@@ -1,0 +1,1012 @@
+diff --git a/Eggshell/OperationPlan.lean b/Eggshell/OperationPlan.lean
+index ee77e72c..dd3fc52e 100644
+--- a/Eggshell/OperationPlan.lean
++++ b/Eggshell/OperationPlan.lean
+@@ -9 +8,0 @@ open Lean OperationWire
+-def searchWorkers : Nat := 3
+@@ -11 +10 @@ def saveWorkers : Nat := 2
+-def workers : Nat := searchWorkers+saveWorkers
++def workers : Nat := saveWorkers
+@@ -14,7 +13,2 @@ def maxBytes : Nat := 16*1024*1024
+-abbrev Lane := Fin workers
+-def Lane.role (lane : Lane) : Role := if lane.val < searchWorkers then .search else .save
+-
+-theorem Lane.search_bound (lane : Lane) (role : lane.role = .search) : lane.val < searchWorkers := by
+-  by_cases bound : lane.val < searchWorkers
+-  · exact bound
+-  · simp [Lane.role,bound] at role
++abbrev Lane := Fin saveWorkers
++def Lane.role (_ : Lane) : Role := .save
+@@ -26,0 +21 @@ structure Job where
++  session : String
+@@ -34 +29,2 @@ structure Contents where
+-  running : Vector (Option Active) workers := Vector.replicate workers none
++  running : Vector (Option Active) saveWorkers := Vector.replicate saveWorkers none
++  searches : Array Active := #[]
+@@ -38 +34 @@ structure Contents where
+-def Contents.active (contents : Contents) := contents.running.toArray.filterMap id
++def Contents.active (contents : Contents) := contents.running.toArray.filterMap id ++ contents.searches
+@@ -42 +38 @@ def Contents.charge (contents : Contents) :=
+-  contents.active.foldl (fun total active => total+active.job.bytes) 0
++    contents.active.foldl (fun total active => total+active.job.bytes) 0
+@@ -51,2 +47,2 @@ private def checked (contents : Contents) : Option State :=
+-  if countBound : contents.count ≤ maxRequests then
+-    if byteBound : contents.charge ≤ maxBytes then some ⟨contents,countBound,byteBound⟩ else none
++  if a : contents.count ≤ maxRequests then
++    if b : contents.charge ≤ maxBytes then some ⟨contents,a,b⟩ else none
+@@ -59 +55,2 @@ private def checked (contents : Contents) : Option State :=
+-    | some next => (next,true) | none => (state,false)
++    | some next => (next,true)
++    | none => (state,false)
+@@ -60,0 +58 @@ private def checked (contents : Contents) : Option State :=
++/-- Save lanes retain their independent durable-publication lifetime. -/
+@@ -64 +62 @@ private def checked (contents : Contents) : Option State :=
+-  let some position := before.pending.findIdx? (fun job => job.role == lane.role && now < job.cutoff) |
++  let some position := before.pending.findIdx? (fun job => job.role == .save && now < job.cutoff) |
+@@ -73,0 +72,15 @@ private def checked (contents : Contents) : Option State :=
++/-- A search owns an actor token, not one of a fixed number of process pipes.
++Only the same chat's outstanding search keeps a later search waiting. -/
++@[no_expose] def takeSearch (state : State) (now : Nat) : State × Option Active := Id.run do
++  let before := state.contents
++  if before.closed then return (state,none)
++  let some position := before.pending.findIdx? (fun job => job.role == .search && now < job.cutoff &&
++      !before.searches.any (fun active => active.job.session == job.session)) | return (state,none)
++  let some job := before.pending[position]? | return (state,none)
++  let active : Active := ⟨job,before.nextToken⟩
++  let next := {before with
++    pending := before.pending.extract 0 position ++ before.pending.extract (position+1) before.pending.size
++    searches := before.searches.push active,nextToken := before.nextToken+1}
++  let some next := checked next | return (state,none)
++  return (next,some active)
++
+@@ -76 +89,4 @@ private def checked (contents : Contents) : Option State :=
+-  (checked {state.contents with running := state.contents.running.set lane none}).getD state
++  return (checked {state.contents with running := state.contents.running.set lane none}).getD state
++
++@[no_expose] def finishSearch (state : State) (id : String) (token : Nat) : State :=
++  (checked {state.contents with searches := state.contents.searches.filter (fun active => !(active.job.id == id && active.token == token))}).getD state
+@@ -97,4 +113,7 @@ theorem bytes_bounded (state : State) : state.contents.charge ≤ maxBytes := st
+-theorem workers_bounded (state : State) : state.contents.active.size ≤ workers := by
+-  simpa [Contents.active] using
+-    (Array.size_filterMap_le (f := id) (xs := state.contents.running.toArray))
+-
++theorem searches_bounded (state : State) : state.contents.searches.size ≤ maxRequests := by
++  have bound := state.countBound
++  simp only [Contents.count,Contents.active,Array.size_append] at bound
++  omega
++theorem save_workers_bounded (state : State) :
++    (state.contents.running.toArray.filterMap id).size ≤ saveWorkers := by
++  simpa using (Array.size_filterMap_le (f := id) (xs := state.contents.running.toArray))
+@@ -103,0 +123,2 @@ theorem closed_starts_no_job (state : State) (lane : Lane) (now : Nat) :
++theorem closed_starts_no_search (state : State) (now : Nat) :
++    (takeSearch (close state) now).2 = none := by simp [takeSearch,close]
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index 4e55e04a..33828eed 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -3,0 +4 @@ public import Eggshell.Worker
++public import Eggshell.SearchReaders
+@@ -11 +12 @@ def replyBytes : Role → Nat | .search => Daemon.maxFrameBytes | .save => 65536
+-def searchReplyCapacity : Nat := OperationPlan.searchWorkers*Daemon.maxFrameBytes
++def searchReplyCapacity : Nat := 3*Daemon.maxFrameBytes
+@@ -33,0 +35 @@ structure State where
++  peakSearchActors : Nat := 0
+@@ -38,0 +41 @@ structure Pool where
++  readers : SearchReaders.Coordinator
+@@ -40 +43 @@ structure Pool where
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new {},← Std.Mutex.new {}⟩
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new {},← Std.Mutex.new {},← SearchReaders.Coordinator.new⟩
+@@ -105 +108 @@ def Pool.submit (pool : Pool) (request : Request) (cancelled : IO.Ref Bool) : IO
+-    let (plan,accepted) := OperationPlan.admit state.plan ⟨request.id,request.role,size,request.cutoff⟩
++    let (plan,accepted) := OperationPlan.admit state.plan ⟨request.id,request.role,size,request.cutoff,request.session⟩
+@@ -116 +119,2 @@ def Pool.submit (pool : Pool) (request : Request) (cancelled : IO.Ref Bool) : IO
+-def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationPlan.Active × Job)) := do
++def Pool.takeUsing (pool : Pool) (choose : OperationPlan.State → Nat → OperationPlan.State × Option OperationPlan.Active) :
++    IO (Option (OperationPlan.Active × Job)) := do
+@@ -132 +136 @@ def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationP
+-    let (plan,active) := OperationPlan.take plan lane now
++    let (plan,active) := choose plan now
+@@ -140,0 +145 @@ def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationP
++        peakSearchActors := max state.peakSearchActors plan.contents.searches.size,
+@@ -146 +151,8 @@ def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationP
+-def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
++def Pool.take (pool : Pool) (lane : OperationPlan.Lane) : IO (Option (OperationPlan.Active × Job)) :=
++  pool.takeUsing (fun state now => OperationPlan.take state lane now)
++
++def Pool.takeSearch (pool : Pool) : IO (Option (OperationPlan.Active × Job)) :=
++  pool.takeUsing OperationPlan.takeSearch
++
++def Pool.reserveReply (pool : Pool) (job : Job) (amount : Nat := replyBytes job.request.role) : IO Bool := do
++  unless 0 < amount && amount ≤ replyBytes job.request.role do return false
+@@ -152,2 +164,2 @@ def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
+-      | .open amount =>
+-        if amount > 0 then return some true
++      | .open previous =>
++        if previous > 0 then return some (previous == amount)
+@@ -157 +169 @@ def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
+-            let some next := before.reserve? (replyBytes job.request.role) | return false
++            let some next := before.reserve? amount | return false
+@@ -161 +173 @@ def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
+-            let some next := before.reserve? (replyBytes job.request.role) | return false
++            let some next := before.reserve? amount | return false
+@@ -164 +176 @@ def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
+-        set (Worker.Lifetime.Cell.open (replyBytes job.request.role))
++        set (Worker.Lifetime.Cell.open amount)
+@@ -179,12 +191,96 @@ def Pool.releaseReply (pool : Pool) (job : Job) : IO Unit := do
+-/-- The slot is service-owned. A disconnected search cancels only its current
+-pipe. Saves already in progress retain their durable source-ACK path. -/
+-def searchOperation (session : String) (request : Worker.Search)
+-    (ready : Nat → IO Unit := fun _ => pure ()) : IO Worker.SearchReply :=
+-  Worker.executeUsing request (fun phase signal => do
+-    let semantic := phase.route == .configured && phase.semanticCutoff.isSome
+-    let cutoff := if semantic then min phase.deadline (phase.semanticCutoff.getD phase.deadline) else phase.deadline
+-    let policy : Worker.SearchPolicy := {
+-      identity := phase.identity,finishReady := semantic,onReady := signal }
+-    let some response ← Worker.exchangeLocal session "search" (toJson phase) cutoff (some policy) |
+-      throw (IO.userError "owned search phase did not return a reply")
+-    IO.ofExcept (fromJson? response : Except String (Option Handoff))) ready
++/-- Cancel/join only this request's computation. Readiness can use the rest of
++the original hook window; neither queue time nor the upstream clock is reset. -/
++def ownedPhase (deadline proposed : Nat) (action : IO Unit → IO α)
++    (signal : Nat → IO Unit) : IO α := do
++  let cutoff := min deadline proposed
++  let progress : IO.Promise (Except IO.Error Nat) ← IO.Promise.new
++  let ready := do
++    let arrived ← IO.monoMsNow
++    if arrived < cutoff && !(← progress.isResolved) then
++      progress.resolve (.ok arrived)
++      signal arrived
++  let task ← IO.asTask (action ready) .dedicated
++  let stop ← Std.CancellationToken.new
++  let complete ← TaskDeadline.event task
++  let advanced ← TaskDeadline.event progress.result!
++  let first ← (Std.Async.Selectable.one #[
++    .case complete (fun result => pure (some result)),
++    .case advanced (fun _ => pure none),
++    .case stop.selector (fun _ => throw (IO.userError "search phase cancelled"))]).toIO
++  try
++    match ← TaskDeadline.wait first cutoff with
++    | some result => return result
++    | none => TaskDeadline.wait task deadline
++  finally
++    unless ← progress.isResolved do progress.resolve (.error (IO.userError "search phase closed before readiness"))
++    stop.cancel
++    discard <| IO.wait first
++    if !(← IO.hasFinished task) then IO.cancel task
++    discard <| IO.wait task
++
++def searchPhase (request : Worker.Search) (environment : Worker.SearchEnvironment)
++    (readers : Option PreparedReaders.Pool) (signal : Nat → IO Unit) : IO (Option Handoff) :=
++  ownedPhase request.deadline (request.semanticCutoff.getD request.deadline)
++    (fun ready => Worker.searchRestored request ready readers (some environment)) signal
++
++def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref Bool)
++    (ready : Nat → IO Unit) : IO Worker.SearchReply := do
++  let request ← IO.ofExcept request.restorePrepared
++  let initial ← Worker.openSearchEnvironment request
++  let (environment,readers) ← match request.prepared,initial.snapshots with
++    | some inputs,some originals => do
++      let frame ← PreparedReaders.Frame.capture (originals.filterMap id).toArray inputs request.owners
++      let session ← pool.readers.borrow frame request.deadline cancelled
++      pure (← IO.ofExcept (initial.withSources session.sources),some session.pool)
++    | _,_ => pure (initial,none)
++  try Worker.executeUsing request (fun phase signal => searchPhase phase environment readers signal) ready
++  finally
++    if let some readers := readers then
++      Receipt.observe request.receipt "request-pages" (← readers.pages.stats)
++
++def observeFinished (job : Job) (started finished : Nat) (cancelled replied : Bool)
++    (lane : Option Nat) : IO Unit := do
++  if let some identity := job.request.identity then
++    let ready ← job.ready.get
++    let fields := [
++      ("id",toJson job.request.id),("lane",toJson lane),
++      ("queueMs",toJson (started-job.admitted)),("workMs",toJson (finished-started)),
++      ("route",job.request.payload.getObjValD "route"),
++      ("startedAt",toJson started),("finishedAt",toJson finished),
++      ("readyMs",toJson (ready.map (·-started))),
++      ("cancelled",toJson cancelled),("reply",toJson replied)]
++    observeJob job "finished" fields
++    Receipt.observe identity.receipt "operation-service" (Json.mkObj fields)
++
++def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : IO Unit := do
++  let started ← IO.monoMsNow
++  let result ← try
++    unless job.request.role == .search && active.job.session == job.request.session do
++      throw (IO.userError "search actor changed its requesting chat")
++    let task ← IO.asTask (do
++      let request ← IO.ofExcept (fromJson? job.request.payload : Except String Worker.Search)
++      pool.searchActor request job.cancelled (fun now => job.ready.set (some now))) .dedicated
++    let reply ← try
++      repeat
++        if ← IO.hasFinished task then break
++        if (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get) then IO.cancel task
++        IO.sleep 5
++      IO.ofExcept (← IO.wait task)
++      finally
++        if !(← IO.hasFinished task) then IO.cancel task
++        discard <| IO.wait task
++    let value := toJson reply
++    let amount := value.compress.utf8ByteSize+1024
++    if !(← job.cancelled.get) && (← pool.reserveReply job amount) then pure (some value) else pure none
++    catch error =>
++      observeJob job "actor-failed" [("error",toJson error.toString)]
++      pure none
++  let wasCancelled := (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get)
++  let finished ← IO.monoMsNow
++  unless ← job.reply.isResolved do job.reply.resolve result
++  pool.state.atomically do
++    modify fun state => {state with
++      plan := OperationPlan.finishSearch state.plan active.job.id active.token
++      jobs := state.jobs.erase active.job.id,completed := state.completed+1,
++      cancelled := state.cancelled+(if wasCancelled then 1 else 0)}
++  observeFinished job started finished wasCancelled result.isSome none
+@@ -199,5 +295 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+-      let task ← IO.asTask (if job.request.role == .search then do
+-          let request ← IO.ofExcept (fromJson? job.request.payload : Except String Worker.Search)
+-          let reply ← searchOperation session request (fun now => job.ready.set (some now))
+-          pure (some (toJson reply))
+-        else Worker.exchangeLocal session lane.role.name job.request.payload job.request.cutoff none) .dedicated
++      let task ← IO.asTask (Worker.exchangeLocal session lane.role.name job.request.payload job.request.cutoff none) .dedicated
+@@ -206,3 +298 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+-        if (← IO.monoMsNow) ≥ (← job.expires.get) ||
+-            (job.request.role == .search && (← job.cancelled.get)) then
+-          if job.request.role == .search then IO.cancel task
++        if (← IO.monoMsNow) ≥ (← job.expires.get) then
+@@ -222,11 +312 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+-  if let some identity := job.request.identity then
+-    let ready ← job.ready.get
+-    let fields := [
+-      ("id",toJson job.request.id),("lane",toJson lane.val),
+-      ("queueMs",toJson (started-job.admitted)),("workMs",toJson (finished-started)),
+-      ("route",job.request.payload.getObjValD "route"),
+-      ("startedAt",toJson started),("finishedAt",toJson finished),
+-      ("readyMs",toJson (ready.map (·-started))),
+-      ("cancelled",toJson wasCancelled),("reply",toJson result.isSome)]
+-    observeJob job "finished" fields
+-    Receipt.observe identity.receipt "operation-service" (Json.mkObj fields)
++  observeFinished job started finished wasCancelled result.isSome (some lane.val)
+@@ -234,6 +314,8 @@ def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.A
+-def Pool.close (pool : Pool) : IO Unit := pool.state.atomically do
+-  let state ← get
+-  for (_,job) in state.jobs do
+-    job.cancelled.set true
+-    unless ← job.reply.isResolved do job.reply.resolve none
+-  set {state with plan := OperationPlan.close state.plan}
++def Pool.close (pool : Pool) : IO Unit := do
++  pool.state.atomically do
++    let state ← get
++    for (_,job) in state.jobs do
++      job.cancelled.set true
++      unless ← job.reply.isResolved do job.reply.resolve none
++    set {state with plan := OperationPlan.close state.plan}
++  pool.readers.close
+@@ -243,0 +326 @@ def Pool.stats (pool : Pool) : IO Json := do
++  let prepared ← pool.readers.statistics.get
+@@ -249 +332,2 @@ def Pool.stats (pool : Pool) : IO Json := do
+-      ("searchWorkers",toJson OperationPlan.searchWorkers),("saveWorkers",toJson OperationPlan.saveWorkers),
++      ("searchExecution",toJson "request-owned"),("activeSearchActors",toJson state.plan.contents.searches.size),
++      ("peakSearchActors",toJson state.peakSearchActors),("preparedReaders",prepared),("saveWorkers",toJson OperationPlan.saveWorkers),
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index f2385386..46ac43a8 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -691 +691 @@ def stats (server : Server) : IO Json := server.state.atomically do
+-def peerWaiting (client : Socket.Client) : IO Bool := (do
++def peerWaiting (client : Socket.Client) : IO Bool := TaskDeadline.awaitEvent (do
+@@ -694 +694 @@ def peerWaiting (client : Socket.Client) : IO Bool := (do
+-    .case timer (fun _ => pure true)]).block
++    .case timer (fun _ => pure true)])
+@@ -736 +736 @@ partial def receiveLive (server : Server) (client : Socket.Client) (remaining de
+-  let chunk : Option (Option ByteArray) ← (do
++  let chunk : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
+@@ -739 +739 @@ partial def receiveLive (server : Server) (client : Socket.Client) (remaining de
+-      .case timer (fun _ => pure none)]).block
++      .case timer (fun _ => pure none)])
+@@ -951,0 +952 @@ def run : IO UInt32 := do
++  Client.registerHosted endpoint
+@@ -992,0 +994,4 @@ def run : IO UInt32 := do
++      repeat
++        let some (active,job) ← server.operations.takeSearch | break
++        let task ← IO.asTask (server.operations.runSearch active job) .dedicated
++        operations.modify (task :: ·)
+@@ -1030,0 +1036 @@ def run : IO UInt32 := do
++    Client.unregisterHosted endpoint
+diff --git a/Eggshell/PreparedReaders.lean b/Eggshell/PreparedReaders.lean
+index 32ef4b4f..03b376a0 100644
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -130,0 +131 @@ structure Image where
++  originals : Array SnapshotImage
+@@ -211,2 +212,3 @@ structure Pool where
+-  let clones ← (sources.zip scopes).mapM fun (source,scope) => do
+-    let clone ← (← SnapshotImage.capture pool.pages scope source).borrow pool.pages scope
++  let originals ← (sources.zip scopes).mapM fun (source,scope) => SnapshotImage.capture pool.pages scope source
++  let clones ← (originals.zip scopes).mapM fun (image,scope) => do
++    let clone ← image.borrow pool.pages scope
+@@ -233 +235 @@ structure Pool where
+-  let count := shared.foldl (fun n reader => n+reader.toArray.size) 0+
++  let count := originals.size+shared.foldl (fun n reader => n+reader.toArray.size) 0+
+@@ -235 +237 @@ structure Pool where
+-  return ⟨key,scopes,publicInputs inputs,reference,shared,sharedReads,owners,
++  return ⟨key,scopes,publicInputs inputs,reference,originals,shared,sharedReads,owners,
+@@ -285,0 +288,82 @@ capturedLocal for each operation. This returns public shared readers only. -/
++/-- A coordinator freezes a checked public image once for a complete read cut.
++It contains no query, usage root or borrower-owned mutable counters/bitmaps. -/
++structure Frozen where
++  private mk ::
++  image : Image
++  private pages : PageMap.PagePool
++
++def Frozen.matches (frozen : Frozen) (sources : Array PageMap.Snapshot) (scopes : Array String)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : Bool :=
++  acceptsKey frozen.image.key (frameKey sources scopes inputs reference)
++
++theorem Frozen.matches_exact (frozen : Frozen) (sources scopes inputs reference) :
++    frozen.matches sources scopes inputs reference = true ↔
++      frozen.image.key = frameKey sources scopes inputs reference :=
++  acceptsKey_exact _ _
++
++/-- Called by the public-view owner before dispatching request-local workers.
++The shared image has the existing catalogue's metadata and handle bounds. -/
++@[no_expose] def Pool.freeze (pool : Pool) (sources : Array PageMap.Snapshot)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : IO Frozen := do
++  let borrow ← pool.acquire sources inputs reference
++  let _ ← IO.ofExcept (Catalogue.check #[borrow.image])
++  return ⟨borrow.image,pool.pages⟩
++
++structure Session where
++  sources : Array PageMap.Snapshot
++  pool : Pool
++
++/-- Each worker gets its own reader catalogue, mutable bitmap overlays and
++source trace/counters. Only immutable images and the existing bounded page pool
++are shared. A changed scope, root, producer or owner order needs a new freeze. -/
++@[no_expose] def Frozen.fork (frozen : Frozen) (sources : Array PageMap.Snapshot)
++    (inputs : Array PreparedInputs.Reference) (reference : Option OwnerViews.Reference) : IO Session := do
++  unless inputs.size == sources.size && (inputs.zip sources).all (fun (input,source) =>
++      input.producer == PreparedInputs.implementation && input.source == source.head) do
++    throw (IO.userError "session reader changed its complete original boundary")
++  let scopes ← sources.mapM OwnerViews.scope
++  unless frozen.matches sources scopes inputs reference do
++    throw (IO.userError "session reader needs a different checked public image")
++  let catalogue ← IO.ofExcept (Catalogue.check #[frozen.image])
++  unless frozen.image.originals.map (fun image => (image.directory.toString,image.head)) ==
++      sources.map (fun source => (source.directory.toString,source.head)) do
++    throw (IO.userError "shared original images changed their exact source boundary")
++  let pages ← frozen.pages.forkPrivate
++  let originals ← (frozen.image.originals.zip scopes).mapM fun (image,scope) => image.borrow pages scope
++  let pool : Pool := ⟨← IO.mkRef {catalogue},pages⟩
++  return ⟨originals,pool⟩
++
++/-- Captured by each actor after authorization; only public preparation enters
++the coordinator. The private usage root is carried unchanged to the borrower. -/
++structure Frame where
++  private mk ::
++  sources : Array PageMap.Snapshot
++  scopes : Array String
++  inputs : Array PreparedInputs.Reference
++  reference : Option OwnerViews.Reference
++  key : String
++  exact : key = frameKey sources scopes inputs reference
++
++@[no_expose] def Frame.capture (sources : Array PageMap.Snapshot) (inputs : Array PreparedInputs.Reference)
++    (reference : Option OwnerViews.Reference) : IO Frame := do
++  unless inputs.size == sources.size && (inputs.zip sources).all (fun (input,source) =>
++      input.producer == PreparedInputs.implementation && input.source == source.head) do
++    throw (IO.userError "search frame changed its prepared original boundary")
++  let scopes ← sources.mapM OwnerViews.scope
++  return ⟨sources,scopes,inputs,reference,frameKey sources scopes inputs reference,rfl⟩
++
++/-- A single coordinator calls this operation. Hits reuse the validated image;
++workers never concurrently mutate its catalogue or repeat its public build. -/
++@[no_expose] def Pool.forkFrame (pool : Pool) (frame : Frame) : IO Session := do
++  let frozen ← match ← pool.find frame.key with
++    | some image => pure (⟨image,pool.pages⟩ : Frozen)
++    | none => pool.freeze frame.sources frame.inputs frame.reference
++  unless frozen.image.key == frame.key do throw (IO.userError "coordinator returned a different public read cut")
++  let catalogue ← IO.ofExcept (Catalogue.check #[frozen.image])
++  unless frozen.image.originals.map (fun image => (image.directory.toString,image.head)) ==
++      frame.sources.map (fun source => (source.directory.toString,source.head)) do
++    throw (IO.userError "coordinator original image boundary differs")
++  let pages ← pool.pages.forkPrivate
++  let originals ← (frozen.image.originals.zip frame.scopes).mapM fun (image,scope) => image.borrow pages scope
++  return ⟨originals,⟨← IO.mkRef {catalogue},pages⟩⟩
++
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index e4f6b09d..50fe6df0 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -788,0 +789,38 @@ theorem changed_waiter_context_cannot_start (request : Search) (state : ThreadSt
++structure SearchEnvironment where
++  private mk ::
++  session : String
++  identity : OperationWire.Identity
++  context : Option ProjectContext.Context
++  configured : Config.Selection
++  snapshots : Option (List (Option DB.PageMap.Snapshot))
++
++def SearchEnvironment.accepts (environment : SearchEnvironment) (request : Search) : Bool :=
++  environment.session == request.pending.sessionId && environment.identity == request.identity &&
++    (request.originals.isNone || environment.snapshots.map (List.map (Option.map (·.head))) == request.originals)
++
++@[no_expose] def openSearchEnvironment (request : Search) : IO SearchEnvironment := do
++  let context ← ProjectContext.open? request.pending request.deadline
++  let configured := context.map (·.physicalSelection) |>.getD (pendingSelection request.pending)
++  let snapshots ← originalSnapshots request configured (context.map (·.snapshots))
++  return ⟨request.pending.sessionId,request.identity,context,configured,snapshots⟩
++
++@[no_expose] def SearchEnvironment.withSources (environment : SearchEnvironment)
++    (sources : Array DB.PageMap.Snapshot) : Except String SearchEnvironment := do
++  let some originals := environment.snapshots | throw "search environment has no captured sources"
++  unless (originals.filterMap id).map SourceOwners.refOf == sources.toList.map SourceOwners.refOf do
++    throw "request worker changed its exact original sources"
++  let mut index := 0
++  let mut updated := []
++  for original in originals do
++    match original with
++    | none => updated := updated ++ [none]
++    | some _ =>
++      let some source := sources[index]? | throw "request worker omitted an original source"
++      index := index+1
++      updated := updated ++ [some source]
++  return {environment with snapshots := some updated}
++
++theorem SearchEnvironment.foreign_session_rejected (environment : SearchEnvironment) (request : Search)
++    (foreign : environment.session ≠ request.pending.sessionId) : environment.accepts request = false := by
++  simp [accepts,foreign]
++
+@@ -790 +828,2 @@ def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
+-    (readers : Option PreparedReaders.Pool := none) : IO (Option Handoff) := do
++    (readers : Option PreparedReaders.Pool := none)
++    (environment : Option SearchEnvironment := none) : IO (Option Handoff) := do
+@@ -799,3 +838,7 @@ def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
+-  let context ← ProjectContext.open? request.pending request.deadline
+-  let configured := context.map (·.physicalSelection) |>.getD (pendingSelection request.pending)
+-  let captured ← originalSnapshots request configured (context.map (·.snapshots))
++  let environment ← match environment with
++    | some environment => pure environment
++    | none => openSearchEnvironment request
++  unless environment.accepts request do throw (IO.userError "search worker received another request's environment")
++  let context := environment.context
++  let configured := environment.configured
++  let captured := environment.snapshots
+@@ -842 +885,8 @@ def searchRestored (request : Search) (onSemanticReady : IO Unit := pure ())
+-          onDependencies := fun sources =>
++          onDependencies := fun sources => do
++            TaskDeadline.ensureLive request.deadline
++            let some latestState ← (readJson? files.state stateJsonDefaults : IO (Option ThreadState)) |
++              throw (IO.userError "cancelled search lost its private state")
++            let some latestPending ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn)) |
++              throw (IO.userError "cancelled search lost its private turn")
++            unless (currentSearch? request latestState latestPending).isSome do
++              throw (IO.userError "obsolete search cannot queue dependencies")
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 81a7a719..881f1e13 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -52 +52 @@ abbrev Kernel := IO.Process.Child {stdin := .piped,stdout := .piped,stderr := .i
+-initialize ownedServices : IO.Ref (Array Service) ← IO.mkRef #[]
++initialize ownedServices : Std.Mutex (Array Service) ← Std.Mutex.new #[]
+@@ -68,5 +68,8 @@ def alive (pid : Nat) : IO Bool := do
+-  for child in ← ownedServices.get do
+-    if child.pid.toNat == pid then
+-      if (← child.tryWait).isSome then
+-        ownedServices.modify (·.filter (·.pid.toNat != pid))
+-        return false
++  let exited ← ownedServices.atomically do
++    let children ← get
++    for child in children do
++      if child.pid.toNat == pid && (← child.tryWait).isSome then
++        set (children.filter (·.pid.toNat != pid))
++        return true
++    return false
++  if exited then return false
+@@ -96 +99 @@ def resolve (config : Config) : IO Endpoint := do
+-    ownedServices.modify (·.push child)
++    ownedServices.atomically (modify (·.push child))
+@@ -178 +181 @@ def peerWaiting (client : Socket.Client) : IO Bool :=
+-  (do
++  TaskDeadline.awaitEvent (do
+@@ -181 +184 @@ def peerWaiting (client : Socket.Client) : IO Bool :=
+-      .case timer (fun _ => pure true)]).block
++      .case timer (fun _ => pure true)])
+@@ -202 +205 @@ partial def receiveLive (backend : Backend) (client : Socket.Client)
+-  let chunk : Option (Option ByteArray) ← (do
++  let chunk : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
+@@ -206 +209 @@ partial def receiveLive (backend : Backend) (client : Socket.Client)
+-      .case timer (fun _ => pure none)]).block
++      .case timer (fun _ => pure none)])
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index 682f88db..a3b81403 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2446 +2446,2 @@ def focusNeighborhood (command : List String) (current : String)
+-  let rows := result.ranking.filterMap fun row =>
++  let ranked := corpus.orderLocators current (fun row => row.document.owner) result.ranking
++  let rows := ranked.filterMap fun row =>
+@@ -2467 +2468,2 @@ def refocusObservedNeighborhood (question : String)
+-    let lexical := SearchRank.lexical question (support.map fun item => Persistence.Store.searchText item.owner)
++    let corpus := SearchRank.Corpus.build (support.map fun item => Persistence.Store.searchText item.owner)
++    let lexical := corpus.rank question
+@@ -2468,0 +2471 @@ def refocusObservedNeighborhood (question : String)
++    let ranking := corpus.orderLocators question id ranking
+@@ -8822 +8825,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-      (prepared.source.head.identity,prepared.canonical.map (fun ready => ready.metadata.rows),prepared.canonicalFailure)))
++      (prepared.source.head.identity,prepared.canonical.map (fun ready => ready.metadata.rows),
++        prepared.canonicalFailure,prepared.failure)))
+@@ -9715,0 +9720,5 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++    let unavailable := synaptic.filter (·.failure.isSome)
++    unless unavailable.isEmpty do
++      Receipt.observe (sourceContext.bind (·.receipt)) "source-acquisition-unavailable"
++        (toJson (unavailable.map fun prepared => (prepared.source.head.identity,prepared.failure)))
++      throw (IO.userError "complete source cut unavailable; acquired references are being released")
+diff --git a/Eggshell/SearchRank.lean b/Eggshell/SearchRank.lean
+index 098287b9..1efbf3f5 100644
+--- a/Eggshell/SearchRank.lean
++++ b/Eggshell/SearchRank.lean
+@@ -59 +59 @@ order inside each lane are unchanged; this grants no reuse authority. -/
+-def preferLiteralMatches (ranked : List Nat) (named : Nat → Bool) : List Nat :=
++def preferLiteralMatches (ranked : List α) (named : α → Bool) : List α :=
+@@ -62 +62 @@ def preferLiteralMatches (ranked : List Nat) (named : Nat → Bool) : List Nat :
+-theorem preferLiteralMatches_members (ranked : List Nat) (named : Nat → Bool) (id : Nat) :
++theorem preferLiteralMatches_members (ranked : List α) (named : α → Bool) (id : α) :
+@@ -66 +66 @@ theorem preferLiteralMatches_members (ranked : List Nat) (named : Nat → Bool)
+-theorem preferLiteralMatches_order (ranked : List Nat) (named : Nat → Bool) :
++theorem preferLiteralMatches_order (ranked : List α) (named : α → Bool) :
+@@ -155,0 +156,25 @@ def Corpus.rank {candidates : List String} (corpus : Corpus candidates) (query :
++/-- Carry explicit current-question locators through a later evidence focus.
++The existing compiled corpus is reused; neither rows nor numerical evidence
++positions are filtered. This supplies advisory order, never Work authority. -/
++def Corpus.orderLocators {candidates : List String} (corpus : Corpus candidates) (query : String)
++    (ordinal : α → Nat) (ranked : List α) : List α :=
++  let wanted := (terms query).filter literalTerm
++  let documents := corpus.documents.toArray
++  preferLiteralMatches ranked fun row =>
++    (documents[ordinal row]?).any fun document => wanted.any document.contains
++
++theorem Corpus.orderLocators_members {candidates : List String} (corpus : Corpus candidates)
++    (query : String) (ordinal : α → Nat) (ranked : List α) (row : α) :
++    row ∈ corpus.orderLocators query ordinal ranked ↔ row ∈ ranked := by
++  simp only [orderLocators,preferLiteralMatches_members]
++
++theorem Corpus.orderLocators_without_locators {candidates : List String} (corpus : Corpus candidates)
++    (query : String) (ordinal : α → Nat) (ranked : List α)
++    (absent : (terms query).filter literalTerm = []) :
++    corpus.orderLocators query ordinal ranked = ranked := by
++  simp [orderLocators,absent,preferLiteralMatches]
++  have empty : ranked.filter (fun _ => false) = [] := by induction ranked <;> simp_all
++  have keep : ranked.filter (fun _ => true) = ranked := by induction ranked <;> simp_all
++  rw [empty,keep]
++  rfl
++
+diff --git a/Main.lean b/Main.lean
+index ed8ac139..00b7d6d0 100644
+--- a/Main.lean
++++ b/Main.lean
+@@ -17 +17,2 @@ def sourceRouteEngine (arguments : List String) : IO UInt32 := do
+-  | ["codex-publication-daemon"] => Eggshell.Plugin.Publication.Service.run
++  | ["codex-publication-daemon"] =>
++      Eggshell.Numerical.withDefaultKeeper Eggshell.Plugin.Publication.Service.run 1000
+diff --git a/Eggshell/TaskDeadline.lean b/Eggshell/TaskDeadline.lean
+index 5ee05af3..dce647a1 100644
+--- a/Eggshell/TaskDeadline.lean
++++ b/Eggshell/TaskDeadline.lean
+@@ -43,0 +44,6 @@ def event (task : AsyncTask α) : IO (Selector α) := do
++/-- Register readiness in this owner. `Async.block` first starts another
++pool task; a socket/timer wait needs no such CPU worker. The caller retains
++the absolute deadline and owns cancellation of the actual IO. -/
++def awaitEvent (action : Async α) : IO α := do
++  IO.ofExcept (← IO.wait (← action.toIO))
++
+@@ -53 +59 @@ def wait (task : AsyncTask α) (deadline : Nat) : IO α := do
+-    let result ← (do
++    let result ← awaitEvent (do
+@@ -56 +62 @@ def wait (task : AsyncTask α) (deadline : Nat) : IO α := do
+-        .case timer (fun _ => pure none)]).block
++        .case timer (fun _ => pure none)])
+diff --git a/Eggshell/DB/PageMap.lean b/Eggshell/DB/PageMap.lean
+index cecc1960..7c23dce7 100644
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -249,0 +250,42 @@ structure SharedPages where
++namespace LocalPages
++def maxBytes : Nat := 2*1024*1024
++def maxEntries : Nat := 512
++def used (entries : Array (SharedPageKey × CachedPage)) : Nat :=
++  (entries.toList.map (·.2.ref.bytes)).sum
++structure State where
++  entries : Array (SharedPageKey × CachedPage)
++  index : Std.HashMap SharedPageKey Nat
++  bytes : Nat
++  exact : bytes = used entries
++  bounded : bytes ≤ maxBytes
++  slotsBounded : entries.size ≤ maxEntries
++def State.empty : State := ⟨#[],{},0,rfl,by decide,by decide⟩
++def State.find (state : State) (key : SharedPageKey) (ref : Ref) : Option (Loaded ref) := do
++  let position ← state.index[key]?
++  let (known,page) ← state.entries[position]?
++  unless known == key do none
++  if same : page.ref = ref then some (same ▸ page.loaded) else none
++def State.insert (state : State) (key : SharedPageKey) (page : CachedPage) : State :=
++  if fits : state.bytes+page.ref.bytes ≤ maxBytes ∧ state.entries.size+1 ≤ maxEntries then
++    ⟨state.entries.push (key,page),state.index.insert key state.entries.size,state.bytes+page.ref.bytes,
++      by simp [used,state.exact],fits.1,by simpa using fits.2⟩
++  else if fits : page.ref.bytes ≤ maxBytes then
++    ⟨#[(key,page)],(∅ : Std.HashMap SharedPageKey Nat).insert key 0,page.ref.bytes,
++      by simp [used],fits,by simp [maxEntries]⟩
++  else state
++theorem encoded_bytes_bounded (state : State) : used state.entries ≤ maxBytes := by
++  rw [← state.exact]
++  exact state.bounded
++theorem slots_bounded (state : State) : state.entries.size ≤ maxEntries := state.slotsBounded
++theorem different_key_rejected (state : State) (key actual : SharedPageKey) (ref : Ref)
++    (position : Nat) (page : CachedPage) (located : state.index[key]? = some position)
++    (entry : state.entries[position]? = some (actual,page)) (different : actual ≠ key) :
++    state.find key ref = none := by
++  simp [State.find,located,entry,different]
++structure Front where
++  state : IO.Ref State
++  hits : IO.Ref Nat
++  misses : IO.Ref Nat
++def Front.new : IO Front := return ⟨← IO.mkRef State.empty,← IO.mkRef 0,← IO.mkRef 0⟩
++end LocalPages
++
+@@ -251,0 +294,3 @@ structure PagePool where
++  /-- One exclusive request owns this bounded pin table across all its readers.
++  Payloads remain immutable and shared. It is not one cache per source. -/
++  front : Option LocalPages.Front := none
+@@ -253 +298 @@ structure PagePool where
+-def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {}⟩
++def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {},none⟩
+@@ -255,2 +300,10 @@ def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {}⟩
+-def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) :=
+-  pool.state.atomically do
++def PagePool.forkPrivate (pool : PagePool) : IO PagePool :=
++  return ⟨pool.state,some (← LocalPages.Front.new)⟩
++
++def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) := do
++  if let some front := pool.front then
++    if let some loaded := (← front.state.get).find key ref then
++      front.hits.modify (·+1)
++      return some loaded
++    front.misses.modify (·+1)
++  let found ← pool.state.atomically do
+@@ -262,0 +316,3 @@ def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Opti
++  if let some front := pool.front then
++    if let some loaded := found then front.state.modify (·.insert key ⟨ref,loaded⟩)
++  return found
+@@ -264 +320 @@ def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Opti
+-def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit :=
++def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit := do
+@@ -266,0 +323 @@ def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage)
++    if let some front := pool.front then front.state.modify (·.insert key page)
+@@ -269,4 +326,13 @@ def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage)
+-def PagePool.stats (pool : PagePool) : IO Json := pool.state.atomically do
+-  let state ← get
+-  return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
+-    ("capacityBytes",toJson SharedPageCache.capacity),("hits",toJson state.hits),("misses",toJson state.misses)]
++def PagePool.stats (pool : PagePool) : IO Json := do
++  let privateStats ← match pool.front with
++    | none => pure Json.null
++    | some front => do
++      let state ← front.state.get
++      pure (Json.mkObj [("hits",toJson (← front.hits.get)),("misses",toJson (← front.misses.get)),
++        ("entries",toJson state.entries.size),("encodedReferencedBytes",toJson state.bytes),
++        ("maxEntries",toJson LocalPages.maxEntries),("maxEncodedReferencedBytes",toJson LocalPages.maxBytes)])
++  pool.state.atomically do
++    let state ← get
++    return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
++      ("capacityBytes",toJson SharedPageCache.capacity),("hits",toJson state.hits),("misses",toJson state.misses),
++      ("privateFront",privateStats)]
+diff --git a/Eggshell/CanonicalSourceLease.lean b/Eggshell/CanonicalSourceLease.lean
+index e4ac8f44..0a8689c5 100644
+--- a/Eggshell/CanonicalSourceLease.lean
++++ b/Eggshell/CanonicalSourceLease.lean
+@@ -9 +9,3 @@ def capacity : Nat := 8*1024*1024
+-def maxHandles : Nat := 512
++/-- A token contains only a shared descriptor reference and request lifetime. -/
++def handleCharge : Nat := 1024
++def maxHandles : Nat := capacity/handleCharge
+@@ -11 +13,2 @@ def maxHandles : Nat := 512
+-structure Held where
++structure Descriptor where
++  identity : String
+@@ -16 +18,0 @@ structure Held where
+-  deadline : Nat
+@@ -18,2 +20 @@ structure Held where
+-  readers : Nat := 0
+-  released : Bool := false
++  borrowers : Nat := 0
+@@ -21,2 +22,3 @@ structure Held where
+-def Held.accepts (held : Held) (scope : String) (source : PageMap.Head) (metadata : Cache.Manifest) : Bool :=
+-  held.scope == scope && decide (held.source = source) && held.loaded.metadata == metadata
++def Descriptor.accepts (entry : Descriptor) (scope : String) (source : PageMap.Head)
++    (metadata : Cache.Manifest) : Bool :=
++  entry.scope == scope && decide (entry.source = source) && entry.loaded.metadata == metadata
+@@ -24,3 +26,4 @@ def Held.accepts (held : Held) (scope : String) (source : PageMap.Head) (metadat
+-theorem Held.same_source (held : Held) (scope : String) (source : PageMap.Head) (metadata : Cache.Manifest)
+-    (accepted : held.accepts scope source metadata = true) : held.source = source := by
+-  simp only [accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++theorem Descriptor.same_source (entry : Descriptor) (scope : String) (source : PageMap.Head)
++    (metadata : Cache.Manifest) (accepted : entry.accepts scope source metadata = true) :
++    entry.source = source := by
++  simp only [Descriptor.accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
+@@ -28,0 +32,6 @@ theorem Held.same_source (held : Held) (scope : String) (source : PageMap.Head)
++structure Held where
++  descriptor : String
++  deadline : Nat
++  readers : Nat := 0
++  released : Bool := false
++
+@@ -30,0 +40 @@ structure State where
++  descriptors : Std.HashMap String Descriptor := {}
+@@ -41,0 +52,3 @@ def expiry (entries : Std.HashMap String Held) : Option Nat :=
++def earlier (current : Option Nat) (deadline : Nat) : Option Nat :=
++  some (current.map (min deadline) |>.getD deadline)
++
+@@ -43,0 +57,42 @@ theorem State.within_capacity (state : State) : state.budget.used ≤ capacity :
++/-- Admission charges a checked immutable descriptor once, and a small token per
++borrower. Neither the full source identity nor the loaded arena is copied per chat. -/
++def State.admit? (state : State) (token : String) (candidate : Descriptor)
++    (holdUntil : Nat) : Option (State × Descriptor × Bool) := do
++  if state.closed || state.entries.contains token || state.entries.size ≥ maxHandles then none else do
++    let existing := state.descriptors[candidate.identity]?
++    let descriptor := existing.getD candidate
++    if !descriptor.accepts candidate.scope candidate.source candidate.loaded.metadata then none else do
++      let fresh := existing.isNone
++      let budget ← state.budget.reserve? (handleCharge+(if fresh then descriptor.charge else 0))
++      let held : Held := ⟨descriptor.identity,holdUntil,0,false⟩
++      return ({state with
++        entries := state.entries.insert token held,
++        descriptors := state.descriptors.insert descriptor.identity
++          {descriptor with borrowers := descriptor.borrowers+1},
++        budget,nextExpiry := earlier state.nextExpiry holdUntil,acquired := state.acquired+1},
++        descriptor,fresh)
++
++/-- Only tokens with no active reader may be retired. The final borrower owns
++the one original-cache release, performed outside the metadata lock. -/
++def State.retire (state : State) (tokens : Array String) : State × Array Descriptor := Id.run do
++  let mut state := state
++  let mut retired := #[]
++  for token in tokens do
++    let some held := state.entries[token]? | continue
++    if held.readers > 0 then continue
++    let entries := state.entries.erase token
++    state := {state with entries,budget := state.budget.release handleCharge}
++    let some descriptor := state.descriptors[held.descriptor]? | continue
++    if descriptor.borrowers ≤ 1 then
++      state := {state with
++        descriptors := state.descriptors.erase held.descriptor,
++        budget := state.budget.release descriptor.charge}
++      retired := retired.push descriptor
++    else
++      let descriptor := {descriptor with borrowers := descriptor.borrowers-1}
++      state := {state with descriptors := state.descriptors.insert held.descriptor descriptor}
++  return (state,retired)
++
++def State.accountedBytes (state : State) : Nat :=
++  state.entries.size*handleCharge + state.descriptors.fold (fun total _ entry => total+entry.charge) 0
++
+@@ -50,3 +105,2 @@ def Pool.new (originals : Shared.Pool) : IO Pool := return ⟨originals,← Std.
+-/-- Release the original cache borrow outside this pool's short metadata lock. -/
+-def Pool.dispose (pool : Pool) (held : Array Held) : IO Unit :=
+-  held.forM fun entry => pool.originals.release entry.loaded.identity entry.serial
++def Pool.dispose (pool : Pool) (descriptors : Array Descriptor) : IO Unit :=
++  descriptors.forM fun entry => pool.originals.release entry.loaded.identity entry.serial
+@@ -59,8 +113,4 @@ def Pool.reap (pool : Pool) : IO Unit := do
+-    let retired := state.entries.toArray.filterMap fun (_,held) =>
+-      if held.readers == 0 && (held.released || held.deadline ≤ now) then some held else none
+-    let entries := state.entries.filter fun _ held =>
+-      held.readers > 0 || (!held.released && now < held.deadline)
+-    let amount := retired.foldl (fun total held => total+held.charge) 0
+-    set {state with
+-      entries,budget := state.budget.release amount,nextExpiry := expiry entries,
+-      expired := state.expired+retired.size}
++    let tokens := state.entries.toArray.filterMap fun (token,held) =>
++      if held.readers == 0 && (held.released || held.deadline ≤ now) then some token else none
++    let (state,retired) := state.retire tokens
++    set {state with nextExpiry := expiry state.entries,expired := state.expired+tokens.size}
+@@ -76 +126,2 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-  let identityBytes := (toJson (scope,source.head,metadata)).compress.utf8ByteSize
++  let identity := (toJson (scope,source.head,metadata)).compress
++  let identityBytes := identity.utf8ByteSize
+@@ -78 +128,0 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-  let charge := 65536+8*identityBytes
+@@ -88 +138,3 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-    let token ← pool.state.atomically do
++    let token := Blake3.hex (← IO.getRandomBytes 32)
++    let candidate : Descriptor := ⟨identity,scope,source.head,loaded,entry.serial,65536+8*identityBytes,0⟩
++    let descriptor ← pool.state.atomically do
+@@ -90,10 +142,6 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-      unless !state.closed && state.entries.size < maxHandles do throw (IO.userError "retained source admission is full or stopped")
+-      let some budget := state.budget.reserve? charge | throw (IO.userError "retained source byte admission is full")
+-      let token := Blake3.hex (← IO.getRandomBytes 32)
+-      unless !state.entries.contains token do throw (IO.userError "retained source token collision")
+-      let held : Held := ⟨scope,source.head,loaded,entry.serial,holdUntil,charge,0,false⟩
+-      let entries := state.entries.insert token held
+-      set {state with entries,budget,nextExpiry := expiry entries,acquired := state.acquired+1}
+-      return token
+-    transferred.set true
+-    return (token,loaded,reuse)
++      let some (next,descriptor,fresh) := state.admit? token candidate holdUntil |
++        throw (IO.userError "retained source admission is full, foreign or stopped")
++      set next
++      if fresh then transferred.set true
++      return descriptor
++    return (token,descriptor.loaded,reuse)
+@@ -108,0 +157 @@ def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
++    let state := {state with entries := state.entries.insert token held}
+@@ -110,5 +159,4 @@ def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
+-      let entries := state.entries.erase token
+-      set {state with entries,budget := state.budget.release held.charge,nextExpiry := expiry entries}
+-      return #[held]
+-    let entries := state.entries.insert token held
+-    set {state with entries,nextExpiry := expiry entries}
++      let (state,retired) := state.retire #[token]
++      set state
++      return retired
++    set {state with nextExpiry := earlier state.nextExpiry held.deadline}
+@@ -118 +165,0 @@ def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
+-/-- An active read keeps its original cache charge even after release/expiry. -/
+@@ -123 +170 @@ def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (
+-  let held ← pool.state.atomically do
++  let descriptor ← pool.state.atomically do
+@@ -125,0 +173 @@ def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (
++    let some descriptor := state.descriptors[held.descriptor]? | throw (IO.userError "retained source descriptor missing")
+@@ -127,5 +175,5 @@ def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (
+-        held.accepts scope source metadata do throw (IO.userError "retained source changed its scope, root or lifetime")
+-    let entries := state.entries.insert token {held with readers := held.readers+1}
+-    set {state with entries,nextExpiry := expiry entries}
+-    return held
+-  try use held.loaded .hit
++        descriptor.accepts scope source metadata do
++      throw (IO.userError "retained source changed its scope, root or lifetime")
++    set {state with entries := state.entries.insert token {held with readers := held.readers+1}}
++    return descriptor
++  try use descriptor.loaded .hit
+@@ -138 +186,2 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
+-    unless held.scope == scope do throw (IO.userError "retained source release crossed its scope")
++    let some descriptor := state.descriptors[held.descriptor]? | throw (IO.userError "retained source descriptor missing")
++    unless descriptor.scope == scope do throw (IO.userError "retained source release crossed its scope")
+@@ -139,0 +189 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
++    let state := {state with released := state.released+1}
+@@ -141,2 +191 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
+-      let entries := state.entries.insert token {held with released := true}
+-      set {state with entries,nextExpiry := expiry entries,released := state.released+1}
++      set {state with entries := state.entries.insert token {held with released := true}}
+@@ -144,5 +193,3 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
+-    let entries := state.entries.erase token
+-    set {state with
+-      entries,budget := state.budget.release held.charge,nextExpiry := expiry entries,
+-      released := state.released+1}
+-    return #[held]
++    let (state,retired) := state.retire #[token]
++    set state
++    return retired
+@@ -154,5 +201,4 @@ def Pool.close (pool : Pool) : IO Unit := do
+-    let retired := state.entries.toArray.filterMap fun (_,held) => if held.readers == 0 then some held else none
+-    let entries := state.entries.filterMap fun _ held =>
+-      if held.readers == 0 then none else some {held with released := true}
+-    let amount := retired.foldl (fun total held => total+held.charge) 0
+-    set {state with closed := true,entries,budget := state.budget.release amount,nextExpiry := none}
++    let tokens := state.entries.toArray.filterMap fun (token,held) => if held.readers == 0 then some token else none
++    let (state,retired) := state.retire tokens
++    let entries := state.entries.filterMap fun _ held => some {held with released := true}
++    set {state with closed := true,entries,nextExpiry := none}
+@@ -164,2 +210,3 @@ def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
+-  return Json.mkObj [("active",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
+-    ("capacity",toJson capacity),("acquired",toJson state.acquired),("released",toJson state.released),
++  return Json.mkObj [("active",toJson state.entries.size),("sharedDescriptors",toJson state.descriptors.size),
++    ("chargedBytes",toJson state.budget.used),("capacity",toJson capacity),("handleCharge",toJson handleCharge),
++    ("acquired",toJson state.acquired),("released",toJson state.released),
+@@ -168 +215,3 @@ def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
+-    ("accountedExact",toJson (state.budget.used == state.entries.fold (fun total _ held => total+held.charge) 0))]
++    ("accountedExact",toJson (state.budget.used == state.accountedBytes)),
++    ("borrowersExact",toJson (state.entries.size ==
++      state.descriptors.fold (fun total _ entry => total+entry.borrowers) 0))]
+diff --git a/Eggshell/SearchReaders.lean b/Eggshell/SearchReaders.lean
+new file mode 100644
+index 00000000..946bb146
+--- /dev/null
++++ b/Eggshell/SearchReaders.lean
+@@ -0,0 +1,66 @@
++module
++public import Eggshell.PreparedReaders
++public import Eggshell.TaskDeadline
++public import Std.Sync.Channel
++
++@[expose] public section
++namespace Eggshell.SearchReaders
++open Lean
++
++structure Request where
++  frame : PreparedReaders.Frame
++  deadline : Nat
++  cancelled : IO.Ref Bool
++  reply : IO.Promise (Except IO.Error PreparedReaders.Session)
++
++/-- One owner updates the public catalogue. Source/encoder IO remains outside
++the publication service's accept loop and never owns another chat's state. -/
++partial def serve (queue : Std.CloseableChannel Request) (stats : IO.Ref Json) : IO Unit := do
++  let pool ← PreparedReaders.Pool.new
++  try
++    repeat
++      let some request ← IO.wait (← queue.recv) | break
++      let result ← try
++        TaskDeadline.ensureLive request.deadline
++        unless !(← request.cancelled.get) do throw (IO.userError "reader request cancelled")
++        let session ← pool.forkFrame request.frame
++        stats.set (← pool.stats)
++        pure (.ok session)
++        catch error => pure (.error error)
++      unless ← request.reply.isResolved do request.reply.resolve result
++  finally
++    repeat
++      let some request ← queue.tryRecv | break
++      unless ← request.reply.isResolved do request.reply.resolve (.error (IO.userError "reader coordinator closed"))
++
++structure Coordinator where
++  private mk ::
++  queue : Std.CloseableChannel Request
++  task : Task (Except IO.Error Unit)
++  statistics : IO.Ref Json
++
++@[no_expose] def Coordinator.new : IO Coordinator := do
++  let queue ← Std.CloseableChannel.new (some 160)
++  let stats ← IO.mkRef Json.null
++  return ⟨queue,← IO.asTask (serve queue stats) .dedicated,stats⟩
++
++def Coordinator.borrow (coordinator : Coordinator) (frame : PreparedReaders.Frame)
++    (deadline : Nat) (cancelled : IO.Ref Bool) : IO PreparedReaders.Session := do
++  let reply ← IO.Promise.new
++  unless ← coordinator.queue.trySend ⟨frame,deadline,cancelled,reply⟩ do
++    throw (IO.userError "reader coordinator stopped or full")
++  repeat
++    TaskDeadline.ensureLive deadline
++    unless !(← cancelled.get) do throw (IO.userError "reader wait cancelled")
++    if ← reply.isResolved then
++      let some result := reply.result?.get | throw (IO.userError "reader coordinator lost its result")
++      return ← IO.ofExcept result
++    IO.sleep 2
++  throw (IO.userError "unreachable reader wait")
++
++def Coordinator.close (coordinator : Coordinator) : IO Unit := do
++  try coordinator.queue.close catch _ => pure ()
++  IO.cancel coordinator.task
++  discard <| IO.wait coordinator.task
++
++end Eggshell.SearchReaders
+diff --git a/Eggshell/PublicationClient.lean b/Eggshell/PublicationClient.lean
+index 7a67c1e2..7e9dbb17 100644
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -20,0 +21,26 @@ initialize ownedServer : Std.Mutex (Option Numerical.Service) ← Std.Mutex.new
++/-- Only the service process may install its own immutable endpoint. Search
++actors in that process need no ping, startup lock or self-connection preflight. -/
++initialize hostedOwner : Std.Mutex (Option Daemon.Endpoint) ← Std.Mutex.new none
++
++def hostedAccepts (endpoint : Daemon.Endpoint) (pid : Nat) (implementation : String) : Bool :=
++  endpoint.session == "publisher" && endpoint.pid == pid && endpoint.compatible implementation
++
++theorem hosted_same_owner (endpoint : Daemon.Endpoint) (pid : Nat) (implementation : String)
++    (accepted : hostedAccepts endpoint pid implementation = true) : endpoint.pid = pid := by
++  simp only [hostedAccepts,Bool.and_eq_true,beq_iff_eq] at accepted
++  exact accepted.1.2
++
++def registerHosted (endpoint : Daemon.Endpoint) : IO Unit := do
++  unless hostedAccepts endpoint (← IO.Process.getPID).toNat (← generation) do
++    throw (IO.userError "hosted publisher is not this process and implementation")
++  hostedOwner.atomically do
++    unless (← get).isNone do throw (IO.userError "hosted publisher already installed")
++    set (some endpoint)
++
++def unregisterHosted (endpoint : Daemon.Endpoint) : IO Unit := hostedOwner.atomically do
++  let some current ← get | return
++  unless current.pid == endpoint.pid && current.port == endpoint.port &&
++      current.generation == endpoint.generation && current.secret == endpoint.secret do
++    throw (IO.userError "foreign publisher cannot retire the hosted owner")
++  set (none : Option Daemon.Endpoint)
++
+@@ -349,0 +376 @@ def resolve : IO Daemon.Endpoint := do
++  if let some endpoint ← hostedOwner.atomically get then return endpoint

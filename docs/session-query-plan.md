@@ -54,6 +54,31 @@ supervisors and polling waiters. Reuse immutable router/page preparation and
 make waits event driven before another capacity trial; attribution among runtime
 scheduling, cache contention and repeated decoding still needs stage evidence.
 
+The [subsequent isolated source-lease study](candidates/shared-leases/README.md)
+separates three costs. Direct native event registration alone remains3/32.
+One request-local page front reduces shared hit updates from422,288 to2,258 in
+the first16-client wave, but delivers16/32. Interned immutable descriptors then
+retain80 complete16-source cuts in90ms under the unchanged8 MiB budget, and
+actual16-client waves reach32/32 original+ACK and32/32 semantic handoffs, max9.66s.
+This is progress in components and16-client traffic, not an80-client pass.
+
+Actual80 starts all80 actors, queue max75ms, but delivers20/80 originals and
+16/80 semantic handoffs. Sixty-one complete cuts fail acquisition. Removing
+self-endpoint pings is tested separately: the component resolves80×128 times
+in3ms and32 hooks still pass, but80 hooks regress to0/80, max17.65s. That
+candidate is rejected. Neither increasing actor count nor removing one
+control-path check establishes capacity. No changed ranking, clock or inflated
+resource limit is accepted as a remedy. Product core source remains unchanged.
+
+Next isolate the full80×16 source-acquisition protocol from the whole search
+workload, including actual reply receipt and cancellation, before another core
+change. Reuse a checked immutable read cut directly inside its project service;
+keep remote transport behind the same exact interface and preserve complete
+certification. Do not reconstruct/validate/serialize that full cut per chat.
+Component accounting is not a proof of the wrapper's active-read shutdown order.
+All actual bodies, failures and cleanup are retained as compact evidence, not
+as old DBs or raw run caches. Paid token/quality comparisons remain0/18.
+
 ## Dispatch and resource contract
 
 Replace the fixed three whole-search lanes with request-owned tasks. Admission

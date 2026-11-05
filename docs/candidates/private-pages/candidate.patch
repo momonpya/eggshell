@@ -1,0 +1,120 @@
+diff --git a/Eggshell/DB/PageMap.lean b/Eggshell/DB/PageMap.lean
+index cecc1960..7c23dce7 100644
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -249,0 +250,42 @@ structure SharedPages where
++namespace LocalPages
++def maxBytes : Nat := 2*1024*1024
++def maxEntries : Nat := 512
++def used (entries : Array (SharedPageKey × CachedPage)) : Nat :=
++  (entries.toList.map (·.2.ref.bytes)).sum
++structure State where
++  entries : Array (SharedPageKey × CachedPage)
++  index : Std.HashMap SharedPageKey Nat
++  bytes : Nat
++  exact : bytes = used entries
++  bounded : bytes ≤ maxBytes
++  slotsBounded : entries.size ≤ maxEntries
++def State.empty : State := ⟨#[],{},0,rfl,by decide,by decide⟩
++def State.find (state : State) (key : SharedPageKey) (ref : Ref) : Option (Loaded ref) := do
++  let position ← state.index[key]?
++  let (known,page) ← state.entries[position]?
++  unless known == key do none
++  if same : page.ref = ref then some (same ▸ page.loaded) else none
++def State.insert (state : State) (key : SharedPageKey) (page : CachedPage) : State :=
++  if fits : state.bytes+page.ref.bytes ≤ maxBytes ∧ state.entries.size+1 ≤ maxEntries then
++    ⟨state.entries.push (key,page),state.index.insert key state.entries.size,state.bytes+page.ref.bytes,
++      by simp [used,state.exact],fits.1,by simpa using fits.2⟩
++  else if fits : page.ref.bytes ≤ maxBytes then
++    ⟨#[(key,page)],(∅ : Std.HashMap SharedPageKey Nat).insert key 0,page.ref.bytes,
++      by simp [used],fits,by simp [maxEntries]⟩
++  else state
++theorem encoded_bytes_bounded (state : State) : used state.entries ≤ maxBytes := by
++  rw [← state.exact]
++  exact state.bounded
++theorem slots_bounded (state : State) : state.entries.size ≤ maxEntries := state.slotsBounded
++theorem different_key_rejected (state : State) (key actual : SharedPageKey) (ref : Ref)
++    (position : Nat) (page : CachedPage) (located : state.index[key]? = some position)
++    (entry : state.entries[position]? = some (actual,page)) (different : actual ≠ key) :
++    state.find key ref = none := by
++  simp [State.find,located,entry,different]
++structure Front where
++  state : IO.Ref State
++  hits : IO.Ref Nat
++  misses : IO.Ref Nat
++def Front.new : IO Front := return ⟨← IO.mkRef State.empty,← IO.mkRef 0,← IO.mkRef 0⟩
++end LocalPages
++
+@@ -251,0 +294,3 @@ structure PagePool where
++  /-- One exclusive request owns this bounded pin table across all its readers.
++  Payloads remain immutable and shared. It is not one cache per source. -/
++  front : Option LocalPages.Front := none
+@@ -253 +298 @@ structure PagePool where
+-def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {}⟩
++def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {},none⟩
+@@ -255,2 +300,10 @@ def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {}⟩
+-def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) :=
+-  pool.state.atomically do
++def PagePool.forkPrivate (pool : PagePool) : IO PagePool :=
++  return ⟨pool.state,some (← LocalPages.Front.new)⟩
++
++def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) := do
++  if let some front := pool.front then
++    if let some loaded := (← front.state.get).find key ref then
++      front.hits.modify (·+1)
++      return some loaded
++    front.misses.modify (·+1)
++  let found ← pool.state.atomically do
+@@ -262,0 +316,3 @@ def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Opti
++  if let some front := pool.front then
++    if let some loaded := found then front.state.modify (·.insert key ⟨ref,loaded⟩)
++  return found
+@@ -264 +320 @@ def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Opti
+-def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit :=
++def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit := do
+@@ -266,0 +323 @@ def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage)
++    if let some front := pool.front then front.state.modify (·.insert key page)
+@@ -269,4 +326,13 @@ def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage)
+-def PagePool.stats (pool : PagePool) : IO Json := pool.state.atomically do
+-  let state ← get
+-  return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
+-    ("capacityBytes",toJson SharedPageCache.capacity),("hits",toJson state.hits),("misses",toJson state.misses)]
++def PagePool.stats (pool : PagePool) : IO Json := do
++  let privateStats ← match pool.front with
++    | none => pure Json.null
++    | some front => do
++      let state ← front.state.get
++      pure (Json.mkObj [("hits",toJson (← front.hits.get)),("misses",toJson (← front.misses.get)),
++        ("entries",toJson state.entries.size),("encodedReferencedBytes",toJson state.bytes),
++        ("maxEntries",toJson LocalPages.maxEntries),("maxEncodedReferencedBytes",toJson LocalPages.maxBytes)])
++  pool.state.atomically do
++    let state ← get
++    return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
++      ("capacityBytes",toJson SharedPageCache.capacity),("hits",toJson state.hits),("misses",toJson state.misses),
++      ("privateFront",privateStats)]
+diff --git a/Eggshell/PreparedReaders.lean b/Eggshell/PreparedReaders.lean
+index 759d66c5..03b376a0 100644
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -331,2 +331,3 @@ are shared. A changed scope, root, producer or owner order needs a new freeze. -
+-  let originals ← (frozen.image.originals.zip scopes).mapM fun (image,scope) => image.borrow frozen.pages scope
+-  let pool : Pool := ⟨← IO.mkRef {catalogue},frozen.pages⟩
++  let pages ← frozen.pages.forkPrivate
++  let originals ← (frozen.image.originals.zip scopes).mapM fun (image,scope) => image.borrow pages scope
++  let pool : Pool := ⟨← IO.mkRef {catalogue},pages⟩
+@@ -365,2 +366,3 @@ workers never concurrently mutate its catalogue or repeat its public build. -/
+-  let originals ← (frozen.image.originals.zip frame.scopes).mapM fun (image,scope) => image.borrow pool.pages scope
+-  return ⟨originals,⟨← IO.mkRef {catalogue},pool.pages⟩⟩
++  let pages ← pool.pages.forkPrivate
++  let originals ← (frozen.image.originals.zip frame.scopes).mapM fun (image,scope) => image.borrow pages scope
++  return ⟨originals,⟨← IO.mkRef {catalogue},pages⟩⟩
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index 1b3aa63b..33828eed 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -236 +236,4 @@ def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref
+-  Worker.executeUsing request (fun phase signal => searchPhase phase environment readers signal) ready
++  try Worker.executeUsing request (fun phase signal => searchPhase phase environment readers signal) ready
++  finally
++    if let some readers := readers then
++      Receipt.observe request.receipt "request-pages" (← readers.pages.stats)

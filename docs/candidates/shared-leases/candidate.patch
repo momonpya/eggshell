@@ -1,0 +1,220 @@
+diff --git a/Eggshell/CanonicalSourceLease.lean b/Eggshell/CanonicalSourceLease.lean
+index e4ac8f44..0a8689c5 100644
+--- a/Eggshell/CanonicalSourceLease.lean
++++ b/Eggshell/CanonicalSourceLease.lean
+@@ -9 +9,3 @@ def capacity : Nat := 8*1024*1024
+-def maxHandles : Nat := 512
++/-- A token contains only a shared descriptor reference and request lifetime. -/
++def handleCharge : Nat := 1024
++def maxHandles : Nat := capacity/handleCharge
+@@ -11 +13,2 @@ def maxHandles : Nat := 512
+-structure Held where
++structure Descriptor where
++  identity : String
+@@ -16 +18,0 @@ structure Held where
+-  deadline : Nat
+@@ -18,2 +20 @@ structure Held where
+-  readers : Nat := 0
+-  released : Bool := false
++  borrowers : Nat := 0
+@@ -21,2 +22,3 @@ structure Held where
+-def Held.accepts (held : Held) (scope : String) (source : PageMap.Head) (metadata : Cache.Manifest) : Bool :=
+-  held.scope == scope && decide (held.source = source) && held.loaded.metadata == metadata
++def Descriptor.accepts (entry : Descriptor) (scope : String) (source : PageMap.Head)
++    (metadata : Cache.Manifest) : Bool :=
++  entry.scope == scope && decide (entry.source = source) && entry.loaded.metadata == metadata
+@@ -24,3 +26,4 @@ def Held.accepts (held : Held) (scope : String) (source : PageMap.Head) (metadat
+-theorem Held.same_source (held : Held) (scope : String) (source : PageMap.Head) (metadata : Cache.Manifest)
+-    (accepted : held.accepts scope source metadata = true) : held.source = source := by
+-  simp only [accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
++theorem Descriptor.same_source (entry : Descriptor) (scope : String) (source : PageMap.Head)
++    (metadata : Cache.Manifest) (accepted : entry.accepts scope source metadata = true) :
++    entry.source = source := by
++  simp only [Descriptor.accepts,Bool.and_eq_true,decide_eq_true_eq] at accepted
+@@ -28,0 +32,6 @@ theorem Held.same_source (held : Held) (scope : String) (source : PageMap.Head)
++structure Held where
++  descriptor : String
++  deadline : Nat
++  readers : Nat := 0
++  released : Bool := false
++
+@@ -30,0 +40 @@ structure State where
++  descriptors : Std.HashMap String Descriptor := {}
+@@ -41,0 +52,3 @@ def expiry (entries : Std.HashMap String Held) : Option Nat :=
++def earlier (current : Option Nat) (deadline : Nat) : Option Nat :=
++  some (current.map (min deadline) |>.getD deadline)
++
+@@ -43,0 +57,42 @@ theorem State.within_capacity (state : State) : state.budget.used ≤ capacity :
++/-- Admission charges a checked immutable descriptor once, and a small token per
++borrower. Neither the full source identity nor the loaded arena is copied per chat. -/
++def State.admit? (state : State) (token : String) (candidate : Descriptor)
++    (holdUntil : Nat) : Option (State × Descriptor × Bool) := do
++  if state.closed || state.entries.contains token || state.entries.size ≥ maxHandles then none else do
++    let existing := state.descriptors[candidate.identity]?
++    let descriptor := existing.getD candidate
++    if !descriptor.accepts candidate.scope candidate.source candidate.loaded.metadata then none else do
++      let fresh := existing.isNone
++      let budget ← state.budget.reserve? (handleCharge+(if fresh then descriptor.charge else 0))
++      let held : Held := ⟨descriptor.identity,holdUntil,0,false⟩
++      return ({state with
++        entries := state.entries.insert token held,
++        descriptors := state.descriptors.insert descriptor.identity
++          {descriptor with borrowers := descriptor.borrowers+1},
++        budget,nextExpiry := earlier state.nextExpiry holdUntil,acquired := state.acquired+1},
++        descriptor,fresh)
++
++/-- Only tokens with no active reader may be retired. The final borrower owns
++the one original-cache release, performed outside the metadata lock. -/
++def State.retire (state : State) (tokens : Array String) : State × Array Descriptor := Id.run do
++  let mut state := state
++  let mut retired := #[]
++  for token in tokens do
++    let some held := state.entries[token]? | continue
++    if held.readers > 0 then continue
++    let entries := state.entries.erase token
++    state := {state with entries,budget := state.budget.release handleCharge}
++    let some descriptor := state.descriptors[held.descriptor]? | continue
++    if descriptor.borrowers ≤ 1 then
++      state := {state with
++        descriptors := state.descriptors.erase held.descriptor,
++        budget := state.budget.release descriptor.charge}
++      retired := retired.push descriptor
++    else
++      let descriptor := {descriptor with borrowers := descriptor.borrowers-1}
++      state := {state with descriptors := state.descriptors.insert held.descriptor descriptor}
++  return (state,retired)
++
++def State.accountedBytes (state : State) : Nat :=
++  state.entries.size*handleCharge + state.descriptors.fold (fun total _ entry => total+entry.charge) 0
++
+@@ -50,3 +105,2 @@ def Pool.new (originals : Shared.Pool) : IO Pool := return ⟨originals,← Std.
+-/-- Release the original cache borrow outside this pool's short metadata lock. -/
+-def Pool.dispose (pool : Pool) (held : Array Held) : IO Unit :=
+-  held.forM fun entry => pool.originals.release entry.loaded.identity entry.serial
++def Pool.dispose (pool : Pool) (descriptors : Array Descriptor) : IO Unit :=
++  descriptors.forM fun entry => pool.originals.release entry.loaded.identity entry.serial
+@@ -59,8 +113,4 @@ def Pool.reap (pool : Pool) : IO Unit := do
+-    let retired := state.entries.toArray.filterMap fun (_,held) =>
+-      if held.readers == 0 && (held.released || held.deadline ≤ now) then some held else none
+-    let entries := state.entries.filter fun _ held =>
+-      held.readers > 0 || (!held.released && now < held.deadline)
+-    let amount := retired.foldl (fun total held => total+held.charge) 0
+-    set {state with
+-      entries,budget := state.budget.release amount,nextExpiry := expiry entries,
+-      expired := state.expired+retired.size}
++    let tokens := state.entries.toArray.filterMap fun (token,held) =>
++      if held.readers == 0 && (held.released || held.deadline ≤ now) then some token else none
++    let (state,retired) := state.retire tokens
++    set {state with nextExpiry := expiry state.entries,expired := state.expired+tokens.size}
+@@ -76 +126,2 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-  let identityBytes := (toJson (scope,source.head,metadata)).compress.utf8ByteSize
++  let identity := (toJson (scope,source.head,metadata)).compress
++  let identityBytes := identity.utf8ByteSize
+@@ -78 +128,0 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-  let charge := 65536+8*identityBytes
+@@ -88 +138,3 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-    let token ← pool.state.atomically do
++    let token := Blake3.hex (← IO.getRandomBytes 32)
++    let candidate : Descriptor := ⟨identity,scope,source.head,loaded,entry.serial,65536+8*identityBytes,0⟩
++    let descriptor ← pool.state.atomically do
+@@ -90,10 +142,6 @@ def Pool.retain (pool : Pool) (scope : String) (source : PageMap.Snapshot) (path
+-      unless !state.closed && state.entries.size < maxHandles do throw (IO.userError "retained source admission is full or stopped")
+-      let some budget := state.budget.reserve? charge | throw (IO.userError "retained source byte admission is full")
+-      let token := Blake3.hex (← IO.getRandomBytes 32)
+-      unless !state.entries.contains token do throw (IO.userError "retained source token collision")
+-      let held : Held := ⟨scope,source.head,loaded,entry.serial,holdUntil,charge,0,false⟩
+-      let entries := state.entries.insert token held
+-      set {state with entries,budget,nextExpiry := expiry entries,acquired := state.acquired+1}
+-      return token
+-    transferred.set true
+-    return (token,loaded,reuse)
++      let some (next,descriptor,fresh) := state.admit? token candidate holdUntil |
++        throw (IO.userError "retained source admission is full, foreign or stopped")
++      set next
++      if fresh then transferred.set true
++      return descriptor
++    return (token,descriptor.loaded,reuse)
+@@ -108,0 +157 @@ def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
++    let state := {state with entries := state.entries.insert token held}
+@@ -110,5 +159,4 @@ def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
+-      let entries := state.entries.erase token
+-      set {state with entries,budget := state.budget.release held.charge,nextExpiry := expiry entries}
+-      return #[held]
+-    let entries := state.entries.insert token held
+-    set {state with entries,nextExpiry := expiry entries}
++      let (state,retired) := state.retire #[token]
++      set state
++      return retired
++    set {state with nextExpiry := earlier state.nextExpiry held.deadline}
+@@ -118 +165,0 @@ def Pool.finishRead (pool : Pool) (token : String) : IO Unit := do
+-/-- An active read keeps its original cache charge even after release/expiry. -/
+@@ -123 +170 @@ def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (
+-  let held ← pool.state.atomically do
++  let descriptor ← pool.state.atomically do
+@@ -125,0 +173 @@ def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (
++    let some descriptor := state.descriptors[held.descriptor]? | throw (IO.userError "retained source descriptor missing")
+@@ -127,5 +175,5 @@ def Pool.withHeld (pool : Pool) (token scope : String) (source : PageMap.Head) (
+-        held.accepts scope source metadata do throw (IO.userError "retained source changed its scope, root or lifetime")
+-    let entries := state.entries.insert token {held with readers := held.readers+1}
+-    set {state with entries,nextExpiry := expiry entries}
+-    return held
+-  try use held.loaded .hit
++        descriptor.accepts scope source metadata do
++      throw (IO.userError "retained source changed its scope, root or lifetime")
++    set {state with entries := state.entries.insert token {held with readers := held.readers+1}}
++    return descriptor
++  try use descriptor.loaded .hit
+@@ -138 +186,2 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
+-    unless held.scope == scope do throw (IO.userError "retained source release crossed its scope")
++    let some descriptor := state.descriptors[held.descriptor]? | throw (IO.userError "retained source descriptor missing")
++    unless descriptor.scope == scope do throw (IO.userError "retained source release crossed its scope")
+@@ -139,0 +189 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
++    let state := {state with released := state.released+1}
+@@ -141,2 +191 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
+-      let entries := state.entries.insert token {held with released := true}
+-      set {state with entries,nextExpiry := expiry entries,released := state.released+1}
++      set {state with entries := state.entries.insert token {held with released := true}}
+@@ -144,5 +193,3 @@ def Pool.release (pool : Pool) (token scope : String) : IO Unit := do
+-    let entries := state.entries.erase token
+-    set {state with
+-      entries,budget := state.budget.release held.charge,nextExpiry := expiry entries,
+-      released := state.released+1}
+-    return #[held]
++    let (state,retired) := state.retire #[token]
++    set state
++    return retired
+@@ -154,5 +201,4 @@ def Pool.close (pool : Pool) : IO Unit := do
+-    let retired := state.entries.toArray.filterMap fun (_,held) => if held.readers == 0 then some held else none
+-    let entries := state.entries.filterMap fun _ held =>
+-      if held.readers == 0 then none else some {held with released := true}
+-    let amount := retired.foldl (fun total held => total+held.charge) 0
+-    set {state with closed := true,entries,budget := state.budget.release amount,nextExpiry := none}
++    let tokens := state.entries.toArray.filterMap fun (token,held) => if held.readers == 0 then some token else none
++    let (state,retired) := state.retire tokens
++    let entries := state.entries.filterMap fun _ held => some {held with released := true}
++    set {state with closed := true,entries,nextExpiry := none}
+@@ -164,2 +210,3 @@ def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
+-  return Json.mkObj [("active",toJson state.entries.size),("chargedBytes",toJson state.budget.used),
+-    ("capacity",toJson capacity),("acquired",toJson state.acquired),("released",toJson state.released),
++  return Json.mkObj [("active",toJson state.entries.size),("sharedDescriptors",toJson state.descriptors.size),
++    ("chargedBytes",toJson state.budget.used),("capacity",toJson capacity),("handleCharge",toJson handleCharge),
++    ("acquired",toJson state.acquired),("released",toJson state.released),
+@@ -168 +215,3 @@ def Pool.stats (pool : Pool) : IO Json := pool.state.atomically do
+-    ("accountedExact",toJson (state.budget.used == state.entries.fold (fun total _ held => total+held.charge) 0))]
++    ("accountedExact",toJson (state.budget.used == state.accountedBytes)),
++    ("borrowersExact",toJson (state.entries.size ==
++      state.descriptors.fold (fun total _ entry => total+entry.borrowers) 0))]
+diff --git a/Eggshell/Handoff.lean b/Eggshell/Handoff.lean
+index a87d5d91..a3b81403 100644
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -8825 +8825,2 @@ def indexedDiscoveryUsing (source : IndexedContext) (selection : Config.Selectio
+-      (prepared.source.head.identity,prepared.canonical.map (fun ready => ready.metadata.rows),prepared.canonicalFailure)))
++      (prepared.source.head.identity,prepared.canonical.map (fun ready => ready.metadata.rows),
++        prepared.canonicalFailure,prepared.failure)))
+@@ -9718,0 +9720,5 @@ def automaticHandoff (selection : Config.Selection) (current : String)
++    let unavailable := synaptic.filter (·.failure.isSome)
++    unless unavailable.isEmpty do
++      Receipt.observe (sourceContext.bind (·.receipt)) "source-acquisition-unavailable"
++        (toJson (unavailable.map fun prepared => (prepared.source.head.identity,prepared.failure)))
++      throw (IO.userError "complete source cut unavailable; acquired references are being released")

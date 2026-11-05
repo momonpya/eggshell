@@ -1,0 +1,27 @@
+diff --git a/tools/research/SessionDispatchChecks.lean b/tools/research/SessionDispatchChecks.lean
+index bdad8946..78468046 100644
+--- a/tools/research/SessionDispatchChecks.lean
++++ b/tools/research/SessionDispatchChecks.lean
+@@ -1,0 +2,4 @@ import Main
++import tools.research.DirectWaitChecks
++import tools.research.PrivatePageChecks
++import tools.research.SharedLeaseChecks
++import tools.research.HostedEndpointChecks
+@@ -102,0 +107,17 @@ def main (args : List String) : IO UInt32 := do
++  | ["hosted-endpoint-checks",root] =>
++    Eggshell.Research.HostedEndpointChecks.run (.mk root)
++    return 0
++  | ["shared-lease-checks",root] =>
++    Eggshell.Research.SharedLeaseChecks.run (.mk root)
++    return 0
++  | ["private-page-checks",root] =>
++    Eggshell.Research.PrivatePageChecks.run (.mk root)
++    Eggshell.Research.DirectWaitChecks.run ((.mk root)/"events")
++    Eggshell.Research.SessionDispatchChecks.policy
++    Eggshell.Research.SessionDispatchChecks.cancellation
++    return 0
++  | ["direct-wait-checks",root] =>
++    Eggshell.Research.DirectWaitChecks.run (.mk root)
++    Eggshell.Research.SessionDispatchChecks.policy
++    Eggshell.Research.SessionDispatchChecks.cancellation
++    return 0

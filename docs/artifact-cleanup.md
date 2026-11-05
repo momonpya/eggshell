@@ -1,5 +1,7 @@
 # 不要な実験生成物の削除
 
+2026-11-06、[共有source leaseと並行検索の隔離試験](candidates/shared-leases/README.md)後、終了済みの私有DB/cache/生logと旧実行体5本、再生成できる中間C・compiler出力を削除した。27,869件・論理810,872,003 bytes、archiveなし。実出力306件はdigest・必要項目を照合して保持し、不合格と終了処理の失敗も残した。現在の原典16headと保護入力5件は削除前後で一致し、対照・sealed client・次のprotocol診断用runtimeと必要なnative object/interfaceは保持。製品core sourceは親へ復元し、候補は採用していない。[削除集計](candidates/shared-leases/cleanup.json)、[終端検査](candidates/shared-leases/completion.json)。
+
 2026-11-06、[request-owned検索の隔離試験](candidates/session-dispatch/README.md)の終了後、68パス・49,525,208 bytesの試験DB/私有cache/受領・生log/一時build fixtureを削除した。archiveは作成していない。実出力70件は34本文に重複を除いてdigest付きで照合し、失敗とguard終端も保存した。現在の16所有者原典と次の実行段階診断に必要な対照・候補・native client/link inputsは保持した。隔離sourceは親へ復元、候補は未採用。[削除集計](candidates/session-dispatch/cleanup.json)。
 
 追加の整理で、旧ベンチのデータセットキャッシュ、旧リリース試験、重複する受領ログ、終了済み監査の実行体、ビルドの標準出力と中間Cファイルを削除した。通常ファイル7,057件、論理662,131,468 bytes。既に参照先がなかったビルド別名6,436件も除いた。アーカイブは作っていない。原典DBと対照・候補runtimeのSHAは一致し、現在のリンク対象のnative objectは全て残っている。現在調べている選択器入力と原典、短い失敗結果は保持した。[今回の集計](candidates/artifact-cleanup-current.json)。配送・速度・総トークンの改善を示す作業ではない。

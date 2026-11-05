@@ -1,0 +1,41 @@
+diff --git a/Eggshell/PublicationClient.lean b/Eggshell/PublicationClient.lean
+index 7a67c1e2..7e9dbb17 100644
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -20,0 +21,26 @@ initialize ownedServer : Std.Mutex (Option Numerical.Service) ← Std.Mutex.new
++/-- Only the service process may install its own immutable endpoint. Search
++actors in that process need no ping, startup lock or self-connection preflight. -/
++initialize hostedOwner : Std.Mutex (Option Daemon.Endpoint) ← Std.Mutex.new none
++
++def hostedAccepts (endpoint : Daemon.Endpoint) (pid : Nat) (implementation : String) : Bool :=
++  endpoint.session == "publisher" && endpoint.pid == pid && endpoint.compatible implementation
++
++theorem hosted_same_owner (endpoint : Daemon.Endpoint) (pid : Nat) (implementation : String)
++    (accepted : hostedAccepts endpoint pid implementation = true) : endpoint.pid = pid := by
++  simp only [hostedAccepts,Bool.and_eq_true,beq_iff_eq] at accepted
++  exact accepted.1.2
++
++def registerHosted (endpoint : Daemon.Endpoint) : IO Unit := do
++  unless hostedAccepts endpoint (← IO.Process.getPID).toNat (← generation) do
++    throw (IO.userError "hosted publisher is not this process and implementation")
++  hostedOwner.atomically do
++    unless (← get).isNone do throw (IO.userError "hosted publisher already installed")
++    set (some endpoint)
++
++def unregisterHosted (endpoint : Daemon.Endpoint) : IO Unit := hostedOwner.atomically do
++  let some current ← get | return
++  unless current.pid == endpoint.pid && current.port == endpoint.port &&
++      current.generation == endpoint.generation && current.secret == endpoint.secret do
++    throw (IO.userError "foreign publisher cannot retire the hosted owner")
++  set (none : Option Daemon.Endpoint)
++
+@@ -349,0 +376 @@ def resolve : IO Daemon.Endpoint := do
++  if let some endpoint ← hostedOwner.atomically get then return endpoint
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index eab052d3..46ac43a8 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -951,0 +952 @@ def run : IO UInt32 := do
++  Client.registerHosted endpoint
+@@ -1034,0 +1036 @@ def run : IO UInt32 := do
++    Client.unregisterHosted endpoint

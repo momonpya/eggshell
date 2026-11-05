@@ -1,0 +1,49 @@
+diff --git a/Eggshell/TaskDeadline.lean b/Eggshell/TaskDeadline.lean
+index 5ee05af3..dce647a1 100644
+--- a/Eggshell/TaskDeadline.lean
++++ b/Eggshell/TaskDeadline.lean
+@@ -43,0 +44,6 @@ def event (task : AsyncTask α) : IO (Selector α) := do
++/-- Register readiness in this owner. `Async.block` first starts another
++pool task; a socket/timer wait needs no such CPU worker. The caller retains
++the absolute deadline and owns cancellation of the actual IO. -/
++def awaitEvent (action : Async α) : IO α := do
++  IO.ofExcept (← IO.wait (← action.toIO))
++
+@@ -53 +59 @@ def wait (task : AsyncTask α) (deadline : Nat) : IO α := do
+-    let result ← (do
++    let result ← awaitEvent (do
+@@ -56 +62 @@ def wait (task : AsyncTask α) (deadline : Nat) : IO α := do
+-        .case timer (fun _ => pure none)]).block
++        .case timer (fun _ => pure none)])
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index 1d95345d..881f1e13 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -181 +181 @@ def peerWaiting (client : Socket.Client) : IO Bool :=
+-  (do
++  TaskDeadline.awaitEvent (do
+@@ -184 +184 @@ def peerWaiting (client : Socket.Client) : IO Bool :=
+-      .case timer (fun _ => pure true)]).block
++      .case timer (fun _ => pure true)])
+@@ -205 +205 @@ partial def receiveLive (backend : Backend) (client : Socket.Client)
+-  let chunk : Option (Option ByteArray) ← (do
++  let chunk : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
+@@ -209 +209 @@ partial def receiveLive (backend : Backend) (client : Socket.Client)
+-      .case timer (fun _ => pure none)]).block
++      .case timer (fun _ => pure none)])
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 4a8eada6..eab052d3 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -691 +691 @@ def stats (server : Server) : IO Json := server.state.atomically do
+-def peerWaiting (client : Socket.Client) : IO Bool := (do
++def peerWaiting (client : Socket.Client) : IO Bool := TaskDeadline.awaitEvent (do
+@@ -694 +694 @@ def peerWaiting (client : Socket.Client) : IO Bool := (do
+-    .case timer (fun _ => pure true)]).block
++    .case timer (fun _ => pure true)])
+@@ -736 +736 @@ partial def receiveLive (server : Server) (client : Socket.Client) (remaining de
+-  let chunk : Option (Option ByteArray) ← (do
++  let chunk : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
+@@ -739 +739 @@ partial def receiveLive (server : Server) (client : Socket.Client) (remaining de
+-      .case timer (fun _ => pure none)]).block
++      .case timer (fun _ => pure none)])

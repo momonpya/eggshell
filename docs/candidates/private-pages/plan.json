@@ -1,0 +1,29 @@
+{
+  "status": "isolated, not adopted",
+  "problem": "same shared-page pool receives about424000 hit updates per16-query wave; direct event startup alone retained3/32 evidence delivery",
+  "change": "one bounded request-owned front across all original/index readers; hits do not update the shared page table; the backing pool, certified pages and checked source cuts remain shared",
+  "bounds": {
+    "maxEncodedReferencedBytesPerRequest": 2097152,
+    "maxReferencesPerRequest": 512,
+    "existingMaxRequests": 160,
+    "aggregateRssStopKiB": 3670016,
+    "minFreeKiB": 2097152
+  },
+  "scope": "front stores references to already checked decoded pages, not another DB or model copy; encoded-byte bounds are not a complete heap bound",
+  "unchanged": [
+    "whole original/certification domain",
+    "vector/rank/synapse rules",
+    "hook and semantic cutoffs",
+    "source ownership",
+    "response allowance"
+  ],
+  "tests": [
+    "Lean byte/slot and reference lookup laws",
+    "independent fronts reject scope/ref changes",
+    "pressure eviction stays bounded",
+    "existing native event, session, cancellation checks",
+    "same32 synthetic queries with actual body+ACK and per-request front counters",
+    "only if98 percent semantic+evidence pass, three fixed alternating eighty-client parent/candidate pairs"
+  ],
+  "gate": "do not advance to model trials on a failed smoke test; strict matched inclusive-token/quality adoption remains0/18"
+}
