@@ -85,6 +85,9 @@ def main (args : List String) : IO Unit := do
     unless !(← path.pathExists) do throw (IO.userError "preserve native source comparison")
     let (oldEntry,old) ← sourceWitnesses (.mk parent)
     let (newEntry,current) ← sourceWitnesses (.mk candidate)
+    let additions := allowed.filterMap fun name =>
+      if name.startsWith "+" then some (name.drop 1 |>.toString) else none
+    let allowed := allowed.filter fun name => !name.startsWith "+"
     let mut changed := #[]
     let mut removed := #[]
     let mut added := #[]
@@ -117,7 +120,8 @@ def main (args : List String) : IO Unit := do
           -- Accept only the exact before/after bytes of a declared change.
           unless expectedLiterals.contains (left.2,right.2) do literalsApproved := false
       if !paths.isEmpty then literalContainers := literalContainers.push (name,paths)
-    let ok := removed.isEmpty && added.isEmpty && direct.size == allowed.length &&
+    let ok := removed.isEmpty && added.size == additions.length && added.all (additions.contains ·) &&
+      direct.size == allowed.length &&
       direct.all (allowed.contains ·) && literalsApproved
     let runtimeHash (directory : String) : IO String := do
       let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",directory++"/StudyMain"]}
@@ -129,7 +133,8 @@ def main (args : List String) : IO Unit := do
       ("changedSourcesAndLiteralInputs",toJson (changed.qsort (· < ·))),
       ("directSourceChanges",toJson (direct.qsort (· < ·))),("literalContainers",toJson literalContainers),
       ("literalChangesExactlyMatchDeclaredSourceBytes",toJson literalsApproved),
-      ("removed",toJson removed),("added",toJson added),("exactExpectedChangeSet",toJson ok)]).pretty
+      ("removed",toJson removed),("added",toJson added),("declaredAddedModules",toJson additions),
+      ("exactExpectedChangeSet",toJson ok)]).pretty
     unless ok do throw (IO.userError "native source comparison changed more than the declared candidate")
     return
   if let ["inspect",build,output] := args then

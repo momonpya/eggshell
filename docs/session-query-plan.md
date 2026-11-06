@@ -220,3 +220,14 @@ FAISS's official documentation describes concurrent CPU-index searches and
 batching as supported execution patterns. That is an architectural reference,
 not an Eggshell performance measurement or a proposal to replace its DB:
 [Threads and asynchronous calls](https://github.com/facebookresearch/faiss/wiki/Threads-and-asynchronous-calls).
+
+The owner-metadata-image candidate now captures checked immutable owner values
+after the existing query reservation,then reads them directly in palette
+rendering and source selection. Pure lookup laws and an actual-selector audit
+pass;native reads complete while the originating cache mutex remains held.
+The32 ordinary hooks preserve every parent stdout byte and complete semantic
+delivery;max8,828ms,related RSS2,698,336KiB. This single control establishes
+behavior preservation,not a measured performance or token improvement.
+File-header/page/lease/admission synchronization remains separate. The80-hook
+memory failure is unresolved;do not repeat unchanged80 traffic or increase
+the guard. Product adoption and real98% evidence delivery remain open.

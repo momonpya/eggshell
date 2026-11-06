@@ -135,4 +135,6 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 [メモリ内訳の診断](docs/candidates/working-set/README.md)では同じsealed runtime/clientの成功条件16並行を1回観測した。共有hostのphysical footprint682.2MiB時に実スタックは2304KiBであり、スレッドの仮想予約99〜108GiBをRAM消費と混同しない。主領域はmimallocの匿名mappingと整合する。host RSSはprime後174496→1波後661744→2波後919184KiBと増え、各時点でactive actor/request bytes/palette使用は0、prepared-source16件/8MiB/page86件は不変だった。全cacheや保持taskの内訳までは測れていない。観測clientはexit0/32配送成功だったが、観測器が終了したchildを二重waitしてexit1になった。記録を保持し、モデル負荷を再実行して失敗を隠していない。次は生きたquery状態とallocatorの保持領域を分け、canonical-sourceの不要な共有hit更新も除く。既存の根拠98%/80人8時間・増大project/NAS・品質/tokenの合格条件は変えない。
 
+[所有者メタデータを不変viewへ固定する候補](docs/candidates/owner-metadata-image/README.md)を追加した。初回の全量byte計数と既存の問い合わせ予約の後に検証済み値への参照を保持し、描画・選択中の共有cache再取得/borrower/LRU更新を純粋なscope付きlookupへ置き換えた。値の挿入・別ID拒否・他owner保持のLean lawと、実selectorの接続監査が通った。元cacheのMutexを保持中に4096lookupを完了するnative検査も通った。実16並行×2波は32/32原文+ACK・32/32意味完了、親と全32stdout byte一致、最大8828ms・関連RSS2698336KiB。251→252 native moduleの差は予定した3既存sourceと新しい不変imageだけだった。既存128MiB問い合わせ予約と期限は拡大していない。file-header/page/lease/受付/解放の同期は別途残り、読み取り全体のlock-freeや80人達成とは扱わない。本体未採用、回答モデル0/有料比較0/18、80負荷の再実行なし。保持メモリの原因分離は未完了である。
+
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。

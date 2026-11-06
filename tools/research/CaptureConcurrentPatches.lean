@@ -20,6 +20,15 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["owner-metadata-image"] then
+    check (!(← (workspace/"docs/candidates/owner-metadata-image/candidate.patch").pathExists)) "owner metadata image patch already sealed"
+    save "owner-metadata-image" ((#["Eggshell/PublicationService.lean","Eggshell/ContractAudit.lean",
+      "tools/research/SharedReadViews.lean"] : Array String).map fun (relative : String) =>
+      (base/"owner-metadata-image-parent-core"/relative,core/relative,relative))
+    let output := workspace/"docs/candidates/owner-metadata-image/candidate.patch"
+    IO.FS.writeFile output ((← IO.FS.readFile output)++(← patch "/dev/null"
+      (core/"tools/research/OwnerMetadataImage.lean") "tools/research/OwnerMetadataImage.lean"))
+    return
   if arguments == ["immutable-deadline"] then
     check (!(← (workspace/"docs/candidates/immutable-deadline/candidate.patch").pathExists)) "immutable deadline patch already sealed"
     save "immutable-deadline" ((#["Eggshell/OperationWire.lean","Eggshell/PublicationClient.lean",

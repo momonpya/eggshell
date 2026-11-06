@@ -1,0 +1,133 @@
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 46ac43a8..5e87d1b4 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -269,4 +269,7 @@ def sourcePalette (server : Server) (secret : String) (payload : Json) (deadline
+-      let mut values := #[]
+-      for owner in owners do
+-        let json ← loaded.withMetadata owner deadline (fun ready => pure ready.json)
+-        values := values.push (Json.arr #[toJson owner,json])
++      let values ← server.palettes.withView lease scope.scope fun view => do
++        let some captured := view.sources[0]? | throw (IO.userError "original palette has no captured source")
++        let mut values := #[]
++        for owner in owners do
++          let ready ← IO.ofExcept (captured.readMetadata owner)
++          values := values.push (Json.arr #[toJson owner,ready.json])
++        return values
+@@ -356,3 +359,2 @@ def sourcePalettes (server : Server) (secret : String) (payload : Json) (deadlin
+-      sources := sources.push ({
+-        scope := request.access.scope,source := request.access.source,
+-        loaded,owners := Std.HashSet.ofArray request.owners} : SharedReadViews.Source)
++      sources := sources.push (← SharedReadViews.Source.capture request.access.scope
++        request.access.source loaded request.owners deadline)
+@@ -365,2 +367,2 @@ def sourcePalettes (server : Server) (secret : String) (payload : Json) (deadlin
+-          let value ← entry.loaded.withMetadata owner deadline (fun ready => pure ready.json)
+-          owners := owners.push (Json.arr #[toJson owner,value])
++          let ready ← IO.ofExcept (entry.readMetadata owner)
++          owners := owners.push (Json.arr #[toJson owner,ready.json])
+@@ -443 +445 @@ def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline :
+-          let ready ← entry.loaded.withMetadata file.owner deadline pure
++          let ready ← IO.ofExcept (entry.readMetadata file.owner)
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 134430cf..7355792b 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -1,0 +2 @@ module
++public import Eggshell.PublicationService
+@@ -2216,0 +2218,14 @@ example : Eggshell.Plugin.OperationPlan.maxRequests = Eggshell.Numerical.maxClie
++#check Eggshell.Synapses.OwnerMetadataImage.Image.insert_same
++#check Eggshell.Synapses.OwnerMetadataImage.Image.foreign_rejected
++#check Eggshell.Synapses.OwnerMetadataImage.Image.insert_other
++#check Eggshell.Synapses.SharedReadViews.Source.metadata_lookup
++
++run_elab do
++  let environment ← Lean.getEnv
++  let some declaration := environment.find? ``Eggshell.Plugin.Publication.Service.sourcePlan |
++    throwError "Missing source selector"
++  let some body := declaration.value? | throwError "Missing source selector body"
++  unless body.getUsedConstants.contains ``Eggshell.Synapses.SharedReadViews.Source.readMetadata do
++    throwError "Selector bypasses immutable owner metadata"
++  if body.getUsedConstants.contains ``Eggshell.Synapses.CanonicalSource.Shared.Loaded.withMetadata then
++    throwError "Selector reacquires the shared owner metadata cache"
+diff --git a/tools/research/SharedReadViews.lean b/tools/research/SharedReadViews.lean
+index fa3267d1..a8ae8744 100644
+--- a/tools/research/SharedReadViews.lean
++++ b/tools/research/SharedReadViews.lean
+@@ -2,0 +3 @@ public import Eggshell.CanonicalSourcePrepared
++public import tools.research.OwnerMetadataImage
+@@ -18,0 +20,20 @@ structure Source where
++  metadata : OwnerMetadataImage.Image
++
++/-- Called only after the complete query-view reservation. Values are shared
++immutable references; later reads cannot reenter the metadata-cache owner. -/
++def Source.capture (scope : String) (source : PageMap.Head)
++    (loaded : CanonicalSource.Shared.Loaded) (owners : Array String) (deadline : Nat) : IO Source := do
++  let mut metadata : OwnerMetadataImage.Image := ⟨loaded.identity,{}⟩
++  for owner in owners do
++    let ready ← loaded.withMetadata owner deadline pure
++    metadata := metadata.insert owner ready
++  return ⟨scope,source,loaded,Std.HashSet.ofArray owners,metadata⟩
++
++def Source.readMetadata (source : Source) (owner : String) : Except String PreparedSourceView.OwnerReady :=
++  PreparedSourceView.requireSome (source.metadata.lookup? source.loaded.identity owner)
++    "owner metadata is outside the pinned view"
++
++theorem Source.metadata_lookup (source : Source) (owner : String) :
++    source.readMetadata owner =
++      PreparedSourceView.requireSome (source.metadata.lookup? source.loaded.identity owner)
++        "owner metadata is outside the pinned view" := rfl
+@@ -107,2 +128,9 @@ def Pool.acquire (pool : Pool) (scope : String) (source : PageMap.Head)
+-    (loaded : CanonicalSource.Shared.Loaded) (owners : Array String) (wireBytes deadline : Nat) : IO String :=
+-  pool.acquireMany scope #[⟨scope,source,loaded,Std.HashSet.ofArray owners⟩] wireBytes deadline
++    (loaded : CanonicalSource.Shared.Loaded) (owners : Array String) (wireBytes deadline : Nat) : IO String := do
++  let token ← pool.reserve scope wireBytes deadline
++  try
++    let captured ← Source.capture scope source loaded owners deadline
++    pool.attach token scope #[captured]
++    return token
++  catch error =>
++    pool.state.atomically (modify fun state => {state with active := state.active.erase token})
++    throw error
+diff --git a/tools/research/OwnerMetadataImage.lean b/tools/research/OwnerMetadataImage.lean
+new file mode 100644
+index 00000000..063d3fb5
+--- /dev/null
++++ b/tools/research/OwnerMetadataImage.lean
+@@ -0,0 +1,37 @@
++module
++public import tools.research.PreparedSourceView
++public import Std.Data.HashMap.Lemmas
++@[expose] public section
++
++namespace Eggshell.Synapses.OwnerMetadataImage
++open Lean
++
++/-- Immutable references captured after query-view admission. No cache owner,
++promise, mutable reference, mutex or CAS capability is present in this value. -/
++structure Image where
++  identity : String
++  values : Std.HashMap String PreparedSourceView.OwnerReady := {}
++
++def Image.lookup? (image : Image) (identity owner : String) : Option PreparedSourceView.OwnerReady :=
++  if identity = image.identity then image.values[owner]? else none
++
++def Image.insert (image : Image) (owner : String) (ready : PreparedSourceView.OwnerReady) : Image :=
++  {image with values := image.values.insert owner ready}
++
++theorem Image.insert_same (image : Image) (owner : String) (ready : PreparedSourceView.OwnerReady) :
++    (image.insert owner ready).lookup? image.identity owner = some ready := by
++  simp [insert,lookup?]
++
++theorem Image.foreign_rejected (image : Image) (identity owner : String)
++    (different : identity ≠ image.identity) : image.lookup? identity owner = none := by
++  simp [lookup?,different]
++
++theorem Image.insert_other (image : Image) (owner other : String) (ready : PreparedSourceView.OwnerReady)
++    (different : owner ≠ other) :
++    (image.insert owner ready).lookup? image.identity other = image.lookup? image.identity other := by
++  simp [insert,lookup?,Std.HashMap.getElem?_insert,different]
++
++theorem Image.lookup_is_read (image : Image) (identity owner : String) :
++    image.lookup? identity owner = (if identity = image.identity then image.values[owner]? else none) := rfl
++
++end Eggshell.Synapses.OwnerMetadataImage
