@@ -29,6 +29,10 @@
 
 ## 現在地と次の順序
 
+[検査済みの不変source境界を使う隔離候補](docs/candidates/read-boundary/README.md)で、読み取り時に同じ登録を繰り返しロックする経路を除いた。従来は16 sourceのimage missで最大64回、hitで32回だったregistry取得を入口の1回にまとめ、以後は型でrequest/registryに結び付いたBindingを使う。登録の追記で選択が変わらないこと、所属・scope/capability・要求順序をLeanで証明した。実入口の1回取得、後続3120依存のregistry再取得不使用、純粋認証916依存の同期不使用、既存1953依存と通常ContractAuditが通る。registry mutexを保持したまま80 readerの実prepared source参照が1msで完了し、親の認証32比較も一致した。これは3 sourceの部品試験で、全検索のlock-freeや80全検索の成功ではない。登録・pin/解放・共有寿命等の可変状態同期と、全Head/manifest/scope/retained token/期限の検査は維持する。
+
+同じ16原典・MiniLM・質問・設定・sealed clientの16並行×2波は意味完了/両必須原文/ACK32/32、prime込み35 stdoutが親と全文byte一致した。時間min/median/max5575/6746/7705ms、関連最大RSS2818784KiB、frontend/publisher exit0、guard介入/残存なし。時間差は混在しており、全体の高速化やp99/80人容量の改善を断定しない。257 native objectと直接製品差分1箇所/追加module2つ/正確な埋込source差を照合した。終了DB/cache/生logをarchiveせず削除し、16完全headと5保護原典を確認した。本体未採用・回答モデル0・有料比較0/18。新しい80全検索へ進まず、不変viewの共有を維持したままhost保持と要求ごとの一時graph寿命の切り分けを続ける。80人8時間/増大project/NAS/実98%/品質/総token改善は未達でgoal active。
+
 [host保持の領域を切り分ける診断](docs/candidates/heap-ownership/README.md)を行った。前turnは不変viewの実共有でprogress。今回は同じnative実行体・client・16原典・32問で任意の詳細traceだけを無効にした対照でもhostが179920→667824→891312KiBへ増え、trace主因の仮説は支持されなかった。32/32意味完了/必須原文/ACK、prime込み35 stdoutが親とbyte一致。次に既存mimalloc223の診断APIを、Leanの制御/解析と最小のC ABI接続で観測した。終了したOS threadの16MiB payloadを保持すると20976640 bytes、解放後は割当0となる正負対照が先に通った。解放後も領域の帳簿は約20MiBを報告し、これを生存量とみなせないことも実測した。実serviceの統計取得時だけのcensusでは、host178304→661072→855280KiBに対し、終了thread由来領域のcommitは17201072/16491712/22075072 bytes、割当は2724208/2480304/6607664 bytes、全数走査は完了、3/3/4msだった。この領域だけではhostの大半を説明できない。残りがlive graphだとは断定せず、次は存命のnative I/O完了threadが持つ割当と、空いたallocator arenaの保持を区別する。
 
 観測候補の同じ32検索も意味/必須原文/ACK32/32、prime込み35全文が親とbyte一致、5732/6601/7594msのmin/median/max、関連最大RSS2747440KiB、frontend/publisher exit0、guard介入/残存なし。censusは診断用optionと遅延free整理を伴うため製品の性能改善とは扱わない。allocatorのpolicy/強制回収/worker/順位/認定domain/30秒/資源枠は変更せず、80全検索の再試行/回答LLM投入なし・本体未採用・有料比較0/18。全native依存とC adapterのSHA、初期のproduct source無変更対照、実serviceの観測差分を照合した。終了DB/cache/log、観測専用build/sourceと不要な旧finalizer実行体をarchiveせず削除した。80人8時間/増大project/NAS/実98%/品質/総token改善は未達でgoal active。

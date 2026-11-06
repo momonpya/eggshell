@@ -1,0 +1,69 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -13,0 +14 @@
++public import tools.research.ReadBoundary
+@@ -45,6 +46 @@
+-structure ReadSource where
+-  directory : System.FilePath
+-  database : String
+-  storage : Sidecar.Storage
+-  scope : String
+-  capability : String
++abbrev ReadSource := ReadBoundary.Source
+@@ -314,0 +311,7 @@
++/-- Capture the append-only registry once, before any source load or wait.
++Subsequent reads use proof-carrying bindings, never the mutable registry. -/
++def authorizeBatch (server : Server) (secret : String) (requests : Array SourceViewBatch.Request) :
++    IO (ReadBoundary.Batch secret requests) := do
++  let sources ← server.sources.atomically get
++  IO.ofExcept (ReadBoundary.prepare sources secret requests)
++
+@@ -316,16 +319 @@
+-  let some first := requests[0]? | throw (IO.userError "original batch has no read scope")
+-  unless requests.size ≤ 4096 && secret == first.access.capability &&
+-      requests.foldl (fun total part => total+part.owners.size) 0 ≤ 65536 do
+-    throw (IO.userError "invalid original batch bounds or capability")
+-  for request in requests do
+-    let scope ← scopedSource server request.access.capability (Json.mkObj [
+-      ("database",toJson request.access.database),("scope",toJson request.access.scope)])
+-    unless request.owners.size ≤ 4096 && request.owners.all (fun owner => owner.utf8ByteSize ≤ 256) &&
+-        request.access.source.identity == scope.database && request.access.metadata.source.identity == scope.database &&
+-        request.access.metadata.implementation == CanonicalSource.Cache.implementation && digest request.access.metadata.payload do
+-      throw (IO.userError "original batch crossed its prepared read scope")
+-    if let some focus := request.focus then
+-      unless focus.question.utf8ByteSize ≤ Stream.maxBytes && focus.rows.size ≤ request.owners.size &&
+-          focus.rows.all (fun row => request.owners.contains row.owner && row.work.utf8ByteSize ≤ 256 && row.windows.all digest) &&
+-          focus.rows.foldl (fun n row => n+row.windows.length+row.semantic.length) 0 ≤ 65536 do
+-        throw (IO.userError "prepared focus exceeds the admitted original batch")
++  discard <| authorizeBatch server secret requests
+@@ -338 +326 @@
+-def withBatchSource (server : Server) (request : SourceViewBatch.Request) (deadline : Nat)
++def withBatchSource (server : Server) (entry : ReadBoundary.Entry sources) (deadline : Nat)
+@@ -340,4 +328,2 @@
+-  let access := request.access
+-  let scope ← scopedSource server access.capability (Json.mkObj [
+-    ("database",toJson access.database),("scope",toJson access.scope)])
+-  withPreparedSource server scope access.source access.metadata request.retained deadline use
++  let request := entry.request
++  withPreparedSource server entry.binding.source request.access.source request.access.metadata request.retained deadline use
+@@ -350 +336 @@
+-  checkBatchRequests server secret requests
++  let authorized ← authorizeBatch server secret requests
+@@ -356,2 +342,2 @@
+-  for request in requests do
+-    withBatchSource server request deadline (fun _ _ => pure ())
++  for entry in authorized.entries do
++    withBatchSource server entry deadline (fun _ _ => pure ())
+@@ -365 +351,2 @@
+-    for request in requests do
++    for entry in authorized.entries do
++      let request := entry.request
+@@ -371 +358 @@
+-        withBatchSource server request deadline fun loaded reuse => do
++        withBatchSource server entry deadline fun loaded reuse => do
+@@ -387,2 +374,3 @@
+-        for request in requests do
+-          let loaded ← withBatchSource server request deadline (fun loaded _ => pure loaded)
++        for entry in authorized.entries do
++          let request := entry.request
++          let loaded ← withBatchSource server entry deadline (fun loaded _ => pure loaded)

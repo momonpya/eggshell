@@ -188,11 +188,11 @@ def inspectRetained : IO Unit := do
     ("publisherExit",summary.getObjValD "publisherExit"),("hostRssKiB",toJson hosts),
     ("snapshots",toJson snapshots)]).compress
 
-def recordQuiet (tag : String) (census : Bool := false) : IO Unit := do
+def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap-ownership") : IO Unit := do
   drained
-  let destination := if census then workspace/"docs/candidates/heap-ownership" else study
+  let destination := if census then workspace/"docs/candidates"/scope else study
   let recordName := if census then "evidence.json" else "quiet-result.json"
-  check (tag == (if census then "heap-ownership-cohort1" else "shared-view-quiet1") &&
+  check (tag == (if census then scope++"-cohort1" else "shared-view-quiet1") &&
     !(← (destination/recordName).pathExists)) "preserve the fixed diagnostic control"
   let root := base/(tag++"-result")
   let report ← read (root/"report.json")
@@ -338,6 +338,7 @@ def main (args : List String) : IO Unit := do
   | ["inspect"] => inspectRetained
   | ["record-quiet",tag] => recordQuiet tag
   | ["record-heap",tag] => recordQuiet tag true
+  | ["record-scope",tag,scope] => recordQuiet tag true scope
   | ["verify-memory-controls"] => verifyMemoryControls
   | ["retire-derived"] => retireDerived
   | _ => throw (IO.userError "prepare | setup ACTION TAG")

@@ -1,0 +1,55 @@
+--- a/tools/research/SharedViewChecks.lean
++++ b/tools/research/SharedViewChecks.lean
+@@ -3,0 +4 @@
++import tools.research.ReadBoundaryChecks
+@@ -28,0 +30,48 @@
++#print axioms ReadBoundary.Binding.member
++#print axioms ReadBoundary.Binding.scope_exact
++#print axioms ReadBoundary.Binding.capability_exact
++#print axioms ReadBoundary.lookup_append
++#print axioms ReadBoundary.Binding.extend_same_source
++#print axioms ReadBoundary.Batch.request_order
++#print axioms ReadBoundary.Batch.registered
++
++private def occurrences (target : Name) : Expr → Nat
++  | .const name _ => if name == target then 1 else 0
++  | .app f x => occurrences target f + occurrences target x
++  | .lam _ type body _ | .forallE _ type body _ => occurrences target type + occurrences target body
++  | .letE _ type value body _ => occurrences target type + occurrences target value + occurrences target body
++  | .mdata _ value | .proj _ _ value => occurrences target value
++  | _ => 0
++
++run_cmd do
++  let environment ← getEnv
++  let body (name : Name) := do
++    let some value := (environment.find? name).bind (·.value?) | throwError "missing boundary implementation {name}"
++    pure value
++  unless occurrences ``Std.Mutex.atomically (← body ``authorizeBatch) == 1 &&
++      occurrences ``authorizeBatch (← body ``readSourceViews) == 1 do
++    throwError "ordinary read no longer captures exactly one source registry boundary"
++  unless (← body ``authorizeBatch).getUsedConstants.contains ``ReadBoundary.prepare &&
++      (← body ``readSourceViews).getUsedConstants.contains ``withBatchSource do
++    throwError "ordinary read is disconnected from proof-carrying authorization"
++  let mut pending := [``withBatchSource]
++  let mut seen : Std.HashSet Name := {}
++  while let some name := pending.head? do
++    pending := pending.tail!
++    if seen.contains name then continue
++    seen := seen.insert name
++    if name == ``Server.sources || name == ``scopedSource || name == ``authorizeBatch then
++      throwError "bound source read reacquires mutable registration {name}"
++    if let some value := (environment.find? name).bind (·.value?) then
++      pending := value.getUsedConstants.toList ++ pending
++  let mut purePending := [``ReadBoundary.prepare,``ReadBoundary.resolve,``ReadBoundary.Binding.extend]
++  let mut pureSeen : Std.HashSet Name := {}
++  while let some name := purePending.head? do
++    purePending := purePending.tail!
++    if pureSeen.contains name then continue
++    pureSeen := pureSeen.insert name
++    if ["Std.Mutex.","IO.Ref.","IO.Promise.","IO.asTask","IO.wait"].any (fun stem => name.toString.startsWith stem) then
++      throwError "pure immutable authorization reaches synchronization {name}"
++    if let some value := (environment.find? name).bind (·.value?) then
++      purePending := value.getUsedConstants.toList ++ purePending
++  logInfo m!"Bound source path: one registry capture; {seen.size} dependencies never reopen it; {pureSeen.size} authorization dependencies have no synchronization"
+@@ -276,0 +326 @@
++    Eggshell.Research.ReadBoundaryChecks.run server requests root
