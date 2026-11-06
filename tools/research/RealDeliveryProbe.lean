@@ -1,3 +1,5 @@
+import Main
+import Eggshell.ContractAudit
 import tools.research.StudyRuntime
 import tools.research.StudyAdmission
 import tools.research.StudyCommand
@@ -230,10 +232,11 @@ structure Probe where
   pluginRoot : String
   topic : Nat
   destination : String
+  captureReply : Bool := true
   deriving FromJson
 
-/-- One instrumented transport diagnosis, sharing only the already prepared
-project source. It is not a retry of the six-cell acceptance study. -/
+/-- Fresh chat, sharing only the already prepared project source. Explicit
+capture is reserved for transport diagnosis, never the normal delivery check. -/
 private def diagnose (probe : Probe) : IO Unit := do
   StudyAdmission.verifyArtifact probe.originalInput
   StudyAdmission.verifyArtifact probe.runtime
@@ -256,7 +259,8 @@ private def diagnose (probe : Probe) : IO Unit := do
     ("EGGSHELL_DATA_ROOT",some (root/"data").toString),("TMPDIR",some (root/"tmp").toString),
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
     ("EGGSHELL_PREFIX",some (System.FilePath.mk probe.runtime.path).parent.get!.parent.get!.toString),
-    ("PLUGIN_ROOT",some probe.pluginRoot),("EGGSHELL_RESEARCH_REPLY_FOOTPRINT",some "1")]
+    ("PLUGIN_ROOT",some probe.pluginRoot),
+    ("EGGSHELL_RESEARCH_REPLY_FOOTPRINT",if probe.captureReply then some "1" else none)]
   let sourceFiles ← StudyRuntime.files (root/"work.egg")
   check (toJson sourceFiles == sealed.getObjValD "sourceFiles") "diagnostic original changed before admission"
   let publisher ← StudyRuntime.startPublisher (.mk probe.runtime.path) (root/"data") environment
@@ -266,7 +270,7 @@ private def diagnose (probe : Probe) : IO Unit := do
     let current ← DB.PageMap.pin (root/"work.egg")
     discard <| IO.ofExcept (StudyWarm.decode warmed.stdout #[(root/"work.egg").toString] #[current.head]
       MiniLM.model SearchProvider.encoderContract true)
-    let session := s!"reply-footprint-topic-{probe.topic}"
+    let session := "real-source-" ++ Sha256.hex cell.toString.toUTF8
     let managed ← StudyRuntime.startManaged (.mk probe.runtime.path) (.mk probe.pluginRoot) session
       (root/"data/daemon.json") environment
     try
@@ -299,7 +303,7 @@ private def diagnose (probe : Probe) : IO Unit := do
         if witnessesBefore.contains name then continue
         let path := witnessRoot/name
         witnesses := witnesses.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson (← ArtifactHash.hex path))])
-      check (witnesses.size == 1) "diagnostic did not capture one actual actor reply"
+      check (witnesses.size == (if probe.captureReply then 1 else 0)) "unexpected raw actor-reply capture"
       save (cell/"result.json") (Json.mkObj [("diagnosticOnly",toJson true),("topic",toJson topic.topic),
         ("runtime",toJson probe.runtime),("sourceFiles",toJson sourceFiles),("hookMs",toJson hook.elapsedMs),
         ("availableDelivery",audit.getObjValD "availableDelivery"),("witnesses",toJson witnesses),
@@ -308,10 +312,57 @@ private def diagnose (probe : Probe) : IO Unit := do
   finally StudyRuntime.stopManaged publisher (cell/"publisher-shutdown.json")
   check ((← StudyRuntime.files (root/"work.egg")) == sourceFiles) "diagnostic modified the original DB"
 
+structure Cells where
+  output : String
+  probes : Array Probe
+  deriving FromJson
+
+/-- Same frozen source, runtime and questions, with independent chat claims.
+These are model-free delivery controls, not history-bearing model cycles. -/
+private def cells (input : Cells) : IO Unit := do
+  let root : System.FilePath := .mk input.output
+  check (root.isAbsolute && !(← root.pathExists)) "fresh delivery-cell result root required"
+  check (input.probes.map (·.topic) == #[1,1,2,2,3,3] && input.probes.all (! ·.captureReply))
+    "all six uninstrumented frozen delivery cells required"
+  let some first := input.probes[0]? | throw (IO.userError "missing cell")
+  check (input.probes.all (fun probe => toJson probe.runtime == toJson first.runtime && toJson probe.originalInput == toJson first.originalInput &&
+      probe.pluginRoot == first.pluginRoot && (System.FilePath.mk probe.destination).parent == some root) &&
+    (input.probes.map (·.destination)).toList.eraseDups.length == 6) "delivery cells changed treatment or duplicated a chat"
+  IO.FS.createDirAll root
+  let mut rows := #[]
+  for probe in input.probes do
+    let error ← try diagnose probe; pure none catch error => pure (some error.toString)
+    let path := System.FilePath.mk probe.destination/"result.json"
+    let row ← if ← path.pathExists then json path else pure (Json.mkObj [("topic",toJson probe.topic),("error",toJson error)])
+    rows := rows.push row
+    save (root/"progress.json") (toJson rows)
+    if let some error := error then throw (IO.userError error)
+    check ((row.getObjValD "availableDelivery").getObjValD "targetMet" == toJson true &&
+      (row.getObjValAs? Nat "hookMs").toOption.any (· < 30000)) "actual delivery cell missed its frozen evidence or deadline"
+  save (root/"result.json") (Json.mkObj [("cells",toJson rows),("allSixPassed",toJson true),
+    ("historyBearingModelCycles",toJson false),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+
 end RealDeliveryProbe
 
 def main (args : List String) : IO Unit := do
   let [operation,path] := args | throw (IO.userError "RealDeliveryProbe freeze|run INPUT")
+  if operation == "internal-audit" then
+    let input ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))
+    let specPath ← IO.ofExcept (input.getObjValAs? String "sourceSpec")
+    let body ← IO.ofExcept (input.getObjValAs? String "body")
+    let digest ← IO.ofExcept (input.getObjValAs? String "sha256")
+    let destination ← IO.ofExcept (input.getObjValAs? String "output")
+    unless !(← (System.FilePath.mk destination).pathExists) do throw (IO.userError "preserve internal body audit")
+    let spec ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk specPath)))
+    let replayed ← NativeTrialAudit.replayAvailable spec body digest
+    let fields := ["source","bodySha256","frozenEvidence","requiredDelivery","availableEvidence","availableDelivery"]
+    IO.FS.writeFile (.mk destination) (Json.mkObj ((fields.map fun key => (key,replayed.getObjValD key)) ++
+      [("scope",toJson "internal actor body before transport, not actual delivery"),
+       ("actualHookCalls",toJson (0 : Nat)),("answeringModelCalls",toJson (0 : Nat))])).pretty
+    return
+  if operation == "cells" then
+    RealDeliveryProbe.cells (← IO.ofExcept (fromJson? (← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path))))))
+    return
   if operation == "probe" then
     RealDeliveryProbe.diagnose (← IO.ofExcept (fromJson? (← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path))))))
     return

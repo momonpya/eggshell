@@ -1,0 +1,64 @@
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -9,0 +10 @@
++public import tools.research.CompactSearchWire
+@@ -202,21 +202,0 @@
+-/-- Valid empty memory and an unavailable operation remain distinct on the wire.
+-Search status is scheduling metadata and grants no completion authority. -/
+-structure SearchReply where
+-  handoff : Option Handoff
+-  trace : SearchTrace
+-  deriving ToJson, FromJson
+-
+-def SearchReply.decode (response : Option Json) : Option SearchReply :=
+-  response.bind fun value => (fromJson? value : Except String SearchReply).toOption
+-
+-theorem absent_transport_is_not_reply : SearchReply.decode none = none := rfl
+-
+-/-- Every search frame belongs to one native invocation, including its original
+-deadline. Progress changes scheduling only; it has no Handoff payload. -/
+-abbrev SearchIdentity := OperationWire.Identity
+-
+-inductive SearchFrame where
+-  | ready (identity : SearchIdentity)
+-  | reply (identity : SearchIdentity) (handoff : Option Handoff)
+-  deriving ToJson, FromJson
+-
+@@ -703,0 +684,37 @@
++/-- Already decoded replies retain the exact publication policy without
++constructing and parsing a second full original-evidence JSON graph. -/
++def SearchDelivery.ofDecoded (stamp : RequestStamp) (turn : String) (epoch now budget : Nat)
++    (reply : Option (Option Handoff)) : SearchDelivery stamp turn epoch now budget :=
++  if currentTurn : stamp.turn = turn then
++    if currentEpoch : stamp.epoch = epoch then
++      if accepted : stamp.accepts turn epoch now = true then
++        match reply with
++        | none => .incomplete currentTurn currentEpoch
++        | some none => .empty accepted
++        | some (some handoff) =>
++          if fits : handoff.text.length ≤ budget ∧ handoff.text.utf8ByteSize ≤ Config.nativeHandoffBytes then
++            .found accepted handoff fits.1 fits.2
++          else .incomplete currentTurn currentEpoch
++      else .incomplete currentTurn currentEpoch
++    else .obsolete
++  else .obsolete
++
++theorem decoded_delivery_same_policy (stamp : RequestStamp) (turn : String) (epoch now budget : Nat)
++    (reply : Option Json) :
++    SearchDelivery.ofReply stamp turn epoch now budget reply =
++      SearchDelivery.ofDecoded stamp turn epoch now budget
++        (reply.bind fun json => (fromJson? json : Except String (Option Handoff)).toOption) := by
++  by_cases currentTurn : stamp.turn = turn
++  · by_cases currentEpoch : stamp.epoch = epoch
++    · by_cases accepted : stamp.accepts turn epoch now = true
++      · cases reply with
++        | none => simp [SearchDelivery.ofReply,SearchDelivery.ofDecoded,currentTurn,currentEpoch,accepted]
++        | some json =>
++          cases parsed : (fromJson? json : Except String (Option Handoff)) with
++          | error error => simp [SearchDelivery.ofReply,SearchDelivery.ofDecoded,currentTurn,currentEpoch,accepted,parsed,Except.toOption]
++          | ok value =>
++            cases value <;> simp [SearchDelivery.ofReply,SearchDelivery.ofDecoded,currentTurn,currentEpoch,accepted,parsed,Except.toOption]
++      · simp [SearchDelivery.ofReply,SearchDelivery.ofDecoded,currentTurn,currentEpoch,accepted]
++    · simp [SearchDelivery.ofReply,SearchDelivery.ofDecoded,currentTurn,currentEpoch]
++  · simp [SearchDelivery.ofReply,SearchDelivery.ofDecoded,currentTurn]
++

@@ -1,0 +1,11 @@
+The first pipe control selected the retired path:
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-wire/Fixture
+
+That executable was absent, independently confirmed by ls. Spawned pipe peers
+exited before an exchange, producing broken-pipe reports and:
+uncaught exception: search reply changed its exact original payload or valid empty result
+
+No protocol success is claimed for compact-reply-wire1 (exit 1, residual 0).
+The controller now checks the peer exists before any actor is spawned. A fresh
+Lean peer from the same SearchReadWire.lean source was built under its guard;
+compact-reply-wire2 then passed all 240 exchanges and 1440 policy comparisons.

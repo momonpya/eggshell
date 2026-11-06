@@ -106,6 +106,29 @@ private def sourceWitnesses (directory : System.FilePath) : IO (String × Std.Ha
 
 def main (args : List String) : IO Unit := do
   if args == ["literal-checks"] then literalChecks; return
+  if let ["common-sources",product,auditor,output] := args then
+    let path : System.FilePath := .mk output
+    unless !(← path.pathExists) do throw (IO.userError "preserve native common-source comparison")
+    let (_,original) ← sourceWitnesses (.mk product)
+    let (_,checking) ← sourceWitnesses (.mk auditor)
+    let mut common := 0
+    let mut failures := #[]
+    for (name,bytes) in original do
+      match checking[name]? with
+      | some actual =>
+        common := common+1
+        if actual != bytes then failures := failures.push name
+      | none => if name.startsWith "Eggshell." then failures := failures.push name
+    let runtimeHash (directory : String) : IO String := do
+      let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",directory++"/StudyMain"]}
+      unless result.exitCode == 0 do throw (IO.userError "cannot bind native source audit")
+      return (result.stdout.splitOn " ").headD ""
+    let valid := common > 200 && failures.isEmpty
+    IO.FS.writeFile path (Json.mkObj [("commonModules",toJson common),("failures",toJson failures),
+      ("productSha256",toJson (← runtimeHash product)),("auditorSha256",toJson (← runtimeHash auditor)),
+      ("allProductCorePresent",toJson failures.isEmpty),("commonSourcesUnchanged",toJson valid)]).pretty
+    unless valid do throw (IO.userError "auditor and runtime use different native product sources")
+    return
   if let "compare-sources"::parent::candidate::output::allowed := args then
     let path : System.FilePath := .mk output
     unless !(← path.pathExists) do throw (IO.userError "preserve native source comparison")

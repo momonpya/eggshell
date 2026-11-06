@@ -285,6 +285,16 @@ def main (args : List String) : IO Unit := do
   | ["refresh-footprint-helper"] => do
     drained
     ensureResearch diagnosticAuditorSource "tools.research.RealDeliveryProbe" (← IO.mkRef {})
+  | ["prepare-auditor",product,folder,output,settings] => do
+    drained
+    check (!(← (System.FilePath.mk folder).pathExists)) "fresh product-bound auditor required"
+    discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",
+      (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",product,folder,output,
+      "tools.research.RealDeliveryProbe",settings]
+    let folder : System.FilePath := .mk folder
+    IO.FS.writeFile (folder/"tools/research/RealDeliveryProbe.lean")
+      (← IO.FS.readFile (workspace/"tools/research/RealDeliveryProbe.lean"))
+    ensureResearch folder "tools.research.RealDeliveryProbe" (← IO.mkRef {})
   | _ => throw (IO.userError "prepare | setup ACTION TAG | seal-source | seal-auditor")
 end Eggshell.Research.RealSourceStudy
 def main := Eggshell.Research.RealSourceStudy.main

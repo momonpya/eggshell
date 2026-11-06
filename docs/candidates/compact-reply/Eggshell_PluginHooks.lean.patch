@@ -1,0 +1,8 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -561 +561 @@
+-  let result := decoded.map fun reply => toJson reply.handoff
++  let result := decoded.map (·.handoff)
+@@ -572 +572 @@
+-    match Worker.SearchDelivery.ofReply stamp current.turnId state.epoch now
++    match Worker.SearchDelivery.ofDecoded stamp current.turnId state.epoch now

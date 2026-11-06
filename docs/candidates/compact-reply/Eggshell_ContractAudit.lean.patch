@@ -1,0 +1,12 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -249,0 +250,6 @@
++      ``Eggshell.Plugin.Worker.decoded_delivery_same_policy,
++      ``Eggshell.Plugin.Worker.SearchReply.transport_roundtrip,
++      ``Eggshell.Plugin.Worker.SearchFrame.transport_roundtrip,
++      ``Eggshell.Research.CompactHandoff.roundtrip,
++      ``Eggshell.Research.CompactHandoff.acknowledgment_unchanged,
++      ``Eggshell.Research.CompactHandoff.reconciliation_unchanged,
+@@ -290 +296 @@
+-  for required in #[``Eggshell.Plugin.Worker.SearchDelivery.ofReply,
++  for required in #[``Eggshell.Plugin.Worker.SearchDelivery.ofDecoded,
