@@ -8,6 +8,10 @@ open Eggshell.DB
 #print axioms SourceViewBatch.ReadAccess.foreign_process
 #print axioms SourceViewBatch.ReadAccess.foreign_generation
 #print axioms SharedReadViews.Source.geometry_is_charged
+#print axioms PreparedSourceView.file_ready_stored
+#print axioms PreparedSourceView.file_ready_unique
+#print axioms PreparedSourceView.file_ready_scopes
+#print axioms PreparedSourceView.scoped_file_valid
 
 run_cmd do
   let environment ← getEnv
@@ -19,11 +23,23 @@ run_cmd do
       (``Publication.Client.sourcePalettes,``SourceViewBatch.ReadAccess.read),
       (``OperationPool.Pool.searchActor,``Worker.openSearchEnvironment),
       (``Worker.searchRestored,``Worker.SearchEnvironment.originalReads),
-      (``automaticHandoff,``SourceContext.originalReads)] do
+      (``automaticHandoff,``SourceContext.originalReads),
+      (``sourcePlan,``SharedReadViews.Source.readMetadata),
+      (``PreparedSourceView.decodeOwner,``OwnerPalette.Descriptor.inScope)] do
     unless (← body name).getUsedConstants.contains required do throwError "typed read path is disconnected {name} -> {required}"
   for name in [`Eggshell.Plugin.Publication.Client.sourceRecords,`Eggshell.Plugin.Publication.Service.sourceRecords] do
     if environment.contains name then throwError "obsolete per-source record RPC remains {name}"
-  let mut pending := [``SharedReadViews.Source.readRecords,``SharedReadViews.Source.capturedBytes]
+  for name in [`Eggshell.Synapses.CanonicalSource.Shared.Loaded.withFile,
+      `Eggshell.Synapses.CanonicalSource.Shared.FileCache,
+      `Eggshell.Synapses.CanonicalSource.Shared.fileCapacity,
+      `Eggshell.Synapses.PreparedSourceView.readFile,
+      `Eggshell.Synapses.PreparedSourceView.publishFile,
+      `Eggshell.Synapses.PreparedSourceView.fileName] do
+    if environment.contains name then throwError "redundant file-header storage/cache remains {name}"
+  unless (← body ``sourcePlan).getUsedConstants.contains ``PreparedSourceView.fileReady do
+    throwError "actual selector is disconnected from the pure file header"
+  let mut pending := [``SharedReadViews.Source.readRecords,``SharedReadViews.Source.readMetadata,
+    ``SharedReadViews.Source.capturedBytes,``PreparedSourceView.fileReady,``PreparedSourceView.FileReady.addExtents]
   let mut seen : Std.HashSet Name := {}
   while let some name := pending.head? do
     pending := pending.tail!
@@ -44,6 +60,153 @@ def makeServer : IO Server := do
     ← ObservedRecordView.Cache.new,← Std.Mutex.new 0,← Std.Mutex.new #[],
     ← SharedReadViews.Pool.new,← Publication.Owned.Pool.new,
     ← PreparationService.Pool.new,← OperationPool.Pool.new⟩
+
+def fileChecks (server : Server) (root : System.FilePath) : IO Json := do
+  let directory := root/"file-fixture"
+  IO.FS.createDirAll directory
+  let content := "int alpha = 1;\nint beta = 2;\nint gamma = 3;\n"
+  IO.FS.writeFile (directory/"fixture.c") content
+  let input := Json.mkObj [("command",toJson "nl -ba fixture.c | sed -n '1,3p'")]
+  let deadline := (← IO.monoMsNow)+20000
+  let capture ← SourceEvidence.capture directory input deadline
+  let output := Json.mkObj [("output",toJson "1\tint alpha = 1;\n2\tint beta = 2;\n3\tint gamma = 3;\n")]
+  let correspondence ← ContentCapture.finish directory capture output.compress deadline
+  check (capture.record.valid && correspondence.complete && !correspondence.aliases.isEmpty)
+    "file-header control did not capture actual content correspondence"
+  let tool : ToolEvent := {
+    name := "arbitrary_read"
+    useId := "file"
+    input := input.compress
+    response := output.compress
+    source := some capture
+    correspondence := some correspondence }
+  let source ← Persistence.ensureSnapshot (directory/"project.egg")
+  let occurrence : Occurrence := ⟨"file-session","file-turn",tool.useId⟩
+  let known ← Journal.knowledge source [] false
+  let domain := Sha256.hex "pure file metadata check".toUTF8
+  discard <| Journal.append source ⟨⟨domain,1⟩,.start occurrence (canonicalToolWork tool)
+    (Sha256.hex "read fixture".toUTF8) known,none⟩
+  discard <| Journal.append source ⟨⟨domain,2⟩,.finish occurrence tool.name
+    (canonicalJson tool.input) (canonicalJson tool.response) (some source.directory.toString),none⟩
+  let pending : PendingTurn := {
+    sessionId := occurrence.session
+    turnId := occurrence.turn
+    cwd := directory.toString
+    prompt := "read fixture"
+    profile := "work"
+    write := some source.directory.toString
+    read := []
+    semanticMatcher := none
+    handoffChars := 500000
+    projection := .none
+    tools := [tool]
+    finalMessage := none }
+  let request ← NativePublication.prepare pending source.directory true
+  let published ← NativePublication.runPrepared source.directory #[request]
+  check (published.size == 1 && published.all (·.source.complete)) "file-header control publication did not ACK"
+  let source ← PageMap.pin source.directory
+  let head ← IO.FS.readFile (source.directory/"head")
+  discard <| Build.refresh source .database
+  let refreshed ← CanonicalSource.Cache.refresh source .database
+  let scope ← readSource server source.directory source.head.identity .database
+  let prepared ← prepareRegistered server scope (some source.head) deadline (some deadline) (some refreshed.metadata)
+  let access ← IO.ofExcept (fromJson? prepared : Except String CanonicalSource.Shared.Access)
+  let retained ← IO.ofExcept (prepared.getObjValAs? String "retained")
+  let owner := (compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
+  let owners := #[valueKey owner]
+  let requests : Array SourceViewBatch.Request := #[⟨access,owners,some retained⟩]
+  let palette ← readSourceViews server access.capability requests deadline
+  try
+    let captured ← server.palettes.withView palette.lease (SourceViewBatch.key requests) fun view => do
+      let some source := view.sources[0]? | throw (IO.userError "file view not captured")
+      return source
+    let metadata ← IO.ofExcept (captured.readMetadata owners[0]!)
+    check (!metadata.rows.isEmpty && !metadata.stored.descriptor.files.isEmpty) "file fixture did not reach checked owner metadata"
+    let mut files : Std.HashMap Eggshell.Synapses.File PreparedSourceView.FileReady := {}
+    let invalid := {metadata.stored with descriptor := {metadata.stored.descriptor with
+      files := metadata.stored.descriptor.files.map fun file => {file with fingerprint := "invalid"}}}
+    check (match PreparedSourceView.decodeOwner source.head.identity owners[0]! invalid with
+      | .error _ => true | .ok _ => false)
+      "invalid file identity escaped checked owner metadata"
+    for file in metadata.stored.descriptor.files do
+      let header := PreparedSourceView.fileReady file
+      check (file.valid && header.stored.file == file && header.stored.order == (toJson file).compress &&
+        header.stored.stem == Index.contentKey file && header.stored.extents.isEmpty) "pure header differs from canonical publication"
+      check ((← captured.loaded.recipes.get ("view-file:"++Index.contentKey file)).isNone)
+        "candidate still publishes redundant file metadata"
+      files := files.insert file header
+    for (file,extents) in metadata.stored.scopes do
+      let some header := files[file]? | throw (IO.userError "file scope lost its descriptor")
+      files := files.insert file (header.addExtents extents)
+    let expected ← IO.ofExcept (PreparedSourceView.join metadata.rows files)
+    let expectedDomain ← IO.ofExcept (PreparedSourceView.domain expected files #[])
+    let cues := (PreparedSourceView.bindings owners[0]! expected).map fun (first,last) =>
+      ({priority := 0,first,last} : SharedRangeAdapter.RankedCue)
+    let fileQuery : SharedRangeAdapter.FileQuery := ⟨0,owners[0]!,cues,cues,[]⟩
+    let query : SharedRangeAdapter.ServiceQuery := {
+      owners := owners
+      works := #[(valueKey (compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).1,0)]
+      frameCosts := #[(0,0)]
+      scale := (List.range (max owners.size cues.length)).foldl (fun value rank => Nat.lcm value (61+rank)) 1
+      genericCosts := #[]
+      generic := #[]
+      pieces := []
+      files := #[fileQuery]
+      bundles := #[]
+      fixed := (0,0)
+      ceiling := (120000,120000) }
+    let domain ← IO.ofExcept (PreparedSourceView.domain expected files query.frameCosts)
+    let units ← IO.ofExcept (PreparedSourceView.federatedUnits owners[0]! #[metadata] expected [])
+    let shapes : Array SharedRangeAdapter.ServiceUnit := units.map fun unit => {
+      shape := {family := 0,ranges := unit.ranges,coverage := unit.coverage}
+      sourceKeys := unit.keys }
+    let pieces := SharedRangeAdapter.viewPieces query.scale fileQuery expected
+    let some expectedChoice := SharedRangeAdapter.selectView query shapes pieces domain |
+      throw (IO.userError "independent file selector failed")
+    let reserved ← IO.mkRef (0 : Nat)
+    let actualPlan ← try
+      sourcePlan server access.capability (Json.mkObj [("sources",toJson requests),
+        ("lease",toJson palette.lease),("selector",toJson query)]) deadline reserved
+    finally
+      let amount ← reserved.get
+      server.sourceReplies.atomically (modify (·-amount))
+    check (actualPlan.getObjValD "choice" == toJson expectedChoice)
+      "actual file selector changed the independent selection/receipt"
+    check (!expectedChoice.sourceKeys.isEmpty) "file selector fixture has no positive-value original rows"
+    let before ← server.prepared.stats
+    let began ← IO.monoMsNow
+    -- Hold the old preparation-owner lock for the whole parallel read. Every
+    -- reader receives only immutable values, never a cache/lease capability.
+    server.prepared.state.atomically do
+      let tasks ← (Array.range 80).mapM fun _ => IO.asTask (do
+        for _ in [:128] do
+          let ready ← IO.ofExcept (captured.readMetadata owners[0]!)
+          let mut actual := {}
+          for file in ready.stored.descriptor.files do actual := actual.insert file (PreparedSourceView.fileReady file)
+          for (file,extents) in ready.stored.scopes do
+            let some header := actual[file]? | throw (IO.userError "parallel file scope lost its descriptor")
+            actual := actual.insert file (header.addExtents extents)
+          let rows ← IO.ofExcept (PreparedSourceView.join ready.rows actual)
+          let domain ← IO.ofExcept (PreparedSourceView.domain rows actual #[])
+          check (rows == expected && domain.costs == expectedDomain.costs && domain.payloads == expectedDomain.payloads)
+            "parallel immutable file read changed original rows/costs") .dedicated
+      try
+        for task in tasks do TaskDeadline.wait task ((← IO.monoMsNow)+10000)
+      finally
+        for task in tasks do IO.cancel task
+        for task in tasks do discard <| IO.wait task
+    let elapsed := (← IO.monoMsNow)-began
+    check ((← server.prepared.stats) == before) "pure file read mutated shared cache bookkeeping"
+    check ((← IO.FS.readFile (source.directory/"head")) == head) "file header read rewrote original publication"
+    return Json.mkObj [("publishedFileOwners",toJson (1 : Nat)),("fileIdentities",toJson files.size),
+      ("rows",toJson expected.size),("parallelReaders",toJson (80 : Nat)),("readsEach",toJson (128 : Nat)),
+      ("lockHeldReadElapsedMs",toJson elapsed),("originalRowsCostsAndPayloadsEqual",toJson true),
+      ("actualServicePlanEqualsIndependentSelection",toJson true),
+      ("cacheStatsUnchanged",toJson true),("noRedundantFilePublications",toJson true),
+      ("originalHeadUnchanged",toJson true)]
+  finally
+    server.palettes.release palette.lease (SourceViewBatch.key requests)
+    server.retained.release retained access.scope
 def checks (root : System.FilePath) : IO Unit := do
   check (!(← root.pathExists)) "fresh typed read check root required"
   IO.FS.createDirAll root
@@ -54,6 +217,7 @@ def checks (root : System.FilePath) : IO Unit := do
   let endpoint : Daemon.Endpoint := ⟨"publisher",(← IO.Process.getPID).toNat,12347,"", "typed-native-check"⟩
   let access := localReadAccess server endpoint
   try
+    let fileReport ← fileChecks server root
     for i in [:3] do
       let source ← PageMap.pin (originalRoot/toString (i%2)/"source.egg")
       let storage : DB.Sidecar.Storage := if i < 2 then .database else .user
@@ -158,7 +322,7 @@ def checks (root : System.FilePath) : IO Unit := do
     check (final.getObjValD "active" == toJson (0 : Nat) && final.getObjValD "chargedBytes" == toJson (0 : Nat)) "typed read reservation leaked"
     check ((← server.sourceReplies.atomically get) == 0) "temporary count reservation leaked"
     for (path,bytes) in heads do check ((← IO.FS.readFile path) == bytes) "typed read changed an original head"
-    IO.FS.writeFile (root/"report.json") (Json.mkObj [("typedReadChecks",toJson true),
+    IO.FS.writeFile (root/"report.json") (Json.mkObj [("typedReadChecks",toJson true),("fileReads",fileReport),
       ("typedClientSucceededWithoutNetworkListener",toJson true),("wireAndTypedGeometryMetadataEqual",toJson true),
       ("geometryIncludedInExistingQueryReservation",toJson charged),("fullScopeHeadRootCapabilityExpiryRejection",toJson true),
       ("activeBorrowSurvivesRelease",toJson true),("allReservationsReleased",toJson true),
@@ -173,7 +337,7 @@ def checks (root : System.FilePath) : IO Unit := do
     server.operations.close
 def main (args : List String) : IO UInt32 := do
   match args with
-  | ["typed-read-check",root] => checks (.mk root); return 0
+  | ["file-read-check",root] => checks (.mk root); return 0
   | ["front-traffic-audit",source] =>
     let result ← IO.Process.output {
       cmd := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/metadata-ingress-candidate-build/StudyMain",

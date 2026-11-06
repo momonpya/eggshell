@@ -29,6 +29,8 @@
 
 ## 現在地と次の順序
 
+不要な読取ロックの追加監査から、[ファイル表示情報の共有cacheを丸ごと外す候補](docs/candidates/pure-file-reads/README.md)を隔離実装した。元の出版は検証済みowner descriptorにある完全なfile identityから一意に作る値だけを別途保存していた。その出版・点照会・復号・promise/borrower/LRU/解放・16MiBのcache枠を削除し、純粋なconstructorへ置き換えた。保存済みの値との一致/一意性、scopeでのfile有効性、範囲和集合の4 Lean lawと通常ContractAudit、実selector/decodeOwnerへの接続、1123読取依存の同期不使用を確認した。253 native moduleは4実sourceと対応する埋込みidentityだけが変わる。実取得・出版した1file/3原文行のnative検査では、元の準備管理Mutexを保持して80reader×128回が28msで完了し、行/費用/payloadと共有統計が一致、実serviceのchoice/receiptも独立計算と一致した。これは80全hookやp99ではない。typed/wire、scope/Head/root/期限、取消・利用中解放も通り、最終予約0/残存0。検査器のfinalizer漏れ、無効な保持期限、整数化のfixture誤りとcompile失敗も保存し、製品の期限/重み/資源枠は変えていない。古い検査entryは新entryへ置き換え、終了DB/cache/生logを削除する。本体未採用・回答モデル0/有料比較0/18。全retrievalのlock-free、前候補のfrontend終了失敗/RSS保持/検索後半の遅延の解決や、80人8時間/実98%達成とはしない。残る同期は受付・cache fill・保持/解放など別責任として追跡し、本文を読む処理から切り離す。
+
 現在は[問い合わせが保持する型付き原文view](docs/candidates/typed-original-reads/README.md)を隔離実装した。原文構造と選択metadataを同じ権限確認・既存の128MiB query-view容量へまとめ、保持量へgeometryも算入した。不変の読取interfaceをservice→独立actor→request environment→SourceContextへ明示的に渡し、global callbackを置かない。同一process内の16 record RPC＋1 palette RPCを0件へした。外部wire adapterも同じtyped検査へ委譲する。vector/3辺/完全e-class認定/選択規則は維持した。
 
 [20波のphase寿命対照](docs/candidates/phase-lifetime/README.md)ではquiet条件のRSSは約124MiBで頭打ちになり、4波だけから推測した継続的な増加は支持されなかった。[実actorのowner観測](docs/candidates/actor-heap/README.md)も、最終外側heapが数十KiB、数値側の観測usedが最大約4MiBで、約900MiBのhost RSSを説明できていない。allocator設定・強制回収・worker数・期限を変える根拠にしない。owner集計はpending remote freeを含み得るため生存graphとは同一視しない。

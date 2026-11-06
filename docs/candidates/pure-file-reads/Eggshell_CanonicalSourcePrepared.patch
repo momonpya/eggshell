@@ -1,0 +1,39 @@
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -24 +23,0 @@
+-def fileCapacity : Nat := 16*1024*1024
+@@ -29 +27,0 @@
+-abbrev FileCache := SharedMetadataCache.Cache PreparedSourceView.FileReady fileCapacity
+@@ -40 +37,0 @@
+-  files : FileCache
+@@ -74,10 +70,0 @@
+-def Loaded.withFile (loaded : Loaded) (file : File) (deadline : Nat)
+-    (use : PreparedSourceView.FileReady → IO α) : IO α := do
+-  let name := PreparedSourceView.fileName file
+-  let descriptor ← loaded.recipes.get name
+-  unless descriptor.isSome do throw (IO.userError "original file header is not published")
+-  let bytes ← IO.ofExcept (PageMap.payloadSize descriptor)
+-  let key := (toJson (loaded.namespace,"file",file,descriptor.map Blake3.hex)).compress
+-  loaded.files.withReady key (PreparedOwnerArena.charge (bytes+key.utf8ByteSize)) deadline
+-    (PreparedSourceView.readFile loaded.recipes file) use
+-
+@@ -128,2 +115,2 @@
+-theorem shared_resident_capacity : capacity+metadataCapacity+fileCapacity+PreparedOwnerArena.capacity+
+-    ObservedRecordView.geometryCapacity+PageMap.SharedPageCache.capacity = 512*1024*1024 := by decide
++theorem shared_resident_capacity : capacity+metadataCapacity+PreparedOwnerArena.capacity+
++    ObservedRecordView.geometryCapacity+PageMap.SharedPageCache.capacity = 496*1024*1024 := by decide
+@@ -159 +145,0 @@
+-  files : FileCache
+@@ -161 +147 @@
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[],← PageMap.PagePool.new,← PreparedOwnerArena.Cache.new,← SharedMetadataCache.Cache.new _ metadataCapacity 4096 2,← SharedMetadataCache.Cache.new _ fileCapacity 4096 2⟩
++def Pool.new : IO Pool := return ⟨← Std.Mutex.new {},← Std.Mutex.new #[],← PageMap.PagePool.new,← PreparedOwnerArena.Cache.new,← SharedMetadataCache.Cache.new _ metadataCapacity 4096 2⟩
+@@ -319 +305 @@
+-            return ⟨metadata,recipes,original,pool.owners,pool.views,pool.files,identity⟩
++            return ⟨metadata,recipes,original,pool.owners,pool.views,identity⟩
+@@ -341 +326,0 @@
+-  pool.files.close
+@@ -353 +337,0 @@
+-  let files ← pool.files.stats (fun _ => false)
+@@ -357 +341 @@
+-      ("capacity",toJson capacity),("pages",pages),("owners",owners),("views",views),("files",files),
++      ("capacity",toJson capacity),("pages",pages),("owners",owners),("views",views),

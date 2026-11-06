@@ -1,0 +1,46 @@
+--- a/tools/research/PreparedSourceView.lean
++++ b/tools/research/PreparedSourceView.lean
+@@ -183,7 +182,0 @@
+-def fileName (file : File) : String := "view-file:" ++ Index.contentKey file
+-
+-def publishFile (writer : PageMap.Writer) (file : File) : IO Unit := do
+-  let bytes := (toJson (fileStored file)).compress.toUTF8
+-  unless bytes.size ≤ 32*1024*1024 do throw (IO.userError "published file view exceeds its bound")
+-  Persistence.Store.putPayload writer (fileName file) bytes
+-
+@@ -199,9 +192,4 @@
+-def readFile (snapshot : PageMap.Snapshot) (file : File) : IO FileReady := do
+-  let stored : FileStored ← readValue snapshot (fileName file)
+-  unless stored.file == file && stored.file.valid && stored.extents.all
+-      (fun range => 0 < range.first && range.first ≤ range.last) do
+-    throw (IO.userError "published source scopes changed their file identity")
+-  if ordered : stored.order = (toJson stored.file).compress then
+-    if identity : stored.stem = Index.contentKey stored.file then return ⟨stored,ordered,identity⟩
+-    else throw (IO.userError "published file identity differs from its source")
+-  else throw (IO.userError "published file order differs from its source")
++/-- The owner descriptor already carries and validates the complete file
++identity. Its presentation header has no independent input: the former
++publication was exactly `fileStored file`. No IO/cache owner is needed. -/
++def fileReady (file : File) : FileReady := ⟨fileStored file,rfl,rfl⟩
+@@ -208,0 +197,21 @@
++theorem file_ready_stored (file : File) : (fileReady file).stored = fileStored file := rfl
++
++/-- Every checked result of the former canonical publication is this same
++value, including the proof fields. This is not a hash-only approximation. -/
++theorem file_ready_unique (file : File) (ready : FileReady)
++    (published : ready.stored = fileStored file) : ready = fileReady file := by
++  cases ready
++  cases published
++  rfl
++
++theorem file_ready_scopes (file : File) (extents : Array Extent) :
++    ((fileReady file).addExtents extents).stored.extents =
++      (hashDistinct extents.toList).toArray := by
++  simp [FileReady.addExtents,fileReady,fileStored]
++
++theorem scoped_file_valid (descriptor : OwnerPalette.Descriptor) (database owner : String)
++    (file : File) (validScope : descriptor.inScope database owner = true)
++    (present : file ∈ descriptor.files) : file.valid = true := by
++  simp only [OwnerPalette.Descriptor.inScope,Bool.and_eq_true] at validScope
++  exact Array.all_eq_true_iff_forall_mem.mp validScope.1.1.1.1 file present
++

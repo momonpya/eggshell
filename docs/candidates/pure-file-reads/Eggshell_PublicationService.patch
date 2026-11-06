@@ -1,0 +1,5 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -487 +487 @@
+-              let header ← entry.loaded.withFile source deadline pure
++              let header := PreparedSourceView.fileReady source
