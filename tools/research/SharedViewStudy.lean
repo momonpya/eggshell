@@ -188,7 +188,8 @@ def inspectRetained : IO Unit := do
     ("publisherExit",summary.getObjValD "publisherExit"),("hostRssKiB",toJson hosts),
     ("snapshots",toJson snapshots)]).compress
 
-def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap-ownership") : IO Unit := do
+def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap-ownership")
+    (post : Bool := false) : IO Unit := do
   drained
   let destination := if census then workspace/"docs/candidates"/scope else study
   let recordName := if census then "evidence.json" else "quiet-result.json"
@@ -208,7 +209,7 @@ def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap
   let mut complete := 0
   let mut originalAck := 0
   let mut latencies := #[]
-  for name in ["prime","first","second"] do
+  for name in (if post then ["prime","first","second","post"] else ["prime","first","second"]) do
     let wave := report.getObjValD name
     let receipts ← IO.ofExcept (wave.getObjValAs? (Array Json) "receipts")
     if name != "prime" then
@@ -225,7 +226,9 @@ def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap
       let both := body.contains s!"\"observed-head-case-{index}-7b319c\"" && body.contains s!"\"observed-tail-case-{index}-d82a04\""
       check (row.getObjValD "bothFields" == toJson both && row.getObjValD "bodyBytes" == toJson body.utf8ByteSize)
         "quiet independent original-field check disagrees"
-      let some prior := priorRows.find? (fun old => old.getObjValD "session" == row.getObjValD "session") |
+      let some prior := priorRows.find? (fun old =>
+        if name == "post" then old.getObjValD "case" == row.getObjValD "case"
+        else old.getObjValD "session" == row.getObjValD "session") |
         throw (IO.userError "quiet query is outside the fixed control domain")
       let ref ← IO.ofExcept (prior.getObjValAs? Nat "bodyRef")
       let some retained := bodies[ref]? | throw (IO.userError "missing retained parent body")
@@ -259,7 +262,8 @@ def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap
     ("guardOwnedPids",guard.getObjValD "ownedPids"),("answeringModelCalls",toJson (0 : Nat)),
     ("paidComparisons",toJson "0/18"),("adopted",toJson false)]
   write (destination/recordName) result
-  check (actual.size == 35 && sorted.size == 32) "diagnostic-off control did not retain the fixed cohort"
+  check (actual.size == (if post then 36 else 35) && sorted.size == (if post then 33 else 32))
+    "diagnostic control did not retain the fixed cohort"
   let baseline := base/"allocator-service-build/StudyMain"
   check ((← hash baseline) == "4e4c9b9c95cb2c72b4447a86f5abc81b6bb619854889eb5ffa8492ba592e593a") "active baseline changed"
   IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
@@ -340,6 +344,7 @@ def main (args : List String) : IO Unit := do
   | ["record-quiet",tag] => recordQuiet tag
   | ["record-heap",tag] => recordQuiet tag true
   | ["record-scope",tag,scope] => recordQuiet tag true scope
+  | ["record-after",tag,scope] => recordQuiet tag true scope true
   | ["record-io",tag] => recordQuiet tag true "io-heap"
   | ["verify-memory-controls"] => verifyMemoryControls
   | ["retire-derived"] => retireDerived

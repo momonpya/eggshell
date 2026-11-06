@@ -1,0 +1,7 @@
+--- a/Eggshell/TaskDeadline.lean
++++ b/Eggshell/TaskDeadline.lean
+@@ -3,0 +4 @@
++public import tools.research.OwnedSelect
+@@ -61 +62 @@
+-      Selectable.one #[.case ready (fun value => pure (some value)),
++      Research.OwnedSelect.one #[.case ready (fun value => pure (some value)),

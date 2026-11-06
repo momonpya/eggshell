@@ -1,0 +1,8 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -318 +318 @@
+-        Selectable.one #[.case ready (fun bytes => pure (some bytes)),.case timer (fun _ => pure none)])
++        Research.OwnedSelect.one #[.case ready (fun bytes => pure (some bytes)),.case timer (fun _ => pure none)])
+@@ -389 +389 @@
+-        Selectable.one #[.case ready (fun value => pure (some value)),.case timer (fun _ => pure none)])
++        Research.OwnedSelect.one #[.case ready (fun value => pure (some value)),.case timer (fun _ => pure none)])

@@ -1,0 +1,42 @@
+--- parent/PublicationService
++++ candidate/PublicationService
+@@ -13,0 +14 @@
++public import tools.research.RetentionProbe
+@@ -728,0 +730,19 @@
++def retentionIdle (value : Json) : Bool :=
++  let operations := value.getObjValD "operations"
++  value.getObjValD "queued" == toJson (0 : Nat) && value.getObjValD "active" == toJson (0 : Nat) &&
++    operations.getObjValD "pending" == toJson (0 : Nat) && operations.getObjValD "active" == toJson (0 : Nat) &&
++    operations.getObjValD "activeSearchActors" == toJson (0 : Nat)
++
++def retentionProbe (server : Server) (probe : Option Research.RetentionProbe.Probe) (payload : Json) : IO Json := do
++  unless (← IO.getEnv "EGGSHELL_RESEARCH_RETENTION") == some "1" do
++    throw (IO.userError "retention intervention is diagnostic-only")
++  let some probe := probe | throw (IO.userError "retention diagnostic owner unavailable")
++  let mode ← IO.ofExcept (payload.getObjValAs? String "mode" >>= Research.RetentionProbe.mode?)
++  let before ← stats server
++  unless retentionIdle before do throw (IO.userError "retention intervention requires a quiescent search/publication cut")
++  let observed ← probe.request mode
++  let after ← stats server
++  unless retentionIdle after do throw (IO.userError "retention intervention overlapped application work")
++  return Json.mkObj [("beforeStats",before),("observation",observed),("afterStats",after),
++    ("quiescentBeforeAndAfter",toJson true)]
++
+@@ -797 +817 @@
+-    (operationsOnly : Bool := false) : IO Unit := do
++    (operationsOnly : Bool := false) (retention : Option Research.RetentionProbe.Probe := none) : IO Unit := do
+@@ -898,0 +919 @@
++        | "retention-probe" => retentionProbe server retention payload
+@@ -987,0 +1009,2 @@
++  let retention ← if (← IO.getEnv "EGGSHELL_RESEARCH_RETENTION") == some "1" then
++    some <$> Research.RetentionProbe.Probe.new else pure none
+@@ -1000 +1023 @@
+-            let task ← IO.asTask (serveClient server endpoint.secret client) .dedicated
++            let task ← IO.asTask (serveClient server endpoint.secret client false retention) .dedicated
+@@ -1008 +1031 @@
+-            let task ← IO.asTask (serveClient server endpoint.secret client true) .dedicated
++            let task ← IO.asTask (serveClient server endpoint.secret client true retention) .dedicated
+@@ -1013,0 +1037 @@
++      if let some retention := retention then retention.respond
+@@ -1042,0 +1067 @@
++    if let some retention := retention then retention.stop

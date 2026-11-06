@@ -1,0 +1,8 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -751 +751 @@
+-  Selectable.one #[.case (client.recvSelector 1) (fun _ => pure false),
++  Research.OwnedSelect.one #[.case (client.recvSelector 1) (fun _ => pure false),
+@@ -796 +796 @@
+-    Selectable.one #[.case (client.recvSelector remaining.toUInt64) (fun value => pure (some value)),
++    Research.OwnedSelect.one #[.case (client.recvSelector remaining.toUInt64) (fun value => pure (some value)),

@@ -1,0 +1,6 @@
+--- a/tools/research/RetentionProbe.lean
++++ b/tools/research/RetentionProbe.lean
+@@ -29 +29,2 @@
+-    ("owner",← HeapObservation.owner),("arenas",toJson (← HeapObservation.arenasRaw))]
++    ("owner",← HeapObservation.owner),("arenas",toJson (← HeapObservation.arenasRaw)),
++    ("selectionErrors",toJson (← OwnedSelect.forwardedErrors.get))]

@@ -1,0 +1,13 @@
+--- parent/Client
++++ candidate/Client
+@@ -260,0 +261,7 @@
++    let sham ← command engine #["retention-probe","sham"]
++    check (sham.exitCode == 0) ("retention sham failed: "++sham.stderr)
++    save (root/"retention-sham.json") (← IO.ofExcept (Json.parse sham.stdout))
++    let intervention ← command engine #["retention-probe","collect"]
++    check (intervention.exitCode == 0) ("retention intervention failed: "++intervention.stderr)
++    save (root/"retention-collect.json") (← IO.ofExcept (Json.parse intervention.stdout))
++    let post ← wave root engine "post-collect" 0 1
+@@ -264 +271 @@
+-      ("prime",prime),("first",first),("second",second),("remaining",toJson remaining),
++      ("prime",prime),("first",first),("second",second),("post",post),("remaining",toJson remaining),
