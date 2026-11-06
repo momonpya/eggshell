@@ -1,0 +1,13 @@
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -5,0 +6 @@
++public import tools.research.ReplyFootprint
+@@ -316 +317,7 @@
+-    let amount := value.compress.utf8ByteSize+1024
++    let serialized := value.compress
++    let amount := serialized.utf8ByteSize+1024
++    observeJob job "reply-sizing" [("payloadBytes",toJson serialized.utf8ByteSize),
++      ("reservationBytes",toJson amount),("frameLimit",toJson (replyBytes job.request.role)),
++      ("fitsFrame",toJson (decide (amount ≤ replyBytes job.request.role))),
++      ("payloadSha256",toJson (Sha256.hex serialized.toUTF8))]
++    Research.ReplyFootprint.capture job.request.id serialized

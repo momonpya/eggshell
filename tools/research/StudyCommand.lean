@@ -16,9 +16,9 @@ structure Result where
 private def readBounded (handle : IO.FS.Handle) : IO String := do
   let mut bytes := ByteArray.empty
   repeat
-    let next ← handle.read 1
+    let next ← handle.read 4096
     if next.isEmpty then break
-    unless bytes.size < 32*1024*1024 do throw (IO.userError "native command output exceeds 32 MiB")
+    unless bytes.size+next.size ≤ 32*1024*1024 do throw (IO.userError "native command output exceeds 32 MiB")
     bytes := bytes ++ next
   let some text := String.fromUTF8? bytes | throw (IO.userError "native command output is not UTF-8")
   return text

@@ -4,7 +4,8 @@ import tools.research.StudyCommand
 import tools.research.StudySource
 import tools.research.StudyProfile
 import tools.research.NativeTrialAudit
-import tools.research.ServiceQueryLoad
+import tools.research.StudyWarm
+import Eggshell.Install
 
 open Lean Eggshell Eggshell.Research
 
@@ -26,9 +27,6 @@ structure Input where
   handoffChars : Nat
   repetitions : Nat
   topics : Array Topic
-  serviceLoad : Bool := false
-  serviceLoadCounts : Array Nat := #[1,4,16,40,80]
-  saveSelectorFixture : Bool := false
   deriving ToJson,FromJson
 
 private def check (ok : Bool) (message : String) : IO Unit :=
@@ -162,22 +160,19 @@ private def run (input : Input) (inputPath : System.FilePath) : IO Unit := do
       ("EGGSHELL_DATA_ROOT",some (root / "data").toString),("TMPDIR",some (root / "tmp").toString),
       ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
   let publisher ← StudyRuntime.startPublisher (.mk input.runtime.path) (root / "data") environment
-  let observer ← try
-      if input.serviceLoad then some <$> ServiceQueryLoad.start else pure none
-    catch error =>
-      StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
-      throw error
   try
     let warm ← StudyCommand.run input.runtime.path #["egg","warm","work"] environment input.workspace "" (root / "warm") 240000
     check (warm.exitCode == 0) s!"explicit real-source warm failed: {warm.stderr}"
-    let prepared ← IO.ofExcept (Json.parse warm.stdout >>= (·.getObjValAs? (Array Json) "databases"))
-    let some coverage := prepared[0]? | throw (IO.userError "warm returned no database")
-    check (prepared.size == 1 && (coverage.getObjValD "after").getObjValD "missing" == toJson (0 : Nat) &&
-      (coverage.getObjValD "after").getObjValD "invalid" == toJson (0 : Nat)) "real source numerical preparation incomplete"
+    let current ← DB.PageMap.pin (root/"work.egg")
+    let prepared ← IO.ofExcept (StudyWarm.decode warm.stdout #[(root/"work.egg").toString] #[current.head]
+      MiniLM.model SearchProvider.encoderContract)
+    save (root/"warm-admission.json") (toJson prepared.frame)
     let repeated ← StudyCommand.run input.runtime.path #["egg","warm","work"] environment input.workspace "" (root / "repeat-warm") 240000
     check (repeated.exitCode == 0) "repeat real-source warm failed"
-    let repeatedRows ← IO.ofExcept (Json.parse repeated.stdout >>= (·.getObjValAs? (Array Json) "databases"))
-    check (repeatedRows.size == 1 && repeatedRows[0]!.getObjValD "requested" == toJson (0 : Nat)) "repeat warm encoded source windows"
+    let repeatedRows ← IO.ofExcept (StudyWarm.decode repeated.stdout #[(root/"work.egg").toString] #[current.head]
+      MiniLM.model SearchProvider.encoderContract true)
+    check (toJson prepared.frame.inputs == toJson repeatedRows.frame.inputs)
+      "unchanged repeat warm changed its prepared public inputs"
     let mut results := #[]
     for topic in input.topics do
       let spec ← json (root / s!"topic-{topic.topic}-source.json")
@@ -186,7 +181,7 @@ private def run (input : Input) (inputPath : System.FilePath) : IO Unit := do
         let cell := root / s!"topic-{topic.topic}-chat-{repetition}"
         IO.FS.createDir cell
         let session := s!"real-topic-{topic.topic}-chat-{repetition}"
-        let endpoint := root / "data/sessions" / session / "daemon.json"
+        let endpoint := root / "data/daemon.json"
         let managed ← StudyRuntime.startManaged (.mk input.runtime.path) (.mk input.pluginRoot) session endpoint environment
         try
           let fields := [("session_id",toJson session),("turn_id",toJson "first"),
@@ -218,23 +213,133 @@ private def run (input : Input) (inputPath : System.FilePath) : IO Unit := do
             ("requiredDelivery",report.getObjValD "requiredDelivery"),
             ("availableDelivery",report.getObjValD "availableDelivery")])
           save (root / "progress.json") (toJson results)
+          check ((report.getObjValD "availableDelivery").getObjValD "targetMet" == toJson true)
+            "frozen real-source delivery missed the target; stop before another topic"
         finally StudyRuntime.stopManaged managed (cell / "shutdown.json")
     check ((← StudyRuntime.files (root / "source.egg")) == (← StudyRuntime.files (root / "work.egg")))
       "readonly diagnostics changed the original database"
     save (root / "result.json") (Json.mkObj [("cells",toJson results),("source",sealed),
       ("answeringModelCalls",toJson (0 : Nat)),("acceptedSeed",toJson false),
       ("firstCycleAndSecondCycleModelTrials",toJson false)])
-    if let some observer := observer then
-      observer.load root (input.topics.size*input.repetitions) input.serviceLoadCounts input.saveSelectorFixture
   finally
+    StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+
+structure Probe where
+  originalInput : StudyAdmission.Artifact
+  runtime : StudyAdmission.Artifact
+  pluginRoot : String
+  topic : Nat
+  destination : String
+  deriving FromJson
+
+/-- One instrumented transport diagnosis, sharing only the already prepared
+project source. It is not a retry of the six-cell acceptance study. -/
+private def diagnose (probe : Probe) : IO Unit := do
+  StudyAdmission.verifyArtifact probe.originalInput
+  StudyAdmission.verifyArtifact probe.runtime
+  let input ← IO.ofExcept (fromJson? (← json (.mk probe.originalInput.path)) : Except String Input)
+  let root : System.FilePath := .mk input.output
+  let sealed ← json (root/"sealed.json")
+  check (sealed.getObjValD "inputSha256" == toJson probe.originalInput.sha256)
+    "diagnosis changed the original frozen input"
+  let some topic := input.topics.find? (·.topic == probe.topic) | throw (IO.userError "unknown diagnostic topic")
+  let cell : System.FilePath := .mk probe.destination
+  check (cell.isAbsolute && !(← cell.pathExists)) "fresh diagnostic destination required"
+  IO.FS.createDirAll cell
+  let config := cell/"config.toml"
+  IO.FS.writeFile config (StudyProfile.render probe.runtime.path (root/"work.egg").toString
+    (← IO.ofExcept (StudyProfile.checked input.handoffChars)) false)
+  let environment := input.environment.filter (fun row => !["EGGSHELL_CONFIG","EGGSHELL_PROFILE",
+      "EGGSHELL_DATA_ROOT","TMPDIR","CODEX_THREAD_ID","CODEX_TURN_ID","EGGSHELL_PREFIX","PLUGIN_ROOT",
+      "EGGSHELL_RESEARCH_REPLY_FOOTPRINT"].contains row.1) ++ #[
+    ("EGGSHELL_CONFIG",some config.toString),("EGGSHELL_PROFILE",some "work"),
+    ("EGGSHELL_DATA_ROOT",some (root/"data").toString),("TMPDIR",some (root/"tmp").toString),
+    ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none),
+    ("EGGSHELL_PREFIX",some (System.FilePath.mk probe.runtime.path).parent.get!.parent.get!.toString),
+    ("PLUGIN_ROOT",some probe.pluginRoot),("EGGSHELL_RESEARCH_REPLY_FOOTPRINT",some "1")]
+  let sourceFiles ← StudyRuntime.files (root/"work.egg")
+  check (toJson sourceFiles == sealed.getObjValD "sourceFiles") "diagnostic original changed before admission"
+  let publisher ← StudyRuntime.startPublisher (.mk probe.runtime.path) (root/"data") environment
+  try
+    let warmed ← StudyCommand.run probe.runtime.path #["egg","warm","work"] environment input.workspace "" (cell/"warm") 240000
+    check (warmed.exitCode == 0) "diagnostic cache validation failed"
+    let current ← DB.PageMap.pin (root/"work.egg")
+    discard <| IO.ofExcept (StudyWarm.decode warmed.stdout #[(root/"work.egg").toString] #[current.head]
+      MiniLM.model SearchProvider.encoderContract true)
+    let session := s!"reply-footprint-topic-{probe.topic}"
+    let managed ← StudyRuntime.startManaged (.mk probe.runtime.path) (.mk probe.pluginRoot) session
+      (root/"data/daemon.json") environment
     try
-      if let some observer := observer then observer.stop
-    finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+      let fields := [("session_id",toJson session),("turn_id",toJson "first"),
+        ("cwd",toJson input.workspace),("_eggshell_config",toJson config.toString)]
+      let started ← StudyCommand.run probe.runtime.path #["codex-hook"] environment input.workspace
+        ((Json.mkObj (fields++[("hook_event_name",toJson "SessionStart")])).compress++"\n") (cell/"SessionStart") 35000
+      check (started.exitCode == 0) "diagnostic SessionStart failed"
+      let receiptRoot := root/"data/receipts"
+      let before ← snapshots receiptRoot
+      let witnessRoot := root/"data/reply-witnesses"
+      let witnessesBefore ← snapshots witnessRoot
+      let spec ← json (root/s!"topic-{topic.topic}-source.json")
+      let request := Json.mkObj (fields++[("hook_event_name",toJson "UserPromptSubmit"),("prompt",spec.getObjValD "prompt")])
+      let hook ← StudyCommand.run probe.runtime.path #["codex-hook"] environment input.workspace
+        (request.compress++"\n") (cell/"hook") 35000
+      let reply ← IO.ofExcept (Json.parse hook.stdout)
+      let body := (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext")).toOption.getD ""
+      IO.FS.writeFile (cell/"body.txt") body
+      save (cell/"receipt.json") (← receipt receiptRoot before hook.stdout)
+      save (cell/"audit-input.json") (Json.mkObj [("source",spec),("database",toJson (root/"work.egg").toString),
+        ("request",toJson (cell/"hook/stdin").toString),("stdout",toJson (cell/"hook/stdout").toString),
+        ("timing",toJson (cell/"hook/record.json").toString),("body",toJson (cell/"body.txt").toString)])
+      let audit ← NativeTrialAudit.inspect (cell/"audit-input.json").toString
+      check (audit.getObjValD "availableEvidence" == (← json (root/s!"topic-{topic.topic}-frozen.json")))
+        "diagnostic changed frozen necessary evidence"
+      save (cell/"audit.json") audit
+      let mut witnesses := #[]
+      for name in ← snapshots witnessRoot do
+        if witnessesBefore.contains name then continue
+        let path := witnessRoot/name
+        witnesses := witnesses.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson (← ArtifactHash.hex path))])
+      check (witnesses.size == 1) "diagnostic did not capture one actual actor reply"
+      save (cell/"result.json") (Json.mkObj [("diagnosticOnly",toJson true),("topic",toJson topic.topic),
+        ("runtime",toJson probe.runtime),("sourceFiles",toJson sourceFiles),("hookMs",toJson hook.elapsedMs),
+        ("availableDelivery",audit.getObjValD "availableDelivery"),("witnesses",toJson witnesses),
+        ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+    finally StudyRuntime.stopManaged managed (cell/"shutdown.json")
+  finally StudyRuntime.stopManaged publisher (cell/"publisher-shutdown.json")
+  check ((← StudyRuntime.files (root/"work.egg")) == sourceFiles) "diagnostic modified the original DB"
 
 end RealDeliveryProbe
 
 def main (args : List String) : IO Unit := do
   let [operation,path] := args | throw (IO.userError "RealDeliveryProbe freeze|run INPUT")
+  if operation == "probe" then
+    RealDeliveryProbe.diagnose (← IO.ofExcept (fromJson? (← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path))))))
+    return
+  if operation == "install-prefix" then
+    let value ← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))
+    let root := System.FilePath.mk (← IO.ofExcept (value.getObjValAs? String "root"))
+    let runtime ← IO.ofExcept (fromJson? (value.getObjValD "runtime") : Except String StudyAdmission.Artifact)
+    let models := System.FilePath.mk (← IO.ofExcept (value.getObjValAs? String "models"))
+    unless root.isAbsolute && !(← root.pathExists) && (← models.isDir) do
+      throw (IO.userError "fresh isolated prefix and existing model directory required")
+    StudyAdmission.verifyArtifact runtime
+    IO.FS.createDirAll (root/"libexec")
+    let copied ← IO.Process.output {cmd := "/bin/cp",args := #["-c",runtime.path,(root/"libexec/eggshell").toString]}
+    unless copied.exitCode == 0 do throw (IO.userError "cannot stage the pinned runtime")
+    let plugin := root/"share/eggshell/codex-plugin"
+    IO.FS.createDirAll (plugin/"bin")
+    for name in ["egg","eggshelld"] do
+      let target := plugin/"bin"/name
+      IO.FS.writeFile target (Eggshell.Install.pluginLauncher root)
+      IO.setAccessRights target {
+        user := {read := true,write := true,execution := true}
+        group := {read := true,execution := true}
+        other := {read := true,execution := true}}
+    let linked ← IO.Process.output {cmd := "/bin/ln",args := #["-s",models.toString,(root/"share/eggshell/minilm").toString]}
+    unless linked.exitCode == 0 do throw (IO.userError "cannot share unchanged MiniLM assets")
+    unless (← ArtifactHash.hex (root/"libexec/eggshell")) == runtime.sha256 do
+      throw (IO.userError "staged executable differs from the pinned runtime")
+    return
   if operation == "layout" then
     let input ← IO.ofExcept (fromJson? (α := RealDeliveryProbe.LayoutInput)
       (← IO.ofExcept (Json.parse (← IO.FS.readFile (.mk path)))))

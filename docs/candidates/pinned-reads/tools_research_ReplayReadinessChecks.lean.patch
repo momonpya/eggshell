@@ -1,0 +1,6 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -2,0 +3 @@
++import tools.research.PinnedReadsChecks
+@@ -93,0 +95 @@
++  | ["pinned-reads-check",root] => Eggshell.Research.PinnedReadsChecks.run (.mk root); return 0

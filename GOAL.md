@@ -31,6 +31,10 @@
 
 現在の隔離候補は [search-read](docs/candidates/search-read/README.md)。統合済みの [read-runtime](docs/candidates/read-runtime/README.md) を親とする。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
 
+**最新の実配送は不合格**。[同一の実LLVM原典の監査](docs/candidates/real-source-search-read/README.md)では、準備完了・再warmの要求0を確認後、題材1の最初のhookが7,432msで通知だけを返し、必要原文は0/4だった。残る5セルと回答モデルは実行していない。返送直前の診断で、意味検索とシナプス探索が完走しても内部応答13,420,015bytesが8,388,608bytesの通信上限を超えて拒否されることを実測した。順位・予算を調整せず、重複する来歴の共有表現をLeanで往復証明してから実配送へ戻る。内部の約49万文字に必要項目が全て入るかも未監査であり、内部の完了を配送成功としない。
+
+不要な読み取り時の排他については [pinned-reads](docs/candidates/pinned-reads/README.md) を隔離実装した。保持済み原文の借用を工程ごとの取得から要求の入口・最終解放の2回へまとめ、その間は不変参照を使う。元のscope・完全head・manifest・期限、budget/descriptor不変をLeanで確認し、参照解決等の558依存に同期がないことを監査した。元Mutex保持中の80並行・10,240参照、途中失敗の無変更、解放/取消/closeと重複tokenの回収が通った。通常のtyped/wire原文・窓順位、80独立lease、271 native objectの整合も確認した。可変の受付・容量予約・palette寿命の同期は残り、検索全体の無ロック性や上の返送欠陥の修正とは扱わない。新しいRef/Promise/CAS、期限・容量の拡大は加えず、未採用・有料比較0/18を維持する。
+
 検索待機で不要な同期が残っていた。要求ごとの `Mutex Nat` をreaderがreadyで書き換え、待機側が5msごとにロックしていた。要求の所有者だけが「最初のframe」「最終frame」を進め、各段階の期限を不変値で渡す形へ変更した。共有期限・そのmutexとpollごとの取得を除き、代用品のRef/Promise/CASは追加していない。上流期限、別要求/遅着/重複readyの拒否をLeanで証明した。純粋な遷移209依存と実読取り821依存を監査し、既存のpipe終了/共有受付・解放と任意callbackの同期まで除去済みとは扱わない。タイムアウトと失敗の二重回収も除き、読取り・検査/通知・期限切れの各経路が回収を一度だけ担当する。
 
 1,440方針比較、80並行pipe×3交換で本文・正常な空・ready callbackを確認し、期限切れ・取消後の子も回収した。最終候補の並行部分2,330ms、関連最大RSS1,510,288KiB、終了後残存0。これは小さいLean製通信相手を使う部品試験であり、検索全体・80人容量・配送98%の達成ではない。最初の80製品processによる試験はRSS保護停止、その次の別要求テスト入力のID衝突も失敗として保存した。二重回収修正前の成功も保持し、単発の時差を性能差と扱わない。269 native objectは整合し、製品差はWorkerとContractAuditの2つだけ。順位/認定/配送枠/30秒は変更していない。
@@ -42,7 +46,7 @@
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 新候補を使い、保存済みの実原典と凍結した必要項目について題材1/2/3の実フック本文を再監査する。人手の正解をselectorへ渡さない。保存/索引/準備とruntime/helper/prefixの整合を確認し、題材1の1回目から評価する。モデルなしの検査を先にし、通信/fixtureの成功を実DBの98%に置き換えない。
+1. 返送の重複来歴を不変の共有表へ移し、本文・原依存・順序・ACK/reconciliationの往復一致をLeanで証明する。実測13.42MBの応答を上限8MiBのまま返せることを先に検査する。その後、保存済みの実原典と同じ凍結必要項目で題材1の1回目から再監査する。正解をselectorへ渡さず、保存/索引/準備とruntime/helper/prefixの整合を確認し、部品試験を実DBの98%に置き換えない。
 2. 保持している実WorkGraph/応答の所有と、allocator側の保持を因果的に分ける。共有cacheの論理bytes、少数threadのheap、RSSを同一視しない。同じ受動census・交差threadの小fixture・変更なしの失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。

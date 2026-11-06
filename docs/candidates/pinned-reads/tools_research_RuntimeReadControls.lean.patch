@@ -1,0 +1,20 @@
+--- a/tools/research/RuntimeReadControls.lean
++++ b/tools/research/RuntimeReadControls.lean
+@@ -55 +55,2 @@
+-      (← body ``readSourceViews).getUsedConstants.contains ``withBatchSource do
++      (← body ``readSourceViews).getUsedConstants.contains ``readPinnedSourceViews &&
++      (← body ``readPinnedSourceViews).getUsedConstants.contains ``withPinnedSource do
+@@ -57 +58 @@
+-  let mut pending := [``withBatchSource]
++  let mut pending := [``withPinnedSource]
+@@ -91 +92 @@
+-      (``readSourceViews,``SharedReadViews.View.project),
++      (``readPinnedSourceViews,``SharedReadViews.View.project),
+@@ -93,2 +94,5 @@
+-      (``readSourceViews,``SharedReadViews.Pool.borrow?),
+-      (``readSourceViews,``withBatchSource),
++      (``readPinnedSourceViews,``SharedReadViews.Pool.borrow?),
++      (``readPinnedSourceViews,``withPinnedSource),
++      (``readSourceViews,``CanonicalSource.Leases.PinnedReads.withBatch),
++      (``readSourceViews,``readPinnedSourceViews),
++      (``withPinnedSource,``CanonicalSource.Leases.PinnedReads.resolve),

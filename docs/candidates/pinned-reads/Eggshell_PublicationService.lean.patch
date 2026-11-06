@@ -1,0 +1,47 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -17,0 +18 @@
++public import tools.research.PinnedReads
+@@ -335,6 +336,20 @@
+-/-- First count cached metadata under short borrows. Waiting requests keep
+-only capabilities/coordinates; pinned readers and JSON are acquired after
+-one atomic admission covering every project in this query. -/
+-def readSourceViews (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
+-    (deadline : Nat) : IO SourceViewBatch.Palette := do
+-  let authorized ← authorizeBatch server secret requests
++def batchPinRequests (entries : Array (ReadBoundary.Entry sources)) : List CanonicalSource.Leases.PinnedReads.Request :=
++  entries.toList.filterMap fun entry => entry.request.retained.map fun token =>
++    ⟨token,entry.request.access.scope,entry.request.access.source,entry.request.access.metadata⟩
++
++def withPinnedSource (server : Server) (pins : List CanonicalSource.Leases.PinnedReads.Pin)
++    (entry : ReadBoundary.Entry sources) (deadline : Nat)
++    (use : CanonicalSource.Shared.Loaded → CanonicalSource.Shared.Reuse → IO α) : IO α := do
++  if let some token := entry.request.retained then
++    let request : CanonicalSource.Leases.PinnedReads.Request :=
++      ⟨token,entry.request.access.scope,entry.request.access.source,entry.request.access.metadata⟩
++    let checked ← IO.ofExcept (CanonicalSource.Leases.PinnedReads.resolve pins request (← IO.monoMsNow))
++    return ← use checked.loaded .hit
++  withBatchSource server entry deadline use
++
++/-- Pin retained descriptors once at the operation boundary. These arenas are
++already resident and charged; the batch never loads or waits for another
++arena. Geometry still enters only after the existing reply reservation. -/
++def readPinnedSourceViews (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
++    (deadline : Nat) (authorized : ReadBoundary.Batch secret requests)
++    (pins : List CanonicalSource.Leases.PinnedReads.Pin) : IO SourceViewBatch.Palette := do
+@@ -347 +362 @@
+-    withBatchSource server entry deadline (fun _ _ => pure ())
++    withPinnedSource server pins entry deadline (fun _ _ => pure ())
+@@ -362 +377 @@
+-        withBatchSource server entry deadline fun loaded reuse => do
++        withPinnedSource server pins entry deadline fun loaded reuse => do
+@@ -380 +395 @@
+-          let loaded ← withBatchSource server entry deadline (fun loaded _ => pure loaded)
++          let loaded ← withPinnedSource server pins entry deadline (fun loaded _ => pure loaded)
+@@ -400,0 +416,6 @@
++def readSourceViews (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
++    (deadline : Nat) : IO SourceViewBatch.Palette := do
++  let authorized ← authorizeBatch server secret requests
++  CanonicalSource.Leases.PinnedReads.withBatch server.retained (batchPinRequests authorized.entries) deadline fun batch =>
++    readPinnedSourceViews server secret requests deadline authorized batch.pins
++

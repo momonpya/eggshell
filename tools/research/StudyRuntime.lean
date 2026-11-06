@@ -108,6 +108,13 @@ structure PublisherRuntime where
 def startManaged (binary plugin : System.FilePath) (session : String) (path : System.FilePath)
     (environment : Array (String × Option String)) : IO Managed := do
   let _ ← IO.ofExcept (Plugin.safeSession session)
+  let configured := environment.filter (·.1 == "EGGSHELL_DATA_ROOT")
+  let data ← match configured.toList with
+    | [] => Plugin.dataRoot
+    | [(_,some value)] => pure (System.FilePath.mk value)
+    | _ => throw (IO.userError "one explicit frontend data root required")
+  check (path.normalize == (data/"daemon.json").normalize)
+    "study frontend endpoint must be the shared data-root endpoint"
   check (← (plugin / "bin/eggshelld").pathExists) "missing reviewed plugin launcher"
   check (!(← path.pathExists)) "a daemon already owns this session"
   let child ← IO.Process.spawn {
@@ -116,7 +123,7 @@ def startManaged (binary plugin : System.FilePath) (session : String) (path : Sy
     stdin := .null, stdout := .inherit, stderr := .inherit, setsid := true}
   let exit ← IO.mkRef none
   try
-    let endpoint ← ready child session path exit ((← IO.monoMsNow) + 10000)
+    let endpoint ← ready child "" path exit ((← IO.monoMsNow) + 10000)
     return {child,exit,endpoint,path}
   catch error =>
     if (← poll child exit).isNone then
@@ -198,7 +205,7 @@ def stopManaged (managed : Managed) (report : System.FilePath) : IO Unit := do
       ("daemonExitCode",toJson code.toNat),("endpointRemoved",toJson removed),
       ("processExited",toJson true),
       ("stopElapsedMs",toJson ((← IO.monoMsNow)-stopStarted)),("acknowledged",toJson true),
-      ("service",toJson (if managed.expectedShutdown.isEmpty then "session" else "publication"))]
+      ("service",toJson (if managed.expectedShutdown.isEmpty then "frontend" else "publication"))]
     writeJson report result
     check (code == 0 && removed) "owned daemon did not stop cleanly"
   catch error =>
@@ -210,7 +217,7 @@ def stopManaged (managed : Managed) (report : System.FilePath) : IO Unit := do
 
 def supervise (binary plugin : System.FilePath) (session : String) (report : System.FilePath) : IO UInt32 := do
   check (!(← report.pathExists)) "keep the existing supervisor result"
-  let path ← Plugin.Daemon.endpointPath session
+  let path ← Plugin.Daemon.endpointPath
   let managed ← startManaged binary plugin session path #[]
   try
     let stdout ← IO.getStdout
