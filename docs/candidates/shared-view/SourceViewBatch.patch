@@ -1,0 +1,23 @@
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -4,0 +5 @@
++public import Init.Data.List.Sort.Lemmas
+@@ -37,0 +39,18 @@
++/-- Image membership is a set; the private batch binding above retains the
++caller's presentation order. No question, deadline or capability is retained. -/
++def canonicalOwners (owners : Array String) : Array String :=
++  (owners.toList.mergeSort (· ≤ ·)).eraseDups.toArray
++
++theorem canonicalOwners_membership (owners : Array String) (owner : String) :
++    owner ∈ canonicalOwners owners ↔ owner ∈ owners := by
++  simp [canonicalOwners]
++
++def publicContents (parts : Array Request) : String :=
++  (toJson (parts.map fun part => (part.access.identity,canonicalOwners part.owners))).compress
++
++theorem publicContents_ignores_question (parts : Array Request) (question : String) :
++    publicContents (parts.map fun part => {part with focus := part.focus.map fun focus => {focus with question}}) =
++      publicContents parts := by
++  simp [publicContents,Array.map_map]
++  rfl
++

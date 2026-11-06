@@ -96,6 +96,7 @@ def main (arguments : List String) : IO Unit := do
     | "--frontend-stop" :: tags => (destination.parent.getD destination / "frontend-stop",tags)
     | "--frontend-traffic-stop" :: tags => (destination.parent.getD destination / "frontend-traffic-stop",tags)
     | "--frontend-finalizer" :: tags => (destination.parent.getD destination / "frontend-finalizer",tags)
+    | "--shared-view" :: tags => (destination.parent.getD destination / "shared-view",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -128,7 +129,7 @@ def main (arguments : List String) : IO Unit := do
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
       tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-" ||
       tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-" || tag.startsWith "working-set-" ||
-      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-" || tag.startsWith "typed-original-reads-" || tag.startsWith "discovery-stages-" || tag.startsWith "prepared-focus-hook-" || tag.startsWith "owned-service-" || tag.startsWith "frontend-traffic-stop-" || tag.startsWith "frontend-finalizer-") &&
+      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-" || tag.startsWith "typed-original-reads-" || tag.startsWith "discovery-stages-" || tag.startsWith "prepared-focus-hook-" || tag.startsWith "owned-service-" || tag.startsWith "frontend-traffic-stop-" || tag.startsWith "frontend-finalizer-" || tag.startsWith "shared-view-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"

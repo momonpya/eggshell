@@ -1,0 +1,343 @@
+--- a/tools/research/SharedReadViews.lean
++++ b/tools/research/SharedReadViews.lean
+@@ -3,0 +4 @@
++public import tools.research.SourceViewBatch
+@@ -11 +12 @@
+-def maxActive : Nat := 8
++def maxImages : Nat := 8
+@@ -19,0 +21 @@
++  order : Array String
+@@ -28,0 +31 @@
++  let owners := SourceViewBatch.canonicalOwners owners
+@@ -42,0 +46 @@
++    order := owners
+@@ -80,3 +84,3 @@
+-/-- One reservation owns the complete set of pinned project views. It never
+-holds a first project's admission slot while waiting for a second one. -/
+-structure View where
++/-- Authorization scope and complete original content are independent of a
++request's question, deadline and private lease. -/
++structure Key where
+@@ -83,0 +88,13 @@
++  contents : String
++  deriving BEq, ReflBEq, LawfulBEq, Hashable
++
++def contents (sources : Array Source) : String :=
++  (toJson (sources.map fun source =>
++    (toJson (source.source.identity,source.scope,source.source,source.loaded.metadata),
++      SourceViewBatch.canonicalOwners source.order))).compress
++
++def capturedBytes (sources : Array Source) : Nat := sources.foldl (fun bytes source => bytes+source.capturedBytes) 0
++def leaseCharge (key : Key) : Nat := 1024+4*(key.scope.utf8ByteSize+key.contents.utf8ByteSize)
++
++structure Image where
++  binding : String
+@@ -84,0 +102,18 @@
++  wireBytes : Nat
++  stamp : Nat
++  bound : contents sources = binding
++  covered : capturedBytes sources ≤ wireBytes
++
++def Image.charge (image : Image) := SharedReadViews.charge image.wireBytes
++
++def Image.prepare (binding : String) (sources : Array Source) (wireBytes stamp : Nat) : Except String Image :=
++  if bound : contents sources = binding then
++    if covered : capturedBytes sources ≤ wireBytes then .ok ⟨binding,sources,wireBytes,stamp,bound,covered⟩
++    else .error "original image exceeded its counted bytes"
++  else .error "original image changed its complete source/owner boundary"
++
++theorem Image.original_boundary (image : Image) : contents image.sources = image.binding := image.bound
++
++structure View where
++  key : Key
++  image : Option Image := none
+@@ -86 +121 @@
+-  charge : Nat
++  wireBytes : Nat
+@@ -89,0 +125,53 @@
++def View.scope (view : View) := view.key.scope
++def View.sources (view : View) := view.image.map (·.sources) |>.getD #[]
++def View.charge (view : View) := SharedReadViews.charge view.wireBytes
++def View.ofImage (key : Key) (image : Image) (deadline : Nat) : View :=
++  {key,image := some image,deadline,wireBytes := image.wireBytes}
++
++theorem View.shared_sources (key : Key) (image : Image) (deadline : Nat) :
++    (View.ofImage key image deadline).sources = image.sources := rfl
++theorem View.private_deadline (key : Key) (image : Image) (deadline : Nat) :
++    (View.ofImage key image deadline).deadline = deadline := rfl
++theorem View.private_scope (key : Key) (image : Image) (deadline : Nat) :
++    (View.ofImage key image deadline).scope = key.scope := rfl
++theorem View.released_independent (key other : Key) (image : Image) (first second : Nat) :
++    ({View.ofImage key image first with released := true}).sources =
++      (View.ofImage other image second).sources := rfl
++
++structure Projection where
++  owners : Array (Array (String × OwnerPalette.Descriptor))
++  records : Array (Array (String × Option ObservedRecordView.Geometry))
++  focus : Array (Array (String × List Nat))
++
++/-- Pure reads receive only an immutable image and the current request. Admission,
++release, cache state and IO capabilities are absent from this computation. The
++request's order is preserved even when different permutations share an image. -/
++def View.project (view : View) (requests : Array SourceViewBatch.Request) : Except String Projection := do
++  unless view.sources.size == requests.size do throw "original batch changed its source count"
++  let mut values := #[]
++  let mut records := #[]
++  let mut focused := #[]
++  for (entry,request) in view.sources.zip requests do
++    unless entry.scope == request.access.scope && entry.source == request.access.source &&
++        entry.loaded.metadata == request.access.metadata && request.owners.all entry.owners.contains do
++      throw "original batch changed its immutable read domain"
++    let owners ← request.owners.mapM fun owner => do
++      return (owner,(← entry.readMetadata owner).stored.descriptor)
++    values := values.push owners
++    records := records.push (← entry.readRecords request.owners)
++    let ranked ← match request.focus with
++      | none => pure #[]
++      | some focus => focus.rows.mapM fun row => do
++          return (row.owner,← entry.focusWindows row.owner row.work row.windows focus.question row.semantic)
++    focused := focused.push ranked
++  return ⟨values,records,focused⟩
++
++theorem View.project_private_lifetime (view : View) (requests : Array SourceViewBatch.Request)
++    (deadline borrowers : Nat) (released : Bool) :
++    ({view with deadline,borrowers,released}).project requests = view.project requests := rfl
++
++theorem View.project_shared_image (key other : Key) (image : Image) (first second : Nat)
++    (requests : Array SourceViewBatch.Request) :
++    (View.ofImage key image first).project requests =
++      (View.ofImage other image second).project requests := rfl
++
+@@ -91,0 +180 @@
++  images : Std.HashMap String Image := {}
+@@ -98,0 +188,4 @@
++  clock : Nat := 0
++  hits : Nat := 0
++  builds : Nat := 0
++  evictions : Nat := 0
+@@ -100 +193,9 @@
+-def State.used (state : State) : Nat := state.active.fold (fun bytes _ view => bytes+view.charge) 0
++def State.residentBytes (state : State) := state.images.fold (fun bytes _ image => bytes+image.charge) 0
++def State.leaseBytes (state : State) := state.active.fold (fun bytes _ view => bytes+leaseCharge view.key) 0
++def State.buildingBytes (state : State) := state.active.fold (fun bytes _ view =>
++  bytes+(if view.image.isNone then view.charge else 0)) 0
++def State.building (state : State) := state.active.fold (fun count _ view =>
++  count+(if view.image.isNone then 1 else 0)) 0
++def State.used (state : State) := state.residentBytes+state.leaseBytes+state.buildingBytes
++def State.referenced (state : State) (binding : String) :=
++  state.active.fold (fun found _ view => found || view.key.contents == binding) false
+@@ -101,0 +203,18 @@
++def State.Valid (state : State) : Prop := state.used ≤ capacity ∧
++  state.images.size+state.building ≤ maxImages ∧ state.active.size ≤ AdmissionLimits.operations ∧
++  state.images.toArray.all (fun (binding,image) => image.binding == binding) = true ∧
++  state.active.toArray.all (fun (_,view) => view.image.all (fun image => image.binding == view.key.contents)) = true
++
++instance (state : State) : Decidable state.Valid := by unfold State.Valid; infer_instance
++
++structure Checked where
++  value : State
++  valid : value.Valid
++
++def State.checked (state : State) : Except String Checked :=
++  if valid : state.Valid then .ok ⟨state,valid⟩ else .error "shared original view accounting exceeded its fixed bounds"
++
++theorem Checked.byte_bound (state : Checked) : state.value.used ≤ capacity := state.valid.1
++theorem Checked.image_bound (state : Checked) : state.value.images.size+state.value.building ≤ 8 := state.valid.2.1
++theorem Checked.lease_bound (state : Checked) : state.value.active.size ≤ AdmissionLimits.operations := state.valid.2.2.1
++
+@@ -109 +228,3 @@
+-  {state with active,expired := state.expired+expired}
++  let images := if state.closed then state.images.filter fun key _ =>
++    active.fold (fun found _ view => found || view.key.contents == key) false else state.images
++  {state with active,images,expired := state.expired+expired}
+@@ -111,2 +232,9 @@
+-structure Pool where
+-  state : Std.Mutex State
++def State.reclaim (state : State) (amount : Nat) (slot : Bool) (preserve : String) : Nat → State
++  | 0 => state
++  | fuel+1 =>
++    if state.used+amount ≤ capacity && (!slot || state.images.size+state.building < maxImages) then state else
++    let idle := state.images.toArray.filter fun (key,_) => key != preserve && !state.referenced key
++    match (idle.qsort fun a b => a.2.stamp < b.2.stamp)[0]? with
++    | none => state
++    | some (key,_) => reclaim {state with images := state.images.erase key,evictions := state.evictions+1}
++        amount slot preserve fuel
+@@ -114 +242,3 @@
+-def Pool.new : IO Pool := return ⟨← Std.Mutex.new {}⟩
++structure Admission where
++  token : String
++  resident : Bool
+@@ -116,3 +246,35 @@
+-def Pool.reserve (pool : Pool) (scope : String) (wireBytes deadline : Nat) : IO String := do
+-  let amount := charge wireBytes
+-  unless amount ≤ capacity do throw (IO.userError "original view exceeds its query budget")
++structure Pool where
++  state : Std.Mutex Checked
++
++def Pool.new : IO Pool := do
++  let empty ← IO.ofExcept (({} : State).checked)
++  return ⟨← Std.Mutex.new empty⟩
++
++/-- A hit only creates a private lifetime handle. The resident image and its
++replacement stamp are unchanged. The caller authenticates every source first. -/
++def Pool.borrow? (pool : Pool) (key : Key) (deadline : Nat) : IO (Option (String × Nat)) := do
++  let now ← IO.monoMsNow
++  unless now < deadline do throw (IO.userError "original view request expired")
++  let token := Blake3.hex (← IO.getRandomBytes 32)
++  pool.state.atomically do
++    let state := (← get).value.reap now
++    unless !state.closed do throw (IO.userError "original view admission stopped")
++    let some image := state.images[key.contents]? | set (← IO.ofExcept state.checked); return none
++    let state := state.reclaim (leaseCharge key) false key.contents maxImages
++    unless state.active.size < AdmissionLimits.operations && state.used+leaseCharge key ≤ capacity do
++      set (← IO.ofExcept state.checked)
++      return none
++    unless !state.active.contains token do throw (IO.userError "original view token collision")
++    let next : State := {
++      state with
++      active := state.active.insert token (View.ofImage key image deadline)
++      admitted := state.admitted+1
++      hits := state.hits+1
++      peak := max state.peak (state.used+leaseCharge key)}
++    set (← IO.ofExcept next.checked)
++    return some (token,image.wireBytes)
++
++def Pool.reserve (pool : Pool) (key : Key) (wireBytes deadline : Nat) : IO Admission := do
++  let amount := charge wireBytes
++  unless amount+leaseCharge key ≤ capacity do throw (IO.userError "original view exceeds its query budget")
++  let token := Blake3.hex (← IO.getRandomBytes 32)
+@@ -120 +282 @@
+-    let state ← get
++    let state := (← get).value
+@@ -123 +285 @@
+-    set {state with waiting := state.waiting ++ [state.next],next := state.next+1}
++    set (← IO.ofExcept ({state with waiting := state.waiting ++ [state.next],next := state.next+1}).checked)
+@@ -130 +292 @@
+-        let state := (← get).reap now
++        let state := (← get).value.reap now
+@@ -132,2 +294,5 @@
+-        if state.waiting.head? == some ticket && state.active.size < maxActive && state.used+amount ≤ capacity then
+-          let token := Blake3.hex (← IO.getRandomBytes 32)
++        let image := state.images[key.contents]?
++        let needed := leaseCharge key+(if image.isSome then 0 else amount)
++        let state := state.reclaim needed image.isNone key.contents maxImages
++        if state.waiting.head? == some ticket && state.active.size < AdmissionLimits.operations &&
++            state.used+needed ≤ capacity && (image.isSome || state.images.size+state.building < maxImages) then
+@@ -135,6 +300,13 @@
+-          let view : View := {scope,sources := #[],deadline,charge := amount}
+-          set {state with
+-            active := state.active.insert token view,waiting := state.waiting.drop 1,
+-            admitted := state.admitted+1,peak := max state.peak (state.used+amount)}
+-          return some token
+-        set state
++          let view ← match image with
++            | some image => pure (View.ofImage key image deadline)
++            | none => pure ({key,deadline,wireBytes} : View)
++          let next : State := {
++            state with
++            active := state.active.insert token view
++            waiting := state.waiting.drop 1
++            admitted := state.admitted+1
++            hits := state.hits+(if image.isSome then 1 else 0)
++            peak := max state.peak (state.used+needed)}
++          set (← IO.ofExcept next.checked)
++          return some ({token,resident := image.isSome} : Admission)
++        set (← IO.ofExcept state.checked)
+@@ -145 +317,3 @@
+-  finally pool.state.atomically (modify fun state => {state with waiting := state.waiting.filter (· != ticket)})
++  finally pool.state.atomically do
++    let state := (← get).value
++    set (← IO.ofExcept ({state with waiting := state.waiting.filter (· != ticket)}).checked)
+@@ -147,0 +322,3 @@
++  -- Content serialization and geometry accounting inspect immutable data. They
++  -- run under the existing build reservation, never under the registry mutex.
++  let prepared ← IO.ofExcept (Image.prepare (contents sources) sources (capturedBytes sources) 0)
+@@ -150 +327 @@
+-    let state := (← get).reap now
++    let state := (← get).value.reap now
+@@ -154 +331,15 @@
+-    set {state with active := state.active.insert token {view with sources}}
++    unless prepared.binding == view.key.contents && prepared.wireBytes ≤ view.wireBytes do
++      throw (IO.userError "original image changed its reserved source/owner boundary")
++    let (image,images,clock,builds,hits) ← match state.images[view.key.contents]? with
++      | some image => pure (image,state.images,state.clock,state.builds,state.hits+1)
++      | none =>
++        let prepared := {prepared with stamp := state.clock+1}
++        pure (prepared,state.images.insert view.key.contents prepared,state.clock+1,state.builds+1,state.hits)
++    let next : State := {
++      state with
++      images := images
++      clock := clock
++      builds := builds
++      hits := hits
++      active := state.active.insert token (View.ofImage view.key image view.deadline)}
++    set (← IO.ofExcept next.checked)
+@@ -156,10 +346,0 @@
+-def Pool.acquireMany (pool : Pool) (scope : String) (sources : Array Source)
+-    (wireBytes deadline : Nat) : IO String := do
+-  let token ← pool.reserve scope wireBytes deadline
+-  try
+-    pool.attach token scope sources
+-    return token
+-  catch error =>
+-    pool.state.atomically (modify fun state => {state with active := state.active.erase token})
+-    throw error
+-
+@@ -168 +349,5 @@
+-  let token ← pool.reserve scope wireBytes deadline
++  let identity := toJson (source.identity,scope,source,loaded.metadata)
++  let key : Key := ⟨scope,(toJson #[(identity,SourceViewBatch.canonicalOwners owners)]).compress⟩
++  if let some (token,_) ← pool.borrow? key deadline then return token
++  let admission ← pool.reserve key wireBytes deadline
++  let token := admission.token
+@@ -170,2 +355,3 @@
+-    let captured ← Source.capture scope source loaded owners deadline
+-    pool.attach token scope #[captured]
++    unless admission.resident do
++      let captured ← Source.capture scope source loaded owners deadline
++      pool.attach token scope #[captured]
+@@ -174 +360,3 @@
+-    pool.state.atomically (modify fun state => {state with active := state.active.erase token})
++    pool.state.atomically do
++      let state := (← get).value
++      set (← IO.ofExcept ({state with active := state.active.erase token}).checked)
+@@ -180,2 +368,2 @@
+-    let state := (← get).reap now
+-    set state
++    let state := (← get).value.reap now
++    set (← IO.ofExcept state.checked)
+@@ -198 +386 @@
+-    let state := (← get).reap now
++    let state := (← get).value.reap now
+@@ -202 +390 @@
+-    set {state with active := state.active.insert token {view with borrowers := view.borrowers+1}}
++    set (← IO.ofExcept ({state with active := state.active.insert token {view with borrowers := view.borrowers+1}}).checked)
+@@ -208 +396 @@
+-      let state ← get
++      let state := (← get).value
+@@ -210 +398 @@
+-      set ({state with active := state.active.insert token {view with borrowers := view.borrowers-1}}.reap now)
++      set (← IO.ofExcept ({state with active := state.active.insert token {view with borrowers := view.borrowers-1}}.reap now).checked)
+@@ -213 +401 @@
+-  let state ← get
++  let state := (← get).value
+@@ -219 +407 @@
+-  set {state with active,released := state.released+1}
++  set (← IO.ofExcept ({state with active,released := state.released+1}).checked)
+@@ -222 +410 @@
+-  let state ← get
++  let state := (← get).value
+@@ -225 +413,2 @@
+-  set {state with closed := true,active,waiting := []}
++  let next := ({state with closed := true,active,waiting := []}).reap 0
++  set (← IO.ofExcept next.checked)
+@@ -228 +417 @@
+-  let state ← get
++  let state := (← get).value
+@@ -232 +421,5 @@
+-    ("closed",toJson state.closed)]
++    ("closed",toJson state.closed),("images",toJson state.images.size),("building",toJson state.building),
++    ("residentBytes",toJson state.residentBytes),("leaseBytes",toJson state.leaseBytes),
++    ("buildingBytes",toJson state.buildingBytes),("builds",toJson state.builds),("hits",toJson state.hits),
++    ("evictions",toJson state.evictions),("maxImages",toJson maxImages),
++    ("maxLeases",toJson AdmissionLimits.operations)]

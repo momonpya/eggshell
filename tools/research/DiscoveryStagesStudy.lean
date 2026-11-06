@@ -56,7 +56,8 @@ def drained : IO Unit := do
       probe.stdout.contains "guard " && probe.stdout.contains settingsName
     check (!sameGuard) ("previous guard still live: "++entry.fileName)
 
-def materialize (selected destination output : System.FilePath) (entry : String) : IO Unit := do
+def materialize (selected destination output : System.FilePath) (entry : String)
+    (settingsOverride : Option System.FilePath := none) : IO Unit := do
   check (!(← destination.pathExists)) "fresh native source destination required"
   let build ← read (selected/"build.json")
   let config := build.getObjValD "settings"
@@ -98,7 +99,7 @@ def materialize (selected destination output : System.FilePath) (entry : String)
       ("baselineMain",(selected/(oldEntry.replace "." "_"++".o")).toString),
       ("objectModules",(destination/"object-mapping.json").toString),("mainModule",entry)] do
     settings := settings.setObjVal! key (toJson value)
-  write (base/(if destination == sourceRoot then "discovery-stages-settings.json" else if destination == focusSource then
+  write (settingsOverride.getD (base/(if destination == sourceRoot then "discovery-stages-settings.json" else if destination == focusSource then
     "prepared-focus-settings.json" else if destination == focusHookSource then "prepared-focus-hook-settings.json"
     else if destination == stopSource then "frontend-stop-settings.json"
     else if destination == keeperSource then "process-keeper-settings.json"
@@ -106,7 +107,7 @@ def materialize (selected destination output : System.FilePath) (entry : String)
     else if destination == stopClientSource then "frontend-traffic-stop-settings.json"
     else if destination == finalizerSource then "frontend-finalizer-settings.json"
     else if destination == ownerReferenceSource then "frontend-owner-reference-settings.json"
-    else "discovery-stages-client-settings.json")) settings
+    else "discovery-stages-client-settings.json"))) settings
 
 def prepare : IO Unit := do
   drained
@@ -763,6 +764,14 @@ def finishFinalizer : IO Unit := do
   compactRecords finalizerStudy
   IO.println (← IO.FS.readFile (finalizerStudy/"summary.json"))
 
+def inspectHostRetention : IO Unit := do
+  let evidence ← read (finalizerStudy/"evidence.json")
+  let runs := arr evidence "runs"
+  check (runs.size == 1) "one retained actual cohort required"
+  for wave in arr runs[0]! "waves" do
+    IO.println (Json.mkObj [("name",wave.getObjValD "name"),
+      ("serviceStats",wave.getObjValD "serviceStats")]).pretty
+
 def checkOwnedPollLift : IO Unit := do
   let called ← IO.mkRef (0 : Nat)
   let sameOwner := false
@@ -1046,6 +1055,12 @@ def cleanupFocusHook (tag : String) : IO Unit := do
 
 def main (args : List String) : IO Unit := do
   match args with
+  | ["materialize-native",parent,source,target,entry,settings] =>
+    drained
+    materialize (.mk parent) (.mk source) (.mk target) entry (some (.mk settings))
+  | ["record-native",tag,destination,mode,previous,stem] =>
+    record tag (.mk destination) mode (.mk previous) false stem
+  | ["compact-native",destination] => compactRecords (.mk destination)
   | ["prepare"] => prepare
   | ["prepare-focus"] => prepareFocus
   | ["prepare-focus-hook"] => prepareFocusHook
@@ -1065,6 +1080,7 @@ def main (args : List String) : IO Unit := do
   | ["record-owner-controls"] => recordOwnerControls
   | ["record-finalizer",tag] => recordFinalizer tag
   | ["finish-finalizer"] => finishFinalizer
+  | ["inspect-host-retention"] => inspectHostRetention
   | ["check-owned-poll-lift"] => checkOwnedPollLift
   | ["retire-unused-controls"] => retireUnusedControls
   | ["retire-lifecycle-intermediates"] => retireLifecycleIntermediates

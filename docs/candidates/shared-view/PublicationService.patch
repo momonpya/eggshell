@@ -1,0 +1,106 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -264 +264 @@
+-    for owner in owners do
++    for owner in SourceViewBatch.canonicalOwners owners do
+@@ -352,19 +351,0 @@
+-  let mut bytes := 0
+-  let mut reuse := #[]
+-  for request in requests do
+-    -- Count under one temporary, existing reply reservation; waiting actors
+-    -- hold only coordinates. No geometry escapes into the query before its
+-    -- complete metadata+geometry reservation has been admitted.
+-    reserveReply server Stream.maxBytes deadline
+-    let (count,shared) ← try
+-      withBatchSource server request deadline fun loaded reuse => do
+-        let mut bytes := 0
+-        for owner in request.owners do
+-          bytes := bytes+(← loaded.withMetadata owner deadline (fun ready => pure ready.bytes))
+-        let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
+-        let records ← server.structures.project original.index request.access.database request.owners deadline (Stream.maxBytes-4096)
+-        return (bytes+records.bytes,reuse)
+-    finally server.sourceReplies.atomically (modify (·-Stream.maxBytes))
+-    bytes := bytes+count
+-    reuse := reuse.push shared
+-    unless bytes ≤ Stream.maxBytes do throw (IO.userError "original batch metadata exceeds its frame budget")
+@@ -372,3 +353,12 @@
+-  let lease ← server.palettes.reserve key bytes deadline
+-  try
+-    let mut sources := #[]
++  let imageKey : SharedReadViews.Key := ⟨key,SourceViewBatch.publicContents requests⟩
++  -- A public image never substitutes for a caller's scope or retained token.
++  -- Authenticate the complete request before trying the resident image.
++  for request in requests do
++    withBatchSource server request deadline (fun _ _ => pure ())
++  let resident ← server.palettes.borrow? imageKey deadline
++  let (lease,bytes,reuse) ← match resident with
++  | some (lease,bytes) =>
++    pure (lease,bytes,requests.map (fun _ => CanonicalSource.Shared.Reuse.hit))
++  | none =>
++    let mut bytes := 0
++    let mut reuse := #[]
+@@ -376,23 +366,32 @@
+-      let loaded ← withBatchSource server request deadline (fun loaded _ => pure loaded)
+-      sources := sources.push (← SharedReadViews.Source.capture request.access.scope
+-        request.access.source loaded request.owners deadline (some server.structures))
+-    unless sources.foldl (fun bytes source => bytes+source.capturedBytes) 0 ≤ bytes do
+-      throw (IO.userError "original view exceeded its counted metadata and geometry")
+-    server.palettes.attach lease key sources
+-    let (values,records,focused) ← server.palettes.withView lease key fun view => do
+-      let mut values := #[]
+-      let mut records := #[]
+-      let mut focused := #[]
+-      for (entry,request) in view.sources.zip requests do
+-        let mut owners := #[]
+-        for owner in request.owners do
+-          let ready ← IO.ofExcept (entry.readMetadata owner)
+-          owners := owners.push (owner,ready.stored.descriptor)
+-        values := values.push owners
+-        records := records.push (← IO.ofExcept (entry.readRecords request.owners))
+-        let ranked ← match request.focus with
+-          | none => pure #[]
+-          | some focus => focus.rows.mapM fun row => do
+-              return (row.owner,← IO.ofExcept (entry.focusWindows row.owner row.work row.windows focus.question row.semantic))
+-        focused := focused.push ranked
+-      return (values,records,focused)
++      -- Count under one temporary, existing reply reservation; waiting actors
++      -- hold only coordinates. No geometry escapes into the query before its
++      -- complete metadata+geometry reservation has been admitted.
++      reserveReply server Stream.maxBytes deadline
++      let (count,shared) ← try
++        withBatchSource server request deadline fun loaded reuse => do
++          let mut bytes := 0
++          let owners := SourceViewBatch.canonicalOwners request.owners
++          for owner in owners do
++            bytes := bytes+(← loaded.withMetadata owner deadline (fun ready => pure ready.bytes))
++          let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
++          let records ← server.structures.project original.index request.access.database owners deadline (Stream.maxBytes-4096)
++          return (bytes+records.bytes,reuse)
++      finally server.sourceReplies.atomically (modify (·-Stream.maxBytes))
++      bytes := bytes+count
++      reuse := reuse.push shared
++      unless bytes ≤ Stream.maxBytes do throw (IO.userError "original batch metadata exceeds its frame budget")
++    let admission ← server.palettes.reserve imageKey bytes deadline
++    try
++      unless admission.resident do
++        let mut sources := #[]
++        for request in requests do
++          let loaded ← withBatchSource server request deadline (fun loaded _ => pure loaded)
++          sources := sources.push (← SharedReadViews.Source.capture request.access.scope
++            request.access.source loaded request.owners deadline (some server.structures))
++        unless sources.foldl (fun bytes source => bytes+source.capturedBytes) 0 ≤ bytes do
++          throw (IO.userError "original view exceeded its counted metadata and geometry")
++        server.palettes.attach admission.token key sources
++      pure (admission.token,bytes,reuse)
++    catch error => server.palettes.release admission.token key; throw error
++  try
++    let projected ← server.palettes.withView lease key fun view => IO.ofExcept (view.project requests)
+@@ -401 +400,7 @@
+-    return {identities := requests.map (·.access.identity),lease := lease,owners := values,reuse := reuse,records := records,focus := focused}
++    return {
++      identities := requests.map (·.access.identity)
++      lease := lease
++      owners := projected.owners
++      reuse := reuse
++      records := projected.records
++      focus := projected.focus }

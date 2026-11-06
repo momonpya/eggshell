@@ -13,7 +13,19 @@ open Eggshell.DB
 #print axioms PreparedSourceView.file_ready_scopes
 #print axioms PreparedSourceView.scoped_file_valid
 #print axioms SourceViewBatch.key_ignores_question
+#print axioms SourceViewBatch.canonicalOwners_membership
+#print axioms SourceViewBatch.publicContents_ignores_question
 #print axioms refocus_prepared_windows_exact
+#print axioms SharedReadViews.Image.original_boundary
+#print axioms SharedReadViews.View.shared_sources
+#print axioms SharedReadViews.View.private_deadline
+#print axioms SharedReadViews.View.private_scope
+#print axioms SharedReadViews.View.released_independent
+#print axioms SharedReadViews.View.project_private_lifetime
+#print axioms SharedReadViews.View.project_shared_image
+#print axioms SharedReadViews.Checked.byte_bound
+#print axioms SharedReadViews.Checked.image_bound
+#print axioms SharedReadViews.Checked.lease_bound
 
 run_cmd do
   let environment ← getEnv
@@ -27,7 +39,11 @@ run_cmd do
       (``Worker.searchRestored,``Worker.SearchEnvironment.originalReads),
       (``automaticHandoff,``SourceContext.originalReads),
       (``sourcePlan,``SharedReadViews.Source.readMetadata),
-      (``readSourceViews,``SharedReadViews.Source.focusWindows),
+      (``readSourceViews,``SharedReadViews.View.project),
+      (``SharedReadViews.View.project,``SharedReadViews.Source.focusWindows),
+      (``readSourceViews,``SharedReadViews.Pool.borrow?),
+      (``readSourceViews,``withBatchSource),
+      (``SharedReadViews.Pool.attach,``SharedReadViews.Image.prepare),
       (``indexedDiscoveryUsing,``Synapses.Transport.prepareBatch),
       (``indexedDiscoveryUsing,``refocusObservedNeighborhoodUsing),
       (``Synapses.Transport.prepareBatch,``Publication.Client.sourcePalettes),
@@ -44,7 +60,7 @@ run_cmd do
     if environment.contains name then throwError "redundant file-header storage/cache remains {name}"
   unless (← body ``sourcePlan).getUsedConstants.contains ``PreparedSourceView.fileReady do
     throwError "actual selector is disconnected from the pure file header"
-  let mut pending := [``SharedReadViews.Source.readRecords,``SharedReadViews.Source.readMetadata,
+  let mut pending := [``SharedReadViews.View.project,``SharedReadViews.Source.readRecords,``SharedReadViews.Source.readMetadata,
     ``SharedReadViews.Source.focusWindows,
     ``SharedReadViews.Source.capturedBytes,``PreparedSourceView.fileReady,``PreparedSourceView.FileReady.addExtents]
   let mut seen : Std.HashSet Name := {}
@@ -222,7 +238,9 @@ def checks (root : System.FilePath) : IO Unit := do
   let mut requests : Array SourceViewBatch.Request := #[]
   let mut focusRows : Array SourceViewBatch.FocusRow := #[]
   let mut expectedRanks : Std.HashMap String (List Nat) := {}
+  let mut alternateRanks : Std.HashMap String (List Nat) := {}
   let question := "recorded head tail source/key-17 警告"
+  let alternate := "recorded tail source/key-11 探索"
   let mut heads : Array (System.FilePath × String) := #[]
   let endpoint : Daemon.Endpoint := ⟨"publisher",(← IO.Process.getPID).toNat,12347,"", "typed-native-check"⟩
   let access := localReadAccess server endpoint
@@ -252,6 +270,8 @@ def checks (root : System.FilePath) : IO Unit := do
           let edge ← reader.outcome (← reader.locateOutcome entry.id)
           expectedRanks := expectedRanks.insert document.owner
             (focusedEvidenceWindows question (evidenceSearchWindows edge) semantic)
+          alternateRanks := alternateRanks.insert document.owner
+            (focusedEvidenceWindows alternate (evidenceSearchWindows edge) semantic)
         owners := owners.push document.owner
       requests := requests.push {access := originalAccess,owners := owners.push "missing-owner",retained := some retained}
     let sources := requests.map fun request =>
@@ -288,6 +308,69 @@ def checks (root : System.FilePath) : IO Unit := do
       "wire and typed reads disagree"
     access.release requests wirePalette.lease
     batch.release deadline
+    let beforeShared ← server.palettes.stats
+    let entered ← (Array.range 80).mapM fun _ => IO.Promise.new (α := Unit)
+    let release : IO.Promise Unit ← IO.Promise.new
+    let actors ← IO.mkRef (#[] : Array (Task (Except IO.Error Unit)))
+    try
+      for index in [:80] do
+        let different := index%2 == 1
+        let changed := batch.requests.map fun request => {request with
+          owners := if different then request.owners.reverse else request.owners
+          focus := request.focus.map fun focus => {focus with question := if different then alternate else question}}
+        check (SourceViewBatch.publicContents changed == SourceViewBatch.publicContents batch.requests)
+          "owner permutation changed immutable image membership"
+        let some waiting := entered[index]? | throw (IO.userError "missing independent lease signal")
+        let actor ← IO.asTask (do
+          let palette ← access.read changed deadline
+          try
+            check ((palette.owners.map (·.map Prod.fst)) == changed.map (·.owners) &&
+              (palette.records.map (·.map Prod.fst)) == changed.map (·.owners))
+              "shared image lost the caller's owner order"
+            for rows in palette.focus do
+              for (owner,ranking) in rows do
+                check (((if different then alternateRanks else expectedRanks)[owner]?) == some ranking)
+                  "shared image mixed request-specific focus"
+            waiting.resolve ()
+            discard <| IO.wait release.result!
+          finally access.release changed palette.lease) .dedicated
+        actors.modify (·.push actor)
+      for waiting in entered do TaskDeadline.wait (Std.Async.AsyncTask.ofPurePromise waiting) deadline
+      let held ← server.palettes.stats
+      check (held.getObjValD "active" == toJson (80 : Nat) &&
+        held.getObjValD "images" == beforeShared.getObjValD "images" &&
+        held.getObjValD "builds" == beforeShared.getObjValD "builds")
+        "eighty independently authorized leases rebuilt or serialized immutable images"
+      IO.FS.writeFile (root/"shared-eighty.json") (Json.mkObj [("before",beforeShared),("held",held),
+        ("independentLeases",toJson (80 : Nat)),("questionKinds",toJson (2 : Nat)),
+        ("allFocusRanksMatchIndependentOriginalReference",toJson true)]).compress
+    finally
+      release.resolve ()
+      for actor in ← actors.get do IO.ofExcept (← IO.wait actor)
+    let validHit ← access.read batch.requests deadline
+    let lockStarted ← IO.monoMsNow
+    server.palettes.withView validHit.lease key fun view => do
+      let expected ← IO.ofExcept (view.project batch.requests)
+      -- Both pool locks remain held throughout the actual pure batch reads.
+      -- A dependency on either would deadlock this control until its deadline.
+      server.palettes.state.atomically do
+        server.prepared.state.atomically do
+          let readers ← (Array.range 80).mapM fun _ => IO.asTask (do
+            let actual ← IO.ofExcept (view.project batch.requests)
+            check (toJson actual.owners == toJson expected.owners &&
+              toJson actual.records == toJson expected.records && actual.focus == expected.focus)
+              "pure batch read changed under held management locks") .dedicated
+          for reader in readers do IO.ofExcept (← IO.wait reader)
+    IO.FS.writeFile (root/"held-lock-reads.json") (Json.mkObj [
+      ("readers",toJson (80 : Nat)),("poolAndPreparedLocksHeld",toJson true),
+      ("sameMetadataRecordsAndFocus",toJson true),("elapsedMs",toJson ((← IO.monoMsNow)-lockStarted))]).compress
+    access.release batch.requests validHit.lease
+    let invalidRetained := batch.requests.modify 0 fun request =>
+      {request with retained := some (String.ofList (List.replicate 64 'b'))}
+    check (SourceViewBatch.key invalidRetained == SourceViewBatch.key batch.requests)
+      "retained-token control changed public image identity"
+    check (← rejects (access.read invalidRetained deadline))
+      "resident image bypassed requesting chat's retained authority"
     for changed in [focusRows.map (fun row => {row with work := "foreign"}),
         focusRows.map (fun row => {row with windows := row.windows++["foreign"]})] do
       check (← rejects (Publication.Client.sourcePalettes sources deadline (some (question,changed))))
@@ -331,7 +414,9 @@ def checks (root : System.FilePath) : IO Unit := do
       TaskDeadline.wait (Std.Async.AsyncTask.ofPurePromise entered) ((← IO.monoMsNow)+2000)
       borrowed.release deadline
       let stats ← server.palettes.stats
-      check (stats.getObjValD "active" == toJson (1 : Nat) && stats.getObjValD "chargedBytes" == toJson charged)
+      check (stats.getObjValD "active" == toJson (1 : Nat) &&
+        stats.getObjValD "leaseBytes" == toJson (SharedReadViews.leaseCharge ⟨key,SourceViewBatch.publicContents requests⟩) &&
+        (stats.getObjValAs? Nat "chargedBytes").toOption.getD 0 ≥ charged)
         "release freed active reader reservation"
       check (← rejects (server.palettes.withView borrowed.palette.lease key (fun _ => pure ()))) "released lease admitted a new reader"
     finally
@@ -351,7 +436,9 @@ def checks (root : System.FilePath) : IO Unit := do
       discard <| IO.wait cancelledTask
       cancelled.release ((← IO.monoMsNow)+1000)
     let final ← server.palettes.stats
-    check (final.getObjValD "active" == toJson (0 : Nat) && final.getObjValD "chargedBytes" == toJson (0 : Nat)) "typed read reservation leaked"
+    check (final.getObjValD "active" == toJson (0 : Nat) && final.getObjValD "leaseBytes" == toJson (0 : Nat) &&
+      final.getObjValD "buildingBytes" == toJson (0 : Nat) && final.getObjValD "chargedBytes" == final.getObjValD "residentBytes")
+      "typed read private reservation leaked"
     check ((← server.sourceReplies.atomically get) == 0) "temporary count reservation leaked"
     for (path,bytes) in heads do check ((← IO.FS.readFile path) == bytes) "typed read changed an original head"
     IO.FS.writeFile (root/"report.json") (Json.mkObj [("typedReadChecks",toJson true),("fileReads",fileReport),
