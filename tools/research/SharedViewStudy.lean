@@ -271,6 +271,7 @@ def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap
     ("semanticCompletedWithHandoff",toJson complete),("peakRssKiB",guard.getObjValD "sampledPeakRssKiB"),
     ("hostRssKiB",toJson (waves.map fun wave => (wave.getObjValD "name",wave.getObjValD "hostRssKiB"))),
     ("abandonedHeap",toJson (waves.map fun wave => (wave.getObjValD "name",(wave.getObjValD "serviceStats").getObjValD "abandonedHeap"))),
+    ("ownerHeaps",toJson (waves.map fun wave => (wave.getObjValD "name",(wave.getObjValD "serviceStats").getObjValD "ownerHeaps"))),
     ("bodyDifferences",toJson differences.size),("frontendExit",result.getObjValD "frontendExit"),
     ("publisherExit",result.getObjValD "publisherExit")]).compress
 
@@ -339,6 +340,7 @@ def main (args : List String) : IO Unit := do
   | ["record-quiet",tag] => recordQuiet tag
   | ["record-heap",tag] => recordQuiet tag true
   | ["record-scope",tag,scope] => recordQuiet tag true scope
+  | ["record-io",tag] => recordQuiet tag true "io-heap"
   | ["verify-memory-controls"] => verifyMemoryControls
   | ["retire-derived"] => retireDerived
   | _ => throw (IO.userError "prepare | setup ACTION TAG")

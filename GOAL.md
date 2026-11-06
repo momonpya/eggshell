@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-06更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-07更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -28,6 +28,10 @@
 - 未使用だけで記憶を消さない。物理圧縮/再配置は元bytes・証拠・旧pinを保持する。明示保持方針の削除は原文不在を明示し、digest墓標だけで原文配送やcompletedが可能とは扱わない。
 
 ## 現在地と次の順序
+
+[存命ownerとallocator領域の保持を分ける診断](docs/candidates/io-heap/README.md)で進捗あり。直前turnの不変認証境界候補とは混ぜず、既存shared-view親の同じ16原典/32問/設定で観測した。native timer/TCPが同じ別ownerで解決すること、明示mailboxが指定ownerで応答することを先に検査した。64KiB多数の16MiB payloadに加え、実Lean ByteArray1個の64KiB/2MiB/32MiBでも保持とowner-local解放が計数される。別threadで解放したrootを生存量と誤認しない較正も保存した。実hostは179440→665024→890320KiBだが、I/O ownerの割当32/128/32bytes、service loop13584/15584/15600bytes、reader coordinatorは直近fork時3271760/3314400/3314400bytesで、観測した範囲の保持が主因という仮説は支持されない。coordinatorはidle時の標本ではなく、選ばれたdefault workerも時点間で別threadなので、全worker/全live graphの計数とはしない。arenaのinuse粒度21/26/27個とcommit bitmapもRSS/生存量に置き換えない。同じ初期化の別native対照でpurge無効false/delay10ms/multiplier10/decommit有効を確認した。実cohort内のoption直接標本とは区別する。
+
+実hookは意味完了/両必須原文/ACK32/32、prime込み35 stdoutが親とbyte一致、min/median/max5750/6882/8155ms、関連最大RSS2765392KiB、frontend/publisher exit0、guard介入/残存なし。15guardを終端/ownedPids空で検査し、初期対照2失敗とcompiler2失敗、容量拒否を保持した。終了DB/cache/log・観測用build/sourceをarchiveせず削除し、保護5原典と16完全head、必要な親closureを確認した。不要compiler interface69850件/論理4389666969bytesも削除し、一覧はbuild別の小さい記録へ集約した。本体未採用・回答モデル0・有料比較0/18。次は同じ受動censusだけを足して32問を繰り返さず、処理済みtask/応答の参照と回収可能なallocator領域を、実サービス上の対照介入で分ける。強制回収を製品修正として入れる判断ではなく、順位/domain/資源/30秒は維持する。80全検索の再試行と有料試験へ進まず、80人8時間/増大project/NAS/実98%/品質/総token改善は未達でgoal active。
 
 [検査済みの不変source境界を使う隔離候補](docs/candidates/read-boundary/README.md)で、読み取り時に同じ登録を繰り返しロックする経路を除いた。従来は16 sourceのimage missで最大64回、hitで32回だったregistry取得を入口の1回にまとめ、以後は型でrequest/registryに結び付いたBindingを使う。登録の追記で選択が変わらないこと、所属・scope/capability・要求順序をLeanで証明した。実入口の1回取得、後続3120依存のregistry再取得不使用、純粋認証916依存の同期不使用、既存1953依存と通常ContractAuditが通る。registry mutexを保持したまま80 readerの実prepared source参照が1msで完了し、親の認証32比較も一致した。これは3 sourceの部品試験で、全検索のlock-freeや80全検索の成功ではない。登録・pin/解放・共有寿命等の可変状態同期と、全Head/manifest/scope/retained token/期限の検査は維持する。
 

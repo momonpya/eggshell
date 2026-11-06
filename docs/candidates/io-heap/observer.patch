@@ -1,0 +1,51 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -13,0 +14 @@
++public import tools.research.HeapObservation
+@@ -797 +798 @@
+-    (operationsOnly : Bool := false) : IO Unit := do
++    (operationsOnly : Bool := false) (probe : Option Research.HeapObservation.Probe := none) : IO Unit := do
+@@ -898 +899,14 @@
+-        | "stats" => stats server
++        | "stats" => do
++          let ordinary ← stats server
++          if (← IO.getEnv "EGGSHELL_RESEARCH_IO_HEAP") == some "1" then
++            let some probe := probe | throw (IO.userError "owner diagnostic mailbox is unavailable")
++            let started ← IO.monoMsNow
++            let handler ← Research.HeapObservation.owner
++            let main ← probe.request
++            let io ← Research.HeapObservation.ioSnapshot
++            let worker ← Research.HeapObservation.workerSnapshot
++            let arenas ← Research.HeapObservation.arenasRaw
++            pure (ordinary.setObjVal! "ownerHeaps" (Json.mkObj [
++              ("handler",handler),("main",main),("io",io),("worker",worker),
++              ("arenas",toJson arenas),("elapsedMs",toJson ((← IO.monoMsNow)-started))]))
++          else pure ordinary
+@@ -987,0 +1002,2 @@
++  let probe ← if (← IO.getEnv "EGGSHELL_RESEARCH_IO_HEAP") == some "1" then
++    some <$> Research.HeapObservation.Probe.new else pure none
+@@ -1000 +1016 @@
+-            let task ← IO.asTask (serveClient server endpoint.secret client) .dedicated
++            let task ← IO.asTask (serveClient server endpoint.secret client false probe) .dedicated
+@@ -1008 +1024 @@
+-            let task ← IO.asTask (serveClient server endpoint.secret client true) .dedicated
++            let task ← IO.asTask (serveClient server endpoint.secret client true probe) .dedicated
+@@ -1013,0 +1030 @@
++      if let some probe := probe then probe.respond
+@@ -1042,0 +1060 @@
++    if let some probe := probe then probe.stop
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -1,0 +2 @@
++public import tools.research.HeapObservation
+@@ -205 +206,2 @@
+-  return Json.mkObj [("builds",toJson state.builds),("hits",toJson state.hits),
++  let pages ← pool.pages.stats
++  let value := Json.mkObj [("builds",toJson state.builds),("hits",toJson state.hits),
+@@ -208 +210,5 @@
+-    ("handles",toJson (handles state.catalogue.images)),("pages",← pool.pages.stats)]
++    ("handles",toJson (handles state.catalogue.images)),("pages",pages)]
++  if (← IO.getEnv "EGGSHELL_RESEARCH_IO_HEAP") == some "1" then
++    let identity ← Research.HeapObservation.threadId
++    pure (value.setObjVal! "coordinatorHeap" (Json.mkObj [("thread",toJson identity),("heap",← Research.HeapObservation.owner)]))
++  else pure value

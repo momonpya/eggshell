@@ -1,0 +1,18 @@
+--- cohort/heap_observation.c
++++ policy/heap_observation.c
+@@ -38,0 +39,3 @@
++    const long purge_delay = mi_option_get(mi_option_purge_delay);
++    const unsigned long purge_magnitude = purge_delay < 0
++        ? (unsigned long)(-(purge_delay + 1)) + 1UL : (unsigned long)purge_delay;
+@@ -42 +45,3 @@
+-        "committedBytes=%zu\nrecordedBytes=%zu\nallocatedBlocks=%zu\nallocatedBytes=%zu\n",
++        "committedBytes=%zu\nrecordedBytes=%zu\nallocatedBlocks=%zu\nallocatedBytes=%zu\n"
++        "purgeDisabled=%u\npurgeDelayMagnitudeMs=%lu\narenaPurgeMultiplier=%ld\n"
++        "purgeDecommits=%u\narenaEagerCommitMode=%ld\n",
+@@ -44 +49,5 @@
+-        sum.committed, sum.recorded, sum.blocks, sum.allocated);
++        sum.committed, sum.recorded, sum.blocks, sum.allocated,
++        purge_delay < 0 ? 1u : 0u, purge_magnitude,
++        mi_option_get(mi_option_arena_purge_mult),
++        mi_option_is_enabled(mi_option_purge_decommits) ? 1u : 0u,
++        mi_option_get(mi_option_arena_eager_commit));

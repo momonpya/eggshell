@@ -1,0 +1,41 @@
+--- cohort/IoHeapChecks.lean
++++ shapes/IoHeapChecks.lean
+@@ -103,0 +104,36 @@
++
++@[noinline] def produceShape (keep : IO.Ref ByteArray) (size : Nat) : IO Unit := do
++  let payload := ByteArray.mk (Array.replicate size (37 : UInt8))
++  check (payload.size == size) "heap-shape fixture changed its original bytes"
++  keep.set payload
++
++/-- A small-block positive control cannot establish that a heap visitor sees
++large native buffers. Validate the actual Lean allocation path at both sizes. -/
++def shapes (root : System.FilePath) : IO Unit := do
++  check (!(← root.pathExists)) "fresh heap shape control required"
++  IO.FS.createDirAll root
++  HeapObservation.initializeObserver
++  let mut rows := #[]
++  let mut valid := true
++  let number := fun value key => (value.getObjValAs? Nat key).toOption.getD 0
++  for size in [65536,2*1024*1024,32*1024*1024] do
++    let keep ← IO.mkRef ByteArray.empty
++    let before ← HeapObservation.ioSnapshot
++    let (producer,_) ← HeapObservation.onNativeTimer (produceShape keep size)
++    let held ← HeapObservation.ioSnapshot
++    let (releaseOwner,_) ← HeapObservation.onNativeTimer (keep.set ByteArray.empty)
++    let released ← HeapObservation.ioSnapshot
++    let same := before.getObjValD "thread" == toJson producer && producer == releaseOwner &&
++      held.getObjValD "thread" == toJson producer && released.getObjValD "thread" == toJson producer
++    let complete := [before,held,released].all (fun value =>
++      number (value.getObjValD "heap") "complete" == 1)
++    let heldBytes := number (held.getObjValD "heap") "allocatedBytes"
++    let seen := decide (number (before.getObjValD "heap") "allocatedBytes"+size ≤ heldBytes)
++    let freed := decide (number (released.getObjValD "heap") "allocatedBytes"+size ≤ heldBytes)
++    rows := rows.push (Json.mkObj [("payloadBytes",toJson size),("before",before),("held",held),
++      ("released",released),("sameOwner",toJson same),("complete",toJson complete),
++      ("heldPayloadCounted",toJson seen),("ownerLocalReleaseCounted",toJson freed)])
++    valid := valid && same && complete && seen && freed
++  IO.FS.writeFile (root/"report.json") (Json.mkObj [("rows",toJson rows),
++    ("allPayloadShapesCounted",toJson valid),("noCollectionOrOptionChange",toJson true)]).compress
++  check valid "heap census does not cover every tested native buffer shape"
+@@ -107,0 +144 @@
++  | ["io-heap-shapes",root] => IoHeapChecks.shapes (.mk root); return 0
