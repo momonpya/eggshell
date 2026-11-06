@@ -1,0 +1,8 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -4,0 +5,2 @@
++import tools.research.ReplyOwnershipChecks
++import tools.research.ActorReadsChecks
+@@ -95,0 +98,2 @@
++  | ["actor-reads-check",root] => Eggshell.Research.ActorReadsChecks.run (.mk root); return 0
++  | ["reply-ownership-check",root] => Eggshell.Research.ReplyOwnershipChecks.run (.mk root); return 0

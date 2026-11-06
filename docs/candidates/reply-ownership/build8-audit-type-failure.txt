@@ -1,0 +1,44 @@
+'Eggshell.PreparedReaders.CheckedFrame.original_boundary' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.PreparedReaders.CheckedFrame.original_key' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.PreparedReaders.CheckedFrame.public_image' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.PreparedReaders.CheckedFrame.local_fork' depends on axioms: [propext, Classical.choice, Quot.sound]
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-ownership-source/tools/research/ActorReadsChecks.lean:28:9: error: Application type mismatch: The argument
+  value
+has type
+  Expr
+but is expected to have type
+  Elab.Command.CommandElabM ?m.18
+in the application
+  pure value
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-ownership-source/tools/research/ActorReadsChecks.lean:58:41: error: Application type mismatch: The argument
+  __do_lift✝
+has type
+  Elab.Command.CommandElabM ?m.18
+but is expected to have type
+  Expr
+in the application
+  occurrences `Eggshell.PreparedReaders.CheckedFrame.fork __do_lift✝
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-ownership-source/tools/research/ActorReadsChecks.lean:60:41: error: Application type mismatch: The argument
+  __do_lift✝²
+has type
+  Elab.Command.CommandElabM ?m.18
+but is expected to have type
+  Expr
+in the application
+  occurrences `Eggshell.PreparedReaders.Pool.prepareFrame __do_lift✝²
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-ownership-source/tools/research/ActorReadsChecks.lean:61:33: error: Application type mismatch: The argument
+  __do_lift✝¹
+has type
+  Elab.Command.CommandElabM ?m.18
+but is expected to have type
+  Expr
+in the application
+  occurrences `Eggshell.PreparedReaders.localSession __do_lift✝¹
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reply-ownership-source/tools/research/ActorReadsChecks.lean:62:38: error: Application type mismatch: The argument
+  __do_lift✝
+has type
+  Elab.Command.CommandElabM ?m.18
+but is expected to have type
+  Expr
+in the application
+  occurrences `Eggshell.PreparedReaders.CheckedFrame.fork __do_lift✝

@@ -1,0 +1,86 @@
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -208 +208 @@
+-    ("handles",toJson (handles state.catalogue.images)),("pages",← pool.pages.stats)]
++    ("handles",toJson (handles state.catalogue.images))]
+@@ -296 +295,0 @@
+-  private pages : PageMap.PagePool
+@@ -313 +312 @@
+-  return ⟨borrow.image,pool.pages⟩
++  return ⟨borrow.image⟩
+@@ -319,0 +319,9 @@
++/-- Construct only request-owned mutable overlays. The immutable image carries
++no catalogue owner, so assembling a reader cannot lock or update that owner. -/
++@[no_expose] def localSession (image : Image) (scopes : Array String) : IO Session := do
++  let catalogue ← IO.ofExcept (Catalogue.check #[{image with pageSeed := .empty}])
++  let front ← PageMap.LocalPages.Front.new image.pageSeed
++  let pages := PageMap.PagePool.reader front
++  let originals ← (image.originals.zip scopes).mapM fun (image,scope) => image.borrow pages scope
++  return ⟨originals,⟨← IO.mkRef {catalogue},pages⟩,rfl⟩
++
+@@ -331 +338,0 @@
+-  let catalogue ← IO.ofExcept (Catalogue.check #[{frozen.image with pageSeed := .empty}])
+@@ -335,5 +342 @@
+-  let reader ← frozen.pages.forkPrivate frozen.image.pageSeed
+-  let pages := reader.val
+-  let originals ← (frozen.image.originals.zip scopes).mapM fun (image,scope) => image.borrow pages scope
+-  let pool : Pool := ⟨← IO.mkRef {catalogue},pages⟩
+-  return ⟨originals,pool,reader.property⟩
++  localSession frozen.image scopes
+@@ -360,5 +363,40 @@
+-/-- A single coordinator calls this operation. Hits reuse the validated image;
+-workers never concurrently mutate its catalogue or repeat its public build. -/
+-@[no_expose] def Pool.forkFrame (pool : Pool) (frame : Frame) : IO Session := do
+-  let frozen ← match ← pool.find frame.key with
+-    | some image => pure (⟨image,pool.pages⟩ : Frozen)
++/-- A checked immutable value, not a handle back to the mutable catalogue.
++All source ordering and prepared-root validation precedes this handoff. -/
++structure CheckedFrame where
++  private mk ::
++  image : Image
++  scopes : Array String
++  key : String
++  original : Array (String × PageMap.Head)
++  keyExact : image.key = key
++  originalExact : image.originals.map (fun image => (image.directory.toString,image.head)) = original
++
++@[no_expose] def CheckedFrame.bind (image : Image) (frame : Frame) : Except String CheckedFrame := do
++  if keyExact : image.key = frame.key then
++    if originalExact : image.originals.map (fun image => (image.directory.toString,image.head)) =
++        frame.sources.map (fun source => (source.directory.toString,source.head)) then
++      return ⟨image,frame.scopes,frame.key,_,keyExact,originalExact⟩
++    else throw "coordinator original image boundary differs"
++  else throw "coordinator returned a different public read cut"
++
++theorem CheckedFrame.original_boundary (checked : CheckedFrame) :
++    checked.image.originals.map (fun image => (image.directory.toString,image.head)) = checked.original :=
++  checked.originalExact
++
++theorem CheckedFrame.original_key (checked : CheckedFrame) : checked.image.key = checked.key := checked.keyExact
++
++def CheckedFrame.publicImage (checked : CheckedFrame) : Image := checked.image
++
++theorem CheckedFrame.public_image (checked : CheckedFrame) : checked.publicImage = checked.image := rfl
++
++def CheckedFrame.fork (checked : CheckedFrame) : IO Session :=
++  localSession checked.image checked.scopes
++
++theorem CheckedFrame.local_fork (checked : CheckedFrame) :
++    checked.fork = localSession checked.image checked.scopes := rfl
++
++/-- Only catalogue lookup/build is serialized. A hit hands its immutable image
++to the actor; local reader construction runs independently in that actor. -/
++@[no_expose] def Pool.prepareFrame (pool : Pool) (frame : Frame) : IO CheckedFrame := do
++  let frozen ← match ← pool.find frame.key with
++    | some image => pure (⟨image⟩ : Frozen)
+@@ -366,9 +404 @@
+-  unless frozen.image.key == frame.key do throw (IO.userError "coordinator returned a different public read cut")
+-  let catalogue ← IO.ofExcept (Catalogue.check #[{frozen.image with pageSeed := .empty}])
+-  unless frozen.image.originals.map (fun image => (image.directory.toString,image.head)) ==
+-      frame.sources.map (fun source => (source.directory.toString,source.head)) do
+-    throw (IO.userError "coordinator original image boundary differs")
+-  let reader ← pool.pages.forkPrivate frozen.image.pageSeed
+-  let pages := reader.val
+-  let originals ← (frozen.image.originals.zip frame.scopes).mapM fun (image,scope) => image.borrow pages scope
+-  return ⟨originals,⟨← IO.mkRef {catalogue},pages⟩,reader.property⟩
++  IO.ofExcept (CheckedFrame.bind frozen.image frame)

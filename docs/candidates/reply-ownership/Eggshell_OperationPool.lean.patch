@@ -1,0 +1,104 @@
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -5,0 +6 @@
++public import tools.research.ReplyHold
+@@ -9,0 +11 @@
++open Eggshell.Research
+@@ -23 +25 @@
+-  reservation : Std.Mutex (Worker.Lifetime.Cell Nat)
++  reservation : Std.Mutex ReplyHold.Cell
+@@ -102 +104 @@
+-    ← IO.Promise.new,← Std.Mutex.new (.open 0)⟩
++    ← IO.Promise.new,← Std.Mutex.new .waiting⟩
+@@ -158,2 +160,2 @@
+-def Pool.reserveReply (pool : Pool) (job : Job) (amount : Nat := replyBytes job.request.role) : IO Bool := do
+-  unless 0 < amount && amount ≤ replyBytes job.request.role do return false
++def Pool.reserveReply (pool : Pool) (job : Job) : IO Bool := do
++  let amount := replyBytes job.request.role
+@@ -163,16 +165,13 @@
+-      match ← get with
+-      | .closed => return some false
+-      | .open previous =>
+-        if previous > 0 then return some (previous == amount)
+-        let reserved ← match job.request.role with
+-          | .search => pool.searchReplies.atomically do
+-            let before : Budget searchReplyCapacity ← get
+-            let some next := before.reserve? amount | return false
+-            set next; return true
+-          | .save => pool.saveReplies.atomically do
+-            let before : Budget saveReplyCapacity ← get
+-            let some next := before.reserve? amount | return false
+-            set next; return true
+-        if !reserved then return none
+-        set (Worker.Lifetime.Cell.open amount)
+-        return some true
++      let some next := ReplyHold.grant (← get) amount | return some false
++      let reserved ← match job.request.role with
++        | .search => pool.searchReplies.atomically do
++          let before : Budget searchReplyCapacity ← get
++          let some next := before.reserve? amount | return false
++          set next; return true
++        | .save => pool.saveReplies.atomically do
++          let before : Budget saveReplyCapacity ← get
++          let some next := before.reserve? amount | return false
++          set next; return true
++      if !reserved then return none
++      set next
++      return some true
+@@ -183,5 +182,2 @@
+-def Pool.releaseReply (pool : Pool) (job : Job) : IO Unit := do
+-  let amount ← job.reservation.atomically do
+-    let (next,owned) := Worker.Lifetime.close (← get)
+-    set next
+-    return owned.getD 0
++def Pool.returnReplyBytes (pool : Pool) (job : Job) (amount : Nat) : IO Unit := do
++  if amount == 0 then return
+@@ -191,0 +188,27 @@
++def Pool.releaseReply (pool : Pool) (job : Job) : IO Unit := do
++  let amount ← job.reservation.atomically do
++    let (next,amount) := ReplyHold.close (← get)
++    set next
++    return amount
++  pool.returnReplyBytes job amount
++
++def Pool.finishReplyProducer (pool : Pool) (job : Job) : IO Unit := do
++  let amount ← job.reservation.atomically do
++    let (next,amount) := ReplyHold.finish (← get)
++    set next
++    return amount
++  pool.returnReplyBytes job amount
++
++/-- The callback is entered only after memory admission. Search actors remain
++independent; this bound applies to materializing and retaining wire replies.
++Cancellation cannot return their charge before the enclosing producer ends. -/
++@[noinline, nospecialize] def Pool.withReplyEncoding (pool : Pool) (job : Job) (input : α)
++    (encode : α → IO Json) : IO (Option Json) := do
++  unless ← pool.reserveReply job do return none
++  unless !(← job.cancelled.get) && (← IO.monoMsNow) < (← job.expires.get) do return none
++  let value ← encode input
++  let amount := value.compress.utf8ByteSize+1024
++  if amount ≤ replyBytes job.request.role && !(← job.cancelled.get) &&
++      (← IO.monoMsNow) < (← job.expires.get) then return some value
++  return none
++
+@@ -297 +320 @@
+-def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job)
++def Pool.runSearchBody (pool : Pool) (active : OperationPlan.Active) (job : Job)
+@@ -315,3 +338 @@
+-    let value := toJson reply
+-    let amount := value.compress.utf8ByteSize+1024
+-    if !(← job.cancelled.get) && (← pool.reserveReply job amount) then pure (some value) else pure none
++    pool.withReplyEncoding job reply (fun reply => pure (toJson reply))
+@@ -331 +352,6 @@
+-def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.Active) (job : Job) : IO Unit := do
++def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job)
++    (originalReads : Option Synapses.SourceViewBatch.ReadAccess := none) : IO Unit :=
++  try pool.runSearchBody active job originalReads
++  finally pool.finishReplyProducer job
++
++def Pool.runBody (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.Active) (job : Job) : IO Unit := do
+@@ -356,0 +383,4 @@
++def Pool.run (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPlan.Active) (job : Job) : IO Unit :=
++  try pool.runBody lane active job
++  finally pool.finishReplyProducer job
++

@@ -1,0 +1,15 @@
+--- a/Eggshell/SearchReaders.lean
++++ b/Eggshell/SearchReaders.lean
+@@ -14 +14 @@
+-  reply : IO.Promise (Except IO.Error PreparedReaders.Session)
++  reply : IO.Promise (Except IO.Error PreparedReaders.CheckedFrame)
+@@ -26 +26 @@
+-        let session ← pool.forkFrame request.frame
++        let checked ← pool.prepareFrame request.frame
+@@ -28 +28 @@
+-        pure (.ok session)
++        pure (.ok checked)
+@@ -57 +57,2 @@
+-      return ← IO.ofExcept result
++      let checked ← IO.ofExcept result
++      return ← checked.fork
