@@ -89,6 +89,7 @@ def main (arguments : List String) : IO Unit := do
     | "--snapshot-stats" :: tags => (destination.parent.getD destination / "snapshot-stats",tags)
     | "--actor-heap" :: tags => (destination.parent.getD destination / "actor-heap",tags)
     | "--transport-heap" :: tags => (destination.parent.getD destination / "transport-heap",tags)
+    | "--record-read-image" :: tags => (destination.parent.getD destination / "record-read-image",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -121,7 +122,7 @@ def main (arguments : List String) : IO Unit := do
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
       tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-" ||
       tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-" || tag.startsWith "working-set-" ||
-      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-") &&
+      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"

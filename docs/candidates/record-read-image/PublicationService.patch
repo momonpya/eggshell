@@ -1,0 +1,16 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -509,10 +509,3 @@
+-    let mut rows : Array (String × Option ObservedRecordView.Geometry) := #[]
+-    let mut size := 0
+-    for owner in owners do
+-      unless (← IO.monoMsNow) < deadline do throw (IO.userError "original record projection expired")
+-      let found ← server.structures.acquire original.index scope.database owner deadline
+-      let value := toJson (owner,found)
+-      size := size+value.compress.utf8ByteSize
+-      unless size ≤ Stream.maxBytes-4096 do throw (IO.userError "original record projection exceeds reserved reply budget")
+-      rows := rows.push (owner,found)
+-    return toJson ({source := head,rows,cache := ← server.structures.stats} : ObservedRecordView.Projection)
++    let batch ← server.structures.project original.index scope.database owners deadline (Stream.maxBytes-4096)
++    let rows := batch.rows
++    return toJson ({source := head,rows,cache := Json.null} : ObservedRecordView.Projection)

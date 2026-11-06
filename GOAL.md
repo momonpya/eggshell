@@ -35,9 +35,9 @@
 
 同じPID内で、35照会が16ソースずつ、原文構造metadataのsource-records通信を560回行っていた。小さな不変値をJSON化・送受信・parseし直している事実は確認できたが、RSSの主因とは未確定である。[typed original reads](docs/candidates/typed-original-reads/plan.json)はこの内部境界を対象に、scope・capability・full Head・producer・retained lease・owner順・絶対期限と既存の保持容量を守る読取interfaceを計画した。過去に不採用のsearch-inputsを繰り返さない。
 
-ユーザーのロック除去指示に対し、最初に原文構造cacheの不変lookupと可変の受付・充填・解放を分離する。現状はhitのLRU更新とmissのDB読出しが共有Mutex内にある。同期不要の読取型からMutex/CAS/可変参照を除き、読取結果と拒否条件の不変性をLeanで確認し、元Mutexを保持したnative対照で接続を検査する。登録・容量予約・解放の本当に可変な状態まで無同期にしない。全retrievalがlock-freeとは主張しない。
+ユーザーのロック除去指示に対し、[原文構造cacheの読取と管理を分ける隔離候補](docs/candidates/record-read-image/README.md)を実装した。hitのLRU/統計更新を除き、missのDB読出しを共有Mutex外へ移した。短い参照受渡し後は要求された不変entryだけを保持し、読取型にMutex/CAS/可変参照を渡さない。6 Lean lawと実宣言の1016依存監査、通常ContractAuditが通り、元Mutexを保持した80並行reader×16batchと実miss読取、scope/Head/期限/予算の拒否、退役前image、重複fill・容量境界を確認した。全retrievalのlock-freeを証明したものではない。
 
-次の順序は、①原文構造の読取とcache管理の分離を証明・実装、②checked typed readへ接続、③固定32実hookの完全stdout一致・原文/ACK・同期回数/保持量を比較、④根拠ある改善がある場合だけ変更後の80負荷を一度測る。同じ失敗80を無変更で再試行しない。従来の[numerical-ready](docs/candidates/numerical-ready/README.md)の80同時は全ready hitでもRSS保護停止、必要原文0で不合格のまま。nested時間や中央値を加算して主因を作らない。
+同候補の固定32実hookは全原文+ACK・意味完了32/32、親stdoutと全byte一致、35実出力を独立照合した。時間は6621/7614/9084ms（min/median/max）、関連sampled RSS2726000KiBで、速度・memory改善を確認していない。従って新しい80負荷は実行せず、本体未採用・回答モデル0/有料比較0/18を維持する。次はchecked typed readへ接続して同一process内の原文metadata通信を除き、固定32実hookの同期回数/保持量/本文を比較する。根拠ある改善がある場合だけ変更後80を一度測る。同じ失敗80を無変更で再試行しない。従来の[numerical-ready](docs/candidates/numerical-ready/README.md)の80同時は全ready hitでもRSS保護停止、必要原文0で不合格のまま。nested時間や中央値を加算して主因を作らない。
 
 製品coreは変更していない。隔離sourceは全overlayを戻し、終了DB/cache/raw log・初期copy・不要な旧実行体は記録後にarchiveせず削除する。現在の診断に必要な実行体/link object/interface、16原典、対照とsealed clientを保持する。各chatの軽いactorは独立、重いDB/model/public準備は共有する。元の30秒、4 GiB ceiling/3.5 GiB stop、空き2 GiB、16並行原典所有者、完全な認定domain・私有usage分離を維持する。資源停止を成功扱いにしない。
 
