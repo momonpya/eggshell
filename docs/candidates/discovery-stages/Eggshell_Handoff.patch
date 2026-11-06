@@ -1,0 +1,64 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2318 +2318,2 @@
+-      Fin document.windows.length → IO String) (receipt : Option String := none) (queryInputs : Option Json := none) :
++      Fin document.windows.length → IO String) (receipt : Option String := none) (queryInputs : Option Json := none)
++    (onStage : String → IO Unit := fun _ => pure ()) :
+@@ -2319,0 +2321 @@
++  onStage "focus-directory:start"
+@@ -2329,0 +2332 @@
++  onStage "focus-directory:end"
+@@ -2343 +2346,4 @@
+-  let some observed ← BuiltinSearch.nominateIndexed command question requests [] [] repair false receipt "focus" queryInputs | return none
++  onStage "focus-provider:start"
++  let observed ← BuiltinSearch.nominateIndexed command question requests [] [] repair false receipt "focus" queryInputs
++  onStage "focus-provider:end"
++  let some observed := observed | return none
+@@ -8305,0 +8312 @@
++  onStage : String → IO Unit := fun _ => pure ()
+@@ -8505,0 +8513 @@
++    source.onStage ("discovery:"++label)
+@@ -8799,0 +8808 @@
++  trace "source citations"
+@@ -8807,0 +8817 @@
++  trace "synaptic owners"
+@@ -8816,0 +8827 @@
++  trace "synaptic built"
+@@ -8914,0 +8926 @@
++    trace "automatic prepared"
+@@ -8922,0 +8935 @@
++    trace "automatic rendered"
+@@ -8942 +8955 @@
+-    auditRenderedSelection source.receipt discovery
++    let audited ← auditRenderedSelection source.receipt discovery
+@@ -8944,0 +8958,2 @@
++    trace "selection audited"
++    return audited
+@@ -8947,0 +8963 @@
++    trace "original release:start"
+@@ -8949,0 +8966 @@
++    trace "original release:end"
+@@ -9157 +9174,2 @@
+-    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) :
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
++    (onStage : String → IO Unit := fun _ => pure ()) :
+@@ -9165,0 +9184 @@
++    onStage
+@@ -9217 +9236 @@
+-          Persistence.Store.readSearchWindow source document.original index.val) receipt (queryInputs.map toJson)
++          Persistence.Store.readSearchWindow source document.original index.val) receipt (queryInputs.map toJson) onStage
+@@ -9392,0 +9412 @@
++    onStage "owner-view:reference"
+@@ -9395 +9415,2 @@
+-      reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs
++      reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs onStage
++  onStage "owner-view:common"
+@@ -9441,0 +9463 @@
++    onStage
+@@ -9541,0 +9564 @@
++      onStage "focus-documents:start"
+@@ -9554,0 +9578 @@
++      onStage "focus-documents:end"
+@@ -9567 +9591 @@
+-          Persistence.Store.readSearchWindow original.snapshot document index.val) receipt (queryInputs.map toJson) }
++          Persistence.Store.readSearchWindow original.snapshot document index.val) receipt (queryInputs.map toJson) onStage }

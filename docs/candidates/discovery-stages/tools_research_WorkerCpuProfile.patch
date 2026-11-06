@@ -1,0 +1,30 @@
+--- a/tools/research/WorkerCpuProfile.lean
++++ b/tools/research/WorkerCpuProfile.lean
+@@ -43,0 +44 @@
++  program : String
+@@ -81 +82 @@
+-      ← IO.ofExcept (cpuMs system),rss,role engine command⟩
++      ← IO.ofExcept (cpuMs system),rss,role engine command,command⟩
+@@ -149 +150 @@
+-    IO.sleep 750
++    IO.sleep 3000
+@@ -151,0 +153 @@
++      let sampleBegan ← IO.monoMsNow
+@@ -153,0 +156 @@
++        ("startedAtMs",toJson sampleBegan),("finishedAtMs",toJson (← IO.monoMsNow)),
+@@ -266,0 +270,3 @@
++    let before ← processes engine
++    save (root/"shutdown-before.json") (toJson before)
++    let frontendStarted ← IO.monoMsNow
+@@ -267,0 +274,5 @@
++    let frontendFinished ← IO.monoMsNow
++    let between ← processes engine
++    save (root/"shutdown-frontend.json") (Json.mkObj [("exitCode",toJson frontend.exitCode.toNat),
++      ("stdout",toJson frontend.stdout),("stderr",toJson frontend.stderr),
++      ("startedAtMs",toJson frontendStarted),("finishedAtMs",toJson frontendFinished),("processesAfter",toJson between)])
+@@ -269 +280,4 @@
+-    save (root/"shutdown.json") (Json.mkObj [("frontendExit",toJson frontend.exitCode.toNat),("publisherExit",toJson publisher.exitCode.toNat)])
++    let after ← processes engine
++    save (root/"shutdown.json") (Json.mkObj [("frontendExit",toJson frontend.exitCode.toNat),
++      ("publisherExit",toJson publisher.exitCode.toNat),("publisherStdout",toJson publisher.stdout),("publisherStderr",toJson publisher.stderr),
++      ("before",toJson before),("afterFrontend",toJson between),("afterPublisher",toJson after)])

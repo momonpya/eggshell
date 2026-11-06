@@ -91,6 +91,7 @@ def main (arguments : List String) : IO Unit := do
     | "--transport-heap" :: tags => (destination.parent.getD destination / "transport-heap",tags)
     | "--record-read-image" :: tags => (destination.parent.getD destination / "record-read-image",tags)
     | "--typed-original-reads" :: tags => (destination.parent.getD destination / "typed-original-reads",tags)
+    | "--discovery-stages" :: tags => (destination.parent.getD destination / "discovery-stages",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -123,7 +124,7 @@ def main (arguments : List String) : IO Unit := do
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
       tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-" ||
       tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-" || tag.startsWith "working-set-" ||
-      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-" || tag.startsWith "typed-original-reads-") &&
+      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-" || tag.startsWith "typed-original-reads-" || tag.startsWith "discovery-stages-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"
