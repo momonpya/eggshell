@@ -231,3 +231,16 @@ behavior preservation,not a measured performance or token improvement.
 File-header/page/lease/admission synchronization remains separate. The80-hook
 memory failure is unresolved;do not repeat unchanged80 traffic or increase
 the guard. Product adoption and real98% evidence delivery remain open.
+
+Allocator-profile observations exclude a simple growing-cache-cardinality
+explanation:host RSS grows172,608→647,088→874,864KiB,but metadata remains160
+empty entries/12,703,024 charged bytes,one completed loader task,and no original
+owner or file-header entries. Source/header and reader-image counts stay fixed.
+The same32 hooks preserve every parent stdout byte and complete semantics.
+Owner-reported phase blocks are roughly5MiB,but non-block area accounting can
+include pending remote frees. Global committed counters failed validation and
+are not used. A same-owner model-free fixture does not reproduce the growth.
+Next compare producer-owned release with cross-thread result release after
+producer exit,and audit typed SearchReply/Json/environment lifetimes. Do not
+change allocator knobs,concurrency,ranking or clocks based on incomplete heap
+attribution. No80-hook repeat,token improvement or product adoption is claimed.

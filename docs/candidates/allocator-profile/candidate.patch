@@ -1,0 +1,95 @@
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index bb77b013..28ddcb6c 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -3,0 +4 @@ public import Eggshell.Worker
++public import tools.research.AllocatorDiagnostics
+@@ -224 +225,5 @@ def searchPhase (request : Worker.Search) (environment : Worker.SearchEnvironmen
+-    (fun ready => Worker.searchRestored request ready readers (some environment)) signal
++    (fun ready => do
++      let result ← Worker.searchRestored request ready readers (some environment)
++      if (← IO.getEnv "EGGSHELL_TRACE_ALLOCATOR") == some "1" then
++        Receipt.observe request.receipt "query-allocator" (← Research.AllocatorDiagnostics.owner)
++      return result) signal
+diff --git a/Eggshell/PublicationService.lean b/Eggshell/PublicationService.lean
+index 5e87d1b4..84d0843c 100644
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -681,0 +682,2 @@ def stats (server : Server) : IO Json := server.state.atomically do
++  let enabled ← IO.getEnv "EGGSHELL_TRACE_ALLOCATOR"
++  let heap ← if enabled == some "1" then Research.AllocatorDiagnostics.owner else pure Json.null
+@@ -691 +693,2 @@ def stats (server : Server) : IO Json := server.state.atomically do
+-    ("operations",← server.operations.stats),("workerPipes",← Worker.localStats)]
++    ("operations",← server.operations.stats),("workerPipes",← Worker.localStats),
++    ("statsOwnerHeap",heap)]
+diff --git a/Eggshell/CanonicalSourcePrepared.lean b/Eggshell/CanonicalSourcePrepared.lean
+index 5d17e723..28f8a2fa 100644
+--- a/Eggshell/CanonicalSourcePrepared.lean
++++ b/Eggshell/CanonicalSourcePrepared.lean
+@@ -351,0 +352,2 @@ def Pool.stats (pool : Pool) : IO Json := do
++  let views ← pool.views.stats (fun value => value.rows.isEmpty)
++  let files ← pool.files.stats (fun _ => false)
+@@ -355 +357,2 @@ def Pool.stats (pool : Pool) : IO Json := do
+-      ("capacity",toJson capacity),("pages",pages),("owners",owners),("active",toJson state.active),("loads",toJson state.loads),
++      ("capacity",toJson capacity),("pages",pages),("owners",owners),("views",views),("files",files),
++      ("active",toJson state.active),("loads",toJson state.loads),
+diff --git a/tools/research/SharedMetadataCache.lean b/tools/research/SharedMetadataCache.lean
+index b991d0f4..17772fc9 100644
+--- a/tools/research/SharedMetadataCache.lean
++++ b/tools/research/SharedMetadataCache.lean
+@@ -4,0 +5 @@ public import Init.System.Promise
++public import Lean.Data.Json.FromToJson
+@@ -155,0 +157,20 @@ def Cache.withReady (cache : Cache α capacity) (key : String) (amount deadline
++def Cache.stats (cache : Cache α capacity) (empty : α → Bool) : IO Lean.Json := do
++  let state ← cache.state.atomically get
++  let tasks ← cache.tasks.atomically get
++  let finished ← tasks.filterM fun task => return (← IO.hasFinished task)
++  let mut resolved := 0
++  let mut emptyEntries := 0
++  for (_,entry) in state.entries do
++    if ← entry.promise.isResolved then
++      if let some (.ok value) := entry.promise.result?.get then
++        resolved := resolved+1
++        if empty value then emptyEntries := emptyEntries+1
++  return Lean.Json.mkObj [("entries",Lean.toJson state.entries.size),("chargedBytes",Lean.toJson state.budget.used),
++    ("capacity",Lean.toJson capacity),("active",Lean.toJson state.active),("loads",Lean.toJson state.loads),
++    ("hits",Lean.toJson state.hits),("joins",Lean.toJson state.joins),("evictions",Lean.toJson state.evictions),
++    ("borrowers",Lean.toJson (state.entries.fold (fun n _ entry => n+entry.borrowers) 0)),
++    ("resolvedEntries",Lean.toJson resolved),("emptyEntries",Lean.toJson emptyEntries),
++    ("retainedTasks",Lean.toJson tasks.size),("finishedRetainedTasks",Lean.toJson finished.size),
++    ("accountedExact",Lean.toJson (state.budget.used == state.entries.fold (fun n _ entry => n+entry.charge) 0)),
++    ("chargesNotHeapBytes",Lean.toJson true)]
++
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 7355792b..3784e8cc 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2221,0 +2222,2 @@ example : Eggshell.Plugin.OperationPlan.maxRequests = Eggshell.Numerical.maxClie
++#check Eggshell.Synapses.SharedMetadataCache.Cache.stats
++#check Eggshell.Research.AllocatorDiagnostics.owner
+diff --git a/tools/research/AllocatorDiagnostics.lean b/tools/research/AllocatorDiagnostics.lean
+new file mode 100644
+index 00000000..8ab98151
+--- /dev/null
++++ b/tools/research/AllocatorDiagnostics.lean
+@@ -0,0 +1,20 @@
++module
++public import Lean.Data.Json.FromToJson
++@[expose] public section
++namespace Eggshell.Research.AllocatorDiagnostics
++open Lean
++@[extern "eggshell_research_allocator_owner"] opaque ownerRaw : IO String
++/-- Diagnostic-only owner-thread areas. No global counter, collection,
++foreign heap traversal or production decision depends on this value. -/
++def owner : IO Json := do
++  let raw ← ownerRaw
++  let fields ← (raw.splitOn "\n").filterMapM fun line => do
++    if line.isEmpty then return none
++    let [key,value] := line.splitOn "=" | throw (IO.userError "invalid owner heap field")
++    let some number := value.toNat? | throw (IO.userError "invalid owner heap number")
++    return some (key,toJson number)
++  let result := Json.mkObj fields
++  unless result.getObjValD "version" == toJson (223 : Nat) do
++    throw (IO.userError "unexpected installed allocator")
++  return result.setObjVal! "ownerOnlyNotWholeProcessLiveBytes" (toJson true)
++end Eggshell.Research.AllocatorDiagnostics

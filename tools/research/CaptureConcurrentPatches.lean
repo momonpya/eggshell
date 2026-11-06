@@ -20,6 +20,16 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["allocator-profile"] then
+    check (!(← (workspace/"docs/candidates/allocator-profile/candidate.patch").pathExists)) "allocator service observer patch already sealed"
+    save "allocator-profile" ((#["Eggshell/OperationPool.lean","Eggshell/PublicationService.lean",
+      "Eggshell/CanonicalSourcePrepared.lean","tools/research/SharedMetadataCache.lean",
+      "Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"allocator-service-parent-core"/relative,core/relative,relative))
+    let output := workspace/"docs/candidates/allocator-profile/candidate.patch"
+    IO.FS.writeFile output ((← IO.FS.readFile output)++(← patch "/dev/null"
+      (core/"tools/research/AllocatorDiagnostics.lean") "tools/research/AllocatorDiagnostics.lean"))
+    return
   if arguments == ["owner-metadata-image"] then
     check (!(← (workspace/"docs/candidates/owner-metadata-image/candidate.patch").pathExists)) "owner metadata image patch already sealed"
     save "owner-metadata-image" ((#["Eggshell/PublicationService.lean","Eggshell/ContractAudit.lean",

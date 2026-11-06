@@ -137,4 +137,6 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 [所有者メタデータを不変viewへ固定する候補](docs/candidates/owner-metadata-image/README.md)を追加した。初回の全量byte計数と既存の問い合わせ予約の後に検証済み値への参照を保持し、描画・選択中の共有cache再取得/borrower/LRU更新を純粋なscope付きlookupへ置き換えた。値の挿入・別ID拒否・他owner保持のLean lawと、実selectorの接続監査が通った。元cacheのMutexを保持中に4096lookupを完了するnative検査も通った。実16並行×2波は32/32原文+ACK・32/32意味完了、親と全32stdout byte一致、最大8828ms・関連RSS2698336KiB。251→252 native moduleの差は予定した3既存sourceと新しい不変imageだけだった。既存128MiB問い合わせ予約と期限は拡大していない。file-header/page/lease/受付/解放の同期は別途残り、読み取り全体のlock-freeや80人達成とは扱わない。本体未採用、回答モデル0/有料比較0/18、80負荷の再実行なし。保持メモリの原因分離は未完了である。
 
+[所有者heapと保持量の観測](docs/candidates/allocator-profile/README.md)を追加した。DB/モデルなし8 actor×4波の4条件では終了後RSS約77MiBで、実hostの増大を再現しなかった。allocatorのglobal committed集計には不正な値があり、その値を根拠から除外した。実サービスはglobal集計/強制回収をしないowner-only診断APIと、欠けていたmetadata/file/task統計だけを追加。固定16 sourceの実32件は全本文が親とbyte一致、32/32原文+ACK/意味完了、最大9116ms・関連sampled RSS2691712KiBだった。host RSSはprime/1波/2波で172608→647088→874864KiBに増えたが、sources16/8MiB/page86、views160件（全て空）/12703024bytes、loader完了task1、files/owner arena0は不変。単純なcache件数増加では説明できない。phase ownerのreported usedは約5MiBだがpending remote freeを含み得るため、生存graphとはまだ断定しない。次はproducer内解放と、graphのスレッド間移譲後・producer終了後の解放を同負荷で比較し、SearchReply/Json/環境の境界寿命を追う。allocator設定・worker数・期限を先に変えない。80再試行なし、回答モデル0、有料比較0/18、本体未採用、98%と80人8時間の達成は未証明。
+
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。

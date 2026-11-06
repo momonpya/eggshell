@@ -19,3 +19,5 @@
 観測した空きは2,219,836→2,640,356 KiB。OS等の同時変化を含む値で、論理削除量と物理回収量を同一視しない。二arm準備の起動条件3 GiBには未到達であり、容量制限を下げた再試行はしていない。追加の回答モデル呼出し0、配送・総トークンの新しい改善主張なし。[小さな削除集計](candidates/artifact-cleanup.json)。
 
 2026-11-06、owner-metadata-image候補の終了済み試験DB・派生cache・rawログ・不要な生成C/診断stdoutを削除した。5,676ファイル、論理33,096,425 bytes。アーカイブは作らず、35実出力の本文とSHA、失敗記録、native検査・source監査だけを文書側に保持した。元の16 Headと5保護入力は一致し、選定した対照/候補runtimeと必要なnativeリンク入力を保持した。物理空きの増加量とは同一視しない。[削除集計](candidates/owner-metadata-image/cleanup.json)。
+
+同日、allocator-profileの終了済み試験DB・cache・rawログ・生成C/診断stdout、および不要になったモデルなし再現用の実行体とbuild全体を削除した。5,924ファイル、論理134,794,206 bytes。アーカイブなし。4条件の数値観測、35実配送本文とSHA、失敗・ABI・source/object digestは記録側に保持し、保護原典と現在のサービス候補・対照・必要なリンク入力は保持した。[削除集計](candidates/allocator-profile/cleanup.json)。
