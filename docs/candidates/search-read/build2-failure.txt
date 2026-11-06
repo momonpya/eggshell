@@ -1,0 +1,40 @@
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:52:70: error: unsolved goals
+case ready
+α : Type
+expected : Identity
+finishReady : Bool
+cutoff arrived : Nat
+late : cutoff ≤ arrived
+identity✝ : Identity
+⊢ (Except.error "foreign or expired search progress").isOk = false
+
+case reply
+α : Type
+expected : Identity
+finishReady : Bool
+cutoff arrived : Nat
+late : cutoff ≤ arrived
+identity✝ : Identity
+value✝ : α
+⊢ (Except.error "foreign or expired search reply").isOk = false
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:57:74: error: unsolved goals
+α : Type
+expected actual : Identity
+cutoff arrived : Nat
+value : α
+late : cutoff ≤ arrived
+⊢ (Except.error "foreign or expired search reply").isOk = false
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:65:90: error: unsolved goals
+α : Type
+expected actual : Identity
+finishReady : Bool
+cutoff arrived : Nat
+foreign : (actual == expected) = false
+⊢ (Except.error "foreign or expired search progress").isOk = false
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:70:74: error: unsolved goals
+α : Type
+expected actual : Identity
+cutoff arrived : Nat
+value : α
+foreign : (actual == expected) = false
+⊢ (Except.error "foreign or expired search reply").isOk = false

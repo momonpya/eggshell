@@ -1,0 +1,8 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -1,0 +2 @@
++import tools.research.SearchReadChecks
+@@ -92,0 +94,3 @@
++  | ["search-read-check",root,wire] =>
++    Eggshell.Research.SearchReadChecks.run (.mk root) (.mk wire)
++    return 0

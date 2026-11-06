@@ -1,0 +1,26 @@
+{
+  "priorRuntime": {
+    "adopted": false,
+    "paidComparisons": "0/18",
+    "parentSha256": "a7abe3c71ba50f0b20f492d8291b4df993d0454bf2e5fa4e3e5e59fdbab3f78f",
+    "sha256": "f23b9f8c95c0e4a7ff6fca03717157b2c3dbef3cca759dd2e4dd6fb7d37c7643"
+  },
+  "priorControls": {
+    "adopted": false,
+    "answeringModelCalls": 0,
+    "cancelledReadJoined": true,
+    "elapsedMs": 330,
+    "invalidAndTimeoutRetiredOwnedChild": true,
+    "nativeExchanges": 240,
+    "parallelRequests": 80,
+    "phaseExtensionOnlyWhenAuthorized": true,
+    "policyComparisons": 1440,
+    "replacementRefOrPromise": false,
+    "sharedDeadlineMutexRemoved": true,
+    "validEmptyReplyAndReadyCallbacksPreserved": true,
+    "wholeSearchLockFree": false
+  },
+  "priorWorkerPatch": "--- a/Eggshell/Worker.lean\n+++ b/Eggshell/Worker.lean\n@@ -8,0 +9 @@\n+public import tools.research.SearchReadCut\n@@ -281,26 +282,6 @@\n-/-- One optional ready frame followed by one final reply. Repeated, foreign or\n-late progress cannot restart or extend the upstream deadline. -/\n-def readSearchReply (input : IO.FS.Handle) (policy : SearchPolicy)\n-    (window : Std.Mutex Nat) : IO Json := do\n-  let readFrame : IO SearchFrame := do\n-    IO.ofExcept (Json.parse (← input.getLine) >>= fromJson? (α := SearchFrame))\n-  let frame ← readFrame\n-  let reply ← match frame with\n-    | .ready identity => do\n-        let arrived ← window.atomically do\n-          let cutoff ← get\n-          let arrived ← IO.monoMsNow\n-          unless identity == policy.identity && arrived < cutoff do\n-            throw (IO.userError \"foreign or expired search progress\")\n-          set (readyDeadline policy.identity identity policy.finishReady cutoff arrived)\n-          pure arrived\n-        policy.onReady arrived\n-        readFrame\n-    | other => pure other\n-  match reply with\n-  | .reply identity result =>\n-      unless identity == policy.identity do throw (IO.userError \"foreign search reply\")\n-      unless (← IO.monoMsNow) < (← window.atomically get) do\n-        throw (IO.userError \"expired search reply\")\n-      return toJson result\n-  | .ready _ => throw (IO.userError \"repeated search progress\")\n+def readSearchFrame (input : IO.FS.Handle) : IO (Research.SearchReadCut.Frame (Option Handoff) × Nat) := do\n+  let frame ← IO.ofExcept (Json.parse (← input.getLine) >>= fromJson? (α := SearchFrame))\n+  let arrived ← IO.monoMsNow\n+  return (match frame with\n+    | .ready identity => .ready identity\n+    | .reply identity value => .reply identity value,arrived)\n@@ -308 +289,3 @@\n-partial def awaitSearch (task : Task (Except IO.Error α)) (window : Std.Mutex Nat) : IO (Option α) := do\n+/-- The request owner waits with a value deadline. A timeout closes this exact\n+pipe and joins its read before returning; no blocking read escapes its owner. -/\n+partial def awaitSearch (task : Task (Except IO.Error α)) (deadline : Nat) : IO (Option α) := do\n@@ -313 +296 @@\n-  if (← IO.checkCanceled) || (← IO.monoMsNow) ≥ (← window.atomically get) then return none\n+  if (← IO.checkCanceled) || (← IO.monoMsNow) ≥ deadline then return none\n@@ -315 +298 @@\n-  awaitSearch task window\n+  awaitSearch task deadline\n@@ -316,0 +300,28 @@\n+def awaitSearchFrame (slot : Slot) (child : Child) (deadline : Nat) (read : IO α) : IO (Option α) := do\n+  let task ← IO.asTask read .dedicated\n+  let result ← try awaitSearch task deadline\n+    catch error =>\n+      retire slot child\n+      discard <| IO.wait task\n+      throw error\n+  if result.isNone then\n+    retire slot child\n+    discard <| IO.wait task\n+  return result\n+\n+/-- Only this owner advances the immutable phase. The reader publishes one\n+frame result and never mutates the caller's deadline. -/\n+def readSearchReply (slot : Slot) (child : Child) (payload : Json) (policy : SearchPolicy)\n+    (deadline : Nat) : IO (Option Json) := do\n+  let some (frame,arrived) ← awaitSearchFrame slot child deadline (do\n+    child.stdin.putStr (payload.compress ++ \"\\n\")\n+    child.stdin.flush\n+    readSearchFrame child.stdout) | return none\n+  match ← IO.ofExcept (Research.SearchReadCut.first policy.identity policy.finishReady deadline arrived frame) with\n+  | .finished value => return some (toJson value)\n+  | .final cutoff =>\n+    policy.onReady arrived\n+    unless (← IO.monoMsNow) < cutoff do return none\n+    let some (reply,arrived) ← awaitSearchFrame slot child cutoff (readSearchFrame child.stdout) | return none\n+    return some (toJson (← IO.ofExcept (Research.SearchReadCut.final policy.identity cutoff arrived reply)))\n+\n@@ -423 +434,4 @@\n-    let window ← Std.Mutex.new deadline\n+    if let some policy := searchPolicy then\n+      let result ← readSearchReply slot child payload policy deadline\n+      if result.isNone then retire slot child\n+      return result\n@@ -427,3 +441 @@\n-      match searchPolicy with\n-      | some policy => readSearchReply child.stdout policy window\n-      | none => IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated\n+      IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated\n@@ -434 +445,0 @@\n-      else if searchPolicy.isSome then awaitSearch task window\n",
+  "reason": "remove duplicate retirement lock before committing",
+  "answeringModelCalls": 0
+}

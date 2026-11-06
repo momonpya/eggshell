@@ -1,0 +1,54 @@
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:42:4: error: unsolved goals
+case ready.isTrue.refl
+α : Type
+expected : Identity
+finishReady : Bool
+cutoff arrived : Nat
+actual : Identity
+h✝ : (actual == expected && decide (arrived < cutoff)) = true
+⊢ readyDeadline expected actual finishReady cutoff arrived ≤ expected.deadline
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:44:6: error: No goals to be solved
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:51:70: error: unsolved goals
+case ready
+α : Type
+expected : Identity
+finishReady : Bool
+cutoff arrived : Nat
+late : cutoff ≤ arrived
+identity✝ : Identity
+⊢ ((fun a => Next.final (readyDeadline expected identity✝ finishReady cutoff arrived)) <$>
+        throw "foreign or expired search progress").isOk =
+    false
+
+case reply
+α : Type
+expected : Identity
+finishReady : Bool
+cutoff arrived : Nat
+late : cutoff ≤ arrived
+identity✝ : Identity
+value✝ : α
+⊢ ((fun a => Next.finished value✝) <$> throw "foreign or expired search reply").isOk = false
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:56:74: error: unsolved goals
+α : Type
+expected actual : Identity
+cutoff arrived : Nat
+value : α
+late : cutoff ≤ arrived
+⊢ ((fun a => value) <$> throw "foreign or expired search reply").isOk = false
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:64:90: error: unsolved goals
+α : Type
+expected actual : Identity
+finishReady : Bool
+cutoff arrived : Nat
+foreign : (actual == expected) = false
+⊢ ((fun a => Next.final (readyDeadline expected actual finishReady cutoff arrived)) <$>
+        throw "foreign or expired search progress").isOk =
+    false
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/search-read-source/tools/research/SearchReadCut.lean:69:74: error: unsolved goals
+α : Type
+expected actual : Identity
+cutoff arrived : Nat
+value : α
+foreign : (actual == expected) = false
+⊢ ((fun a => value) <$> throw "foreign or expired search reply").isOk = false

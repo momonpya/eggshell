@@ -29,17 +29,21 @@
 
 ## 現在地と次の順序
 
-現在の統合候補は [read-runtime](docs/candidates/read-runtime/README.md)。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+現在の隔離候補は [search-read](docs/candidates/search-read/README.md)。統合済みの [read-runtime](docs/candidates/read-runtime/README.md) を親とする。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
 
-直近の検索実行体には、別候補で検証済みのReadBoundaryがまだ含まれていなかった。今回は全native sourceを照合し、登録参照を入口1回へまとめるtyped boundaryと、各借用の不要な失効掃除を除くReadCutを一つの実行体へ統合した。既存のOwnedSelect、出版入口、全13カウンタの静止判定、外部DBの準備済み判定は保持する。実ソース差はPublicationServiceとCanonicalSourceLeaseの2つだけで、追加の証明・対照・診断helperと埋込literalも照合した。267 native objectの依存が整合し、原文/権限/完全head/期限/取消、80並行の参照、10,240借用、元のContractAuditが通った。新Mutex/CAS/workerなし。可変な借用登録・解放の境界同期は残り、全retrievalの無同期性とはしない。
+検索待機で不要な同期が残っていた。要求ごとの `Mutex Nat` をreaderがreadyで書き換え、待機側が5msごとにロックしていた。要求の所有者だけが「最初のframe」「最終frame」を進め、各段階の期限を不変値で渡す形へ変更した。共有期限・そのmutexとpollごとの取得を除き、代用品のRef/Promise/CASは追加していない。上流期限、別要求/遅着/重複readyの拒否をLeanで証明した。純粋な遷移209依存と実読取り821依存を監査し、既存のpipe終了/共有受付・解放と任意callbackの同期まで除去済みとは扱わない。タイムアウトと失敗の二重回収も除き、読取り・検査/通知・期限切れの各経路が回収を一度だけ担当する。
 
-同じ16原典/32問/2波と介入後1問の実hookは33/33が意味検索・必須原文2件・ACKを30秒内に完了し、prime込み36 stdout全文が既存の実出力と一致した。時間min/median/max1707/6617/7645ms（最小は介入後の単独問を含む）、関連最大RSS2748928KiB。frontend292ms/exit0、publisher exit0、guard停止なし・残存0。ただしsynthetic fixtureの診断であり、80人8時間・実LLVMの98%・p99・品質・総token改善の証拠にはしない。
+1,440方針比較、80並行pipe×3交換で本文・正常な空・ready callbackを確認し、期限切れ・取消後の子も回収した。最終候補の並行部分2,330ms、関連最大RSS1,510,288KiB、終了後残存0。これは小さいLean製通信相手を使う部品試験であり、検索全体・80人容量・配送98%の達成ではない。最初の80製品processによる試験はRSS保護停止、その次の別要求テスト入力のID衝突も失敗として保存した。二重回収修正前の成功も保持し、単発の時差を性能差と扱わない。269 native objectは整合し、製品差はWorkerとContractAuditの2つだけ。順位/認定/配送枠/30秒は変更していない。
+
+親のread-runtimeでは、登録参照を入口1回へまとめるReadBoundaryと、各借用の不要な失効掃除を除くReadCutを全native sourceの照合後に統合した。OwnedSelect、出版入口、全13カウンタの静止判定、外部DBの準備済み判定も保持する。親の実ソース差はPublicationServiceとCanonicalSourceLeaseの2つで、追加helperと埋込literalも照合済み。267 native objectの依存が整合し、原文/権限/完全head/期限/取消、80並行の参照、10,240借用、ContractAuditが通った。可変な借用登録・解放の境界同期は残り、全retrievalの無同期性とはしない。
+
+親read-runtimeの16原典/32問/2波と介入後1問の実hookは33/33が意味検索・必須原文2件・ACKを30秒内に完了し、prime込み36 stdout全文が既存の実出力と一致した。時間min/median/max1707/6617/7645ms（最小は介入後の単独問を含む）、関連最大RSS2748928KiB。frontend292ms/exit0、publisher exit0、guard停止なし・残存0。ただしsynthetic fixtureの診断であり、新候補・80人8時間・実LLVMの98%・p99・品質・総token改善の証拠にはしない。
 
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 保持している実WorkGraph/応答の所有と、allocator側の保持を因果的に分ける。共有cacheの論理bytes、少数threadのheap、RSSを同一視しない。同じ受動census・交差threadの小fixture・変更なしの失敗80検索を反復しない。
-2. 統合候補を使い、保存済みの実原典と凍結した必要項目について題材1/2/3の原文配送を再監査する。人手の正解をselectorへ渡さない。保存/索引/準備の完了を確認し、修正した場合は題材1の1回目から再評価する。モデルなしの検査を先にし、fixtureでの100%を実DBの98%に置き換えない。
+1. 新候補を使い、保存済みの実原典と凍結した必要項目について題材1/2/3の実フック本文を再監査する。人手の正解をselectorへ渡さない。保存/索引/準備とruntime/helper/prefixの整合を確認し、題材1の1回目から評価する。モデルなしの検査を先にし、通信/fixtureの成功を実DBの98%に置き換えない。
+2. 保持している実WorkGraph/応答の所有と、allocator側の保持を因果的に分ける。共有cacheの論理bytes、少数threadのheap、RSSを同一視しない。同じ受動census・交差threadの小fixture・変更なしの失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。
 

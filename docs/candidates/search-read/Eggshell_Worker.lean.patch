@@ -1,0 +1,107 @@
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -8,0 +9 @@
++public import tools.research.SearchReadCut
+@@ -281,26 +282,6 @@
+-/-- One optional ready frame followed by one final reply. Repeated, foreign or
+-late progress cannot restart or extend the upstream deadline. -/
+-def readSearchReply (input : IO.FS.Handle) (policy : SearchPolicy)
+-    (window : Std.Mutex Nat) : IO Json := do
+-  let readFrame : IO SearchFrame := do
+-    IO.ofExcept (Json.parse (← input.getLine) >>= fromJson? (α := SearchFrame))
+-  let frame ← readFrame
+-  let reply ← match frame with
+-    | .ready identity => do
+-        let arrived ← window.atomically do
+-          let cutoff ← get
+-          let arrived ← IO.monoMsNow
+-          unless identity == policy.identity && arrived < cutoff do
+-            throw (IO.userError "foreign or expired search progress")
+-          set (readyDeadline policy.identity identity policy.finishReady cutoff arrived)
+-          pure arrived
+-        policy.onReady arrived
+-        readFrame
+-    | other => pure other
+-  match reply with
+-  | .reply identity result =>
+-      unless identity == policy.identity do throw (IO.userError "foreign search reply")
+-      unless (← IO.monoMsNow) < (← window.atomically get) do
+-        throw (IO.userError "expired search reply")
+-      return toJson result
+-  | .ready _ => throw (IO.userError "repeated search progress")
++def readSearchFrame (input : IO.FS.Handle) : IO (Research.SearchReadCut.Frame (Option Handoff) × Nat) := do
++  let frame ← IO.ofExcept (Json.parse (← input.getLine) >>= fromJson? (α := SearchFrame))
++  let arrived ← IO.monoMsNow
++  return (match frame with
++    | .ready identity => .ready identity
++    | .reply identity value => .reply identity value,arrived)
+@@ -308 +289,3 @@
+-partial def awaitSearch (task : Task (Except IO.Error α)) (window : Std.Mutex Nat) : IO (Option α) := do
++/-- The request owner waits with a value deadline. A timeout closes this exact
++pipe and joins its read before returning; no blocking read escapes its owner. -/
++partial def awaitSearch (task : Task (Except IO.Error α)) (deadline : Nat) : IO (Option α) := do
+@@ -313 +296 @@
+-  if (← IO.checkCanceled) || (← IO.monoMsNow) ≥ (← window.atomically get) then return none
++  if (← IO.checkCanceled) || (← IO.monoMsNow) ≥ deadline then return none
+@@ -315 +298,13 @@
+-  awaitSearch task window
++  awaitSearch task deadline
++
++def awaitSearchFrame (slot : Slot) (child : Child) (deadline : Nat) (read : IO α) : IO (Option α) := do
++  let task ← IO.asTask read .dedicated
++  let result ← try awaitSearch task deadline
++    catch error =>
++      retire slot child
++      discard <| IO.wait task
++      throw error
++  if result.isNone then
++    retire slot child
++    discard <| IO.wait task
++  return result
+@@ -316,0 +312,28 @@
++/-- Validation and callbacks run between joined reads. A failure here owns
++retirement; a failed/expired read is retired by awaitSearchFrame instead. -/
++def checkedSearchStep (slot : Slot) (child : Child) (action : IO α) : IO α := do
++  try action
++  catch error =>
++    retire slot child
++    throw error
++
++/-- Only this owner advances the immutable phase. The reader publishes one
++frame result and never mutates the caller's deadline. -/
++def readSearchReply (slot : Slot) (child : Child) (payload : Json) (policy : SearchPolicy)
++    (deadline : Nat) : IO (Option Json) := do
++  let some (frame,arrived) ← awaitSearchFrame slot child deadline (do
++    child.stdin.putStr (payload.compress ++ "\n")
++    child.stdin.flush
++    readSearchFrame child.stdout) | return none
++  match ← checkedSearchStep slot child (IO.ofExcept
++      (Research.SearchReadCut.first policy.identity policy.finishReady deadline arrived frame)) with
++  | .finished value => return some (toJson value)
++  | .final cutoff =>
++    checkedSearchStep slot child (policy.onReady arrived)
++    unless ← checkedSearchStep slot child (return decide ((← IO.monoMsNow) < cutoff)) do
++      retire slot child
++      return none
++    let some (reply,arrived) ← awaitSearchFrame slot child cutoff (readSearchFrame child.stdout) | return none
++    return some (toJson (← checkedSearchStep slot child (IO.ofExcept
++      (Research.SearchReadCut.final policy.identity cutoff arrived reply))))
++
+@@ -422,2 +445,8 @@
+-  try
+-    let window ← Std.Mutex.new deadline
++  if let some policy := searchPolicy then
++    try readSearchReply slot child payload policy deadline
++    catch error =>
++      -- The reader or checked step already retired this exact child. Do not
++      -- reacquire the ownership lock just to retire it a second time.
++      unless ← slot.closed do IO.eprintln s!"Eggshell {role} worker stopped: {error}"
++      return none
++  else try
+@@ -427,3 +456 @@
+-      match searchPolicy with
+-      | some policy => readSearchReply child.stdout policy window
+-      | none => IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated
++      IO.ofExcept (Json.parse (← child.stdout.getLine))) .dedicated
+@@ -434 +460,0 @@
+-      else if searchPolicy.isSome then awaitSearch task window
