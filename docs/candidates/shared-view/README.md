@@ -69,6 +69,11 @@ Consequently no unchanged eighty-full-search trial is attempted and the host
 memory problem remains open. Background preparation is still active/pending
 at the last observation; it is not labeled drained there.
 
+The subsequent [host-memory diagnosis](../heap-ownership/README.md) runs the same
+sealed runtime with optional tracing disabled. All35 outputs remain exact,
+and host RSS still grows179,920→667,824→891,312KiB. It rules out detailed tracing
+as the main explanation; it does not establish a memory repair.
+
 Ranking, selection, certification completeness, source payloads, source heads,
 deadlines and resource limits are unchanged. Answering-model calls remain0;
 paid matched comparisons remain0/18. The product, README results and releases

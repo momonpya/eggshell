@@ -54,15 +54,27 @@ def setup (action tag : String) : IO Unit := do
         "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
         "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
         (target/"StudyMain").toString,"file-read-check",(base/(tag++"-result")).toString]
-    | "cohort" => do
+    | "cohort" | "cohort-quiet" => do
       check ((← read (study/"native-closure.json")).getObjValD "consistent" == toJson true &&
         (← read (study/"native-checks.json")).getObjValD "typedReadChecks" == toJson true)
         "native closure and read controls required before ordinary traffic"
       let client := base/"frontend-traffic-stop-build/StudyMain"
       check ((← hash client) == "b7bf4901734522beb9bb2d20a8f5cea76afeee6d978a7932e4b4e65e1a2de873")
         "sealed cohort client changed"
-      pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
-        "EGGSHELL_TRACE_QUERY_STAGES=1","EGGSHELL_TRACE_NUMERICAL_STAGES=1","EGGSHELL_TRACE_ALLOCATOR=1","EGGSHELL_TRACE_ACTOR_HEAP=1",
+      let trace := if action == "cohort-quiet" then "0" else "1"
+      if action == "cohort-quiet" then
+        check ((← hash (target/"StudyMain")) == "a9827fcedad5a2d390f64f0e191aee00d0bec5a3f395f6baf5596af0b7d3e7fb")
+          "diagnostic-off control changed the selected native runtime"
+        IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+        discard <| command "/bin/ln" #["-s",(target/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+        write (study/"quiet-plan.json") (Json.mkObj [("previousGoalTurn",toJson "progress:bounded shared images implemented,proved and exercised in actual32-query cohort"),
+          ("purpose",toJson "unchanged runtime/source/query/harness;only optional five diagnostic flags disabled"),
+          ("runtimeSha256",toJson (← hash (target/"StudyMain"))),("clientSha256",toJson (← hash client)),
+          ("cohort",toJson "same16sources/32queries/two waves"),("noEightySearchRetry",toJson true),
+          ("deadlinesAndResourceBoundsUnchanged",toJson true),("adopted",toJson false)])
+      pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE="++trace,
+        "EGGSHELL_TRACE_QUERY_STAGES="++trace,"EGGSHELL_TRACE_NUMERICAL_STAGES="++trace,
+        "EGGSHELL_TRACE_ALLOCATOR="++trace,"EGGSHELL_TRACE_ACTOR_HEAP="++trace,
         "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
         "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
         "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
@@ -175,6 +187,120 @@ def inspectRetained : IO Unit := do
     ("frontendStopMs",summary.getObjValD "frontendStopMs"),("frontendExit",summary.getObjValD "frontendExit"),
     ("publisherExit",summary.getObjValD "publisherExit"),("hostRssKiB",toJson hosts),
     ("snapshots",toJson snapshots)]).compress
+
+def recordQuiet (tag : String) (census : Bool := false) : IO Unit := do
+  drained
+  let destination := if census then workspace/"docs/candidates/heap-ownership" else study
+  let recordName := if census then "evidence.json" else "quiet-result.json"
+  check (tag == (if census then "heap-ownership-cohort1" else "shared-view-quiet1") &&
+    !(← (destination/recordName).pathExists)) "preserve the fixed diagnostic control"
+  let root := base/(tag++"-result")
+  let report ← read (root/"report.json")
+  let guard ← read (base/(tag++".guard.json"))
+  let parentEvidence ← read (study/"evidence.json")
+  let runs ← IO.ofExcept (parentEvidence.getObjValAs? (Array Json) "runs")
+  let some previous := runs[0]? | throw (IO.userError "missing diagnostic-on cohort")
+  let priorRows ← IO.ofExcept (previous.getObjValAs? (Array Json) "rowsIncludingPrime")
+  let bodies ← IO.ofExcept (fromJson? (← read (study/"bodies.json")) : Except String (Array Json))
+  let mut actual := #[]
+  let mut waves := #[]
+  let mut differences := #[]
+  let mut complete := 0
+  let mut originalAck := 0
+  let mut latencies := #[]
+  for name in ["prime","first","second"] do
+    let wave := report.getObjValD name
+    let receipts ← IO.ofExcept (wave.getObjValAs? (Array Json) "receipts")
+    if name != "prime" then
+      complete := complete+(receipts.filter fun receipt =>
+        let semantic := receipt.getObjValD "search-phase-semantic"
+        semantic.getObjValD "status" == toJson "completed" && semantic.getObjValD "hasHandoff" == toJson true).size
+    for row in ← IO.ofExcept (wave.getObjValAs? (Array Json) "rows") do
+      let session ← IO.ofExcept (row.getObjValAs? String "session")
+      let raw ← IO.FS.readFile (root/(session++".stdout"))
+      check (row.getObjValD "stdoutSha256" == toJson (← hash (root/(session++".stdout")))) "quiet actual stdout changed"
+      let output ← IO.ofExcept (Json.parse raw)
+      let body := ((output.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext").toOption.getD ""
+      let index ← IO.ofExcept (row.getObjValAs? Nat "case")
+      let both := body.contains s!"\"observed-head-case-{index}-7b319c\"" && body.contains s!"\"observed-tail-case-{index}-d82a04\""
+      check (row.getObjValD "bothFields" == toJson both && row.getObjValD "bodyBytes" == toJson body.utf8ByteSize)
+        "quiet independent original-field check disagrees"
+      let some prior := priorRows.find? (fun old => old.getObjValD "session" == row.getObjValD "session") |
+        throw (IO.userError "quiet query is outside the fixed control domain")
+      let ref ← IO.ofExcept (prior.getObjValAs? Nat "bodyRef")
+      let some retained := bodies[ref]? | throw (IO.userError "missing retained parent body")
+      let sameBody := retained.getObjValD "body" == toJson body
+      if !sameBody then differences := differences.push (session,body)
+      actual := actual.push (row.setObjVal! "parentBodyRef" (toJson ref)
+        |>.setObjVal! "bodyByteEqual" (toJson sameBody)
+        |>.setObjVal! "completeStdoutEqual" (toJson (row.getObjValD "stdoutSha256" == prior.getObjValD "stdoutSha256")))
+      if name != "prime" then
+        let elapsed ← IO.ofExcept (row.getObjValAs? Nat "elapsedMs")
+        latencies := latencies.push elapsed
+        if both && row.getObjValD "acknowledged" == toJson true && elapsed < 30000 then originalAck := originalAck+1
+    let after ← IO.ofExcept (wave.getObjValAs? (Array Json) "after")
+    let host := after.find? (fun process => process.getObjValD "role" == toJson "publication-service")
+    waves := waves.push (Json.mkObj [("name",toJson name),("hostRssKiB",host.map (·.getObjValD "rssKiB") |>.getD Json.null),
+      ("serviceStats",wave.getObjValD "serviceStats"),("receipts",toJson receipts)])
+  let sorted := latencies.qsort (· < ·)
+  let frontend ← read (root/"shutdown-frontend.json")
+  let shutdown ← read (root/"shutdown.json")
+  let start ← IO.ofExcept (frontend.getObjValAs? Nat "startedAtMs")
+  let finish ← IO.ofExcept (frontend.getObjValAs? Nat "finishedAtMs")
+  let result := Json.mkObj [("tag",toJson tag),("runtimeSha256",report.getObjValD "runtimeSha256"),
+    ("parent",toJson "shared-view-cohort1"),("bodies",toJson (if census then "../shared-view/bodies.json" else "bodies.json")),
+    ("actualOutputs",toJson actual),
+    ("unexpectedBodies",toJson differences),("waves",toJson waves),("requiredOriginalAndAck",toJson originalAck),
+    ("semanticCompletedWithHandoff",toJson complete),("queries",toJson sorted.size),
+    ("latencyMs",Json.mkObj [("min",toJson sorted[0]?),("median",toJson sorted[sorted.size/2]?),("max",toJson sorted.back?)]),
+    ("frontendExit",frontend.getObjValD "exitCode"),("frontendStopMs",toJson (finish-start)),
+    ("publisherExit",shutdown.getObjValD "publisherExit"),("originalHeadsUnchanged",report.getObjValD "originalHeadsUnchanged"),
+    ("guardPeakRssKiB",guard.getObjValD "sampledPeakRssKiB"),("guardIntervened",guard.getObjValD "guardTriggered"),
+    ("guardOwnedPids",guard.getObjValD "ownedPids"),("answeringModelCalls",toJson (0 : Nat)),
+    ("paidComparisons",toJson "0/18"),("adopted",toJson false)]
+  write (destination/recordName) result
+  check (actual.size == 35 && sorted.size == 32) "diagnostic-off control did not retain the fixed cohort"
+  let baseline := base/"allocator-service-build/StudyMain"
+  check ((← hash baseline) == "4e4c9b9c95cb2c72b4447a86f5abc81b6bb619854889eb5ffa8492ba592e593a") "active baseline changed"
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",baseline.toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+  IO.FS.removeDirAll root
+  write (destination/(if census then "cleanup.json" else "quiet-cleanup.json")) (Json.mkObj [("removed",toJson root.toString),
+    ("actualBodiesRetainedOrReferencedBeforeDeletion",toJson true),("baselineAliasRestored",toJson true),("archived",toJson false)])
+  IO.println (Json.mkObj [("latencyMs",result.getObjValD "latencyMs"),("requiredOriginalAndAck",toJson originalAck),
+    ("semanticCompletedWithHandoff",toJson complete),("peakRssKiB",guard.getObjValD "sampledPeakRssKiB"),
+    ("hostRssKiB",toJson (waves.map fun wave => (wave.getObjValD "name",wave.getObjValD "hostRssKiB"))),
+    ("abandonedHeap",toJson (waves.map fun wave => (wave.getObjValD "name",(wave.getObjValD "serviceStats").getObjValD "abandonedHeap"))),
+    ("bodyDifferences",toJson differences.size),("frontendExit",result.getObjValD "frontendExit"),
+    ("publisherExit",result.getObjValD "publisherExit")]).compress
+
+def verifyMemoryControls : IO Unit := do
+  drained
+  let bodies ← IO.ofExcept (fromJson? (← read (study/"bodies.json")) : Except String (Array Json))
+  let mut runs := #[]
+  for path in [study/"quiet-result.json",workspace/"docs/candidates/heap-ownership/evidence.json"] do
+    let run ← read path
+    let outputs ← IO.ofExcept (run.getObjValAs? (Array Json) "actualOutputs")
+    check (outputs.size == 35 && outputs.all (fun row => row.getObjValD "bodyByteEqual" == toJson true &&
+      row.getObjValD "completeStdoutEqual" == toJson true) && run.getObjValD "unexpectedBodies" == toJson (#[] : Array Json))
+      "retained actual stdout domain or bytes differ"
+    for row in outputs do
+      let index ← IO.ofExcept (row.getObjValAs? Nat "parentBodyRef")
+      let some body := bodies[index]? | throw (IO.userError "missing referenced actual body")
+      check (row.getObjValD "bodyBytes" == body.getObjValD "utf8Bytes") "retained actual body reference changed"
+    check (run.getObjValD "requiredOriginalAndAck" == toJson (32 : Nat) &&
+      run.getObjValD "semanticCompletedWithHandoff" == toJson (32 : Nat) &&
+      run.getObjValD "guardIntervened" == toJson false && run.getObjValD "guardOwnedPids" == toJson (#[] : Array Nat))
+      "memory control did not complete its actual required output and lifetime checks"
+    runs := runs.push (run.getObjValD "tag",outputs.size)
+  for body in bodies do
+    let raw ← IO.ofExcept (body.getObjValAs? String "body")
+    let digest ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256"]} (some raw)
+    check (digest.exitCode == 0 && body.getObjValD "sha256" == toJson ((digest.stdout.splitOn " ").headD "") &&
+      body.getObjValD "utf8Bytes" == toJson raw.utf8ByteSize) "actual shared body bytes changed"
+  write (workspace/"docs/candidates/heap-ownership/verification.json") (Json.mkObj [("actualOutputs",toJson (70 : Nat)),
+    ("allCompleteStdoutEqualToSealedParent",toJson true),("referencedBodyDigestsVerified",toJson bodies.size),
+    ("runs",toJson runs),("adopted",toJson false)])
 def retireDerived : IO Unit := do
   drained
   let verify := fun (_ : Unit) => do
@@ -210,6 +336,9 @@ def main (args : List String) : IO Unit := do
   | ["record",tag] => record tag
   | ["finish",tag] => finish tag
   | ["inspect"] => inspectRetained
+  | ["record-quiet",tag] => recordQuiet tag
+  | ["record-heap",tag] => recordQuiet tag true
+  | ["verify-memory-controls"] => verifyMemoryControls
   | ["retire-derived"] => retireDerived
   | _ => throw (IO.userError "prepare | setup ACTION TAG")
 end Eggshell.Research.SharedViewStudy

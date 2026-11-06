@@ -1,0 +1,14 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -13,0 +14 @@
++public import tools.research.AbandonedHeap
+@@ -898 +899,8 @@
+-        | "stats" => stats server
++        | "stats" => do
++          let ordinary ← stats server
++          if (← IO.getEnv "EGGSHELL_RESEARCH_ABANDONED_HEAP") == some "1" then
++            let started ← IO.monoMsNow
++            let census ← Research.AbandonedHeap.snapshot true
++            pure (ordinary.setObjVal! "abandonedHeap"
++              (census.setObjVal! "elapsedMs" (toJson ((← IO.monoMsNow)-started))))
++          else pure ordinary
