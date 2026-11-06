@@ -1,0 +1,125 @@
+--- a/Eggshell/HookFrontend.lean
++++ b/Eggshell/HookFrontend.lean
+@@ -87,0 +88,41 @@
++/-- Immutable ownership values, updated only by the frontend loop. IO tasks
++receive their own inputs, never the mutable registry that tracks them. -/
++structure OwnedTasks where
++  readers : Array Reading := #[]
++  clients : Array Client := #[]
++  maintenance : Array Maintenance := #[]
++
++def OwnedTasks.addReader (owned : OwnedTasks) (reader : Reading) : OwnedTasks :=
++  {owned with readers := owned.readers.push reader}
++def OwnedTasks.addClient (owned : OwnedTasks) (client : Client) : OwnedTasks :=
++  {owned with clients := owned.clients.push client}
++def OwnedTasks.addMaintenance (owned : OwnedTasks) (work : Maintenance) : OwnedTasks :=
++  {owned with maintenance := owned.maintenance.push work}
++
++theorem OwnedTasks.reader_registered (owned : OwnedTasks) (reader : Reading) :
++    reader ∈ (owned.addReader reader).readers := by simp [addReader]
++theorem OwnedTasks.client_registered (owned : OwnedTasks) (client : Client) :
++    client ∈ (owned.addClient client).clients := by simp [addClient]
++theorem OwnedTasks.maintenance_registered (owned : OwnedTasks) (work : Maintenance) :
++    work ∈ (owned.addMaintenance work).maintenance := by simp [addMaintenance]
++theorem OwnedTasks.reader_preserves_others (owned : OwnedTasks) (reader : Reading) :
++    (owned.addReader reader).clients = owned.clients ∧
++      (owned.addReader reader).maintenance = owned.maintenance := ⟨rfl,rfl⟩
++theorem OwnedTasks.client_preserves_others (owned : OwnedTasks) (client : Client) :
++    (owned.addClient client).readers = owned.readers ∧
++      (owned.addClient client).maintenance = owned.maintenance := ⟨rfl,rfl⟩
++theorem OwnedTasks.maintenance_preserves_others (owned : OwnedTasks) (work : Maintenance) :
++    (owned.addMaintenance work).readers = owned.readers ∧
++      (owned.addMaintenance work).clients = owned.clients := ⟨rfl,rfl⟩
++
++/-- Finalization receives the last live ownership value, after the sole loop
++has stopped. It never captures the loop's initial mutable-local arrays. -/
++def OwnedTasks.finish (owned : OwnedTasks) (stopReaders : Std.CancellationToken) : IO Unit := do
++  stopReaders.cancel
++  for reader in owned.readers do discard <| IO.wait reader.task
++  for client in owned.clients do IO.cancel client.task
++  for work in owned.maintenance do IO.cancel work.task
++  Worker.shutdown
++  for client in owned.clients do discard <| IO.wait client.task
++  for work in owned.maintenance do discard <| IO.wait work.task
++
+@@ -133,3 +174 @@
+-  let mut readers : Array Reading := #[]
+-  let mut clients : Array Client := #[]
+-  let mut maintenance : Array Maintenance := #[]
++  let owned ← IO.mkRef ({} : OwnedTasks)
+@@ -146 +185 @@
+-      for client in clients do
++      for client in (← owned.get).clients do
+@@ -158 +197 @@
+-      clients := active
++      owned.modify fun state => {state with clients := active}
+@@ -160 +199 @@
+-      for work in maintenance do
++      for work in (← owned.get).maintenance do
+@@ -168 +207 @@
+-      maintenance := working
++      owned.modify fun state => {state with maintenance := working}
+@@ -171 +210 @@
+-      for reader in readers do
++      for reader in (← owned.get).readers do
+@@ -176 +215 @@
+-            if !closing && HookBudget.admit clients.size (heldBytes clients) bytes.size then
++            if !closing && HookBudget.admit (← owned.get).clients.size (heldBytes (← owned.get).clients) bytes.size then
+@@ -199 +238 @@
+-                          (maintenance.toList.map (·.session)) (clients.toList.filterMap (·.session)) then
++                          ((← owned.get).maintenance.toList.map (·.session)) ((← owned.get).clients.toList.filterMap (·.session)) then
+@@ -211,2 +250,2 @@
+-                ("requestBytes",toJson (heldBytes clients)),("activeRequests",toJson clients.size),
+-                ("readers",toJson readers.size),("activeMaintenance",toJson maintenance.size),
++                ("requestBytes",toJson (heldBytes (← owned.get).clients)),("activeRequests",toJson (← owned.get).clients.size),
++                ("readers",toJson (← owned.get).readers.size),("activeMaintenance",toJson (← owned.get).maintenance.size),
+@@ -224 +263 @@
+-              clients := clients.push {
++              owned.modify (·.addClient {
+@@ -228 +267 @@
+-                task := task }
++                task := task })
+@@ -232 +271 @@
+-      readers := receiving
++      owned.modify fun state => {state with readers := receiving}
+@@ -235 +274,2 @@
+-        if readers.size < HookBudget.readers && readers.size+clients.size < HookBudget.clients then
++        if (← owned.get).readers.size < HookBudget.readers &&
++            (← owned.get).readers.size+(← owned.get).clients.size < HookBudget.clients then
+@@ -238,2 +278,3 @@
+-            readers := readers.push ⟨socket,← IO.asTask
+-              (Daemon.receiveFrameBefore socket (now+24000) (some stopReaders)) .dedicated⟩
++            let task ← IO.asTask
++              (Daemon.receiveFrameBefore socket (now+24000) (some stopReaders)) .dedicated
++            owned.modify (·.addReader ⟨socket,task⟩)
+@@ -246,2 +287,2 @@
+-          if maintenance.size < HookBudget.maintenance &&
+-              HookBudget.canStart (maintenance.toList.map (·.session)) name then
++          if (← owned.get).maintenance.size < HookBudget.maintenance &&
++              HookBudget.canStart ((← owned.get).maintenance.toList.map (·.session)) name then
+@@ -249 +290,2 @@
+-              maintenance := maintenance.push ⟨name,entry.revision,← IO.asTask entry.refresh .dedicated⟩
++              let task ← IO.asTask entry.refresh .dedicated
++              owned.modify (·.addMaintenance ⟨name,entry.revision,task⟩)
+@@ -252,0 +295 @@
++        let currentOwned ← owned.get
+@@ -254 +297 @@
+-          !entry.canRetire pending.toList (maintenance.toList.map (·.session)) (clients.toList.filterMap (·.session))
++          !entry.canRetire pending.toList (currentOwned.maintenance.toList.map (·.session)) (currentOwned.clients.toList.filterMap (·.session))
+@@ -257 +300,2 @@
+-        if clients.isEmpty && readers.isEmpty && maintenance.isEmpty && now > lastActivity+300000 then
++        if (← owned.get).clients.isEmpty && (← owned.get).readers.isEmpty &&
++            (← owned.get).maintenance.isEmpty && now > lastActivity+300000 then
+@@ -262,11 +306 @@
+-    -- IO.cancel alone cannot interrupt a task blocked on a socket selector.
+-    -- Unregister the actual receive and await its owned task before exit.
+-    stopReaders.cancel
+-    for reader in readers do discard <| IO.wait reader.task
+-    for client in clients do IO.cancel client.task
+-    for work in maintenance do IO.cancel work.task
+-    Worker.shutdown
+-    -- Main must not enter Lean's task-manager finalization with owned IO
+-    -- still running; that can prevent its async continuations from finishing.
+-    for client in clients do discard <| IO.wait client.task
+-    for work in maintenance do discard <| IO.wait work.task
++    (← owned.get).finish stopReaders

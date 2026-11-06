@@ -41,6 +41,7 @@ structure Process where
   system : Nat
   rssKiB : Nat
   role : String
+  program : String
   deriving ToJson,FromJson
 
 def selectedProgram (engine : System.FilePath) (command : String) : Option String :=
@@ -78,7 +79,7 @@ def processes (engine : System.FilePath) : IO (Array Process) := do
     unless wanted.contains pid do continue
     let some rss := rss.toNat? | throw (IO.userError "invalid related RSS")
     selected := selected.push ⟨pid,parent,← IO.ofExcept (cpuMs cpu),← IO.ofExcept (cpuMs user),
-      ← IO.ofExcept (cpuMs system),rss,role engine command⟩
+      ← IO.ofExcept (cpuMs system),rss,role engine command,command⟩
   return selected
 
 def cpuChanges (before after : Array Process) : Array Json := after.filterMap fun current => do
@@ -146,11 +147,13 @@ def wave (root engine : System.FilePath) (name : String) (first count : Nat)
   let before ← processes engine
   let began ← IO.monoMsNow
   let sampler ← samplePid.mapM fun pid => IO.asTask (do
-    IO.sleep 750
+    IO.sleep 3000
     let current ← processes engine
     if current.any (·.pid == pid) then
+      let sampleBegan ← IO.monoMsNow
       let sampled ← IO.Process.output {cmd := "/usr/bin/sample",args := #[toString pid,"2","1","-file",(root/"worker.sample.txt").toString]}
       save (root/"sample-result.json") (Json.mkObj [("pid",toJson pid),("exitCode",toJson sampled.exitCode.toNat),
+        ("startedAtMs",toJson sampleBegan),("finishedAtMs",toJson (← IO.monoMsNow)),
         ("stdout",toJson sampled.stdout),("stderr",toJson sampled.stderr)])
     else save (root/"sample-result.json") (Json.mkObj [("pid",toJson pid),("targetMissing",toJson true)])) .dedicated
   let tasks ← (List.range count).toArray.mapM fun offset => IO.asTask (hook root name (first+offset)) .dedicated
@@ -165,13 +168,20 @@ def wave (root engine : System.FilePath) (name : String) (first count : Nat)
   if let some sampler := sampler then IO.ofExcept (← IO.wait sampler)
   let after ← processes engine
   let cpuInterval := (← IO.monoMsNow)-began
+  -- Preserve the actual client rows before an optional stats query or later
+  -- cleanup can fail. Service time cannot reconstruct a lost client receipt.
+  let capturedReceipts ← receipts root rows
+  save (root/(name++"-checkpoint.json")) (Json.mkObj [("name",toJson name),
+    ("before",toJson before),("after",toJson after),("persistentCpu",toJson (cpuChanges before after)),
+    ("cpuIntervalMs",toJson cpuInterval),("timeline",toJson timeline),("rows",toJson rows),
+    ("receipts",toJson capturedReceipts),("serviceStatsUnavailable",toJson true)])
   let stats ← command engine #["publication-control","stats"]
   let report := Json.mkObj [("name",toJson name),("wallMs",toJson ((← IO.monoMsNow)-began)),
     ("cpuIntervalMs",toJson cpuInterval),
     ("samplePid",toJson samplePid),("latencyIsDiagnostic",toJson true),
     ("before",toJson before),("after",toJson after),("persistentCpu",toJson (cpuChanges before after)),
     ("lostPids",toJson (before.filter (fun previous => !after.any (fun current => current.pid == previous.pid)) |>.map (·.pid))),
-    ("timeline",toJson timeline),("rows",toJson rows),("receipts",toJson (← receipts root rows)),
+    ("timeline",toJson timeline),("rows",toJson rows),("receipts",toJson capturedReceipts),
     ("serviceStats",(Json.parse stats.stdout).toOption.getD Json.null)]
   save (root/(name++".json")) report
   return report
@@ -257,13 +267,35 @@ def run (root engine : System.FilePath) (expected : String) (caseCount : Nat := 
       ("originalHeadsUnchanged",toJson true),
       ("answeringModelCalls",toJson (0 : Nat)),("productChanged",toJson false),("adopted",toJson false)])
   finally
+    let before ← processes engine
+    save (root/"shutdown-before.json") (toJson before)
+    let frontendStarted ← IO.monoMsNow
     let frontend ← command engine #["codex-daemon","shutdown"]
+    let frontendFinished ← IO.monoMsNow
+    let between ← processes engine
+    save (root/"shutdown-frontend.json") (Json.mkObj [("exitCode",toJson frontend.exitCode.toNat),
+      ("stdout",toJson frontend.stdout),("stderr",toJson frontend.stderr),
+      ("startedAtMs",toJson frontendStarted),("finishedAtMs",toJson frontendFinished),("processesAfter",toJson between)])
+    -- Observe the exact remaining frontend after the ordinary stop deadline.
+    -- Do not extend that deadline or stop the publisher before collecting it.
+    if let some retained := between.find? (fun current => current.role == "frontend" &&
+        before.any (fun original => original.pid == current.pid && original.program == current.program)) then
+      let sampled ← IO.Process.output {cmd := "/usr/bin/sample",args := #[toString retained.pid,
+        "1","1","-file",(root/"shutdown-frontend.sample.txt").toString]}
+      save (root/"shutdown-sample.json") (Json.mkObj [("frontend",toJson retained),
+        ("exitCode",toJson sampled.exitCode.toNat),("stderr",toJson sampled.stderr),
+        ("afterOrdinaryStopDeadline",toJson true)])
+    else save (root/"shutdown-sample.json") (Json.mkObj [("frontendStillPresent",toJson false)])
     let publisher ← command engine #["publication-control","shutdown"]
-    save (root/"shutdown.json") (Json.mkObj [("frontendExit",toJson frontend.exitCode.toNat),("publisherExit",toJson publisher.exitCode.toNat)])
+    let after ← processes engine
+    save (root/"shutdown.json") (Json.mkObj [("frontendExit",toJson frontend.exitCode.toNat),
+      ("publisherExit",toJson publisher.exitCode.toNat),("publisherStdout",toJson publisher.stdout),("publisherStderr",toJson publisher.stderr),
+      ("before",toJson before),("afterFrontend",toJson between),("afterPublisher",toJson after)])
 end Eggshell.Research.WorkerCpuProfile
 def main (args : List String) : IO Unit := do
   match args with
   | [root,engine,expected] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected
   | [root,engine,expected,"80"] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected 80
   | [root,engine,expected,"burst80"] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected 80 true
+  | [root,engine,expected,"burst32"] => Eggshell.Research.WorkerCpuProfile.run (.mk root) (.mk engine) expected 32 true
   | _ => throw (IO.userError "fresh profile root, target runtime, SHA and optional 80/burst80 required")

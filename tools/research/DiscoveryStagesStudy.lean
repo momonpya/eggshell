@@ -25,6 +25,14 @@ def keeperSource := base/"process-keeper-source"
 def keeperTarget := base/"process-keeper-build"
 def ownedSource := base/"owned-service-source"
 def ownedTarget := base/"owned-service-build"
+def stopClientSource := base/"frontend-traffic-stop-source"
+def stopClientTarget := base/"frontend-traffic-stop-build"
+def stopClientStudy := workspace/"docs/candidates/frontend-traffic-stop"
+def finalizerSource := base/"frontend-finalizer-source"
+def finalizerTarget := base/"frontend-finalizer-build"
+def finalizerStudy := workspace/"docs/candidates/frontend-finalizer"
+def ownerReferenceSource := base/"frontend-owner-reference-source"
+def ownerReferenceTarget := base/"frontend-owner-reference-build"
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def read (path : System.FilePath) : IO Json := IO.FS.readFile path >>= (IO.ofExcept ∘ Json.parse)
 def write (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.compress
@@ -37,7 +45,7 @@ def hash (path : System.FilePath) : IO String := do
   return ((← command "/usr/bin/shasum" #["-a","256",path.toString]).splitOn " ").headD ""
 def drained : IO Unit := do
   for entry in ← base.readDir do
-    unless ["pure-file-reads-","discovery-stages-","prepared-focus-","frontend-stop-","process-keeper-","owned-service-"].any (fun stem => entry.fileName.startsWith stem) &&
+    unless ["pure-file-reads-","discovery-stages-","prepared-focus-","frontend-stop-","frontend-traffic-stop-","frontend-finalizer-","frontend-owner-reference-","process-keeper-","owned-service-"].any (fun stem => entry.fileName.startsWith stem) &&
         entry.fileName.endsWith ".guard.json" do continue
     let value ← read entry.path
     check (value.getObjValD "state" == toJson "finished" && value.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "previous guard not drained"
@@ -95,6 +103,9 @@ def materialize (selected destination output : System.FilePath) (entry : String)
     else if destination == stopSource then "frontend-stop-settings.json"
     else if destination == keeperSource then "process-keeper-settings.json"
     else if destination == ownedSource then "owned-service-settings.json"
+    else if destination == stopClientSource then "frontend-traffic-stop-settings.json"
+    else if destination == finalizerSource then "frontend-finalizer-settings.json"
+    else if destination == ownerReferenceSource then "frontend-owner-reference-settings.json"
     else "discovery-stages-client-settings.json")) settings
 
 def prepare : IO Unit := do
@@ -127,13 +138,16 @@ def setup (action tag : String) : IO Unit := do
   drained
   let path := base/(tag++".guard-settings.json")
   check (!(← path.pathExists)) "fresh diagnostic tag required"
-  let arguments ← if ["build","client-build","focus-build","focus-hook-build","stop-build","keeper-build","owned-build"].contains action then
+  let arguments ← if ["build","client-build","focus-build","focus-hook-build","stop-build","keeper-build","owned-build","traffic-stop-build","finalizer-build","owner-reference-build"].contains action then
     pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",(workspace/"tools/research/StudyBuildMain.lean").toString,
       (base/(if action == "build" then "discovery-stages-settings.json" else if action == "focus-build" then
         "prepared-focus-settings.json" else if action == "focus-hook-build" then "prepared-focus-hook-settings.json"
         else if action == "stop-build" then "frontend-stop-settings.json"
         else if action == "keeper-build" then "process-keeper-settings.json"
         else if action == "owned-build" then "owned-service-settings.json"
+        else if action == "traffic-stop-build" then "frontend-traffic-stop-settings.json"
+        else if action == "finalizer-build" then "frontend-finalizer-settings.json"
+        else if action == "owner-reference-build" then "frontend-owner-reference-settings.json"
         else "discovery-stages-client-settings.json")).toString]
     else if ["stop-probe","stop-parallel","stop-drop","keeper-probe","keeper-parallel","keeper-drop","owned-probe","owned-parallel","owned-drop","owned-replay"].contains action then pure (#["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT="++(base/(if action == "owned-replay" then "owned-service-cohort1-result/private" else tag++"-result/private")).toString,
@@ -152,6 +166,16 @@ def setup (action tag : String) : IO Unit := do
       "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
       "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
       (ownedTarget/"StudyMain").toString,"keeper-foreign-child-check",(base/(tag++"-result")).toString]
+    else if action == "finalizer-checks" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
+      (finalizerTarget/"StudyMain").toString,"frontend-owner-check",(base/(tag++"-result")).toString]
+    else if action == "owner-reference-checks" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,(compiler/"bin/lean").toString,"-j1","-M1536",
+      "--run",(workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"run-owner-reference",tag]
     else if action == "keeper-lifetime" || action == "owned-lifetime" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
       "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
@@ -169,12 +193,12 @@ def setup (action tag : String) : IO Unit := do
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
       "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
       (focusTarget/"StudyMain").toString,"prepared-focus-check",(base/(tag++"-result")).toString]
-    else if ["hooks","focus-hook-cohort","keeper-cohort","owned-cohort"].contains action then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
+    else if ["hooks","focus-hook-cohort","keeper-cohort","owned-cohort","traffic-stop-cohort","finalizer-cohort"].contains action then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
       "EGGSHELL_TRACE_QUERY_STAGES=1","EGGSHELL_TRACE_NUMERICAL_STAGES=1","EGGSHELL_TRACE_ALLOCATOR=1","EGGSHELL_TRACE_ACTOR_HEAP=1",
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,"EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
-      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,(clientTarget/"StudyMain").toString,
-      (base/(tag++"-result")).toString,((if action == "owned-cohort" then ownedTarget else if action == "hooks" then target else if action == "keeper-cohort" then keeperTarget else focusHookTarget)/"StudyMain").toString,
-      ← hash ((if action == "owned-cohort" then ownedTarget else if action == "hooks" then target else if action == "keeper-cohort" then keeperTarget else focusHookTarget)/"StudyMain")]
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,((if action == "traffic-stop-cohort" || action == "finalizer-cohort" then stopClientTarget else clientTarget)/"StudyMain").toString,
+      (base/(tag++"-result")).toString,((if action == "finalizer-cohort" then finalizerTarget else if action == "owned-cohort" || action == "traffic-stop-cohort" then ownedTarget else if action == "hooks" then target else if action == "keeper-cohort" then keeperTarget else focusHookTarget)/"StudyMain").toString,
+      ← hash ((if action == "finalizer-cohort" then finalizerTarget else if action == "owned-cohort" || action == "traffic-stop-cohort" then ownedTarget else if action == "hooks" then target else if action == "keeper-cohort" then keeperTarget else focusHookTarget)/"StudyMain")]
     else throw (IO.userError "unknown diagnostic action")
   write path (Json.mkObj [("command",toJson arguments),("cwd",toJson workspace.toString),
     ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
@@ -505,6 +529,240 @@ def prepareOwned : IO Unit := do
     "role-only native parent changed"
   materialize keeperTarget ownedSource ownedTarget "tools.research.ProcessKeeperChecks"
 
+def prepareTrafficStop : IO Unit := do
+  drained
+  check ((← hash (clientTarget/"StudyMain")) == "3b182b64b863faf48a34e311197ec7353fc60bf5b1748c579b7c0bdbd18f7889")
+    "sealed client changed"
+  materialize clientTarget stopClientSource stopClientTarget "tools.research.WorkerCpuProfile"
+  IO.FS.writeFile (stopClientSource/"tools/research/WorkerCpuProfile.lean")
+    (← IO.FS.readFile (workspace/"tools/research/WorkerCpuProfile.lean"))
+  IO.FS.createDirAll stopClientStudy
+  write (stopClientStudy/"plan.json") (Json.mkObj [("classificationPreviousTurn",toJson "progress:unrelated model ownership removed;actual traffic stop remains failed"),
+    ("purpose",toJson "sample the exact frontend remaining after the unchanged ordinary stop deadline"),
+    ("runtime",toJson (← hash (ownedTarget/"StudyMain"))),
+    ("same32Queries16SourcesTwoWaves",toJson true),("no80FullSearchRetry",toJson true),
+    ("runtimeUnchanged",toJson true),("adopted",toJson false)])
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",(ownedTarget/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+
+def prepareFinalizer : IO Unit := do
+  drained
+  materialize ownedTarget finalizerSource finalizerTarget "tools.research.FrontendOwnerChecks"
+  IO.FS.createDirAll finalizerStudy
+  write (finalizerStudy/"plan.json") (Json.mkObj [
+    ("purpose",toJson "one frontend loop owns a live task registry;finally reads its current value"),
+    ("parent",toJson (← hash (ownedTarget/"StudyMain"))),
+    ("noNewMutexOrCas",toJson true),("sameDeadlinesAndResourceBounds",toJson true),
+    ("adopted",toJson false)])
+
+def sealFinalizer : IO Unit := do
+  drained
+  let audit := workspace/"tools/research/StudyBuildClosureAudit.lean"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "inspect",finalizerTarget.toString,(finalizerStudy/"native-closure.json").toString]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "compare-sources",ownedTarget.toString,finalizerTarget.toString,(finalizerStudy/"native-sources.json").toString,
+    "Eggshell.HookFrontend"]
+  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/HookFrontend.lean",
+    "--label","b/Eggshell/HookFrontend.lean",(ownedSource/"Eggshell/HookFrontend.lean").toString,
+    (finalizerSource/"Eggshell/HookFrontend.lean").toString]}
+  check (patch.exitCode == 1) "missing live task ownership change"
+  IO.FS.writeFile (finalizerStudy/"HookFrontend.patch") patch.stdout
+  write (finalizerStudy/"build.json") (Json.mkObj [("runtime",toJson (← hash (finalizerTarget/"StudyMain"))),
+    ("parent",toJson (← hash (ownedTarget/"StudyMain"))),
+    ("kernelAndOrdinaryContractAudit",toJson (← IO.FS.readFile (finalizerTarget/"tools_research_FrontendOwnerChecks-lean.stdout")))])
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",(finalizerTarget/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+
+def sealTrafficStop : IO Unit := do
+  let audit := workspace/"tools/research/StudyBuildClosureAudit.lean"
+  if !(← (stopClientStudy/"native-closure.json").pathExists) then
+    discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+      "inspect",stopClientTarget.toString,(stopClientStudy/"native-closure.json").toString]
+  check ((← read (stopClientStudy/"native-closure.json")).getObjValD "consistent" == toJson true)
+    "inconsistent diagnostic client closure"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "compare-sources",clientTarget.toString,stopClientTarget.toString,(stopClientStudy/"native-sources.json").toString,
+    ]
+  write (stopClientStudy/"build.json") (Json.mkObj [("clientSha256",toJson (← hash (stopClientTarget/"StudyMain"))),
+    ("runtimeSha256",toJson (← hash (ownedTarget/"StudyMain"))),("runtimeUnchanged",toJson true)])
+
+def checkFinallyCapture : IO Unit := do
+  let observed ← IO.mkRef (#[] : Array Nat)
+  let mut owners : Array Nat := #[]
+  try
+    owners := owners.push 7
+    check (owners == #[7]) "local ownership update failed"
+  finally observed.set owners
+  write (stopClientStudy/"finally-capture.json") (Json.mkObj [("registeredBeforeExit",toJson #[7]),
+    ("seenByFinally",toJson (← observed.get)),("searchOrModelRequests",toJson (0 : Nat))])
+
+def recordTrafficStop (tag : String) : IO Unit := do
+  record tag stopClientStudy "--frontend-traffic-stop" (stopStudy/"evidence.json") false "frontend-traffic-stop-"
+  let root := base/(tag++"-result")
+  write (stopClientStudy/"shutdown-sample.json") (← read (root/"shutdown-sample.json"))
+
+def retireStopClients : IO Unit := do
+  drained
+  check ((← read (stopClientStudy/"parity.json")).getObjValD "matchingCompleteStdout" == toJson (32 : Nat))
+    "retain diagnostic client body parity before retirement"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot verify retired client owners"
+  let mut removed := #[]
+  for path in [stopTarget/"StudyMain",clientTarget/"StudyMain"] do
+    check (!process.stdout.contains path.toString) "diagnostic client still live"
+    removed := removed.push (path.toString,← hash path)
+  write (stopClientStudy/"retired-clients.json") (Json.mkObj [("removed",toJson removed),
+    ("replacement",toJson (← hash (stopClientTarget/"StudyMain"))),
+    ("requiredNativeInputsRetained",toJson true),("archived",toJson false)])
+  for path in [stopTarget/"StudyMain",clientTarget/"StudyMain"] do IO.FS.removeFile path
+
+def prepareOwnerReference : IO Unit := do
+  drained
+  check ((← read (finalizerStudy/"native-sources.json")).getObjValD "exactExpectedChangeSet" == toJson true)
+    "candidate native source audit required before reference control"
+  let oldExecutable := focusHookTarget/"StudyMain"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0 && !process.stdout.contains oldExecutable.toString &&
+    (← hash oldExecutable) == "22023092f82ab122db5aa04e9f4fd43b37ee07344e6e4a34e95a7dda9bb4084b")
+    "superseded pre-ownership executable still live or changed"
+  write (finalizerStudy/"retired-intermediate.json") (Json.mkObj [("path",toJson oldExecutable.toString),
+    ("sha256",toJson (← hash oldExecutable)),("requiredNativeInputsRetained",toJson true),("archived",toJson false)])
+  IO.FS.removeFile oldExecutable
+  materialize ownedTarget ownerReferenceSource ownerReferenceTarget "tools.research.FrontendOwnerChecks"
+  let entry := ownerReferenceSource/"tools/research/FrontendOwnerChecks.lean"
+  let full ← IO.FS.readFile entry
+  let parts := full.splitOn "def check (ok : Bool)"
+  check (parts.length == 2) "unique identical native control body required"
+  let body := "def check (ok : Bool)"++parts[1]!
+  IO.FS.writeFile entry ("import Main\nimport Eggshell.ContractAudit\nopen Lean Eggshell Eggshell.Plugin\n\n"++body)
+  let candidate ← IO.FS.readFile (finalizerSource/"tools/research/FrontendOwnerChecks.lean")
+  check (candidate.endsWith body) "reference changed native control logic"
+  let digest ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256"]} (some body)
+  check (digest.exitCode == 0) "cannot seal identical control body"
+  write (finalizerStudy/"reference-control-plan.json") (Json.mkObj [("sameNativeControlBodySha256",toJson ((digest.stdout.splitOn " ").headD "")),
+    ("onlyCandidateProofHeaderRemoved",toJson true),("referenceCoreUnchanged",toJson true),
+    ("expectedReferenceError",toJson "frontend returned with an unjoined active client")])
+
+def runOwnerReference (tag : String) : IO Unit := do
+  let root := base/(tag++"-result")
+  let output ← IO.Process.output {
+    cmd := (ownerReferenceTarget/"StudyMain").toString,
+    args := #["frontend-owner-check",root.toString]}
+  write (root/"reference-report.json") (Json.mkObj [("exitCode",toJson output.exitCode.toNat),
+    ("stdout",toJson output.stdout),("stderr",toJson output.stderr),
+    ("expectedFailure",toJson (output.exitCode != 0 && output.stderr.contains "frontend returned with an unjoined active client")),
+    ("searchOrModelRequests",toJson (0 : Nat))])
+  check (output.exitCode != 0 && output.stderr.contains "frontend returned with an unjoined active client")
+    "unmodified frontend did not reproduce missing active-client finalization"
+
+def sealOwnerReference : IO Unit := do
+  drained
+  let audit := workspace/"tools/research/StudyBuildClosureAudit.lean"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "inspect",ownerReferenceTarget.toString,(finalizerStudy/"reference-native-closure.json").toString]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "compare-sources",ownedTarget.toString,ownerReferenceTarget.toString,(finalizerStudy/"reference-native-sources.json").toString]
+  write (finalizerStudy/"reference-build.json") (Json.mkObj [("runtime",toJson (← hash (ownerReferenceTarget/"StudyMain"))),
+    ("parent",toJson (← hash (ownedTarget/"StudyMain"))),("coreUnchanged",toJson true)])
+
+def recordOwnerControls : IO Unit := do
+  drained
+  let candidate ← read (base/"frontend-finalizer-checks1-result/report.json")
+  let reference ← read (base/"frontend-owner-reference-checks1-result/reference-report.json")
+  check (candidate.getObjValD "actualFrontendActiveClientJoined" == toJson true &&
+    candidate.getObjValD "externalReleaseNeeded" == toJson false && reference.getObjValD "expectedFailure" == toJson true)
+    "actual frontend ownership counterfactual failed"
+  write (finalizerStudy/"native-checks.json") (Json.mkObj [("candidate",candidate),("reference",reference),
+    ("smallFinallyCapture",← read (stopClientStudy/"finally-capture.json")),
+    ("sameNativeControlBody",← read (finalizerStudy/"reference-control-plan.json")),
+    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+  let path := ownerReferenceTarget/"StudyMain"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0 && !process.stdout.contains path.toString) "completed reference still active"
+  check ((← hash path) == (← IO.ofExcept ((← read (finalizerStudy/"reference-build.json")).getObjValAs? String "runtime")))
+    "reference executable changed"
+  write (finalizerStudy/"retired-reference.json") (Json.mkObj [("path",toJson path.toString),
+    ("sha256",toJson (← hash path)),("requiredNativeInputsRetained",toJson true),("archived",toJson false)])
+  IO.FS.removeFile path
+
+def recordFinalizer (tag : String) : IO Unit := do
+  record tag finalizerStudy "--frontend-finalizer" (stopClientStudy/"evidence.json") false "frontend-finalizer-"
+  let root := base/(tag++"-result")
+  write (finalizerStudy/"shutdown-sample.json") (← read (root/"shutdown-sample.json"))
+  let sample := root/"shutdown-frontend.sample.txt"
+  if ← sample.pathExists then
+    let lines := (← IO.FS.readFile sample).splitOn "\n"
+    write (finalizerStudy/"shutdown-stack.json") (Json.mkObj [("sha256",toJson (← hash sample)),
+      ("header",toJson (lines.take 25)),("excerpt",toJson (lines.drop 25 |>.take 160))])
+
+def finishFinalizer : IO Unit := do
+  drained
+  let verification ← read (finalizerStudy/"verification.json")
+  check (verification.getObjValD "actualOutputs" == toJson (35 : Nat) &&
+    (← read (finalizerStudy/"parity.json")).getObjValD "matchingCompleteStdout" == toJson (32 : Nat))
+    "retain actual output evidence before cleanup"
+  let measurements ← read (finalizerStudy/"measurements.json")
+  let frontend := measurements.getObjValD "frontendShutdown"
+  let shutdown := measurements.getObjValD "shutdown"
+  let started ← IO.ofExcept (frontend.getObjValAs? Nat "startedAtMs")
+  let finished ← IO.ofExcept (frontend.getObjValAs? Nat "finishedAtMs")
+  let guard ← read (base/"frontend-finalizer-cohort1.guard.json")
+  check (frontend.getObjValD "exitCode" == toJson (0 : Nat) && shutdown.getObjValD "publisherExit" == toJson (0 : Nat) &&
+    guard.getObjValD "guardTriggered" == toJson false && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+    "ordinary traffic did not shut down cleanly"
+  write (finalizerStudy/"summary.json") (Json.mkObj [("verification",verification),
+    ("frontendStopMs",toJson (finished-started)),("frontendExit",frontend.getObjValD "exitCode"),
+    ("publisherExit",shutdown.getObjValD "publisherExit"),("guardPeakRssKiB",guard.getObjValD "sampledPeakRssKiB"),
+    ("noGuardIntervention",toJson true),("remainingHostRssGrowth",measurements.getObjValD "hostAfterWaves"),
+    ("answeringModelCalls",toJson (0 : Nat)),("paidComparisons",toJson "0/18"),("adopted",toJson false)])
+  let mut guards := #[]
+  for entry in ← base.readDir do
+    if ["frontend-traffic-stop-","frontend-finalizer-","frontend-owner-reference-"].any (entry.fileName.startsWith ·) &&
+        entry.fileName.endsWith ".guard.json" then
+      let value ← read entry.path
+      let value ← if value.getObjValD "peakProcesses" == Json.null then pure value else
+        pure (value.setObjVal! "peakProcesses" (← processSummary (value.getObjValD "peakProcesses")))
+      guards := guards.push (entry.fileName,value)
+  write (finalizerStudy/"controls.json") (toJson guards)
+  let baseline := base/"allocator-service-build/StudyMain"
+  check ((← hash baseline) == "4e4c9b9c95cb2c72b4447a86f5abc81b6bb619854889eb5ffa8492ba592e593a") "active baseline changed"
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",baseline.toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+  let mut removed := #[]
+  for tag in #["frontend-traffic-stop-cohort1","frontend-finalizer-cohort1","frontend-finalizer-checks1","frontend-owner-reference-checks1"] do
+    let root := base/(tag++"-result")
+    check (← root.pathExists) "ended control already removed"
+    IO.FS.removeDirAll root
+    removed := removed.push root.toString
+  let obsolete := ownedTarget/"StudyMain"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0 && !process.stdout.contains obsolete.toString &&
+    (← hash obsolete) == "b7737493a40c4f64c311038715da56d1a86031105d885e4efd5a0fcb2e50e70f")
+    "superseded model-ownership candidate still live or changed"
+  let obsoleteHash ← hash obsolete
+  IO.FS.removeFile obsolete
+  let mut logCount := 0
+  for build in [stopClientTarget,finalizerTarget,ownerReferenceTarget] do
+    for entry in ← build.readDir do
+      if entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" then
+        let text ← IO.FS.readFile entry.path
+        check (!(text.contains "error:" || text.contains "error(")) "preserve unexpected compiler failure before log cleanup"
+        IO.FS.removeFile entry.path
+        logCount := logCount+1
+  write (finalizerStudy/"cleanup.json") (Json.mkObj [("endedDbCacheSessionsAndRawLogsRemoved",toJson removed),
+    ("supersededRuntimeRemoved",toJson (obsolete.toString,obsoleteHash)),("compilerLogsRemoved",toJson logCount),
+    ("baselineAliasRestored",toJson true),("originalsAndRequiredNativeInputsRetained",toJson true),("archived",toJson false)])
+  write (finalizerStudy/"development.json") (Json.mkObj [("nativeBuildFailures",toJson (0 : Nat)),
+    ("controllerPreflightErrors",toJson #["diagnostic entry was incorrectly listed as a product source change;entries are audited separately",
+      "closure recorder correctly refused overwrite;existing consistent record reused",
+      "retirement tuple parentheses and reference spawn-argument layout corrected before execution"]),
+    ("ordinaryFailureNotReproducedByDiagnosticCohort",toJson true),
+    ("specificMissingActiveClientReproducedByIdenticalNativeReference",toJson true)])
+  compactRecords stopClientStudy
+  compactRecords finalizerStudy
+  IO.println (← IO.FS.readFile (finalizerStudy/"summary.json"))
+
 def checkOwnedPollLift : IO Unit := do
   let called ← IO.mkRef (0 : Nat)
   let sameOwner := false
@@ -794,6 +1052,19 @@ def main (args : List String) : IO Unit := do
   | ["prepare-stop"] => prepareStop
   | ["prepare-keeper"] => prepareKeeper
   | ["prepare-owned"] => prepareOwned
+  | ["prepare-traffic-stop"] => prepareTrafficStop
+  | ["prepare-finalizer"] => prepareFinalizer
+  | ["seal-finalizer"] => sealFinalizer
+  | ["seal-traffic-stop"] => sealTrafficStop
+  | ["check-finally-capture"] => checkFinallyCapture
+  | ["record-traffic-stop",tag] => recordTrafficStop tag
+  | ["retire-stop-clients"] => retireStopClients
+  | ["prepare-owner-reference"] => prepareOwnerReference
+  | ["run-owner-reference",tag] => runOwnerReference tag
+  | ["seal-owner-reference"] => sealOwnerReference
+  | ["record-owner-controls"] => recordOwnerControls
+  | ["record-finalizer",tag] => recordFinalizer tag
+  | ["finish-finalizer"] => finishFinalizer
   | ["check-owned-poll-lift"] => checkOwnedPollLift
   | ["retire-unused-controls"] => retireUnusedControls
   | ["retire-lifecycle-intermediates"] => retireLifecycleIntermediates
