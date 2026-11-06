@@ -1,0 +1,24 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -326,0 +327,5 @@
++    if let some focus := request.focus then
++      unless focus.question.utf8ByteSize ≤ Stream.maxBytes && focus.rows.size ≤ request.owners.size &&
++          focus.rows.all (fun row => request.owners.contains row.owner && row.work.utf8ByteSize ≤ 256 && row.windows.all digest) &&
++          focus.rows.foldl (fun n row => n+row.windows.length+row.semantic.length) 0 ≤ 65536 do
++        throw (IO.userError "prepared focus exceeds the admitted original batch")
+@@ -377 +382 @@
+-    let (values,records) ← server.palettes.withView lease key fun view => do
++    let (values,records,focused) ← server.palettes.withView lease key fun view => do
+@@ -379,0 +385 @@
++      let mut focused := #[]
+@@ -387 +393,6 @@
+-      return (values,records)
++        let ranked ← match request.focus with
++          | none => pure #[]
++          | some focus => focus.rows.mapM fun row => do
++              return (row.owner,← IO.ofExcept (entry.focusWindows row.owner row.work row.windows focus.question row.semantic))
++        focused := focused.push ranked
++      return (values,records,focused)
+@@ -390 +401 @@
+-    return {identities := requests.map (·.access.identity),lease := lease,owners := values,reuse := reuse,records := records}
++    return {identities := requests.map (·.access.identity),lease := lease,owners := values,reuse := reuse,records := records,focus := focused}

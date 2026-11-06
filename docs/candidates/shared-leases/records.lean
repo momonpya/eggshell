@@ -12,7 +12,7 @@ def digest (value : String) : IO String := do
   check (output.exitCode == 0) "cannot hash actual bytes"
   return (output.stdout.splitOn " ").headD ""
 def compactReceipt (value : Json) : Json := Json.mkObj (
-  ["session","receipt","operation-service","search-phase-semantic","search-phase-lexical","transport","ack","published","actorFailures","request-pages","canonical-source-input","delivery-domain","keyed-nominations","source-acquisition-unavailable","query-allocator"].filterMap fun key =>
+  ["session","receipt","operation-service","search-phase-semantic","search-phase-lexical","transport","ack","published","actorFailures","request-pages","canonical-source-input","delivery-domain","keyed-nominations","source-acquisition-unavailable","query-allocator","prepared-window-focus"].filterMap fun key =>
     let field := value.getObjValD key
     if field == Json.null then none else some (key,field))
 def number (value : Json) (key : String) := (value.getObjValAs? Nat key).toOption.getD 0
@@ -61,11 +61,11 @@ def enrichedReceipt (root : System.FilePath) (value : Json) : IO Json := do
   let path := root/"private/receipts"/id/"request-pages.json"
   let mut value := value
   if ← path.pathExists then value := value.setObjVal! "request-pages" ((← read path).getObjValD "data")
-  for stage in ["canonical-source-input","delivery-domain","keyed-nominations","source-acquisition-unavailable","query-allocator"] do
+  for stage in ["canonical-source-input","delivery-domain","keyed-nominations","source-acquisition-unavailable","query-allocator","prepared-window-focus"] do
     let path := root/"private/receipts"/id/(stage++".json")
     if ← path.pathExists then
       let detail := (← read path).getObjValD "data"
-      let summary := if stage == "canonical-source-input" || stage == "source-acquisition-unavailable" || stage == "query-allocator" then detail else
+      let summary := if ["canonical-source-input","source-acquisition-unavailable","query-allocator","prepared-window-focus"].contains stage then detail else
         Json.mkObj (["synapticComplete","status","error","related","ranked"].filterMap fun key =>
           let field := detail.getObjValD key
           if field == Json.null then none else some (key,field))
@@ -92,6 +92,7 @@ def main (arguments : List String) : IO Unit := do
     | "--record-read-image" :: tags => (destination.parent.getD destination / "record-read-image",tags)
     | "--typed-original-reads" :: tags => (destination.parent.getD destination / "typed-original-reads",tags)
     | "--discovery-stages" :: tags => (destination.parent.getD destination / "discovery-stages",tags)
+    | "--prepared-focus-hook" :: tags => (destination.parent.getD destination / "prepared-focus-hook",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -124,13 +125,14 @@ def main (arguments : List String) : IO Unit := do
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
       tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-" ||
       tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-" || tag.startsWith "working-set-" ||
-      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-" || tag.startsWith "typed-original-reads-" || tag.startsWith "discovery-stages-") &&
+      tag.startsWith "immutable-deadline-" || tag.startsWith "owner-metadata-image-" || tag.startsWith "allocator-service-" || tag.startsWith "snapshot-stats-" || tag.startsWith "actor-heap-" || tag.startsWith "transport-heap-" || tag.startsWith "record-read-image-" || tag.startsWith "typed-original-reads-" || tag.startsWith "discovery-stages-" || tag.startsWith "prepared-focus-hook-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"
     let pid ← IO.ofExcept (guard.getObjValAs? Nat "guardPid")
-    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
-    check (probe.exitCode != 0 && probe.stdout.trimAscii.isEmpty) "guard process still live"
+    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","command="]}
+    check (!(probe.exitCode == 0 && probe.stdout.contains "controller/StudyMain" &&
+      probe.stdout.contains "guard " && probe.stdout.contains (tag++".guard-settings.json"))) "guard process still live"
     let root := base/(tag++"-result")
     let incompleteReport := !(← (root/"report.json").pathExists) && (← (root/"prime-checkpoint.json").pathExists)
     let report ← if ← (root/"report.json").pathExists then read (root/"report.json") else if ← (root/"direct-events.json").pathExists then read (root/"direct-events.json") else if incompleteReport then do

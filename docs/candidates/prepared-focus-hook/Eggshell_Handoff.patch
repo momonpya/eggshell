@@ -1,0 +1,222 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -2470 +2470 @@
+-def refocusObservedNeighborhood (question : String)
++def refocusObservedNeighborhoodUsing (rankWindows : OutcomeEdge → List Nat → List Nat) (question : String)
+@@ -2487 +2487 @@
+-            focusedEvidenceWindows question (evidenceSearchWindows item.owner) windows)
++            rankWindows item.owner windows)
+@@ -2488,0 +2489,7 @@
++
++def refocusObservedNeighborhood (question : String)
++    (support : List (SourceSupport roots all unions))
++    (meaning : List Value) (positions : List (Value × List Nat)) :
++    Option (FocusedNeighborhood support) :=
++  refocusObservedNeighborhoodUsing (fun owner => focusedEvidenceWindows question (evidenceSearchWindows owner))
++    question support meaning positions
+@@ -2489,0 +2497,12 @@
++theorem refocus_prepared_windows_exact (question : String)
++    (support : List (SourceSupport roots all unions)) (meaning : List Value)
++    (positions : List (Value × List Nat)) (rankWindows : OutcomeEdge → List Nat → List Nat)
++    (same : ∀ owner semantic,rankWindows owner semantic = focusedEvidenceWindows question (evidenceSearchWindows owner) semantic) :
++    refocusObservedNeighborhoodUsing rankWindows question support meaning positions =
++      refocusObservedNeighborhood question support meaning positions := by
++  have exactRank : rankWindows = fun owner => focusedEvidenceWindows question (evidenceSearchWindows owner) := by
++    funext owner semantic
++    exact same owner semantic
++  rw [exactRank]
++  rfl
++
+@@ -8305,0 +8325,5 @@
++
++structure IndexedFocus where
++  ranking : List Nat
++  windows : List (Nat × List Nat)
++  originals : List (Nat × List String)
+@@ -8345 +8369 @@
+-    IO (Option (List Nat × List (Nat × List Nat)))) := none
++    IO (Option IndexedFocus)) := none
+@@ -8732 +8756 @@
+-          (indexedFocus.map Prod.fst |>.getD semanticOwners.durableRanking)
++          (indexedFocus.map (·.ranking) |>.getD semanticOwners.durableRanking)
+@@ -8758,51 +8781,0 @@
+-  let observedNeighborhood := indexedFocus.bind fun (ranking, windows) =>
+-    refocusObservedNeighborhood focusQuestion focusDomain (ranking.filterMap (rankedOwners[·]?))
+-      (windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions))
+-  if let some neighborhood := observedNeighborhood then
+-    focusedRanking := neighborhood.ranking
+-    focusedWindows := neighborhood.windows
+-    focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
+-  else if evidence.isNone && !focusDomain.isEmpty then
+-    if let some command := selection.semanticMatcher then
+-      if let some root := evidenceRoots.head? then
+-        if let some owner := entries.find? (fun owner => owner.work == root) then
+-          let windows ← match ← source.liveOwner owner.relation with
+-            | some id => pure ((semanticOwners.durableWindows.find? (·.1 == id)).map Prod.snd |>.getD [])
+-            | none => pure ((semanticOwners.stagedWindows.find? (·.1 == owner.relation)).map Prod.snd |>.getD [])
+-          if (sourceFocus? owner windows).isSome || native then
+-            -- Use the same original question/complete order as the initial
+-            -- packet. A native operation cannot create a different advisory
+-            -- plan and refill it with undispatched old positions.
+-            let some neighborhood ← focusNeighborhood command focusQuestion focusDomain source.receipt | return some pendingSearch
+-            focusedRanking := neighborhood.ranking
+-            focusedWindows := neighborhood.windows
+-            focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
+-  -- Resolve only the finite set of already admitted/hydrated owners. Ordering
+-  -- the packet must not restore every ranked source body from the database.
+-  trace "source focus"
+-  if focusedRows.isEmpty then
+-   if let some (ranking, windows) := indexedFocus then
+-     focusedRanking := ranking.filterMap (rankedOwners[·]?)
+-     focusedWindows := windows.filterMap fun (id, positions) =>
+-       do
+-         let relation ← rankedOwners[id]?
+-         let owner ← (entries ++ support.map (·.owner)).find? (·.relation == relation)
+-         pure (relation, focusedEvidenceWindows focusQuestion (evidenceSearchWindows owner) positions)
+-     focusedRows := focusedWindows
+-  -- Historical locators choose positions only inside original hydrated
+-  -- graph owners. Preserve the independent numerical focus unchanged.
+-  let parents := nominationRanking.zipIdx.filterMap fun (relation,rank) => do
+-    let owner ← nominatedOwners.find? (·.relation == relation)
+-    let text ← Matcher.atomText? owner.outcome
+-    if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
+-  let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
+-    let admitted := parents.filterMap fun (rank,work,text) =>
+-      if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
+-        some (rank,text) else none
+-    (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
+-      (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
+-  let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)
+-  let referencePriorities := referenced.map fun (owner,priority,_,_,_) => (owner,priority)
+-  let referenceRanks := referenced.map fun (owner,_,_,ranks,_) => (owner,ranks)
+-  let referenceRanges := referenced.map fun (owner,_,_,_,ranges) => (owner,ranges)
+-  trace "source citations"
+@@ -8817 +8789,0 @@
+-  trace "synaptic owners"
+@@ -8820,8 +8792,10 @@
+-  let synaptic ← if recommendation && evidence.isNone then
+-    Synapses.Transport.build source.synaptic
+-      ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
+-        (relationKey owner,priority))
+-      synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) advisoryDeadline
+-      (graphDeadline := some (Synapses.Routed.graphDeadline advisoryNow advisoryDeadline))
+-    else pure ({} : Synapses.Transport.Plan)
+-  trace "synaptic built"
++  let windowQuery : Option (Array Synapses.SourceViewBatch.FocusRow) := indexedFocus.bind fun focused => focusDomain.toArray.mapM fun item => do
++    let (id,_) ← rankedOwners.toList.find? (·.2 == item.owner.relation)
++    let (_,windows) ← focused.originals.find? (·.1 == id)
++    let (_,semantic) ← focused.windows.find? (·.1 == id)
++    return ⟨Persistence.selectionKey item.owner.relation,Persistence.selectionKey item.owner.work,windows,semantic⟩
++  trace "prepared focus:start"
++  let focusBatch ← if recommendation && evidence.isNone then
++    Synapses.Transport.prepareBatch source.synaptic synapticOwners advisoryDeadline
++      (windowQuery.map (focusQuestion,·))
++    else pure none
+@@ -8828,0 +8803,81 @@
++    if recommendation && evidence.isNone && windowQuery.isSome && focusBatch.isNone && !focusDomain.isEmpty then return some pendingSearch
++    let preparedWindows ← match windowQuery,focusBatch with
++      | some _,some batch => do
++        let rows := batch.palette.focus.toList.flatMap Array.toList
++        let mut result := []
++        for item in focusDomain do
++          let found := rows.filter (·.1 == Persistence.selectionKey item.owner.relation)
++          let some (_,ranking) := found.head? | throw (IO.userError "prepared focus omitted an admitted original owner")
++          unless found.all (·.2 == ranking) do throw (IO.userError "prepared focus disagreed across original source views")
++          result := result++[(item.owner.relation,ranking)]
++        pure (some result)
++      | _,_ => pure none
++    trace "prepared focus:end"
++    Receipt.observe source.receipt "prepared-window-focus" (Json.mkObj [
++      ("used",toJson preparedWindows.isSome),("owners",toJson (preparedWindows.map List.length |>.getD 0)),
++      ("sharedBatch",toJson focusBatch.isSome)])
++    let rankWindows := fun (owner : OutcomeEdge) (semantic : List Nat) => match preparedWindows with
++      | some rows => (rows.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
++      | none => focusedEvidenceWindows focusQuestion (evidenceSearchWindows owner) semantic
++    let observedNeighborhood := indexedFocus.bind fun focused =>
++      refocusObservedNeighborhoodUsing rankWindows focusQuestion focusDomain (focused.ranking.filterMap (rankedOwners[·]?))
++        (focused.windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions))
++    if let some neighborhood := observedNeighborhood then
++      focusedRanking := neighborhood.ranking
++      focusedWindows := neighborhood.windows
++      focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
++    else if evidence.isNone && !focusDomain.isEmpty then
++      if let some command := selection.semanticMatcher then
++        if let some root := evidenceRoots.head? then
++          if let some owner := entries.find? (fun owner => owner.work == root) then
++            let windows ← match ← source.liveOwner owner.relation with
++              | some id => pure ((semanticOwners.durableWindows.find? (·.1 == id)).map Prod.snd |>.getD [])
++              | none => pure ((semanticOwners.stagedWindows.find? (·.1 == owner.relation)).map Prod.snd |>.getD [])
++            if (sourceFocus? owner windows).isSome || native then
++              -- Use the same original question/complete order as the initial
++              -- packet. A native operation cannot create a different advisory
++              -- plan and refill it with undispatched old positions.
++              let some neighborhood ← focusNeighborhood command focusQuestion focusDomain source.receipt | return some pendingSearch
++              focusedRanking := neighborhood.ranking
++              focusedWindows := neighborhood.windows
++              focusedRows := neighborhood.rows.map (fun row => (row.1.val.owner.relation, row.2))
++    -- Resolve only the finite set of already admitted/hydrated owners. Ordering
++    -- the packet must not restore every ranked source body from the database.
++    trace "source focus"
++    if focusedRows.isEmpty then
++     if let some focused := indexedFocus then
++       focusedRanking := focused.ranking.filterMap (rankedOwners[·]?)
++       focusedWindows := focused.windows.filterMap fun (id, positions) =>
++         do
++           let relation ← rankedOwners[id]?
++           let owner ← (entries ++ support.map (·.owner)).find? (·.relation == relation)
++           pure (relation, rankWindows owner positions)
++       focusedRows := focusedWindows
++    -- Historical locators choose positions only inside original hydrated
++    -- graph owners. Preserve the independent numerical focus unchanged.
++    let parents := nominationRanking.zipIdx.filterMap fun (relation,rank) => do
++      let owner ← nominatedOwners.find? (·.relation == relation)
++      let text ← Matcher.atomText? owner.outcome
++      if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
++    let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
++      let admitted := parents.filterMap fun (rank,work,text) =>
++        if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
++          some (rank,text) else none
++      (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
++        (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
++    let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)
++    let referencePriorities := referenced.map fun (owner,priority,_,_,_) => (owner,priority)
++    let referenceRanks := referenced.map fun (owner,_,_,ranks,_) => (owner,ranks)
++    let referenceRanges := referenced.map fun (owner,_,_,_,ranges) => (owner,ranges)
++    trace "source citations"
++    trace "synaptic owners"
++    let graphNow ← IO.monoMsNow
++    let synaptic ← if recommendation && evidence.isNone then
++      Synapses.Transport.build source.synaptic
++        ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
++          (relationKey owner,priority))
++        synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) advisoryDeadline
++        (graphDeadline := some (Synapses.Routed.graphDeadline graphNow advisoryDeadline))
++        (preparedBatch := focusBatch)
++      else pure ({} : Synapses.Transport.Plan)
++    trace "synaptic built"
+@@ -8853 +8908 @@
+-      if let some (_, rows) := indexedFocus then
++      if let some focused := indexedFocus then
+@@ -8855 +8910 @@
+-          focused := rows.length :: rows.flatMap fun (id, windows) => [id, windows.length] ++ windows}
++          focused := focused.windows.length :: focused.windows.flatMap fun (id, windows) => [id, windows.length] ++ windows}
+@@ -8964 +9019 @@
+-    if let some batch := synaptic.batch then
++    if let some batch := focusBatch then
+@@ -9042 +9097 @@
+-      focusIndexedEvidence command question documents
++      let observed ← focusIndexedEvidence command question documents
+@@ -9048,0 +9104 @@
++      return observed.map fun (ranking,windows) => ⟨ranking,windows,documents.map fun doc => (doc.owner,doc.windows)⟩
+@@ -9225 +9281 @@
+-      focusIndexedEvidence command question requests
++      let observed ← focusIndexedEvidence command question requests
+@@ -9236,0 +9293 @@
++      return observed.map fun (ranking,windows) => ⟨ranking,windows,requests.map fun doc => (doc.owner,doc.windows)⟩
+@@ -9579 +9636 @@
+-      focusIndexedEvidence command question (documents.map Prod.snd)
++      let observed ← focusIndexedEvidence command question (documents.map Prod.snd)
+@@ -9591 +9648,2 @@
+-          Persistence.Store.readSearchWindow original.snapshot document index.val) receipt (queryInputs.map toJson) onStage }
++          Persistence.Store.readSearchWindow original.snapshot document index.val) receipt (queryInputs.map toJson) onStage
++      return observed.map fun (ranking,windows) => ⟨ranking,windows,documents.map fun (_,doc) => (doc.owner,doc.windows)⟩ }

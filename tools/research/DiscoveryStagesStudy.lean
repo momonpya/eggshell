@@ -15,6 +15,9 @@ def clientParent := base/"numerical-stages-client-build"
 def focusSource := base/"prepared-focus-source"
 def focusTarget := base/"prepared-focus-build"
 def focusStudy := workspace/"docs/candidates/prepared-focus"
+def focusHookSource := base/"prepared-focus-hook-source"
+def focusHookTarget := base/"prepared-focus-hook-build"
+def focusHookStudy := workspace/"docs/candidates/prepared-focus-hook"
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def read (path : System.FilePath) : IO Json := IO.FS.readFile path >>= (IO.ofExcept ∘ Json.parse)
 def write (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.compress
@@ -32,8 +35,11 @@ def drained : IO Unit := do
     let value ← read entry.path
     check (value.getObjValD "state" == toJson "finished" && value.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "previous guard not drained"
     let pid ← IO.ofExcept (value.getObjValAs? Nat "guardPid")
-    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
-    check (probe.exitCode != 0 && probe.stdout.trimAscii.isEmpty) "previous guard still live"
+    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","command="]}
+    let settingsName := (entry.fileName.dropEnd ".guard.json".length).toString++".guard-settings.json"
+    let sameGuard := probe.exitCode == 0 && probe.stdout.contains "controller/StudyMain" &&
+      probe.stdout.contains "guard " && probe.stdout.contains settingsName
+    check (!sameGuard) ("previous guard still live: "++entry.fileName)
 
 def materialize (selected destination output : System.FilePath) (entry : String) : IO Unit := do
   check (!(← destination.pathExists)) "fresh native source destination required"
@@ -78,7 +84,8 @@ def materialize (selected destination output : System.FilePath) (entry : String)
       ("objectModules",(destination/"object-mapping.json").toString),("mainModule",entry)] do
     settings := settings.setObjVal! key (toJson value)
   write (base/(if destination == sourceRoot then "discovery-stages-settings.json" else if destination == focusSource then
-    "prepared-focus-settings.json" else "discovery-stages-client-settings.json")) settings
+    "prepared-focus-settings.json" else if destination == focusHookSource then "prepared-focus-hook-settings.json"
+    else "discovery-stages-client-settings.json")) settings
 
 def prepare : IO Unit := do
   drained
@@ -110,19 +117,29 @@ def setup (action tag : String) : IO Unit := do
   drained
   let path := base/(tag++".guard-settings.json")
   check (!(← path.pathExists)) "fresh diagnostic tag required"
-  let arguments ← if action == "build" || action == "client-build" || action == "focus-build" then
+  let arguments ← if action == "build" || action == "client-build" || action == "focus-build" || action == "focus-hook-build" then
     pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",(workspace/"tools/research/StudyBuildMain.lean").toString,
       (base/(if action == "build" then "discovery-stages-settings.json" else if action == "focus-build" then
-        "prepared-focus-settings.json" else "discovery-stages-client-settings.json")).toString]
+        "prepared-focus-settings.json" else if action == "focus-hook-build" then "prepared-focus-hook-settings.json"
+        else "discovery-stages-client-settings.json")).toString]
+    else if action == "focus-hook-preflight" then pure #["/usr/bin/env",
+      "LEAN_PATH="++(focusHookTarget/"lib").toString++":"++(focusHookSource/".lake/build/lib/lean").toString++":"++(compiler/"lib/lean").toString,
+      (compiler/"bin/lean").toString,"--root="++focusHookSource.toString,"-j1","-M3072","-DwarningAsError=true",
+      (focusHookSource/"Eggshell/Handoff.lean").toString]
+    else if action == "focus-hook-checks" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=0",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
+      (focusHookTarget/"StudyMain").toString,"file-read-check",(base/(tag++"-result")).toString]
     else if action == "focus-checks" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=0",
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
       "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
       (focusTarget/"StudyMain").toString,"prepared-focus-check",(base/(tag++"-result")).toString]
-    else if action == "hooks" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
+    else if action == "hooks" || action == "focus-hook-cohort" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
       "EGGSHELL_TRACE_QUERY_STAGES=1","EGGSHELL_TRACE_NUMERICAL_STAGES=1","EGGSHELL_TRACE_ALLOCATOR=1","EGGSHELL_TRACE_ACTOR_HEAP=1",
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,"EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
       "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,(clientTarget/"StudyMain").toString,
-      (base/(tag++"-result")).toString,(target/"StudyMain").toString,← hash (target/"StudyMain")]
+      (base/(tag++"-result")).toString,((if action == "hooks" then target else focusHookTarget)/"StudyMain").toString,
+      ← hash ((if action == "hooks" then target else focusHookTarget)/"StudyMain")]
     else throw (IO.userError "unknown diagnostic action")
   write path (Json.mkObj [("command",toJson arguments),("cwd",toJson workspace.toString),
     ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
@@ -165,14 +182,17 @@ def processSummary (rows : Json) : IO Json := do
       |>.setObjVal! "programSha256" (toJson ((digest.stdout.splitOn " ").headD ""))
       |>.setObjVal! "programUtf8Bytes" (toJson program.utf8ByteSize)
   return toJson values
-def record (tag : String) : IO Unit := do
+def record (tag : String) (destination : System.FilePath := study) (mode : String := "--discovery-stages")
+    (previousPath : System.FilePath := workspace/"docs/candidates/typed-original-reads/evidence.json")
+    (expectFocusSample : Bool := true) (guardStem : String := "discovery-stages-") : IO Unit := do
   drained
+  let study := destination
   let recordScript := workspace/"docs/candidates/shared-leases/records.lean"
   if !(← (study/"evidence.json").pathExists) then
-    discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",recordScript.toString,"--discovery-stages",tag]
-  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",recordScript.toString,"--discovery-stages","verify","35"]
+    discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",recordScript.toString,mode,tag]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",recordScript.toString,mode,"verify","35"]
   let evidence ← read (study/"evidence.json")
-  let previous ← read (workspace/"docs/candidates/typed-original-reads/evidence.json")
+  let previous ← read previousPath
   let runs := arr evidence "runs"
   check (runs.size == 1) "one predeclared diagnostic cohort required"
   let run := runs[0]!
@@ -233,20 +253,25 @@ def record (tag : String) : IO Unit := do
     ("sample",← read (root/"sample-result.json")),("wallIntervalsNotCpuOrAdditiveMedians",toJson true)])
   let mut guards := #[]
   for entry in ← base.readDir do
-    if entry.fileName.startsWith "discovery-stages-" && entry.fileName.endsWith ".guard.json" then
-      guards := guards.push (entry.fileName,← read entry.path)
+    if entry.fileName.startsWith guardStem && entry.fileName.endsWith ".guard.json" then
+      let value ← read entry.path
+      let value ← if value.getObjValD "peakProcesses" == Json.null then pure value else
+        pure (value.setObjVal! "peakProcesses" (← processSummary (value.getObjValD "peakProcesses")))
+      guards := guards.push (entry.fileName,value)
   write (study/"controls.json") (toJson guards)
   let sample := root/"worker.sample.txt"
   let lines := (← IO.FS.readFile sample).splitOn "\n"
-  let some first := lines.findIdx? (·.contains "l_Eggshell_Plugin_refocusObservedNeighborhood") |
-    throw (IO.userError "tail sample does not show the claimed focus branch")
+  let observed := lines.findIdx? (·.contains "l_Eggshell_Plugin_refocusObservedNeighborhood")
+  if expectFocusSample && observed.isNone then throw (IO.userError "tail sample does not show the claimed focus branch")
+  let first := observed.getD 22
   write (study/"sample-context.json") (Json.mkObj [("sha256",toJson (← hash sample)),
     ("header",toJson (lines.take 22)),("firstLine",toJson (first+1)),
     ("excerpt",toJson ((lines.drop first).take 85)),
-    ("sampleObservationsNotCpuPercentages",toJson true)])
-  write (study/"development.json") (Json.mkObj [("controllerPreflightErrors",toJson #[
-    "reserved matches identifier","mutable intervals shadowed;both corrected before client build"]),
-    ("nativeAndHookFailuresThisCohort",toJson (0 : Nat))])
+    ("sampleObservationsNotCpuPercentages",toJson true),("focusFrameObserved",toJson observed.isSome)])
+  if mode == "--discovery-stages" then
+    write (study/"development.json") (Json.mkObj [("controllerPreflightErrors",toJson #[
+      "reserved matches identifier","mutable intervals shadowed;both corrected before client build"]),
+      ("nativeAndHookFailuresThisCohort",toJson (0 : Nat))])
   IO.println (Json.mkObj [("largestGaps",toJson (gapRows.extract 0 12)),("hosts",toJson hosts),
     ("common",toJson common),("reference",toJson reference),
     ("frontendExit",shutdown.getObjValD "frontendExit"),("publisherExit",shutdown.getObjValD "publisherExit")]).pretty
@@ -288,8 +313,9 @@ def retireParents : IO Unit := do
   let previous ← read (study/"cleanup.json")
   write (study/"cleanup.json") (previous.setObjVal! "obsoleteExecutablesRemoved" (toJson removed))
 
-def compactRecords : IO Unit := do
+def compactRecords (destination : System.FilePath := study) : IO Unit := do
   drained
+  let study := destination
   for name in ["evidence.json","bodies.json","verification.json"] do
     let path := study/name
     let value ← read path
@@ -299,7 +325,7 @@ def compactRecords : IO Unit := do
 def retireObsoleteExecutables : IO Unit := do
   drained
   IO.FS.createDirAll focusStudy
-  let mut keep := #["allocator-service-build","prepared-focus-build","discovery-stages-build",
+  let mut keep := #["allocator-service-build","prepared-focus-build","prepared-focus-hook-build","discovery-stages-build",
     "discovery-stages-client-build","numerical-stages-client-build","metadata-ingress-candidate-build"]
   for path in [base/"owned-ready-prefix/libexec/eggshell",base/"reply-admission-prefix/libexec/eggshell",
       base/"worker-cpu-target/bin/eggshelld"] do
@@ -410,16 +436,114 @@ def verifyFocusOriginals : IO Unit := do
   write (focusStudy/"protected-originals.json") (Json.mkObj [("completeHeadsAndSha256Unchanged",toJson heads.size),
     ("protectedAfterSha256Manifest",toJson "docs/candidates/project-cache/protected-after.sha256")])
 
+def prepareFocusHook : IO Unit := do
+  drained
+  let parentBuild ← read (focusStudy/"build.json")
+  check ((← hash (focusTarget/"StudyMain")) == (← IO.ofExcept (parentBuild.getObjValAs? String "runtime"))) "focus native parent changed"
+  materialize focusTarget focusHookSource focusHookTarget "tools.research.PreparedFocusHookChecks"
+  IO.FS.createDirAll focusHookStudy
+  write (focusHookStudy/"plan.json") (Json.mkObj [("previousTurn",toJson "progress:proved pure captured window ranks and bounded delta publication"),
+    ("status",toJson "isolated,not adopted"),("purpose",toJson "consume the existing captured metadata in the actual Handoff focus and reuse its one batch through synaptic selection"),
+    ("fixed",toJson "same16originals/32queries/2waves;rank,MiniLM,scope,certification,deadlines and resource bounds unchanged"),
+    ("no80FullSearchRetry",toJson true),("paidComparisons",toJson "0/18")])
+
+def scopeFocusHook : IO Unit := do
+  drained
+  let file := focusHookSource/"Eggshell/Handoff.lean"
+  let text ← IO.FS.readFile file
+  let [before,rest] := text.splitOn "  let preparedWindows ←" | throw (IO.userError "unique focus batch lifetime start required")
+  let [middle,after] := rest.splitOn "  try\n    if !synaptic.canonicalFailure.isEmpty" |
+    throw (IO.userError "unique original batch lifetime required")
+  let block := "  let preparedWindows ←"++middle
+  let nested := "\n".intercalate ((block.splitOn "\n").dropLast.map ("  "++·))++"\n"
+  IO.FS.writeFile file (before++"  try\n"++
+    "    if recommendation && evidence.isNone && windowQuery.isSome && focusBatch.isNone && !focusDomain.isEmpty then return some pendingSearch\n"++
+    nested++"    if !synaptic.canonicalFailure.isEmpty"++after)
+
+def sealFocusHook (checksTag : String) : IO Unit := do
+  drained
+  let native ← read (base/(checksTag++"-result/report.json"))
+  check (native.getObjValD "typedAndWireWindowRanksExact" == toJson true &&
+    native.getObjValD "foreignFocusWorkAndWindowsRejectedAndReleased" == toJson true &&
+    native.getObjValD "allReservationsReleased" == toJson true) "actual focus protocol controls incomplete"
+  let audit := workspace/"tools/research/StudyBuildClosureAudit.lean"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "inspect",focusHookTarget.toString,(focusHookStudy/"native-closure.json").toString]
+  let changes := #["tools.research.SourceViewBatch","Eggshell.PublicationClient",
+    "Eggshell.PublicationService","Eggshell.SynapseTransport","Eggshell.Handoff","Eggshell.ContractAudit"]
+  discard <| command (compiler/"bin/lean").toString (#["-j1","-M1536","--run",audit.toString,
+    "compare-sources",focusTarget.toString,focusHookTarget.toString,(focusHookStudy/"native-sources.json").toString]++changes)
+  for name in changes do
+    let relative := name.replace "." "/"++".lean"
+    let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/"++relative,"--label","b/"++relative,
+      (focusSource/relative).toString,(focusHookSource/relative).toString]}
+    check (patch.exitCode == 1) "missing actual focus implementation patch"
+    IO.FS.writeFile (focusHookStudy/(name.replace "." "_"++".patch")) patch.stdout
+  write (focusHookStudy/"native-checks.json") native
+  write (focusHookStudy/"build.json") (Json.mkObj [("runtime",toJson (← hash (focusHookTarget/"StudyMain"))),
+    ("parent",toJson (← hash (focusTarget/"StudyMain"))),
+    ("kernelAndOrdinaryContractAudit",toJson (← IO.FS.readFile (focusHookTarget/"tools_research_PreparedFocusHookChecks-lean.stdout")))])
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",(focusHookTarget/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+
+def recordFocusHook (tag : String) : IO Unit := do
+  record tag focusHookStudy "--prepared-focus-hook" (study/"evidence.json") false "prepared-focus-hook-"
+  let evidence ← read (focusHookStudy/"evidence.json")
+  let observed := (arr evidence "runs").flatMap fun run => (arr run "waves").flatMap (arr · "receipts")
+  let used := observed.filter fun row => (row.getObjValD "prepared-window-focus").getObjValD "used" == toJson true
+  write (focusHookStudy/"focus-path.json") (Json.mkObj [("observedReceipts",toJson observed.size),
+    ("preparedFocusUsed",toJson used.size),("no80FullSearchRetry",toJson true),
+    ("answeringModelCalls",toJson (0 : Nat)),("paidMatchedComparisons",toJson "0/18"),("adopted",toJson false)])
+  write (focusHookStudy/"development.json") (Json.mkObj [("failures",toJson #[
+    "build1:array-map composition proof needed final definitional reduction;added rfl",
+    "build2/build3:two multiline record literals violated Lean layout;used typed local and positional FocusRow constructor",
+    "build4:ordinary ContractAudit required old refocus symbol;bind new interpreter and additionally audit prepared service read and absence of window reconstruction in that interpreter",
+    "build5:old native fixture positional Request constructor lacked the new optional field;use named fields",
+    "preflight1:diagnostic used1536MiB while ordinary native compiler uses3072MiB;align with ordinary compiler setting,unchanged3670016KiB RSS guard",
+    "controller:historical terminal guard PID was reused;check actual guard command/tag instead of unrelated numeric PID",
+    "two unapplied patches had invalid context;no partial source changes"]),
+    ("resourceCeilingUnchanged",toJson true),("adopted",toJson false)])
+
+def cleanupFocusHook (tag : String) : IO Unit := do
+  drained
+  check ((arr (← read (focusHookStudy/"evidence.json")) "runs").any (fun run => run.getObjValD "tag" == toJson tag))
+    "named completed cohort must be recorded before cleanup"
+  check ((← read (focusHookStudy/"verification.json")).getObjValD "actualOutputs" == toJson (35 : Nat))
+    "retain actual hook bodies before cleanup"
+  let baseline := base/"allocator-service-build/StudyMain"
+  check ((← hash baseline) == "4e4c9b9c95cb2c72b4447a86f5abc81b6bb619854889eb5ffa8492ba592e593a") "baseline changed"
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",baseline.toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+  let mut removed := #[]
+  for entry in ← base.readDir do
+    if entry.fileName.startsWith "prepared-focus-hook-" && entry.fileName.endsWith "-result" && (← entry.path.isDir) then
+      IO.FS.removeDirAll entry.path
+      removed := removed.push entry.fileName
+  let mut count := 0
+  for entry in ← focusHookTarget.readDir do
+    if entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" then
+      IO.FS.removeFile entry.path
+      count := count+1
+  write (focusHookStudy/"cleanup.json") (Json.mkObj [("endedDbCacheSessionsRemoved",toJson removed),
+    ("compilerLogsRemoved",toJson count),("baselineAliasRestored",toJson true),
+    ("protectedOriginalsAndNativeInputsRetained",toJson true),("archived",toJson false)])
+
 def main (args : List String) : IO Unit := do
   match args with
   | ["prepare"] => prepare
   | ["prepare-focus"] => prepareFocus
+  | ["prepare-focus-hook"] => prepareFocusHook
+  | ["scope-focus-hook"] => scopeFocusHook
+  | ["seal-focus-hook",tag] => sealFocusHook tag
+  | ["record-focus-hook",tag] => recordFocusHook tag
+  | ["cleanup-focus-hook",tag] => cleanupFocusHook tag
   | ["setup",action,tag] => setup action tag
   | ["seal"] => sealRuntime
   | ["record",tag] => record tag
   | ["cleanup",tag] => cleanup tag
   | ["retire-parents"] => retireParents
   | ["compact-records"] => compactRecords
+  | ["compact-focus-hook"] => compactRecords focusHookStudy
   | ["retire-obsolete-executables"] => retireObsoleteExecutables
   | ["seal-focus",tag] => sealFocus tag
   | ["cleanup-focus"] => cleanupFocus

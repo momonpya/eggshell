@@ -1,0 +1,15 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -687 +687,2 @@
+-          ``Eggshell.Plugin.refocusObservedNeighborhood,
++          ``Eggshell.Plugin.refocusObservedNeighborhoodUsing,
++          ``Eggshell.Synapses.Transport.prepareBatch,
+@@ -691,0 +693,8 @@
++      (``Eggshell.Plugin.refocusObservedNeighborhood,
++        #[``Eggshell.Plugin.refocusObservedNeighborhoodUsing], #[]),
++      (``Eggshell.Plugin.refocusObservedNeighborhoodUsing,
++        #[``Eggshell.SearchRank.Corpus.build],
++        #[``Eggshell.Plugin.evidenceSearchWindows,``Eggshell.Plugin.focusedEvidenceWindows]),
++      (``Eggshell.Plugin.Publication.Service.readSourceViews,
++        #[``Eggshell.Synapses.SharedReadViews.Source.focusWindows,
++          ``Eggshell.Synapses.SharedReadViews.Source.capture], #[]),

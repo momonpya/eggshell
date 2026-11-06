@@ -12,6 +12,8 @@ open Eggshell.DB
 #print axioms PreparedSourceView.file_ready_unique
 #print axioms PreparedSourceView.file_ready_scopes
 #print axioms PreparedSourceView.scoped_file_valid
+#print axioms SourceViewBatch.key_ignores_question
+#print axioms refocus_prepared_windows_exact
 
 run_cmd do
   let environment ← getEnv
@@ -25,6 +27,10 @@ run_cmd do
       (``Worker.searchRestored,``Worker.SearchEnvironment.originalReads),
       (``automaticHandoff,``SourceContext.originalReads),
       (``sourcePlan,``SharedReadViews.Source.readMetadata),
+      (``readSourceViews,``SharedReadViews.Source.focusWindows),
+      (``indexedDiscoveryUsing,``Synapses.Transport.prepareBatch),
+      (``indexedDiscoveryUsing,``refocusObservedNeighborhoodUsing),
+      (``Synapses.Transport.prepareBatch,``Publication.Client.sourcePalettes),
       (``PreparedSourceView.decodeOwner,``OwnerPalette.Descriptor.inScope)] do
     unless (← body name).getUsedConstants.contains required do throwError "typed read path is disconnected {name} -> {required}"
   for name in [`Eggshell.Plugin.Publication.Client.sourceRecords,`Eggshell.Plugin.Publication.Service.sourceRecords] do
@@ -39,6 +45,7 @@ run_cmd do
   unless (← body ``sourcePlan).getUsedConstants.contains ``PreparedSourceView.fileReady do
     throwError "actual selector is disconnected from the pure file header"
   let mut pending := [``SharedReadViews.Source.readRecords,``SharedReadViews.Source.readMetadata,
+    ``SharedReadViews.Source.focusWindows,
     ``SharedReadViews.Source.capturedBytes,``PreparedSourceView.fileReady,``PreparedSourceView.FileReady.addExtents]
   let mut seen : Std.HashSet Name := {}
   while let some name := pending.head? do
@@ -114,7 +121,7 @@ def fileChecks (server : Server) (root : System.FilePath) : IO Json := do
   let retained ← IO.ofExcept (prepared.getObjValAs? String "retained")
   let owner := (compileOperationOutcomes (.text occurrence.session) (.text occurrence.turn) tool).2
   let owners := #[valueKey owner]
-  let requests : Array SourceViewBatch.Request := #[⟨access,owners,some retained⟩]
+  let requests : Array SourceViewBatch.Request := #[{access,owners,retained := some retained}]
   let palette ← readSourceViews server access.capability requests deadline
   try
     let captured ← server.palettes.withView palette.lease (SourceViewBatch.key requests) fun view => do
@@ -213,6 +220,9 @@ def checks (root : System.FilePath) : IO Unit := do
   let server ← makeServer
   let originalRoot : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/frontend-quiescence-fixture-small1/work.project/owners"
   let mut requests : Array SourceViewBatch.Request := #[]
+  let mut focusRows : Array SourceViewBatch.FocusRow := #[]
+  let mut expectedRanks : Std.HashMap String (List Nat) := {}
+  let question := "recorded head tail source/key-17 警告"
   let mut heads : Array (System.FilePath × String) := #[]
   let endpoint : Daemon.Endpoint := ⟨"publisher",(← IO.Process.getPID).toNat,12347,"", "typed-native-check"⟩
   let access := localReadAccess server endpoint
@@ -231,9 +241,19 @@ def checks (root : System.FilePath) : IO Unit := do
       let retained ← IO.ofExcept (prepared.getObjValAs? String "retained")
       let reader ← Persistence.Store.NodeReader.new source
       let entries ← Build.entries source
-      let owners ← (entries.extract 0 (min 4 entries.size)).mapM fun entry => do
-        return (← Build.document reader entry.id).owner
-      requests := requests.push ⟨originalAccess,owners.push "missing-owner",some retained⟩
+      let mut owners := #[]
+      for entry in entries.extract 0 (min 4 entries.size) do
+        let document ← Build.document reader entry.id
+        let indexed ← SourceDelta.documents source [entry.id]
+        let some original := indexed.head? | throw (IO.userError "focus original directory missing")
+        let semantic := (List.range original.windows.length).reverse
+        unless focusRows.any (·.owner == document.owner) do
+          focusRows := focusRows.push ⟨document.owner,document.work,original.windows,semantic⟩
+          let edge ← reader.outcome (← reader.locateOutcome entry.id)
+          expectedRanks := expectedRanks.insert document.owner
+            (focusedEvidenceWindows question (evidenceSearchWindows edge) semantic)
+        owners := owners.push document.owner
+      requests := requests.push {access := originalAccess,owners := owners.push "missing-owner",retained := some retained}
     let sources := requests.map fun request =>
       (({
         endpoint := {endpoint with secret := request.access.capability}
@@ -241,8 +261,13 @@ def checks (root : System.FilePath) : IO Unit := do
         retained := request.retained
         localReads := some access } : Publication.Client.SourceReference),request.owners)
     let deadline := (← IO.monoMsNow)+10000
-    let batch ← Publication.Client.sourcePalettes sources deadline
+    let batch ← Publication.Client.sourcePalettes sources deadline (some (question,focusRows))
     check (batch.localReads.isSome && batch.palette.records.size == 3) "typed client used the absent network listener"
+    let mut focusComparisons := 0
+    for rows in batch.palette.focus do
+      for (owner,ranking) in rows do
+        check (expectedRanks[owner]? == some ranking) "actual typed service focus differs from original-window reranking"
+        focusComparisons := focusComparisons+1
     let key := SourceViewBatch.key requests
     let charged ← server.palettes.withView batch.palette.lease key fun view => do
       let captured := view.sources.foldl (fun bytes source => bytes+source.capturedBytes) 0
@@ -255,13 +280,20 @@ def checks (root : System.FilePath) : IO Unit := do
         check (toJson actual == toJson expected) "captured geometry differs from independent DB read"
       return view.charge
     let some first := requests[0]? | throw (IO.userError "typed read fixture has no sources")
-    let wire ← sourcePalettes server first.access.capability (Json.mkObj [("sources",toJson requests)]) deadline
+    let wire ← sourcePalettes server first.access.capability (Json.mkObj [("sources",toJson batch.requests)]) deadline
     let wirePalette ← IO.ofExcept (fromJson? wire : Except String SourceViewBatch.Palette)
     check (toJson wirePalette.owners == toJson batch.palette.owners &&
-      toJson wirePalette.records == toJson batch.palette.records && wirePalette.identities == batch.palette.identities)
+      toJson wirePalette.records == toJson batch.palette.records && wirePalette.identities == batch.palette.identities &&
+      wirePalette.focus == batch.palette.focus)
       "wire and typed reads disagree"
     access.release requests wirePalette.lease
     batch.release deadline
+    for changed in [focusRows.map (fun row => {row with work := "foreign"}),
+        focusRows.map (fun row => {row with windows := row.windows++["foreign"]})] do
+      check (← rejects (Publication.Client.sourcePalettes sources deadline (some (question,changed))))
+        "prepared focus accepted a foreign original Work/window domain"
+    check ((← server.palettes.stats).getObjValD "active" == toJson (0 : Nat))
+      "failed focus retained a query reservation"
     let rejectedReleases ← IO.mkRef (0 : Nat)
     let malformed : SourceViewBatch.ReadAccess := {access with
       read := fun requests deadline => do
@@ -327,6 +359,8 @@ def checks (root : System.FilePath) : IO Unit := do
       ("geometryIncludedInExistingQueryReservation",toJson charged),("fullScopeHeadRootCapabilityExpiryRejection",toJson true),
       ("activeBorrowSurvivesRelease",toJson true),("allReservationsReleased",toJson true),
       ("clientRejectionAndCancellationReleaseReservations",toJson true),
+      ("focusComparisons",toJson focusComparisons),("typedAndWireWindowRanksExact",toJson true),
+      ("foreignFocusWorkAndWindowsRejectedAndReleased",toJson true),
       ("originalHeadsUnchanged",toJson true),("final",final),("adopted",toJson false)]).compress
   finally
     for request in requests do

@@ -1,0 +1,20 @@
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -238 +238,2 @@
+-def sourcePalettes (sources : Array (SourceReference × Array String)) (deadline : Nat) : IO SourceBatch := do
++def sourcePalettes (sources : Array (SourceReference × Array String)) (deadline : Nat)
++    (focus : Option (String × Array Synapses.SourceViewBatch.FocusRow) := none) : IO SourceBatch := do
+@@ -245 +246,2 @@
+-    ({access := source.access,owners := (hashDistinct owners.toList).toArray,retained := source.retained} : Synapses.SourceViewBatch.Request)
++    ({access := source.access,owners := (hashDistinct owners.toList).toArray,retained := source.retained,
++      focus := focus.map fun (question,rows) => ⟨question,rows.filter (fun row => owners.contains row.owner)⟩} : Synapses.SourceViewBatch.Request)
+@@ -261 +263,2 @@
+-      palette.owners.size == requests.size && palette.reuse.size == requests.size && palette.records.size == requests.size do
++      palette.owners.size == requests.size && palette.reuse.size == requests.size && palette.records.size == requests.size &&
++      palette.focus.size == requests.size do
+@@ -272,0 +276,5 @@
++    let some ranked := palette.focus[index]? | throw (IO.userError "prepared focus source disappeared")
++    let wanted := request.focus.map (·.rows) |>.getD #[]
++    unless ranked.map Prod.fst == wanted.map (·.owner) &&
++        (ranked.zip wanted).all (fun ((_,ranking),row) => row.accepts ranking) do
++      throw (IO.userError "prepared focus changed its requested original window domain")

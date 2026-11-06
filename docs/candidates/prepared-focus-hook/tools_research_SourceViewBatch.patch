@@ -1,0 +1,29 @@
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -9,0 +10,16 @@
++structure FocusRow where
++  owner : String
++  work : String
++  windows : List String
++  semantic : List Nat
++  deriving ToJson,FromJson
++
++structure Focus where
++  question : String
++  rows : Array FocusRow
++  deriving ToJson,FromJson
++
++def FocusRow.accepts (row : FocusRow) (ranking : List Nat) : Bool :=
++  ranking.all (· < row.windows.length) && ranking.length ≤ row.semantic.length &&
++    ranking.eraseDups.length == ranking.length
++
+@@ -15,0 +32 @@
++  focus : Option Focus := none
+@@ -20,0 +38,5 @@
++theorem key_ignores_question (parts : Array Request) (question : String) :
++    key (parts.map fun part => {part with focus := part.focus.map fun focus => {focus with question}}) = key parts := by
++  simp [key,Array.map_map]
++  rfl
++
+@@ -26,0 +49 @@
++  focus : Array (Array (String × List Nat)) := #[]

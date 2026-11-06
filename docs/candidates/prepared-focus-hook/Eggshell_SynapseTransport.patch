@@ -1,0 +1,48 @@
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -153,0 +154,18 @@
++def sourceViews (prepared : Array Recommend.Prepared) (owners : Array Owner) :
++    Array (Plugin.Publication.Client.SourceReference × Array String) :=
++  prepared.filterMap fun source => do
++    let reference ← source.canonical
++    let ids := owners.filterMap fun owner =>
++      if owner.database == source.source.head.identity then
++        some (Persistence.selectionKey owner.original.relation) else none
++    if ids.isEmpty then none else some (reference,ids)
++
++/-- The same admitted immutable batch supplies focus ranks and later original
++selection. Capture/charge metadata once, not once again after refocusing. -/
++def prepareBatch (prepared : Array Recommend.Prepared) (owners : Array Owner) (deadline : Nat)
++    (focus : Option (String × Array SourceViewBatch.FocusRow) := none) :
++    IO (Option Plugin.Publication.Client.SourceBatch) := do
++  let sources := sourceViews prepared owners
++  if sources.isEmpty then return none
++  return some (← Plugin.Publication.Client.sourcePalettes sources deadline focus)
++
+@@ -159 +177,2 @@
+-    (graphDeadline : Option Nat := none) : IO Plan := do
++    (graphDeadline : Option Nat := none)
++    (preparedBatch : Option Plugin.Publication.Client.SourceBatch := none) : IO Plan := do
+@@ -226,6 +245 @@
+-  let sources := prepared.filterMap fun source => do
+-    let reference ← source.canonical
+-    let ids := owners.filterMap fun owner =>
+-      if owner.database == source.source.head.identity then
+-        some (Persistence.selectionKey owner.original.relation) else none
+-    if ids.isEmpty then none else some (reference,ids)
++  let sources := sourceViews prepared owners
+@@ -235,2 +249,12 @@
+-      let batch ← Plugin.Publication.Client.sourcePalettes sources deadline
+-      acquired := some batch
++      let batch ← match preparedBatch with
++        | some batch => do
++          let expected := sources.map fun (source,owners) =>
++            ({access := source.access,owners := (hashDistinct owners.toList).toArray,
++              retained := source.retained} : SourceViewBatch.Request)
++          unless SourceViewBatch.key batch.requests == SourceViewBatch.key expected do
++            throw (IO.userError "prepared focus batch changed its original source domain")
++          pure batch
++        | none => do
++          let batch ← Plugin.Publication.Client.sourcePalettes sources deadline
++          acquired := some batch
++          pure batch
