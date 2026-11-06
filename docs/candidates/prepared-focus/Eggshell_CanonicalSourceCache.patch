@@ -1,0 +1,28 @@
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -17 +17 @@
+-  producerDependencies.1.toUTF8,producerDependencies.2.toUTF8,
++  producerDependencies.1.toUTF8,producerDependencies.2.toUTF8,PreparedFocusFacts.implementation.toUTF8,
+@@ -206,3 +206,12 @@
+-  if !document.native then return totals
+-  let (originals,statistics) ← addPublishedDocument source id document {} {} prepared
+-  let stored ← IO.ofExcept (Recipe.compile originals.store)
++  let focus := PreparedFocusFacts.compile document.owner document.work
++    (document.workText.getD "") (document.source.getD "")
++  let encoded ← readChunks source source.get "searchWindows" id
++  let (windows,tail) ← IO.ofExcept (windowCodec.decode encoded.toList)
++  unless tail.isEmpty && focus.originalWindows == windows do
++    throw (IO.userError "prepared focus compilation changed original source windows")
++  let projected : Recipe.Stored × Statistics ← if document.native then do
++      let (originals,statistics) ← addPublishedDocument source id document {} {} prepared
++      let stored ← IO.ofExcept (Recipe.compile originals.store)
++      pure (stored,statistics)
++    else pure ((⟨#[],[]⟩ : Recipe.Stored),({} : Statistics))
++  let (stored,statistics) := projected
+@@ -210 +219 @@
+-  PreparedSourceView.publishOwner writer document.owner stored
++  PreparedSourceView.publishOwner writer document.owner stored (some focus)
+@@ -215 +224,2 @@
+-    statistics := addStatistics totals.statistics statistics,hydrated := totals.hydrated+1}
++    statistics := addStatistics totals.statistics statistics,
++    hydrated := totals.hydrated+(if document.native then 1 else 0)}

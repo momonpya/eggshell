@@ -1,0 +1,28 @@
+--- a/tools/research/PreparedSourceView.lean
++++ b/tools/research/PreparedSourceView.lean
+@@ -5,0 +6 @@
++public import tools.research.PreparedFocusFacts
+@@ -41,0 +43 @@
++  focus : Option PreparedFocusFacts.Stored := none
+@@ -49,0 +52 @@
++  focus : Option PreparedFocusFacts.Ready := none
+@@ -55 +58,2 @@
+-def ownerStored (owner : String) (stored : Recipe.Stored) (layout : Recipe.Checked stored.rows) : OwnerStored :=
++def ownerStored (owner : String) (stored : Recipe.Stored) (layout : Recipe.Checked stored.rows)
++    (focus : Option PreparedFocusFacts.Stored := none) : OwnerStored :=
+@@ -60 +64 @@
+-    files.toArray.map (fun (file,rows) => (file,compileExtents rows))⟩
++    files.toArray.map (fun (file,rows) => (file,compileExtents rows)),focus⟩
+@@ -85 +89,4 @@
+-  return ⟨stored,rows,units,json,json.compress.utf8ByteSize⟩
++  let focus ← stored.focus.mapM (PreparedFocusFacts.check owner)
++  let bytes := json.compress.utf8ByteSize+
++    (stored.focus.map (fun facts => (toJson facts).compress.utf8ByteSize)).getD 0
++  return ⟨stored,rows,units,json,bytes,focus⟩
+@@ -89 +96,2 @@
+-def publishOwner (writer : PageMap.Writer) (owner : String) (stored : Recipe.Stored) : IO Unit := do
++def publishOwner (writer : PageMap.Writer) (owner : String) (stored : Recipe.Stored)
++    (focus : Option PreparedFocusFacts.Stored := none) : IO Unit := do
+@@ -93 +101 @@
+-  let bytes := (toJson (ownerStored owner stored layout)).compress.toUTF8
++  let bytes := (toJson (ownerStored owner stored layout focus)).compress.toUTF8

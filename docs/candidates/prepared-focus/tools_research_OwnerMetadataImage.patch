@@ -1,0 +1,39 @@
+--- a/tools/research/OwnerMetadataImage.lean
++++ b/tools/research/OwnerMetadataImage.lean
+@@ -36,0 +37,36 @@
++/-- Read the facts already retained by the admitted query view. There is no
++cache admission, borrower update, task, mutable reference or IO in this API.
++The entire original window directory is checked before returning positions. -/
++def Image.focusWindows (image : Image) (identity owner work : String) (windows : List String)
++    (question : String) (semantic : List Nat) : Except String (List Nat) := do
++  let some metadata := image.lookup? identity owner |
++    throw "focus owner is outside the pinned view"
++  let some facts := metadata.focus | throw "original window focus is not prepared"
++  unless facts.matches owner work windows do
++    throw "prepared focus crossed its original owner/work/window domain"
++  return facts.rank question semantic
++
++theorem Image.focus_ready_exact (image : Image) (identity owner work : String)
++    (windows : List String) (question : String) (semantic : List Nat)
++    (metadata : PreparedSourceView.OwnerReady) (facts : PreparedFocusFacts.Ready)
++    (found : image.lookup? identity owner = some metadata) (prepared : metadata.focus = some facts)
++    (domain : facts.matches owner work windows = true) :
++    image.focusWindows identity owner work windows question semantic = .ok (facts.rank question semantic) := by
++  simp [focusWindows,found,prepared,domain]
++  rfl
++
++theorem Image.foreign_focus_rejected (image : Image) (identity owner work : String)
++    (windows : List String) (question : String) (semantic : List Nat)
++    (foreign : identity ≠ image.identity) :
++    image.focusWindows identity owner work windows question semantic =
++      .error "focus owner is outside the pinned view" := by
++  simp [focusWindows,lookup?,foreign]
++  rfl
++
++theorem Image.focus_insert_other (image : Image) (owner other work : String)
++    (ready : PreparedSourceView.OwnerReady) (windows : List String)
++    (question : String) (semantic : List Nat) (different : owner ≠ other) :
++    (image.insert owner ready).focusWindows image.identity other work windows question semantic =
++      image.focusWindows image.identity other work windows question semantic := by
++  simp only [focusWindows,insert_other image owner other ready different]
++

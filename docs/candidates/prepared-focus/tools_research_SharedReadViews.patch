@@ -1,0 +1,14 @@
+--- a/tools/research/SharedReadViews.lean
++++ b/tools/research/SharedReadViews.lean
+@@ -68,0 +69,11 @@
++/-- Selection reads only the immutable metadata captured under the existing
++query reservation. It cannot acquire a cache lock or wait for a fill. -/
++def Source.focusWindows (source : Source) (owner work : String) (windows : List String)
++    (question : String) (semantic : List Nat) : Except String (List Nat) :=
++  source.metadata.focusWindows source.loaded.identity owner work windows question semantic
++
++theorem Source.focus_is_captured_read (source : Source) (owner work : String)
++    (windows : List String) (question : String) (semantic : List Nat) :
++    source.focusWindows owner work windows question semantic =
++      source.metadata.focusWindows source.loaded.identity owner work windows question semantic := rfl
++
