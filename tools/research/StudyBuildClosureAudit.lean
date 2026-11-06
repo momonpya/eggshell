@@ -3,6 +3,31 @@ import Lean.Data.Json.FromToJson
 import Std.Data.HashMap
 open Lean
 
+/-- Match embedded inputs by path, rather than zipping positions. A declared
+new module may add its exact source bytes to an implementation identity. Old
+paths retain their occurrence counts and change only by a declared source pair. -/
+private def approvedLiterals (before after : Array (String × String))
+    (changes : Array (String × String)) (additions : Array String) : Bool :=
+  before.all (fun old =>
+    (before.filter (fun row => row.1 == old.1)).size == (after.filter (fun row => row.1 == old.1)).size) &&
+  after.all (fun actual =>
+    let old := before.filter (fun row => row.1 == actual.1)
+    if old.isEmpty then additions.contains actual.2
+    else old.any (fun row => row.2 == actual.2 || changes.contains (row.2,actual.2)))
+
+private def literalChecks : IO Unit := do
+  let old := #[("a","original-a"),("b","original-b")]
+  let changed := #[("a","changed-a"),("new","new-module"),("b","original-b")]
+  let cases := #[approvedLiterals old changed #[("original-a","changed-a")] #["new-module"],
+    !approvedLiterals old changed #[] #["new-module"],
+    !approvedLiterals old changed #[("original-a","changed-a")] #[],
+    !approvedLiterals old #[("a","original-a")] #[] #[],
+    !approvedLiterals old (old.push ("b","original-b")) #[] #[],
+    !approvedLiterals old (old.push ("new","wrong-module")) #[] #["new-module"],
+    approvedLiterals old old.reverse #[] #[]]
+  unless cases.all id do throw (IO.userError "embedded source audit accepts an undeclared change")
+  IO.println (Json.mkObj [("checks",toJson cases.size),("allPassed",toJson true)]).compress
+
 private def read (path : System.FilePath) : IO Json :=
   IO.FS.readFile path >>= fun text => IO.ofExcept (Json.parse text)
 
@@ -80,6 +105,7 @@ private def sourceWitnesses (directory : System.FilePath) : IO (String × Std.Ha
   return (entry,found)
 
 def main (args : List String) : IO Unit := do
+  if args == ["literal-checks"] then literalChecks; return
   if let "compare-sources"::parent::candidate::output::allowed := args then
     let path : System.FilePath := .mk output
     unless !(← path.pathExists) do throw (IO.userError "preserve native source comparison")
@@ -104,6 +130,10 @@ def main (args : List String) : IO Unit := do
       let some before := old[name]? | throw (IO.userError "declared parent source absent")
       let some after := current[name]? | throw (IO.userError "declared candidate source absent")
       expectedLiterals := expectedLiterals.push ((← decode before).1,(← decode after).1)
+    let mut addedLiterals := #[]
+    for name in additions do
+      let some bytes := current[name]? | throw (IO.userError "declared added source absent")
+      addedLiterals := addedLiterals.push (← decode bytes).1
     let mut direct := #[]
     let mut literalContainers := #[]
     let mut literalsApproved := true
@@ -111,14 +141,11 @@ def main (args : List String) : IO Unit := do
       let before ← decode old[name]!
       let after ← decode current[name]!
       if before.1 != after.1 then direct := direct.push name
-      if before.2.map (·.1) != after.2.map (·.1) then literalsApproved := false
+      unless approvedLiterals before.2 after.2 expectedLiterals addedLiterals do literalsApproved := false
       let mut paths := #[]
-      for (left,right) in before.2.zip after.2 do
-        if left.2 != right.2 then
+      for right in after.2 do
+        if !before.2.contains right then
           paths := paths.push right.1
-          -- An implementation-identity container may embed changed source.
-          -- Accept only the exact before/after bytes of a declared change.
-          unless expectedLiterals.contains (left.2,right.2) do literalsApproved := false
       if !paths.isEmpty then literalContainers := literalContainers.push (name,paths)
     let ok := removed.isEmpty && added.size == additions.length && added.all (additions.contains ·) &&
       direct.size == allowed.length &&

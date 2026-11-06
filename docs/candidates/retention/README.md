@@ -2,14 +2,20 @@
 
 隔離した診断。製品の強制回収・allocator設定の変更ではなく、総トークン・品質の採用比較でもない。
 
+訂正：後続の[全記録の再監査](../ingress-ownership/quiescence-audit.json)で、
+sham/collectionとも背景準備が実行中だったと確認した。旧判定は検索と出版だけを
+見ており、準備のpending/active/residentBytesを見ていなかった。raw記録は変更しない。
+以下のRSS差は観測値であり、全仕事を静止させた回収介入の因果結果には使わない。
+
 shared-view の親と同じ16原典・MiniLM・質問・設定を使い、16並行の2波が
 終了してから、同じservice loopでshamと`mi_collect(true)`を実行した。
-受付・実行中・準備待ちが前後とも0であることを確認し、さらに同じ原文を
+検索・出版の受付/実行中が前後とも0だった旧判定で実施し、さらに同じ原文を
 1問配送した。実装と制御はLean、Cは既存allocatorへの最小の接続だけである。
 
 [summary.json](summary.json) のRSSは、shamが888,688→888,672KiB、
 collectionが888,752→888,704KiBだった。後者の変化は48KiBであり、
-約868MiBのhost保持を説明しない。介入はOSのmain threadではない。
+約868MiBのhost保持を説明するには不十分である。背景準備も停止していない。
+介入はOSのmain threadではない。
 現在のheapとglobal arenaへの回収であって、他の生きたthreadの全heapや
 全abandoned blockを回収したとは言えない。この否定結果から、残りが
 生存しているWorkGraphであるとも断定しない。

@@ -1,0 +1,11 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -15,0 +16 @@
++public import tools.research.WorkQuiescence
+@@ -731,5 +732 @@
+-def retentionIdle (value : Json) : Bool :=
+-  let operations := value.getObjValD "operations"
+-  value.getObjValD "queued" == toJson (0 : Nat) && value.getObjValD "active" == toJson (0 : Nat) &&
+-    operations.getObjValD "pending" == toJson (0 : Nat) && operations.getObjValD "active" == toJson (0 : Nat) &&
+-    operations.getObjValD "activeSearchActors" == toJson (0 : Nat)
++def retentionIdle (value : Json) : Bool := Research.WorkQuiescence.idle value

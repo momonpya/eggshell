@@ -29,6 +29,10 @@
 
 ## 現在地と次の順序
 
+[出版入口の受信を一度だけ所有する候補](docs/candidates/ingress-ownership/README.md)を検証した。5msごとのsocket/timer再登録を既存handlerによる単一native受信の取消/joinへ置換し、残り長の減少・原文全長と実入口への接続をLeanで確認した。新Mutex/CAS/専用workerなし。同じnativeで16接続×3波/512KiBを2反復ずつ比較し、system CPU18.98/21.47→1.46/1.70秒、最終RSS149744/149168→103712/106608KiB、全原文一致。ただし同じ16原典の実フックは33/33意味/原文/ACK・36 stdout全文一致、min/median/max1863/7443/8144ms、最大関連RSS2745872KiBで、全体時間とhost保持は未改善。部品改善を80人容量の達成にはしない。
+
+重要な訂正：以前のsham/collection全6観測は、準備workerが稼働中だった。旧判定は検索/出版だけを見て準備を見落としており、静止状態の回収介入という解釈を撤回する。追加のhook/modelなしの再監査で6/6を不合格とした。13カウンタを検査し欠落schemaも拒否する純粋なWorkQuiescenceをLeanで実装し、受理値が全て0、準備稼働中なら拒否することを証明した。実サービスへ接続したnative検査でも準備稼働中の12端点を全て拒否し、実idle記録の陽性と欠落schemaの陰性も通った。260 native objectと実source差、guard終端/残存なしを確認した。次は継続している背景準備とflushIndexesResult/Wakeの受付・再試行を追う。検索終了だけを全仕事の終了とせず、正しい境界で実WorkGraph/応答の寿命と複製を局所化する。新しい80全検索/回答モデル投入は行わず、本体未採用・有料比較0/18、80人8時間/増大project/NAS/実98%/品質/総token改善は未達でgoal active。
+
 [並行選択のエラー時解放を直す隔離候補](docs/candidates/selector-cleanup/README.md)を検証した。読み取りの不要なregistry再取得は前のread-boundary候補で64回から入口1回にまとめ、後続の不変参照を証明・監査済み。今回は新しいMutex/CAS/専用workerを追加せず、既存Waiterの勝者判定を共有することと元の結果への復号をLeanで証明した。実installed Stdのnative対照で、成功時は2源を解放する一方、登録後エラーでは2源が残る不具合を再現し、候補は両方で2源を解放した。実7箇所への接続、258 native object、6既存source/1追加moduleと正確な埋込identityの差を照合した。
 
 同じ16原典・MiniLM・質問・設定・native clientで16並行×2波と介入後1問を実施し、意味完了/両必須原文/ACK33/33、prime込み36 stdoutが親と全文byte一致。時間min/median/max1799/7330/8454ms（最小値は介入後の単独問も含む）、関連最大RSS2757712KiB、frontend終了333ms/exit0、publisher exit0、guard介入/残存なし。ただし実serviceのerror通知counterは0でhost約868MiBの保持は未改善。この部品不具合を保持の主因とは扱わない。[同一processでのsham/回収介入](docs/candidates/retention/README.md)も保持を48KiBしか減らさず、全heapの回収/全live graphの測定ではない。強制回収を製品に入れない。終了DB/cache/log・対照専用実行体をarchiveせず削除し、16完全head/5保護原典と必要native closureを確認した。本体未採用・回答モデル0・有料比較0/18。次は同じ受動censusや80全検索を反復せず、要求完了後に残る実WorkGraph/応答の所有参照を局所化し、要求ごとに複製している不変部分を除く。順位/domain/資源/30秒を維持し、80人8時間/増大project/NAS/実98%/品質/総token改善は未達でgoal active。

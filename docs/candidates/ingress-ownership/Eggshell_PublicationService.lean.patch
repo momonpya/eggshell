@@ -1,0 +1,28 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -14,0 +15 @@
++public import tools.research.OwnedIngress
+@@ -789,15 +790,3 @@
+-partial def receiveLive (server : Server) (client : Socket.Client) (remaining deadline : Nat)
+-    (received : ByteArray := ByteArray.empty) : IO ByteArray := do
+-  if remaining == 0 then return received
+-  let now ← IO.monoMsNow
+-  unless !(← server.stopping.get) && now < deadline do throw (IO.userError "publisher frame expired")
+-  let chunk : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
+-    let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
+-    Research.OwnedSelect.one #[.case (client.recvSelector remaining.toUInt64) (fun value => pure (some value)),
+-      .case timer (fun _ => pure none)])
+-  match chunk with
+-  | none => receiveLive server client remaining deadline received
+-  | some none => throw (IO.userError "publisher peer closed an incomplete frame")
+-  | some (some bytes) =>
+-      unless !bytes.isEmpty do throw (IO.userError "publisher received an empty frame")
+-      receiveLive server client (remaining-bytes.size) deadline (received.append bytes)
++def receiveLive (server : Server) (client : Socket.Client) (remaining deadline : Nat)
++    (received : ByteArray := ByteArray.empty) : IO ByteArray :=
++  Research.OwnedIngress.receive server.stopping client remaining deadline received
+@@ -804,0 +794,4 @@
++theorem receiveLive_owned (server : Server) (client : Socket.Client) (remaining deadline : Nat) (received : ByteArray) :
++    receiveLive server client remaining deadline received =
++      Research.OwnedIngress.receive server.stopping client remaining deadline received := rfl
++
