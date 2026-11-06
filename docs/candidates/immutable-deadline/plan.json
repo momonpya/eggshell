@@ -1,0 +1,8 @@
+{
+  "beforeImplementation":true,
+  "problem":"The operation client owns its framed connection and processes its one progress header sequentially,yet carries a Mutex Nat read during every transport poll. There is no concurrent updater: the same operationExchange stack invokes onReady between frames. Keep the separate legacy pipe deadline mutex where a reader and its supervising task really run concurrently.",
+  "change":"Pass the absolute cutoff as an immutable Nat through connect/send/receive. A pure checked progress transition derives the next cutoff from the request identity and finishReady policy,then the same owner reads the remaining stream under that value. No mutable deadline reference,mutex or CAS capability. Preserve original upstream bound,identity/late rejection,cancellation and busy-retry rules. Retire/join the pending native receive on exit and kernel-prove strict fragment decrease.",
+  "validation":"Kernel-check progress equivalence and hard-deadline bounds;native fixtures for valid/foreign/late progress,fragmented exact bytes,cancel/deadline/EOF and an unaffected peer. Then same sealed native hook client,all16 sources and questions,two16-client waves;all32 original bodies must match retained readonly-pages bytes and semantic handoffs must complete. No80 full-hook retry until the separate memory cause is addressed.",
+  "limits":"This removes one proven-unnecessary synchronization path. It does not claim the new memory map proves heap-object ownership or this change fixes80-client memory. Guard3670016KiB/free disk2097152KiB and all original hook clocks remain.",
+  "answeringModelCalls":0,"paidComparisons":"0/18","adopted":false
+}

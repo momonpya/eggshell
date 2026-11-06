@@ -1,0 +1,169 @@
+diff --git a/Eggshell/OperationWire.lean b/Eggshell/OperationWire.lean
+index f8d820a5..9f147c3f 100644
+--- a/Eggshell/OperationWire.lean
++++ b/Eggshell/OperationWire.lean
+@@ -4 +3,0 @@ public import Eggshell.PublicationStream
+-public import Std.Sync.Mutex
+@@ -26 +25 @@ structure Identity where
+-  deriving BEq, Repr, ToJson, FromJson
++  deriving BEq, ReflBEq, LawfulBEq, Repr, ToJson, FromJson
+@@ -37,0 +37,28 @@ structure Request where
++/-- Only the framed connection's owner processes progress,between reads.
++No other task mutates its absolute cutoff. -/
++def readyDeadline (expected actual : Identity) (finishReady : Bool) (cutoff arrived : Nat) : Nat :=
++  min expected.deadline (if finishReady && expected == actual && arrived < cutoff then
++    expected.deadline else cutoff)
++
++def Request.advance (request : Request) (actual : Identity) (cutoff arrived : Nat) : Except String Nat :=
++  match request.identity with
++  | none => .error "unexpected operation progress"
++  | some expected =>
++    if expected == actual && arrived < cutoff then
++      .ok (readyDeadline expected actual request.finishReady cutoff arrived)
++    else .error "foreign or expired operation progress"
++
++theorem Request.advance_bounded (request : Request) (expected actual : Identity) (cutoff arrived next : Nat)
++    (identity : request.identity = some expected) (accepted : request.advance actual cutoff arrived = .ok next) :
++    next ≤ expected.deadline := by
++  simp only [advance,identity] at accepted
++  split at accepted
++  · cases accepted
++    exact Nat.min_le_left _ _
++  · cases accepted
++
++theorem Request.advance_same (request : Request) (expected : Identity) (cutoff arrived : Nat)
++    (identity : request.identity = some expected) (timely : arrived < cutoff) :
++    request.advance expected cutoff arrived = .ok (readyDeadline expected expected request.finishReady cutoff arrived) := by
++  simp [advance,identity,timely]
++
+@@ -50 +77 @@ caller after its cutoff. Connect and request writes consume the same window. -/
+-def waitNative (promise : IO.Promise (Except IO.Error α)) (window : Std.Mutex Nat)
++def waitCompletion (task : Std.Async.AsyncTask α) (deadline : Nat)
+@@ -54 +81 @@ def waitNative (promise : IO.Promise (Except IO.Error α)) (window : Std.Mutex N
+-        (← IO.monoMsNow) < (← window.atomically get) do
++        (← IO.monoMsNow) < deadline do
+@@ -56,3 +83 @@ def waitNative (promise : IO.Promise (Except IO.Error α)) (window : Std.Mutex N
+-    if ← promise.isResolved then
+-      let some result := promise.result?.get | throw (IO.userError "native operation lost its response")
+-      return ← IO.ofExcept result
++    if ← IO.hasFinished task then return ← IO.ofExcept (← IO.wait task)
+@@ -62 +87,7 @@ def waitNative (promise : IO.Promise (Except IO.Error α)) (window : Std.Mutex N
+-def connect (endpoint : Daemon.Endpoint) (window : Std.Mutex Nat) (cancelled : IO.Ref Bool) :
++/-- Convert and release the promise owner before waiting. In particular,a
++cancelled receive must be allowed to drop its promise and complete the task. -/
++def waitNative (promise : IO.Promise (Except IO.Error α)) (deadline : Nat)
++    (cancelled : IO.Ref Bool) : IO α :=
++  waitCompletion (Std.Async.AsyncTask.ofPromise promise) deadline cancelled
++
++def connect (endpoint : Daemon.Endpoint) (deadline : Nat) (cancelled : IO.Ref Bool) :
+@@ -66 +97 @@ def connect (endpoint : Daemon.Endpoint) (window : Std.Mutex Nat) (cancelled : I
+-  waitNative (← client.native.connect (Daemon.loopback endpoint.port.toUInt16)) window cancelled
++  waitNative (← client.native.connect (Daemon.loopback endpoint.port.toUInt16)) deadline cancelled
+@@ -69 +100 @@ def connect (endpoint : Daemon.Endpoint) (window : Std.Mutex Nat) (cancelled : I
+-def sendFrame (client : Std.Async.TCP.Socket.Client) (bytes : ByteArray) (window : Std.Mutex Nat)
++def sendFrame (client : Std.Async.TCP.Socket.Client) (bytes : ByteArray) (deadline : Nat)
+@@ -72 +103 @@ def sendFrame (client : Std.Async.TCP.Socket.Client) (bytes : ByteArray) (window
+-  waitNative (← client.native.send #[Daemon.frameLength bytes,bytes]) window cancelled
++  waitNative (← client.native.send #[Daemon.frameLength bytes,bytes]) deadline cancelled
+@@ -76,2 +107,2 @@ survives a cancelled caller; dropping this connection cancels that one job. -/
+-partial def receiveExactly (client : Std.Async.TCP.Socket.Client) (remaining : Nat)
+-    (window : Std.Mutex Nat) (cancelled : IO.Ref Bool) (received : ByteArray := ByteArray.empty) : IO ByteArray := do
++def receiveExactly (client : Std.Async.TCP.Socket.Client) (remaining : Nat)
++    (deadline : Nat) (cancelled : IO.Ref Bool) (received : ByteArray := ByteArray.empty) : IO ByteArray := do
+@@ -79,2 +110,2 @@ partial def receiveExactly (client : Std.Async.TCP.Socket.Client) (remaining : N
+-  let pending ← client.native.recv? remaining.toUInt64
+-  let chunk ← try waitNative pending window cancelled finally client.native.cancelRecv
++  let chunk ← Daemon.withOwnedReceive client remaining fun reading =>
++    waitCompletion reading deadline cancelled
+@@ -84,2 +115,5 @@ partial def receiveExactly (client : Std.Async.TCP.Socket.Client) (remaining : N
+-    unless !chunk.isEmpty do throw (IO.userError "empty operation frame")
+-    receiveExactly client (remaining-chunk.size) window cancelled (received++chunk)
++    if _valid : 0 < chunk.size ∧ chunk.size ≤ remaining then
++      receiveExactly client (remaining-chunk.size) deadline cancelled (received++chunk)
++    else throw (IO.userError "empty or oversized operation frame fragment")
++termination_by remaining
++decreasing_by exact Daemon.received_chunk_decreases remaining chunk.size _valid
+@@ -87 +121 @@ partial def receiveExactly (client : Std.Async.TCP.Socket.Client) (remaining : N
+-def receiveFrame (client : Std.Async.TCP.Socket.Client) (window : Std.Mutex Nat)
++def receiveFrame (client : Std.Async.TCP.Socket.Client) (deadline : Nat)
+@@ -89 +123 @@ def receiveFrame (client : Std.Async.TCP.Socket.Client) (window : Std.Mutex Nat)
+-  let size := Daemon.decodeLength (← receiveExactly client 4 window cancelled)
++  let size := Daemon.decodeLength (← receiveExactly client 4 deadline cancelled)
+@@ -91 +125 @@ def receiveFrame (client : Std.Async.TCP.Socket.Client) (window : Std.Mutex Nat)
+-  receiveExactly client size window cancelled
++  receiveExactly client size deadline cancelled
+diff --git a/Eggshell/PublicationClient.lean b/Eggshell/PublicationClient.lean
+index 7e9dbb17..2b2a2437 100644
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -426 +426 @@ request identity; the caller owns cancellation and its absolute deadline. -/
+-partial def operationExchange (request : OperationWire.Request) (window : Std.Mutex Nat)
++partial def operationExchange (request : OperationWire.Request) (cutoff : Nat)
+@@ -437 +437 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-      pure (endpoint,← OperationWire.connect endpoint window cancelled)
++      pure (endpoint,← OperationWire.connect endpoint cutoff cancelled)
+@@ -443 +443 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-      pure (endpoint,← OperationWire.connect endpoint window cancelled)
++      pure (endpoint,← OperationWire.connect endpoint cutoff cancelled)
+@@ -446,3 +446,2 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-  OperationWire.sendFrame client bytes window cancelled
+-  let frame := OperationWire.receiveFrame client window cancelled
+-  let first ← frame
++  OperationWire.sendFrame client bytes cutoff cancelled
++  let first ← OperationWire.receiveFrame client cutoff cancelled
+@@ -451 +450 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-  let first ← if (header.getObjVal? "progress").isOk then do
++  let (first,cutoff) ← if (header.getObjVal? "progress").isOk then do
+@@ -455,3 +454,6 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-      onReady identity (← IO.monoMsNow)
+-      frame
+-    else pure first
++      let arrived ← IO.monoMsNow
++      let next ← IO.ofExcept (request.advance identity cutoff arrived)
++      onReady identity arrived
++      pure (← OperationWire.receiveFrame client next cancelled,next)
++    else pure (first,cutoff)
++  let frame := OperationWire.receiveFrame client cutoff cancelled
+@@ -465 +467 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-  unless reply.id == request.id && (← IO.monoMsNow) < (← window.atomically get) && !(← cancelled.get) do
++  unless reply.id == request.id && (← IO.monoMsNow) < cutoff && !(← cancelled.get) do
+@@ -471 +473 @@ partial def operationExchange (request : OperationWire.Request) (window : Std.Mu
+-    return ← operationExchange request window cancelled onReady
++    return ← operationExchange request cutoff cancelled onReady
+diff --git a/Eggshell/Worker.lean b/Eggshell/Worker.lean
+index 681985be..f77bb968 100644
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -246,2 +246 @@ def readyDeadline (expected actual : SearchIdentity) (finishReady : Bool)
+-  min expected.deadline (if finishReady && expected == actual && arrived < cutoff then
+-    expected.deadline else cutoff)
++  OperationWire.readyDeadline expected actual finishReady cutoff arrived
+@@ -256 +255 @@ theorem unready_preserves_cutoff (expected actual : SearchIdentity) (cutoff arri
+-  simpa [readyDeadline] using (Nat.min_le_right expected.deadline cutoff)
++  simpa [readyDeadline,OperationWire.readyDeadline] using (Nat.min_le_right expected.deadline cutoff)
+@@ -261 +260 @@ theorem late_ready_preserves_cutoff (expected actual : SearchIdentity) (finishRe
+-  simpa [readyDeadline, Nat.not_lt.mpr late] using (Nat.min_le_right expected.deadline cutoff)
++  simpa [readyDeadline,OperationWire.readyDeadline, Nat.not_lt.mpr late] using (Nat.min_le_right expected.deadline cutoff)
+@@ -266 +265 @@ theorem foreign_ready_preserves_cutoff (expected actual : SearchIdentity) (finis
+-  simpa [readyDeadline, foreign] using (Nat.min_le_right expected.deadline cutoff)
++  simpa [readyDeadline,OperationWire.readyDeadline, foreign] using (Nat.min_le_right expected.deadline cutoff)
+@@ -633 +631,0 @@ def exchange (session role : String) (payload : Json) (deadline : Nat)
+-    let window ← Std.Mutex.new cutoff
+@@ -636,5 +634,2 @@ def exchange (session role : String) (payload : Json) (deadline : Nat)
+-      window.atomically do
+-        let cutoff ← get
+-        unless identity == policy.identity && arrived < cutoff do
+-          throw (IO.userError "foreign or expired operation progress")
+-        set (readyDeadline policy.identity identity policy.finishReady cutoff arrived)
++      unless identity == policy.identity && arrived < cutoff do
++        throw (IO.userError "foreign or expired operation progress")
+@@ -642 +637 @@ def exchange (session role : String) (payload : Json) (deadline : Nat)
+-    Publication.Client.operationExchange request window cancelled ready
++    Publication.Client.operationExchange request cutoff cancelled ready
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 84daf048..134430cf 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2214,0 +2215,2 @@ example : Eggshell.Plugin.OperationPlan.maxRequests = Eggshell.Numerical.maxClie
++#check Eggshell.Plugin.OperationWire.Request.advance_bounded
++#check Eggshell.Plugin.OperationWire.Request.advance_same

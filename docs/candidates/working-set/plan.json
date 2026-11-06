@@ -1,0 +1,8 @@
+{
+  "beforeRun":true,
+  "question":"The80-query run stopped at aggregate3673600KiB,with publication host1597968KiB and frontend394752KiB. Does the successful16-client condition show heap allocations or resident thread stacks dominating those processes?",
+  "scope":"One successful-condition16-client/two-wave diagnostic using the exact sealed readonly-pages33c408 runtime and a80cad native client. A separate native observer collects processRSS and at most three macOS vmmap summaries: host400/700MiB,frontend128MiB. No changed search weights,model,budget,questions,sources or worker count. Do not retry80 or infer retained object ownership from RSS alone.",
+  "bounds":"Existing30s hooks,4GiB aggregate ceiling/3670016KiB stop,2097152KiB free-disk floor. The observer shares the guard;vmmap overhead is disclosed. All publications and actual outputs must be drained and recorded before cleanup.",
+  "next":"Inspect memory classes and thread counts before selecting an ownership/allocation change. The publication receiver still uses repeated recvSelector registration unlike the numerical receiver;do not assert this is the memory cause without evidence.",
+  "answeringModelCalls":0,"paidComparisons":"0/18","adopted":false
+}

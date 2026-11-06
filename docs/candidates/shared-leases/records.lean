@@ -82,6 +82,8 @@ def main (arguments : List String) : IO Unit := do
     | "--numerical-waits" :: tags => (destination.parent.getD destination / "numerical-waits",tags)
     | "--owned-receive" :: tags => (destination.parent.getD destination / "owned-receive",tags)
     | "--readonly-pages" :: tags => (destination.parent.getD destination / "readonly-pages",tags)
+    | "--working-set" :: tags => (destination.parent.getD destination / "working-set",tags)
+    | "--immutable-deadline" :: tags => (destination.parent.getD destination / "immutable-deadline",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -113,7 +115,8 @@ def main (arguments : List String) : IO Unit := do
       tag.startsWith "source-protocol-overlap" || tag.startsWith "task-observer-" ||
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
       tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-" ||
-      tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-") &&
+      tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-" || tag.startsWith "working-set-" ||
+      tag.startsWith "immutable-deadline-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"

@@ -131,4 +131,8 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 次は、共有immutable imageを読めば済む部分と受付/保持/取消の状態更新を分離する。PreparedReadersのframe準備queue、canonical-sourceのowner page pool、prepared owner/metadata/file cacheのhit bookkeepingはまだ別の同期経路として残る。読み取り全体がlock-freeとは主張しない。80同時でhostの状態保持も含めて資源境界を測り、不要な共有更新を型と証明で排除してから同じ容量負荷へ戻る。98%実根拠、80人8時間・増大project・NAS・品質・総token改善は引き続き未達。
 
+[操作クライアントの期限Mutexを外す候補](docs/candidates/immutable-deadline/README.md)を追加した。同じ接続のownerがframe間でのみ期限を更新するため、期限はNatとして渡し、進捗の受理を純粋関数にした。要求ID/epochと到着時刻を検査し、元の上限を超えないLean lawと既存の未準備/遅延/foreignの法則を維持。取消検査は、新設したfinallyが未解決Promiseを保持して停止する不具合を2回検出した。live PID/stackを確認して各試験を終了し、既存のwithOwnedReceiveへ所有権をそろえた後、分割70,000bytes/取消/期限/EOF/別peerのnative検査が通った。失敗を成功に数えない。実16並行×2波は32/32原文+ACK・32/32意味完了、親と全32本文byte一致、最大8902ms・関連RSS2717312KiB。251 native moduleの実際のsource witnessも比較し、予定した4 sourceと、その同じ原文を埋め込む実装IDだけの差と確認した。本体未採用、回答モデル0/有料比較0/18、80負荷は再実行していない。
+
+[メモリ内訳の診断](docs/candidates/working-set/README.md)では同じsealed runtime/clientの成功条件16並行を1回観測した。共有hostのphysical footprint682.2MiB時に実スタックは2304KiBであり、スレッドの仮想予約99〜108GiBをRAM消費と混同しない。主領域はmimallocの匿名mappingと整合する。host RSSはprime後174496→1波後661744→2波後919184KiBと増え、各時点でactive actor/request bytes/palette使用は0、prepared-source16件/8MiB/page86件は不変だった。全cacheや保持taskの内訳までは測れていない。観測clientはexit0/32配送成功だったが、観測器が終了したchildを二重waitしてexit1になった。記録を保持し、モデル負荷を再実行して失敗を隠していない。次は生きたquery状態とallocatorの保持領域を分け、canonical-sourceの不要な共有hit更新も除く。既存の根拠98%/80人8時間・増大project/NAS・品質/tokenの合格条件は変えない。
+
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。

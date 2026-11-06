@@ -51,7 +51,87 @@ private def inspect (directory : System.FilePath) : IO Json := do
   return Json.mkObj [("build",toJson directory.toString),("checkedNativeObjects",toJson checked),
     ("failures",Json.arr failures),("consistent",toJson failures.isEmpty)]
 
+private def sourceWitnesses (directory : System.FilePath) : IO (String × Std.HashMap String String) := do
+  let build ← read (directory/"build.json")
+  let entry ← IO.ofExcept ((build.getObjValD "settings").getObjValAs? String "mainModule")
+  let mapping ← read (directory/"object-mapping.json")
+  let mut modules : Std.HashMap String String := {}
+  for (object,name) in (← IO.ofExcept mapping.getObj?).toArray do
+    modules := modules.insert object (← IO.ofExcept name.getStr?)
+  for row in ← IO.ofExcept ((build.getObjValD "modules").getArr?) do
+    modules := modules.insert (← IO.ofExcept (row.getObjValAs? String "object"))
+      (← IO.ofExcept (row.getObjValAs? String "module"))
+  let mut found : Std.HashMap String String := {}
+  for line in (← IO.FS.readFile (directory/"runtime.rsp")).splitOn "\n" do
+    if line.trimAscii.isEmpty then continue
+    let object ← IO.ofExcept (Json.parse line >>= Json.getStr?)
+    let some name := modules[object]? | do
+      if ← ((System.FilePath.mk object).withExtension "source").pathExists then
+        throw (IO.userError ("selected native source has no module mapping: "++object))
+      continue
+    if name == entry then continue
+    let witness := (System.FilePath.mk object).withExtension "source"
+    unless ← witness.pathExists do throw (IO.userError ("native source witness missing: "++name))
+    let bytes ← IO.FS.readFile witness
+    if let some old := found[name]? then
+      unless old == bytes do throw (IO.userError ("duplicate native source: "++name))
+    found := found.insert name bytes
+  unless found.size > 0 do throw (IO.userError "native source comparison was vacuous")
+  return (entry,found)
+
 def main (args : List String) : IO Unit := do
+  if let "compare-sources"::parent::candidate::output::allowed := args then
+    let path : System.FilePath := .mk output
+    unless !(← path.pathExists) do throw (IO.userError "preserve native source comparison")
+    let (oldEntry,old) ← sourceWitnesses (.mk parent)
+    let (newEntry,current) ← sourceWitnesses (.mk candidate)
+    let mut changed := #[]
+    let mut removed := #[]
+    let mut added := #[]
+    for (name,bytes) in old do
+      match current[name]? with
+      | none => removed := removed.push name
+      | some actual => if actual != bytes then changed := changed.push name
+    for (name,_) in current do
+      unless old.contains name do added := added.push name
+    let decode (bytes : String) : IO (String × Array (String × String)) :=
+      IO.ofExcept (Json.parse bytes >>= fromJson?)
+    let mut expectedLiterals : Array (String × String) := #[]
+    for name in allowed do
+      let some before := old[name]? | throw (IO.userError "declared parent source absent")
+      let some after := current[name]? | throw (IO.userError "declared candidate source absent")
+      expectedLiterals := expectedLiterals.push ((← decode before).1,(← decode after).1)
+    let mut direct := #[]
+    let mut literalContainers := #[]
+    let mut literalsApproved := true
+    for name in changed do
+      let before ← decode old[name]!
+      let after ← decode current[name]!
+      if before.1 != after.1 then direct := direct.push name
+      if before.2.map (·.1) != after.2.map (·.1) then literalsApproved := false
+      let mut paths := #[]
+      for (left,right) in before.2.zip after.2 do
+        if left.2 != right.2 then
+          paths := paths.push right.1
+          -- An implementation-identity container may embed changed source.
+          -- Accept only the exact before/after bytes of a declared change.
+          unless expectedLiterals.contains (left.2,right.2) do literalsApproved := false
+      if !paths.isEmpty then literalContainers := literalContainers.push (name,paths)
+    let ok := removed.isEmpty && added.isEmpty && direct.size == allowed.length &&
+      direct.all (allowed.contains ·) && literalsApproved
+    let runtimeHash (directory : String) : IO String := do
+      let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",directory++"/StudyMain"]}
+      unless result.exitCode == 0 do throw (IO.userError "cannot bind source audit to runtime")
+      return (result.stdout.splitOn " ").headD ""
+    IO.FS.writeFile path (Json.mkObj [("parentEntry",toJson oldEntry),("candidateEntry",toJson newEntry),
+      ("parentRuntimeSha256",toJson (← runtimeHash parent)),("candidateRuntimeSha256",toJson (← runtimeHash candidate)),
+      ("parentModules",toJson old.size),("candidateModules",toJson current.size),
+      ("changedSourcesAndLiteralInputs",toJson (changed.qsort (· < ·))),
+      ("directSourceChanges",toJson (direct.qsort (· < ·))),("literalContainers",toJson literalContainers),
+      ("literalChangesExactlyMatchDeclaredSourceBytes",toJson literalsApproved),
+      ("removed",toJson removed),("added",toJson added),("exactExpectedChangeSet",toJson ok)]).pretty
+    unless ok do throw (IO.userError "native source comparison changed more than the declared candidate")
+    return
   if let ["inspect",build,output] := args then
     let path := System.FilePath.mk output
     unless !(← path.pathExists) do throw (IO.userError "preserve native closure evidence")

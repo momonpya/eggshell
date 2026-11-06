@@ -20,6 +20,12 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["immutable-deadline"] then
+    check (!(← (workspace/"docs/candidates/immutable-deadline/candidate.patch").pathExists)) "immutable deadline patch already sealed"
+    save "immutable-deadline" ((#["Eggshell/OperationWire.lean","Eggshell/PublicationClient.lean",
+      "Eggshell/Worker.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"immutable-deadline-parent-core"/relative,core/relative,relative))
+    return
   if arguments == ["readonly-pages"] then
     check (!(← (workspace/"docs/candidates/readonly-pages/candidate.patch").pathExists)) "readonly page patch already sealed"
     save "readonly-pages" ((#["Eggshell/DB/PageMap.lean","Eggshell/PreparedReaders.lean",

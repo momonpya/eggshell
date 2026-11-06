@@ -164,6 +164,23 @@ actor's result. Runtime/stdlib synchronization is not claimed to be lock-free.
 
 ## Required checks
 
+The operation client's deadline is now immutable in the isolated candidate.
+Only its connection owner handles progress between frame reads;the checked
+pure transition preserves the upstream identity and hard cutoff. Native
+cancellation tests caught a promise-owner join bug before hook execution;the
+corrected shared receive owner passes fragmentation/cancel/deadline/EOF/peer
+checks. All32 ordinary hook bodies,original fields,ACKs and semantic handoffs
+match the retained parent. This removes a deadline mutex,not all runtime or
+shared-lifetime synchronization. The complete251-module native-source audit
+limits differences to the declared code and its exact embedded identity bytes.
+
+The memory sample at16 clients rules out resident thread stacks as the main
+footprint at those samples. Quiescent hostRSS grows even while the measured
+source/page/palette counters stay fixed. Separate retained graph/JSON/task
+state from allocator-owned free pages before another80-client test. Do not
+interpret a virtual stack reservation,an observer's exit failure,or a narrow
+successful32-body control as the full80-person/98percent practical gate.
+
 The isolated reader-page candidate now carries immutable verified page seeds
 into actor-owned fronts. The reader constructor has no shared cache owner;
 lookup, misses, insertion and statistics use local state. Lean checks the
