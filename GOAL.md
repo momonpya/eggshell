@@ -29,6 +29,26 @@
 
 ## 現在地と次の順序
 
+[読み取りと失効掃除を分離する候補](docs/candidates/lease-read/README.md)を実装した。
+保持済み原文の各借用で全tokenを掃除する不要なmutex取得を除去し、借用と最終解放の
+2境界だけを残した。新規retain前の回収、完全head/scope/manifest/期限の検査、
+取消・release・close中の容量計上は維持した。ReadCutの生存・原文一致・reader登録・
+budget不変をLeanで証明し、純粋な668依存と実withHeldへの接続を検査した。
+実prepared DBで親条件との10対照、80並行×128借用（57ms）、期限切れ拒否、
+新規retain時の回収、active release/close/cancelと最終charge0を確認した。
+これは借用の部品試験であり、全検索ロック不要・80人容量・総token改善の達成ではない。
+新Mutex/CAS/workerなし。本体未採用で採用比較0/18。
+
+[外部DBの準備済み境界を認識する候補](docs/candidates/replay-readiness/README.md)も検証した。
+変更のない外部DB checkpointを毎回未準備とする条件を、完全headとcursorの一致へ
+置換した。実2DBで再現し、部分・変更・不在・同path別DBを拒否した。
+同じ16原典の32実hookは両方32/32意味・原文・ACK、35 stdout全文一致だったが、
+両client全体は検索後の診断でexit1。完了済み32問だけを実記録から回収し、全試験
+合格とはしない。次は診断のstats/probe間の競合を観測の未実行と実行後に分け、
+静止中に残る実WorkGraph/応答の所有と、読み取り境界の不要な共有同期を追う。
+同じ失敗80全検索や回答モデル投入で代用しない。30秒と資源上限、完全認定を維持し、
+実98%・80人8時間・増大project・NAS・品質・総token改善は未達でgoal active。
+
 [出版入口の受信を一度だけ所有する候補](docs/candidates/ingress-ownership/README.md)を検証した。5msごとのsocket/timer再登録を既存handlerによる単一native受信の取消/joinへ置換し、残り長の減少・原文全長と実入口への接続をLeanで確認した。新Mutex/CAS/専用workerなし。同じnativeで16接続×3波/512KiBを2反復ずつ比較し、system CPU18.98/21.47→1.46/1.70秒、最終RSS149744/149168→103712/106608KiB、全原文一致。ただし同じ16原典の実フックは33/33意味/原文/ACK・36 stdout全文一致、min/median/max1863/7443/8144ms、最大関連RSS2745872KiBで、全体時間とhost保持は未改善。部品改善を80人容量の達成にはしない。
 
 重要な訂正：以前のsham/collection全6観測は、準備workerが稼働中だった。旧判定は検索/出版だけを見て準備を見落としており、静止状態の回収介入という解釈を撤回する。追加のhook/modelなしの再監査で6/6を不合格とした。13カウンタを検査し欠落schemaも拒否する純粋なWorkQuiescenceをLeanで実装し、受理値が全て0、準備稼働中なら拒否することを証明した。実サービスへ接続したnative検査でも準備稼働中の12端点を全て拒否し、実idle記録の陽性と欠落schemaの陰性も通った。260 native objectと実source差、guard終端/残存なしを確認した。次は継続している背景準備とflushIndexesResult/Wakeの受付・再試行を追う。検索終了だけを全仕事の終了とせず、正しい境界で実WorkGraph/応答の寿命と複製を局所化する。新しい80全検索/回答モデル投入は行わず、本体未採用・有料比較0/18、80人8時間/増大project/NAS/実98%/品質/総token改善は未達でgoal active。

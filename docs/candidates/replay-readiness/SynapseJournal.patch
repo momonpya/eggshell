@@ -1,0 +1,22 @@
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -11,0 +12 @@
++public import tools.research.ReplayReadiness
+@@ -218 +219 @@
+-  Index.implementation.toUTF8, UsageCache.implementation.toUTF8, SharedReadReceipt.implementation.toUTF8, (include_str "SynapseJournal.lean").toUTF8,
++  Index.implementation.toUTF8, UsageCache.implementation.toUTF8, SharedReadReceipt.implementation.toUTF8, (include_str "SynapseJournal.lean").toUTF8,(include_str "../tools/research/ReplayReadiness.lean").toUTF8,
+@@ -1491,3 +1492,5 @@
+-    (index : String) (count : Nat) (limit : Nat := 16) : IO Bool := do
+-  if previous.external then return false
+-  previous.sameKnownInput source index count limit
++    (index : String) (count : Nat) (limit : Nat := 16) (storage : Sidecar.Storage := .database) : IO Bool := do
++  unless ← previous.sameKnownInput source index count limit do return false
++  if !previous.external then return true
++  let some journal ← open? source | return false
++  ReplayReadiness.sourcesCurrent journal (workBase storage) source
+@@ -1524 +1527 @@
+-  return !(← previous.sameInput source (← UsageCache.replayIdentity reader usage) (← getNat journal.get "count"))
++  return !(← previous.sameInput source (← UsageCache.replayIdentity reader usage) (← getNat journal.get "count") (storage := storage))
+@@ -1600 +1603 @@
+-        (← previous.sameInput source expected.index count (source.head.revision-previous.source.revision+1)) then
++        (← previous.sameInput source expected.index count (source.head.revision-previous.source.revision+1) storage) then

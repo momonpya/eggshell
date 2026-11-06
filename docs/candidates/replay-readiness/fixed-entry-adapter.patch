@@ -1,0 +1,15 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-readiness-source/tools/research/ReplayReadinessChecks.lean	2026-11-07 02:37:58
++++ /Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/ReplayReadinessChecks.lean	2026-11-07 02:47:56
+@@ -95,0 +96,12 @@
++  | ["front-traffic-audit",source] =>
++    let result ← IO.Process.output {
++      cmd := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/metadata-ingress-candidate-build/StudyMain"
++      args := #["front-traffic-audit",source]}
++    IO.print result.stdout
++    IO.eprint result.stderr
++    return result.exitCode
++  | ["retention-probe",mode] =>
++    discard <| IO.ofExcept (Eggshell.Research.RetentionProbe.mode? mode)
++    let some endpoint ← Publication.Client.endpoint? | throw (IO.userError "no diagnostic service endpoint")
++    IO.println (← Daemon.exchange endpoint "retention-probe" (Json.mkObj [("mode",toJson mode)]) (budget := 5000))
++    return 0

@@ -1,0 +1,23 @@
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/lease-read-source/Eggshell/CanonicalSourceLease.lean:118:9: error: Application type mismatch: The argument
+  h.left.left.left.left
+has type
+  (!state.closed) = true
+but is expected to have type
+  state.closed = false
+in the application
+  And.intro h.left.left.left.left
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/lease-read-source/Eggshell/CanonicalSourceLease.lean:118:19: error: Application type mismatch: The argument
+  h.left.left.left.right
+has type
+  (!cut.held.released) = true
+but is expected to have type
+  cut.held.released = false
+in the application
+  And.intro h.left.left.left.right
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/lease-read-source/Eggshell/CanonicalSourceLease.lean:117:30: error: This simp argument is unused:
+  Bool.not_eq_true
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`

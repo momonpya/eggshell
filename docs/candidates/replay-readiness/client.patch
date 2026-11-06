@@ -1,0 +1,36 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/retention-client-source/tools/research/WorkerCpuProfile.lean	2026-11-07 00:39:49
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/replay-readiness-client-source/tools/research/WorkerCpuProfile.lean	2026-11-07 02:47:59
+@@ -1,0 +2 @@
++import tools.research.WorkQuiescence
+@@ -17,0 +19,22 @@
++def idleIntervention (root engine : System.FilePath) (mode : String) : IO Unit := do
++  let began ← IO.monoMsNow
++  let deadline := began+10000
++  let mut samples := #[]
++  repeat
++    let stats ← command engine #["publication-control","stats"]
++    check (stats.exitCode == 0) "diagnostic idle stats unavailable"
++    let value ← IO.ofExcept (Json.parse stats.stdout)
++    samples := samples.push (Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-began)),("stats",value)])
++    if Eggshell.Research.WorkQuiescence.idle value then break
++    if (← IO.monoMsNow) ≥ deadline then
++      save (root/("idle-"++mode++".json")) (toJson samples)
++      throw (IO.userError "background work never reached the diagnostic idle cut")
++    IO.sleep 5
++  save (root/("idle-"++mode++".json")) (toJson samples)
++  let result ← command engine #["retention-probe",mode]
++  check (result.exitCode == 0) ("single idle intervention failed: "++result.stderr)
++  let value ← IO.ofExcept (Json.parse result.stdout)
++  check (Eggshell.Research.WorkQuiescence.idle (value.getObjValD "beforeStats") &&
++    Eggshell.Research.WorkQuiescence.idle (value.getObjValD "afterStats")) "intervention raced background work"
++  save (root/("retention-"++mode++".json")) value
++
+@@ -261,6 +284,2 @@
+-    let sham ← command engine #["retention-probe","sham"]
+-    check (sham.exitCode == 0) ("retention sham failed: "++sham.stderr)
+-    save (root/"retention-sham.json") (← IO.ofExcept (Json.parse sham.stdout))
+-    let intervention ← command engine #["retention-probe","collect"]
+-    check (intervention.exitCode == 0) ("retention intervention failed: "++intervention.stderr)
+-    save (root/"retention-collect.json") (← IO.ofExcept (Json.parse intervention.stdout))
++    idleIntervention root engine "sham"
++    idleIntervention root engine "collect"

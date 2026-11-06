@@ -1,0 +1,67 @@
+--- a/Eggshell/CanonicalSourceLease.lean
++++ b/Eggshell/CanonicalSourceLease.lean
+@@ -98,0 +99,51 @@
++
++/-- A checked request-local borrow of the immutable descriptor fields.
++Validation and this state transition are pure; IO remains at the pool boundary. -/
++structure ReadCut (state : State) (token scope : String) (source : PageMap.Head)
++    (metadata : Cache.Manifest) (now deadline : Nat) where
++  held : Held
++  descriptor : Descriptor
++  registered : state.entries[token]? = some held
++  bound : state.descriptors[held.descriptor]? = some descriptor
++  accepted : (!state.closed && !held.released && now < held.deadline && now < deadline &&
++    descriptor.accepts scope source metadata) = true
++
++def ReadCut.next (cut : ReadCut state token scope source metadata now deadline) : State :=
++  {state with entries := state.entries.insert token {cut.held with readers := cut.held.readers+1}}
++
++theorem ReadCut.live (cut : ReadCut state token scope source metadata now deadline) :
++    state.closed = false ∧ cut.held.released = false ∧ now < cut.held.deadline ∧ now < deadline := by
++  have h := cut.accepted
++  simp only [Bool.and_eq_true,Bool.not_eq_true',decide_eq_true_eq] at h
++  exact ⟨h.1.1.1.1,h.1.1.1.2,h.1.1.2,h.1.2⟩
++
++theorem ReadCut.same_source (cut : ReadCut state token scope source metadata now deadline) :
++    cut.descriptor.source = source := by
++  have h := cut.accepted
++  simp only [Bool.and_eq_true] at h
++  exact Descriptor.same_source _ _ _ _ h.2
++
++theorem ReadCut.reader_owned (cut : ReadCut state token scope source metadata now deadline) :
++    cut.next.entries[token]? = some {cut.held with readers := cut.held.readers+1} := by
++  simp [ReadCut.next]
++
++theorem ReadCut.budget_unchanged (cut : ReadCut state token scope source metadata now deadline) :
++    cut.next.budget = state.budget := rfl
++
++theorem ReadCut.descriptors_unchanged (cut : ReadCut state token scope source metadata now deadline) :
++    cut.next.descriptors = state.descriptors := rfl
++
++def State.readCut (state : State) (token scope : String) (source : PageMap.Head)
++    (metadata : Cache.Manifest) (now deadline : Nat) :
++    Except String (ReadCut state token scope source metadata now deadline) := do
++  match registered : state.entries[token]? with
++  | none => throw "retained source expired or released"
++  | some held =>
++    match bound : state.descriptors[held.descriptor]? with
++    | none => throw "retained source descriptor missing"
++    | some descriptor =>
++      if accepted : (!state.closed && !held.released && now < held.deadline && now < deadline &&
++          descriptor.accepts scope source metadata) = true then
++        return ⟨held,descriptor,registered,bound,accepted⟩
++      else throw "retained source changed its scope, root or lifetime"
++
+@@ -168 +218,0 @@
+-  pool.reap
+@@ -172,7 +222,3 @@
+-    let some held := state.entries[token]? | throw (IO.userError "retained source expired or released")
+-    let some descriptor := state.descriptors[held.descriptor]? | throw (IO.userError "retained source descriptor missing")
+-    unless !state.closed && !held.released && now < held.deadline && now < deadline &&
+-        descriptor.accepts scope source metadata do
+-      throw (IO.userError "retained source changed its scope, root or lifetime")
+-    set {state with entries := state.entries.insert token {held with readers := held.readers+1}}
+-    return descriptor
++    let cut ← IO.ofExcept (state.readCut token scope source metadata now deadline)
++    set cut.next
++    return cut.descriptor

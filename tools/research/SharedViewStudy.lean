@@ -260,6 +260,9 @@ def recordQuiet (tag : String) (census : Bool := false) (scope : String := "heap
     ("publisherExit",shutdown.getObjValD "publisherExit"),("originalHeadsUnchanged",report.getObjValD "originalHeadsUnchanged"),
     ("guardPeakRssKiB",guard.getObjValD "sampledPeakRssKiB"),("guardIntervened",guard.getObjValD "guardTriggered"),
     ("guardOwnedPids",guard.getObjValD "ownedPids"),("answeringModelCalls",toJson (0 : Nat)),
+    ("wholeClientExit",guard.getObjValD "exitCode"),
+    ("clientReportReconstructed",report.getObjValD "reconstructedQueryPrefix"),
+    ("postQueryDiagnosticCompleted",toJson (report.getObjValD "post" != Json.null)),
     ("paidComparisons",toJson "0/18"),("adopted",toJson false)]
   write (destination/recordName) result
   check (actual.size == (if post then 36 else 35) && sorted.size == (if post then 33 else 32))
