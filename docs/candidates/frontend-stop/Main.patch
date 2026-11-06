@@ -1,0 +1,44 @@
+--- a/Main.lean
++++ b/Main.lean
+@@ -15 +15 @@
+-def sourceRouteEngine (arguments : List String) : IO UInt32 := do
++def dispatchEngine (arguments : List String) : IO UInt32 := do
+@@ -18 +18 @@
+-      Eggshell.Numerical.withDefaultKeeper Eggshell.Plugin.Publication.Service.run 1000
++      Eggshell.Plugin.Publication.Service.run
+@@ -24,2 +24 @@
+-  | _ => Eggshell.Numerical.withDefaultKeeper (drainMs := if arguments.head? == some "codex-daemon" ||
+-      arguments.take 2 == ["egg","warm"] then 1000 else 0) do
++  | _ => do
+@@ -67,0 +67,31 @@
++
++/-- A process-wide model lease belongs to a service or a bulk preparation,
++not to a frontend, hook transport or administrative caller. Numerical
++providers additionally retain their own scoped client claims. -/
++def processKeepsModel (eggAlias : Bool) (arguments : List String) : Bool :=
++  arguments == ["codex-publication-daemon"] || arguments.take 2 == ["egg","warm"] ||
++    (eggAlias && arguments.head? == some "warm")
++
++def runProcess (eggAlias : Bool) (arguments : List String) : IO UInt32 :=
++  if processKeepsModel eggAlias arguments then
++    Eggshell.Numerical.withDefaultKeeper (dispatchEngine arguments) 1000
++  else dispatchEngine arguments
++
++def sourceRouteEngine (arguments : List String) : IO UInt32 := do
++  runProcess ((← IO.appPath).fileName == some "egg") arguments
++
++theorem frontend_has_no_process_keeper (eggAlias : Bool) (session : String) :
++    processKeepsModel eggAlias ["codex-daemon",session] = false := by
++  simp [processKeepsModel]
++
++theorem publication_has_process_keeper (eggAlias : Bool) :
++    processKeepsModel eggAlias ["codex-publication-daemon"] = true := by
++  simp [processKeepsModel]
++
++theorem warm_has_process_keeper (eggAlias : Bool) (options : List String) :
++    processKeepsModel eggAlias ("egg"::"warm"::options) = true := by
++  simp [processKeepsModel]
++
++theorem run_frontend_without_process_keeper (eggAlias : Bool) (session : String) :
++    runProcess eggAlias ["codex-daemon",session] = dispatchEngine ["codex-daemon",session] := by
++  simp [runProcess,frontend_has_no_process_keeper]

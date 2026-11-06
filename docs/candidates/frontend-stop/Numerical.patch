@@ -1,0 +1,19 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -73,0 +74,13 @@
++/-- The ownership predicate is evaluated before executing polling IO.
++An IO term embedded in the right operand of `&&` is lifted before that Bool
++is tested; it must not reap an unrelated child. -/
++def ownedExit (expected actual : Nat) (poll : IO Bool) : IO Bool :=
++  if expected == actual then poll else pure false
++
++theorem foreign_owner_not_polled (expected actual : Nat) (poll : IO Bool)
++    (different : expected ≠ actual) : ownedExit expected actual poll = pure false := by
++  simp [ownedExit,different]
++
++theorem same_owner_polled (pid : Nat) (poll : IO Bool) : ownedExit pid pid poll = poll := by
++  simp [ownedExit]
++
+@@ -78 +91 @@
+-      if child.pid.toNat == pid && (← child.tryWait).isSome then
++      if ← ownedExit pid child.pid.toNat (do return (← child.tryWait).isSome) then

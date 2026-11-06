@@ -18,6 +18,13 @@ def focusStudy := workspace/"docs/candidates/prepared-focus"
 def focusHookSource := base/"prepared-focus-hook-source"
 def focusHookTarget := base/"prepared-focus-hook-build"
 def focusHookStudy := workspace/"docs/candidates/prepared-focus-hook"
+def stopSource := base/"frontend-stop-source"
+def stopTarget := base/"frontend-stop-build"
+def stopStudy := workspace/"docs/candidates/frontend-stop"
+def keeperSource := base/"process-keeper-source"
+def keeperTarget := base/"process-keeper-build"
+def ownedSource := base/"owned-service-source"
+def ownedTarget := base/"owned-service-build"
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def read (path : System.FilePath) : IO Json := IO.FS.readFile path >>= (IO.ofExcept ∘ Json.parse)
 def write (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.compress
@@ -30,7 +37,7 @@ def hash (path : System.FilePath) : IO String := do
   return ((← command "/usr/bin/shasum" #["-a","256",path.toString]).splitOn " ").headD ""
 def drained : IO Unit := do
   for entry in ← base.readDir do
-    unless ["pure-file-reads-","discovery-stages-","prepared-focus-"].any (fun stem => entry.fileName.startsWith stem) &&
+    unless ["pure-file-reads-","discovery-stages-","prepared-focus-","frontend-stop-","process-keeper-","owned-service-"].any (fun stem => entry.fileName.startsWith stem) &&
         entry.fileName.endsWith ".guard.json" do continue
     let value ← read entry.path
     check (value.getObjValD "state" == toJson "finished" && value.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "previous guard not drained"
@@ -85,6 +92,9 @@ def materialize (selected destination output : System.FilePath) (entry : String)
     settings := settings.setObjVal! key (toJson value)
   write (base/(if destination == sourceRoot then "discovery-stages-settings.json" else if destination == focusSource then
     "prepared-focus-settings.json" else if destination == focusHookSource then "prepared-focus-hook-settings.json"
+    else if destination == stopSource then "frontend-stop-settings.json"
+    else if destination == keeperSource then "process-keeper-settings.json"
+    else if destination == ownedSource then "owned-service-settings.json"
     else "discovery-stages-client-settings.json")) settings
 
 def prepare : IO Unit := do
@@ -117,11 +127,36 @@ def setup (action tag : String) : IO Unit := do
   drained
   let path := base/(tag++".guard-settings.json")
   check (!(← path.pathExists)) "fresh diagnostic tag required"
-  let arguments ← if action == "build" || action == "client-build" || action == "focus-build" || action == "focus-hook-build" then
+  let arguments ← if ["build","client-build","focus-build","focus-hook-build","stop-build","keeper-build","owned-build"].contains action then
     pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",(workspace/"tools/research/StudyBuildMain.lean").toString,
       (base/(if action == "build" then "discovery-stages-settings.json" else if action == "focus-build" then
         "prepared-focus-settings.json" else if action == "focus-hook-build" then "prepared-focus-hook-settings.json"
+        else if action == "stop-build" then "frontend-stop-settings.json"
+        else if action == "keeper-build" then "process-keeper-settings.json"
+        else if action == "owned-build" then "owned-service-settings.json"
         else "discovery-stages-client-settings.json")).toString]
+    else if ["stop-probe","stop-parallel","stop-drop","keeper-probe","keeper-parallel","keeper-drop","owned-probe","owned-parallel","owned-drop","owned-replay"].contains action then pure (#["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/(if action == "owned-replay" then "owned-service-cohort1-result/private" else tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(if action == "owned-replay" then "owned-service-cohort1-result/eggshell.toml" else tag++"-result/eggshell.toml")).toString,
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
+      (stopTarget/"StudyMain").toString,(base/(tag++"-result")).toString,
+      ((if action.startsWith "owned-" then ownedTarget else if action.startsWith "keeper-" then keeperTarget else focusHookTarget)/"StudyMain").toString]++
+      if action.endsWith "parallel" then #["parallel"] else if action.endsWith "drop" then #["drop"] else #[])
+    else if action == "keeper-contention" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
+      (keeperTarget/"StudyMain").toString,"keeper-contention-check",(base/(tag++"-result")).toString,(focusHookTarget/"StudyMain").toString]
+    else if action == "owned-foreign" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
+      (ownedTarget/"StudyMain").toString,"keeper-foreign-child-check",(base/(tag++"-result")).toString]
+    else if action == "keeper-lifetime" || action == "owned-lifetime" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
+      "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
+      ((if action == "owned-lifetime" then ownedTarget else keeperTarget)/"StudyMain").toString,"keeper-lifetime-check",(base/(tag++"-result")).toString]
     else if action == "focus-hook-preflight" then pure #["/usr/bin/env",
       "LEAN_PATH="++(focusHookTarget/"lib").toString++":"++(focusHookSource/".lake/build/lib/lean").toString++":"++(compiler/"lib/lean").toString,
       (compiler/"bin/lean").toString,"--root="++focusHookSource.toString,"-j1","-M3072","-DwarningAsError=true",
@@ -134,12 +169,12 @@ def setup (action tag : String) : IO Unit := do
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
       "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
       (focusTarget/"StudyMain").toString,"prepared-focus-check",(base/(tag++"-result")).toString]
-    else if action == "hooks" || action == "focus-hook-cohort" then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
+    else if ["hooks","focus-hook-cohort","keeper-cohort","owned-cohort"].contains action then pure #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1",
       "EGGSHELL_TRACE_QUERY_STAGES=1","EGGSHELL_TRACE_NUMERICAL_STAGES=1","EGGSHELL_TRACE_ALLOCATOR=1","EGGSHELL_TRACE_ACTOR_HEAP=1",
       "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,"EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,
       "PLUGIN_ROOT="++(base/"worker-cpu-target").toString,(clientTarget/"StudyMain").toString,
-      (base/(tag++"-result")).toString,((if action == "hooks" then target else focusHookTarget)/"StudyMain").toString,
-      ← hash ((if action == "hooks" then target else focusHookTarget)/"StudyMain")]
+      (base/(tag++"-result")).toString,((if action == "owned-cohort" then ownedTarget else if action == "hooks" then target else if action == "keeper-cohort" then keeperTarget else focusHookTarget)/"StudyMain").toString,
+      ← hash ((if action == "owned-cohort" then ownedTarget else if action == "hooks" then target else if action == "keeper-cohort" then keeperTarget else focusHookTarget)/"StudyMain")]
     else throw (IO.userError "unknown diagnostic action")
   write path (Json.mkObj [("command",toJson arguments),("cwd",toJson workspace.toString),
     ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
@@ -447,6 +482,229 @@ def prepareFocusHook : IO Unit := do
     ("fixed",toJson "same16originals/32queries/2waves;rank,MiniLM,scope,certification,deadlines and resource bounds unchanged"),
     ("no80FullSearchRetry",toJson true),("paidComparisons",toJson "0/18")])
 
+def prepareStop : IO Unit := do
+  drained
+  check ((← hash (clientTarget/"StudyMain")) == "3b182b64b863faf48a34e311197ec7353fc60bf5b1748c579b7c0bdbd18f7889") "sealed diagnostic client changed"
+  materialize clientTarget stopSource stopTarget "tools.research.TypedReadStopProbe"
+  IO.FS.createDirAll stopStudy
+  write (stopStudy/"plan.json") (Json.mkObj [("previousTurn",toJson "progress:actual prepared-focus path used35/35,32/32 bodies exact;frontend stop failure reproduced"),
+    ("phase",toJson "model-free reproduction,unchanged runtime"),("noSearchOrModelCalls",toJson true),
+    ("sampleWhenStopNotCompleteAfterMs",toJson (1000 : Nat)),("sameShutdownDeadline",toJson true),
+    ("runtime",toJson (← hash (focusHookTarget/"StudyMain"))),("adopted",toJson false)])
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",(focusHookTarget/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+
+def prepareKeeper : IO Unit := do
+  drained
+  check ((← hash (focusHookTarget/"StudyMain")) == "22023092f82ab122db5aa04e9f4fd43b37ee07344e6e4a34e95a7dda9bb4084b") "observed runtime changed"
+  materialize focusHookTarget keeperSource keeperTarget "tools.research.ProcessKeeperChecks"
+
+def prepareOwned : IO Unit := do
+  drained
+  check ((← hash (keeperTarget/"StudyMain")) == (← IO.ofExcept ((← read (stopStudy/"build.json")).getObjValAs? String "runtime")))
+    "role-only native parent changed"
+  materialize keeperTarget ownedSource ownedTarget "tools.research.ProcessKeeperChecks"
+
+def checkOwnedPollLift : IO Unit := do
+  let called ← IO.mkRef (0 : Nat)
+  let sameOwner := false
+  if sameOwner && (← do called.modify (·+1); pure true) then pure ()
+  write (stopStudy/"monadic-predicate-check.json") (Json.mkObj [("matches",toJson sameOwner),
+    ("pollCalls",toJson (← called.get)),("modelOrSearchRequests",toJson (0 : Nat))])
+
+/-- Only completed, superseded executables; native inputs and active runtime
+paths remain. This can free disk during an unrelated guarded compilation. -/
+def retireUnusedControls : IO Unit := do
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot verify unused executable ownership"
+  let files := #[(focusTarget/"StudyMain",← IO.ofExcept ((← read (focusStudy/"build.json")).getObjValAs? String "runtime")),
+    (clientParent/"StudyMain","a80cad2a80fb084842d22e3ead44358762fbdea3e175601b1d407d82c67b308e")]
+  for (path,digest) in files do
+    check (!process.stdout.contains path.toString && (← hash path) == digest) "completed executable still active or changed"
+  write (stopStudy/"retired-unused-runtime.json") (Json.mkObj [("removed",toJson (files.map fun (path,digest) => (path.toString,digest))),
+    ("reason",toJson "completed component and original client superseded by integrated runtime and sealed diagnostic client"),
+    ("requiredObjectsInterfacesSourceWitnessesRetained",toJson true),("archived",toJson false)])
+  for (path,_) in files do IO.FS.removeFile path
+
+def retireLifecycleIntermediates : IO Unit := do
+  drained
+  check ((← read (stopStudy/"native-owned-sources.json")).getObjValD "exactExpectedChangeSet" == toJson true)
+    "retain exact native parent relation before retiring intermediate executables"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot check executable ownership"
+  let files := #[(keeperTarget/"StudyMain",← IO.ofExcept ((← read (stopStudy/"build.json")).getObjValAs? String "runtime")),
+    (target/"StudyMain","284ba3a063a703234c53d61cbea991cf35b3b692a5a9200f30df664cdcee52ae")]
+  for (path,digest) in files do
+    check (!process.stdout.contains path.toString && (← hash path) == digest) "intermediate executable active or changed"
+  write (stopStudy/"retired-intermediate-runtime.json") (Json.mkObj [("removed",toJson (files.map fun (path,digest) => (path.toString,digest))),
+    ("reason",toJson "role-only and old discovery controls completed;current owned-child runtime and sealed client retained"),
+    ("requiredNativeInputsRetained",toJson true),("archived",toJson false)])
+  for (path,_) in files do IO.FS.removeFile path
+
+/-- A completed object's bytes are expendable only when none of the retained
+executables links it. Keep source/dependency witnesses and all interfaces. -/
+def retireUnselectedObjects : IO Unit := do
+  drained
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot inspect native owners"
+  check (!process.stdout.contains "controller/StudyMain guard " &&
+    !process.stdout.contains "StudyBuildMain.lean") "a native guard or build remains active"
+  let mut retained : Std.HashMap String Bool := {}
+  let mut executables := #[]
+  for directory in ← base.readDir do
+    unless ← directory.path.isDir do continue
+    let executable := directory.path/"StudyMain"
+    unless ← executable.pathExists do continue
+    check (!process.stdout.contains executable.toString) "retained executable is still active"
+    let response := directory.path/"runtime.rsp"
+    check (← response.pathExists) "retained executable lost its native response"
+    executables := executables.push (executable.toString,← hash executable)
+    for line in (← IO.FS.readFile response).splitOn "\n" do
+      if line.trimAscii.isEmpty then continue
+      let path ← IO.ofExcept (Json.parse line >>= Json.getStr?)
+      if path.startsWith "-" then continue
+      check (← (System.FilePath.mk path).pathExists) ("retained runtime has a missing link input: "++path)
+      retained := retained.insert path true
+  let mut removed := #[]
+  let mut bytes := 0
+  for directory in ← base.readDir do
+    unless directory.fileName.endsWith "-build" && (← directory.path.isDir) do continue
+    for entry in ← directory.path.readDir do
+      unless entry.fileName.endsWith ".o" && !retained.contains entry.path.toString do continue
+      unless (← entry.path.withExtension "source" |>.pathExists) &&
+        (← entry.path.withExtension "dependencies" |>.pathExists) do continue
+      let size := (← entry.path.metadata).byteSize.toNat
+      removed := removed.push (entry.path.toString,← hash entry.path,size)
+      bytes := bytes+size
+  write (stopStudy/"retired-unselected-objects.json") (Json.mkObj [
+    ("retainedExecutables",toJson executables),("retainedNativeInputs",toJson retained.size),
+    ("removed",toJson removed),("bytes",toJson bytes),
+    ("sourceDependencyWitnessesAndInterfacesRetained",toJson true),("archived",toJson false)])
+  for (path,_,_) in removed do IO.FS.removeFile (.mk path)
+
+def sealKeeper : IO Unit := do
+  drained
+  let audit := workspace/"tools/research/StudyBuildClosureAudit.lean"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "inspect",keeperTarget.toString,(stopStudy/"native-closure.json").toString]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "compare-sources",focusHookTarget.toString,keeperTarget.toString,(stopStudy/"native-sources.json").toString,"Main"]
+  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Main.lean","--label","b/Main.lean",
+    (focusHookSource/"Main.lean").toString,(keeperSource/"Main.lean").toString]}
+  check (patch.exitCode == 1) "missing process ownership change"
+  IO.FS.writeFile (stopStudy/"Main.patch") patch.stdout
+  write (stopStudy/"build.json") (Json.mkObj [("runtime",toJson (← hash (keeperTarget/"StudyMain"))),
+    ("parent",toJson (← hash (focusHookTarget/"StudyMain"))),
+    ("kernelAndOrdinaryContractAudit",toJson (← IO.FS.readFile (keeperTarget/"tools_research_ProcessKeeperChecks-lean.stdout")))])
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",(keeperTarget/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+
+def sealOwned : IO Unit := do
+  drained
+  let audit := workspace/"tools/research/StudyBuildClosureAudit.lean"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "inspect",ownedTarget.toString,(stopStudy/"native-owned-closure.json").toString]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit.toString,
+    "compare-sources",keeperTarget.toString,ownedTarget.toString,(stopStudy/"native-owned-sources.json").toString,"Eggshell.Numerical"]
+  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/Numerical.lean","--label","b/Eggshell/Numerical.lean",
+    (keeperSource/"Eggshell/Numerical.lean").toString,(ownedSource/"Eggshell/Numerical.lean").toString]}
+  check (patch.exitCode == 1) "missing owned-child polling change"
+  IO.FS.writeFile (stopStudy/"Numerical.patch") patch.stdout
+  write (stopStudy/"build-owned.json") (Json.mkObj [("runtime",toJson (← hash (ownedTarget/"StudyMain"))),
+    ("parent",toJson (← hash (keeperTarget/"StudyMain"))),
+    ("kernelAndOrdinaryContractAudit",toJson (← IO.FS.readFile (ownedTarget/"tools_research_ProcessKeeperChecks-lean.stdout")))])
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",(ownedTarget/"StudyMain").toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+
+def recordStop (tag : String) : IO Unit := do
+  drained
+  let guard ← read (base/(tag++".guard.json"))
+  let root := base/(tag++"-result")
+  let report ← if ← (root/"report.json").pathExists then read (root/"report.json") else pure Json.null
+  let sample := root/"frontend.sample.txt"
+  let sample ← if ← sample.pathExists then do
+    let lines := (← IO.FS.readFile sample).splitOn "\n"
+    let first := (lines.findIdx? (·.contains "l_Eggshell_Numerical_release")).getD 20
+    pure (Json.mkObj [("sha256",toJson (← hash sample)),("header",toJson (lines.take 20)),
+      ("firstLine",toJson (first+1)),("excerpt",toJson ((lines.drop first).take 45))])
+    else pure Json.null
+  let path := stopStudy/"diagnostics.json"
+  let previous ← if ← path.pathExists then IO.ofExcept (← read path).getArr? else pure #[]
+  check (!previous.any (fun value => value.getObjValD "tag" == toJson tag)) "preserve diagnostic control"
+  let value := Json.mkObj [("tag",toJson tag),("guard",guard),("report",report),("sample",sample)]
+  write path (toJson (previous.push value))
+
+def recordLifecycleCohort (tag : String) : IO Unit := do
+  record tag stopStudy "--frontend-stop" (focusHookStudy/"evidence.json") false "owned-service-"
+  let traces ← read (stopStudy/"measurements.json")
+  write (stopStudy/"lifecycle-summary.json") (Json.mkObj [
+    ("frontendShutdown",traces.getObjValD "frontendShutdown"),("shutdown",traces.getObjValD "shutdown"),
+    ("commonPathQueries",traces.getObjValD "commonPathQueries"),
+    ("referencePathQueries",traces.getObjValD "referencePathQueries"),
+    ("answeringModelCalls",toJson (0 : Nat)),("paidComparisons",toJson "0/18"),("adopted",toJson false)])
+
+def auditReadLocks : IO Unit := do
+  drained
+  let result ← IO.Process.output {cmd := "/usr/bin/env",args := #[
+    "LEAN_PATH="++(ownedTarget/"lib").toString,(compiler/"bin/lean").toString,"-j1","-M1536",
+    (workspace/"tools/research/ProcessKeeperChecks.lean").toString],cwd := some workspace}
+  write (stopStudy/"read-lock-audit.json") (Json.mkObj [("exitCode",toJson result.exitCode.toNat),
+    ("stdout",toJson result.stdout),("stderr",toJson result.stderr),
+    ("checkerSha256",toJson (← hash (workspace/"tools/research/ProcessKeeperChecks.lean"))),
+    ("checkedNativeRuntime",toJson (← hash (ownedTarget/"StudyMain"))),
+    ("additionalKernelAuditOnly",toJson true),("adopted",toJson false)])
+  check (result.exitCode == 0) "captured read synchronization or lifecycle proof failed"
+
+def cleanupStop : IO Unit := do
+  drained
+  check ((← read (stopStudy/"verification.json")).getObjValD "actualOutputs" == toJson (35 : Nat) &&
+    (← read (stopStudy/"parity.json")).getObjValD "matchingCompleteStdout" == toJson (32 : Nat))
+    "preserve all actual bodies before removing ended state"
+  let controls ← IO.ofExcept (← read (stopStudy/"diagnostics.json")).getArr?
+  check (controls.size == 8 && (← read (stopStudy/"read-lock-audit.json")).getObjValD "exitCode" == toJson (0 : Nat))
+    "preserve lifecycle controls and read proof first"
+  let mut guards := #[]
+  for entry in ← base.readDir do
+    if ["frontend-stop-","process-keeper-","owned-service-"].any (entry.fileName.startsWith ·) &&
+        entry.fileName.endsWith ".guard.json" then
+      let value ← read entry.path
+      let value ← if value.getObjValD "peakProcesses" == Json.null then pure value else
+        pure (value.setObjVal! "peakProcesses" (← processSummary (value.getObjValD "peakProcesses")))
+      guards := guards.push (entry.fileName,value)
+  write (stopStudy/"controls.json") (toJson guards)
+  let baseline := base/"allocator-service-build/StudyMain"
+  check ((← hash baseline) == "4e4c9b9c95cb2c72b4447a86f5abc81b6bb619854889eb5ffa8492ba592e593a") "active baseline changed"
+  IO.FS.removeFile (base/"worker-cpu-target/bin/eggshelld")
+  discard <| command "/bin/ln" #["-s",baseline.toString,(base/"worker-cpu-target/bin/eggshelld").toString]
+  let mut removed := #[]
+  for tag in #["frontend-stop-normal1","frontend-stop-drop1","process-keeper-contention1",
+      "process-keeper-lifetime1","owned-service-foreign1","owned-service-lifetime1",
+      "owned-service-parallel1","owned-service-replay1","owned-service-cohort1"] do
+    let path := base/(tag++"-result")
+    check (← path.pathExists) "ended result already removed without this record"
+    IO.FS.removeDirAll path
+    removed := removed.push path.toString
+  let mut errors := #[]
+  let mut logCount := 0
+  for build in [stopTarget,keeperTarget,ownedTarget] do
+    for entry in ← build.readDir do
+      unless entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" do continue
+      let text ← IO.FS.readFile entry.path
+      if text.contains "error:" || text.contains "error(" || (entry.fileName.endsWith ".stderr" && !text.isEmpty) then
+        errors := errors.push (entry.path.toString,text)
+      IO.FS.removeFile entry.path
+      logCount := logCount+1
+  write (stopStudy/"development.json") (Json.mkObj [("retainedCompilerErrors",toJson errors),
+    ("controllerPreflightErrors",toJson #["link-response flags were initially mistaken for paths;no deletion occurred before correction",
+      "additional read audit used unqualified sourcePlan;qualified name fixed,core unchanged"]),
+    ("firstLifecycleControlStderrObservedInTerminal",toJson "uncaught exception: no such thing (error code: 10, no child processes)"),
+    ("fixedByOwnedPollGuardNotByIncreasingDeadline",toJson true)])
+  write (stopStudy/"cleanup.json") (Json.mkObj [("endedDbCacheSessionsAndRawLogsRemoved",toJson removed),
+    ("compilerLogsRemoved",toJson logCount),
+    ("baselineAliasRestored",toJson true),("originalsAndRequiredNativeInputsRetained",toJson true),
+    ("archived",toJson false)])
+  compactRecords stopStudy
+
 def scopeFocusHook : IO Unit := do
   drained
   let file := focusHookSource/"Eggshell/Handoff.lean"
@@ -533,6 +791,20 @@ def main (args : List String) : IO Unit := do
   | ["prepare"] => prepare
   | ["prepare-focus"] => prepareFocus
   | ["prepare-focus-hook"] => prepareFocusHook
+  | ["prepare-stop"] => prepareStop
+  | ["prepare-keeper"] => prepareKeeper
+  | ["prepare-owned"] => prepareOwned
+  | ["check-owned-poll-lift"] => checkOwnedPollLift
+  | ["retire-unused-controls"] => retireUnusedControls
+  | ["retire-lifecycle-intermediates"] => retireLifecycleIntermediates
+  | ["retire-unselected-objects"] => retireUnselectedObjects
+  | ["seal-keeper"] => sealKeeper
+  | ["seal-owned"] => sealOwned
+  | ["record-stop",tag] => recordStop tag
+  | "record-stops" :: tags => tags.forM recordStop
+  | ["record-lifecycle-cohort",tag] => recordLifecycleCohort tag
+  | ["audit-read-locks"] => auditReadLocks
+  | ["cleanup-stop"] => cleanupStop
   | ["scope-focus-hook"] => scopeFocusHook
   | ["seal-focus-hook",tag] => sealFocusHook tag
   | ["record-focus-hook",tag] => recordFocusHook tag
