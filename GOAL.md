@@ -29,15 +29,15 @@
 
 ## 現在地と次の順序
 
-直近の[provider-stages検査](docs/candidates/provider-stages/README.md)で、同じ16原典・MiniLM・質問・sealed native clientに対して、独立actor内のtyped providerを分解した。request-local時刻列を既存request-pagesへ最後に一度だけ追加し、per-stage file/global traceは増やさない。16同時×2 waveはON/OFFとも実原文+ACKと意味完了32/32、全32 stdoutがbyte一致した。80同時はON0/80、OFF1/80で不合格。236実出力を独立照合した。以前の[query-stages](docs/candidates/query-stages/README.md)の306出力・31/32失敗やobserverの限界も保持し、成功だけを選ばない。
+現在は[整合したnative closureによる所有・通信の診断](docs/candidates/transport-heap/README.md)まで完了した。固定16原典・MiniLM・質問・sealed clientの2組の16同時×2波は各32/32実原文+ACK・意味完了、親の全stdoutとbyte一致した。後者の最大8363ms・関連RSS2701744KiBは診断controlであり改善の証明ではない。部分的なnative差し替えで起きたprime時のcrashと3未完了出力も残し、全253moduleの実source・interface・依存をそろえたbuildだけを有効とする。失敗3と成功70の実出力は独立照合済みで、終了DB/cache/raw logはarchiveせず削除した。
 
-全80件がencoder open・scope pin・prepared input復元・matrix bindingを終えた。入力復元はwall中央値1046/max1464ms、encoder openは4/15ms。21件だけが数値startup lockを取得し、完了した取得待ちは中央値3007/max9811ms。その21件はpingの終了stampがなく、残り59件はlock取得の終了stampがない。質問encodeは0/80完了だった。再open/frame/readerや設定hashの再計算を今回の主因とする仮説は支持されなかった。wallはCPU時間ではなく、nested spanや中央値を足さず、終端のない区間は未計測とする。
+[20波のphase寿命対照](docs/candidates/phase-lifetime/README.md)ではquiet条件のRSSは約124MiBで頭打ちになり、4波だけから推測した継続的な増加は支持されなかった。[実actorのowner観測](docs/candidates/actor-heap/README.md)も、最終外側heapが数十KiB、数値側の観測usedが最大約4MiBで、約900MiBのhost RSSを説明できていない。allocator設定・強制回収・worker数・期限を変える根拠にしない。owner集計はpending remote freeを含み得るため生存graphとは同一視しない。
 
-隔離した[numerical-ready候補](docs/candidates/numerical-ready/README.md)は、認証済み接続metadataだけをscope/config世代・現在の出版に結び付けて最大32件共有し、clientのkeeper/pipe/query/responseは独立に保った。初回起動の待ち後にも再確認し、実RPCの認証、終了/置換の失効、送信済みかもしれない要求を再送しない方針を維持した。Leanのscope/世代拒否証明、既存ContractAudit、nativeの失効/置換/上限/peer分離検査が通った。16同時×2は両mode32/32、親との64対照も全stdout/body byte一致、最大9395/9200ms。
+同じPID内で、35照会が16ソースずつ、原文構造metadataのsource-records通信を560回行っていた。小さな不変値をJSON化・送受信・parseし直している事実は確認できたが、RSSの主因とは未確定である。[typed original reads](docs/candidates/typed-original-reads/plan.json)はこの内部境界を対象に、scope・capability・full Head・producer・retained lease・owner順・絶対期限と既存の保持容量を守る読取interfaceを計画した。過去に不採用のsearch-inputsを繰り返さない。
 
-同候補の80同時は全80件がready hit、startup lock入口0、57件がencode/routing/dedupを終えて採点へ進んだが、provider採点完了0、必要原文配送0だった。関連RSS3683280KiBで保護停止し、全所有processをdrainした。OFF80は実行せず、同条件の再試行もしない。停止前の80 stdoutとprime3を別記録で保持したが、controllerの最終reportは未保存なのでclient latency/ACK/個別caseとreceiptの対応をservice時刻から復元しない。完走control70と停止wave83、合計153実出力を検査した。全体のcapacity/resource gateは不合格で、候補は未採用。
+ユーザーのロック除去指示に対し、最初に原文構造cacheの不変lookupと可変の受付・充填・解放を分離する。現状はhitのLRU更新とmissのDB読出しが共有Mutex内にある。同期不要の読取型からMutex/CAS/可変参照を除き、読取結果と拒否条件の不変性をLeanで確認し、元Mutexを保持したnative対照で接続を検査する。登録・容量予約・解放の本当に可変な状態まで無同期にしない。全retrievalがlock-freeとは主張しない。
 
-保存済みの57採点profileでは、完了返信分のscore wall中央値3335msに対してkernel演算は299µs、projection readは7ms、missは全0、保持projectionは最大4193280 bytesだった。未完了RPCの内訳は未計測。次はbackendのadmission待ち、BlockScore.prepare、raw-kernel交換、応答transportと保持memoryを分ける。cache/重み/worker数/期限を盲目的に変えない。queryごとのprepared input再復元も残るが、以前却下したsearch-inputsを再利用する前に現在のactor負荷で根拠を取る。semantic後のlexical source-errorを最初の取得失敗と誤認しない。
+次の順序は、①原文構造の読取とcache管理の分離を証明・実装、②checked typed readへ接続、③固定32実hookの完全stdout一致・原文/ACK・同期回数/保持量を比較、④根拠ある改善がある場合だけ変更後の80負荷を一度測る。同じ失敗80を無変更で再試行しない。従来の[numerical-ready](docs/candidates/numerical-ready/README.md)の80同時は全ready hitでもRSS保護停止、必要原文0で不合格のまま。nested時間や中央値を加算して主因を作らない。
 
 製品coreは変更していない。隔離sourceは全overlayを戻し、終了DB/cache/raw log・初期copy・不要な旧実行体は記録後にarchiveせず削除する。現在の診断に必要な実行体/link object/interface、16原典、対照とsealed clientを保持する。各chatの軽いactorは独立、重いDB/model/public準備は共有する。元の30秒、4 GiB ceiling/3.5 GiB stop、空き2 GiB、16並行原典所有者、完全な認定domain・私有usage分離を維持する。資源停止を成功扱いにしない。
 

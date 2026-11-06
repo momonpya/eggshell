@@ -36,8 +36,7 @@ def build : IO Unit := do
     ("sdk",toJson sdk),("nativeApiDeclarations",toJson ((generated.splitOn "\n").filter fun line =>
       line.contains "eggshell_research_thread_")),("noAdditionalAllocator",toJson true),
     ("noPythonOrRuby",toJson true),("adopted",toJson false)])
-def phaseBuild : IO Unit := do
-  let phaseTarget := base/"transferred-phase-build"
+def phaseBuildAt (phaseTarget buildEvidence : System.FilePath) : IO Unit := do
   let parent := base/"allocator-service-build"
   check (!(← (phaseTarget/"StudyMain").pathExists)) "preserve completed phase build"
   IO.FS.createDirAll phaseTarget
@@ -55,6 +54,11 @@ def phaseBuild : IO Unit := do
   let calls := (generated.splitOn "\n").filter (·.contains "OperationPool_ownedPhase")
   check (calls.length ≥ 2) "fixture did not call the real native phase helper"
   discard <| command (compiler/"bin/leanc").toString #["-c","-O2","-o",(phaseTarget/"entry.o").toString,(phaseTarget/"entry.c").toString]
+  let sdk := (← command "/usr/bin/xcrun" #["--show-sdk-path"]).trimAscii.toString
+  let adapter := workspace/"tools/research/native/allocator_probe.c"
+  IO.FS.writeFile (phaseTarget/"adapter.c.txt") (← IO.FS.readFile adapter)
+  discard <| command (compiler/"bin/leanc").toString #["-c","-O2","-Wall","-Wextra","-Werror",
+    "-isysroot",sdk,"-isystem",sdk++"/usr/include","-o",(phaseTarget/"adapter.o").toString,adapter.toString]
   let original ← ((← IO.FS.readFile (parent/"runtime.rsp")).splitOn "\n").filterMapM fun line => do
     if line.trimAscii.isEmpty then return none
     return some (← IO.ofExcept (Json.parse line >>= Json.getStr?))
@@ -63,24 +67,28 @@ def phaseBuild : IO Unit := do
   check ((original.filter (· == oldEntry)).length == 1 && (original.filter (· == oldAdapter)).length == 1)
     "parent closure did not contain the exact selected entry and adapter"
   let selected := original.filterMap fun path => if path == oldEntry then none else
-    some (if path == oldAdapter then (target/"adapter.o").toString else path)
+    some (if path == oldAdapter then (phaseTarget/"adapter.o").toString else path)
   let selected := selected++[(phaseTarget/"entry.o").toString]
   let response := phaseTarget/"runtime.rsp"
   IO.FS.writeFile response (String.intercalate "\n" (selected.map (fun path => (toJson path).compress))++"\n")
   discard <| command (compiler/"bin/leanc").toString #["-Wl,-dead_strip","-o",(phaseTarget/"StudyMain").toString,"@"++response.toString]
   let core := parent/"Eggshell_OperationPool.o"
-  write (study/"phase-build.json") (Json.mkObj [("runtimeSha256",toJson (← hash (phaseTarget/"StudyMain"))),
+  write buildEvidence (Json.mkObj [("runtimeSha256",toJson (← hash (phaseTarget/"StudyMain"))),
+    ("adapterSourceSha256",toJson (← hash adapter)),("sdk",toJson sdk),
     ("entrySourceSha256",toJson (← hash source)),("coreObjectSha256",toJson (← hash core)),
     ("coreSourceWitnessSha256",toJson (← hash (core.withExtension "source"))),
     ("parentRuntimeSha256",toJson (← hash (parent/"StudyMain"))),
     ("parentResponseSha256",toJson (← hash (parent/"runtime.rsp"))),
     ("nativeHelperCalls",toJson calls),("onlyEntryAndOsAdapterReplaced",toJson true),
     ("selectedObjects",toJson selected),("adopted",toJson false)])
+def phaseBuild : IO Unit := phaseBuildAt (base/"transferred-phase-build") (study/"phase-build.json")
 def setup (action tag : String) : IO Unit := do
   let path := base/(tag++".guard-settings.json")
   check (!(← path.pathExists)) "fresh transfer guard tag required"
-  let args := if action == "build" || action == "phase-build" then #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+  let args := if action == "build" || action == "phase-build" || action == "lifetime-build" then #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
       (workspace/"tools/research/TransferredGraphStudy.lean").toString,action]
+    else if action.startsWith "lifetime-" then #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/"phase-lifetime-build/StudyMain").toString,
+      (base/(tag++"-result")).toString,(action.drop 9 |>.toString),"20"]
     else if action.startsWith "phase-" then #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/"transferred-phase-build/StudyMain").toString,
       (base/(tag++"-result")).toString,(action.drop 6 |>.toString)]
     else #["/usr/bin/env","LEAN_NUM_THREADS=1",(target/"StudyMain").toString,(base/(tag++"-result")).toString,action]
@@ -144,11 +152,51 @@ def clean : IO Unit := do
   write (study/"cleanup.json") (Json.mkObj [("removed",toJson removed),("archive",toJson false),
     ("logicalBytes",toJson (removed.foldl (fun n row => n+row.2.2) 0)),
     ("parentServiceObjectsAndOriginalsRetained",toJson true)])
+def lifetimeFinish : IO Unit := do
+  let destination := workspace/"docs/candidates/phase-lifetime"
+  let mut controls := #[]
+  for entry in ← base.readDir do
+    unless entry.fileName.startsWith "phase-lifetime-" && entry.fileName.endsWith ".guard.json" do continue
+    let value ← read entry.path
+    check (value.getObjValD "state" == toJson "finished" && value.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+      value.getObjValD "exitCode" == toJson (0 : Nat)) "phase lifetime guard not successfully drained"
+    let pid ← IO.ofExcept (value.getObjValAs? Nat "guardPid")
+    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
+    check (probe.exitCode != 0 && probe.stdout.trimAscii.isEmpty) "phase lifetime guard PID remains"
+    controls := controls.push (entry.fileName,value)
+  check (controls.size == 4) "fixed20-wave control domain changed"
+  let mut reports := #[]
+  for mode in ["plain","quiet","ready"] do
+    let path := base/("phase-lifetime-"++mode++"1-result/report.json")
+    let report ← read path
+    check (report.getObjValD "rounds" == toJson (20 : Nat) && report.getObjValD "producerExitVerifiedByOsIdentities" == toJson true) "phase lifetime dimension or ownership changed"
+    reports := reports.push (mode,report,← hash path)
+  let build ← read (destination/"build.json")
+  check (build.getObjValD "runtimeSha256" == toJson (← hash (base/"phase-lifetime-build/StudyMain")) &&
+    build.getObjValD "entrySourceSha256" == toJson (← hash (workspace/"tools/research/OwnedPhaseRetention.lean"))) "selected phase runtime or entry changed"
+  write (destination/"evidence.json") (Json.mkObj [("controls",toJson controls),("reports",toJson reports),
+    ("decision",toJson "The20-wave plain,quiet and ready conditions plateau near94.6,130.3 and125.5MB. The previous4-wave quiet slope did not continue. Do not patch the phase helper,wire representation or allocator as a service retention repair on this evidence. Next observe the outer searchActor allocations which the prior inner-phase observation omitted."),
+    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+  let processes ← command "/bin/ps" #["-axo","command="]
+  let mut paths := #[base/"phase-lifetime-build"]
+  for (name,_) in controls do
+    let tag := name.dropEnd 11 |>.toString
+    for suffix in ["-result",".log",".guard-settings.json"] do paths := paths.push (base/(tag++suffix))
+  let mut removed := #[]
+  for path in paths do
+    unless ← path.pathExists do continue
+    check (!processes.contains path.toString) "phase artifact still active"
+    let (files,bytes) ← removeTree path
+    removed := removed.push (path.toString,files,bytes)
+  write (destination/"cleanup.json") (Json.mkObj [("removed",toJson removed),("archive",toJson false),
+    ("logicalBytes",toJson (removed.foldl (fun n row => n+row.2.2) 0)),("parentServiceRetained",toJson true)])
 def main (args : List String) : IO Unit := do
   match args with
   | ["setup",action,tag] => setup action tag
   | ["build"] => build
   | ["phase-build"] => phaseBuild
+  | ["lifetime-build"] => phaseBuildAt (base/"phase-lifetime-build") (workspace/"docs/candidates/phase-lifetime/build.json")
+  | ["lifetime-finish"] => lifetimeFinish
   | ["record"] => record
   | ["cleanup"] => clean
   | _ => throw (IO.userError "TransferredGraphStudy setup ACTION FRESH_TAG | build")

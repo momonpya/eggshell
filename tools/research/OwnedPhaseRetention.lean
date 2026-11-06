@@ -99,8 +99,9 @@ structure Actor where
   finally
     for actor in ← registry.get do discard <| IO.wait actor.task
   return (ids,notices)
-def run (root : System.FilePath) (mode : String) : IO Unit := do
-  check (!(← root.pathExists) && ["plain","quiet","ready"].contains mode) "fresh phase fixture required"
+def run (root : System.FilePath) (mode : String) (rounds : Nat := 4) : IO Unit := do
+  check (!(← root.pathExists) && ["plain","quiet","ready"].contains mode &&
+    0 < rounds && rounds ≤ 20) "fresh bounded phase fixture required"
   IO.FS.createDirAll root
   let warmId ← IO.mkRef 0
   let now ← IO.monoMsNow
@@ -113,19 +114,25 @@ def run (root : System.FilePath) (mode : String) : IO Unit := do
   let initial ← observe
   let mut timeline := #[]
   let mut notices := 0
-  for round in [:4] do
+  for round in [:rounds] do
     let (ids,count) ← wave raw mode
     notices := notices+count
     let current ← observe
     check (ids.all (fun id => !current.threads.contains id)) "post-wave phase producer present"
     timeline := timeline.push (Json.mkObj [("round",toJson round),("inventory",toJson current),
       ("producerAndOuterIds",toJson ids),("readyNotifications",toJson count)])
-  check (notices == (if mode == "ready" then 32 else 0)) "actual helper readiness path changed"
+  check (notices == (if mode == "ready" then 8*rounds else 0)) "actual helper readiness path changed"
+  IO.sleep 100
+  let settled ← observe
   IO.FS.writeFile (root/"report.json") (Json.mkObj [("mode",toJson mode),("initial",toJson initial),
-    ("timeline",toJson timeline),("readyNotifications",toJson notices),
+    ("timeline",toJson timeline),("settled",toJson settled),("rounds",toJson rounds),("readyNotifications",toJson notices),
     ("actualSealedCoreHelper",toJson true),("prewarmedIdentically",toJson true),
     ("producerExitVerifiedByOsIdentities",toJson true),("noDbOrModel",toJson true),("adopted",toJson false)]).compress
 end PhaseRetention
 def main (args : List String) : IO Unit := do
-  let [root,mode] := args | throw (IO.userError "OwnedPhaseRetention FRESH_ROOT MODE")
-  PhaseRetention.run (.mk root) mode
+  match args with
+  | [root,mode] => PhaseRetention.run (.mk root) mode
+  | [root,mode,count] =>
+    let some rounds := count.toNat? | throw (IO.userError "invalid bounded phase wave count")
+    PhaseRetention.run (.mk root) mode rounds
+  | _ => throw (IO.userError "OwnedPhaseRetention FRESH_ROOT MODE [ROUNDS<=20]")

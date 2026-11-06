@@ -1,0 +1,17 @@
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -235,0 +236,3 @@
++  let heaps ← if (← IO.getEnv "EGGSHELL_TRACE_ACTOR_HEAP") == some "1" then
++      some <$> IO.mkRef (#[] : Array (String × Json))
++    else pure none
+@@ -239,0 +243,3 @@
++    if let some heaps := heaps then
++      let observation ← Research.AllocatorDiagnostics.owner
++      heaps.modify (·.push (label,observation))
+@@ -266 +272 @@
+-    if finalReaders.isSome || times.isSome then
++    if finalReaders.isSome || times.isSome || heaps.isSome then
+@@ -271,0 +278,3 @@
++      let stats ← match heaps with
++        | none => pure stats
++        | some heaps => pure (stats.setObjVal! "ownerHeapStages" (toJson (← heaps.get)))

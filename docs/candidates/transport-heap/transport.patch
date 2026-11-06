@@ -1,0 +1,9 @@
+--- a/Eggshell/PublicationStream.lean
++++ b/Eggshell/PublicationStream.lean
+@@ -5,0 +6 @@
++public import tools.research.AllocatorDiagnostics
+@@ -56,0 +58,4 @@
++    let fields ← if (← IO.getEnv "EGGSHELL_TRACE_ACTOR_HEAP") == some "1" then do
++        let observation ← Eggshell.Research.AllocatorDiagnostics.owner
++        pure (fields++[("ownerHeap",observation)])
++      else pure fields

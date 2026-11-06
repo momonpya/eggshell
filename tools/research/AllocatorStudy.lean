@@ -303,6 +303,241 @@ def serviceBuild : IO Unit := do
   write path settings
   discard <| run (allocatorToolchain/"bin/lean").toString #["-j1","-M1536","--run",
     (workspace/"tools/research/StudyBuildMain.lean").toString,path.toString]
+def coherentHeapSetup (action tag : String) : IO Unit := do
+  check (["build","hooks"].contains action) "unknown coherent heap action"
+  let path := base/(tag++".guard-settings.json")
+  check (!(← path.pathExists)) "fresh coherent heap tag required"
+  let target := base/"transport-heap-coherent-build/StudyMain"
+  let runtimeHash ← if action == "hooks" then hash target else pure ""
+  let args := if action == "build" then #[(allocatorToolchain/"bin/lean").toString,"-j1","-M1536","--run",
+      (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"transport-heap-coherent-settings.json").toString]
+    else #["/usr/bin/env","LEAN_NUM_THREADS=1","EGGSHELL_TRACE_SERVICE_PROFILE=1","EGGSHELL_TRACE_QUERY_STAGES=1",
+      "EGGSHELL_TRACE_NUMERICAL_STAGES=1","EGGSHELL_TRACE_ALLOCATOR=1","EGGSHELL_TRACE_ACTOR_HEAP=1",
+      "EGGSHELL_DATA_ROOT="++(base/(tag++"-result/private")).toString,
+      "EGGSHELL_CONFIG="++(base/(tag++"-result/eggshell.toml")).toString,"PLUGIN_ROOT="++(base/"worker-cpu-target").toString,
+      (base/"numerical-stages-client-build/StudyMain").toString,(base/(tag++"-result")).toString,target.toString,runtimeHash]
+  write path (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
+    ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
+    ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
+def heapDistribution (values : Array Nat) : Json := Id.run do
+  let sorted := values.qsort (· < ·)
+  return Json.mkObj [("count",toJson sorted.size),("min",toJson sorted[0]?),
+    ("median",toJson sorted[sorted.size/2]?),("max",toJson sorted.back?)]
+def heapControls (mode : String) : IO (Array (String × Json)) := do
+  let mut controls := #[]
+  for entry in ← base.readDir do
+    unless entry.fileName.startsWith (mode++"-") && entry.fileName.endsWith ".guard.json" do continue
+    let value ← read entry.path
+    check (value.getObjValD "state" == toJson "finished" && value.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "heap control not terminal"
+    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString (number value "guardPid"),"-o","pid="]}
+    check (probe.exitCode != 0 && probe.stdout.trimAscii.isEmpty) "heap control guard remains live"
+    controls := controls.push (entry.fileName,value)
+  return controls
+def actorHeapRecord (transport : Bool := false) (coherent : Bool := false) (service : Bool := false) : IO Unit := do
+  let mode := if transport then "transport-heap" else "actor-heap"
+  let study := workspace/"docs/candidates"/mode
+  let target := base/(if coherent then "transport-heap-coherent-build" else mode++"-build")
+  let tag := if service then "transport-heap-service-hook16-1" else if coherent then "transport-heap-coherent-hook16-1" else mode++"-hook16-1"
+  let root := base/(tag++"-result")
+  let controls ← heapControls mode
+  protectedInputs
+  let build ← read (study/(if service then "service-build.json" else if coherent then "coherent-build.json" else "build.json"))
+  check (build.getObjValD "runtimeSha256" == toJson (← hash (target/"StudyMain"))) "selected heap runtime changed"
+  let existing ← if ← (study/"evidence.json").pathExists then read (study/"evidence.json") else pure Json.null
+  if !(arr existing "runs").any (fun row => row.getObjValD "tag" == toJson tag) then
+    script "docs/candidates/shared-leases/records.lean" #["--"++mode,tag]
+  let evidence ← read (study/"evidence.json")
+  let count := (arr evidence "runs").foldl (fun n run => n+(arr run "rowsIncludingPrime").size) 0
+  script "docs/candidates/shared-leases/records.lean" #["--"++mode,"verify",toString count]
+  let some trial := (arr evidence "runs").find? (fun row => row.getObjValD "tag" == toJson tag) |
+    throw (IO.userError "heap hook trial missing")
+  let some before := (arr (← read (destination/"evidence.json")) "runs").find? (fun row => row.getObjValD "tag" == toJson "allocator-service-hook16-1") |
+    throw (IO.userError "sealed parent hook trial missing")
+  let measured := (arr trial "rowsIncludingPrime").filter fun row => ((row.getObjValAs? String "session").toOption.getD "").startsWith "cpu-wave-"
+  let previous := (arr before "rowsIncludingPrime").filter fun row => ((row.getObjValAs? String "session").toOption.getD "").startsWith "cpu-wave-"
+  check (measured.size == 32 && previous.size == 32) "heap hook domain changed"
+  for row in previous do
+    check (measured.any fun next => next.getObjValD "session" == row.getObjValD "session" &&
+      next.getObjValD "stdoutSha256" == row.getObjValD "stdoutSha256") "heap observer changed actual output bytes"
+  let mut stages : Std.HashMap String (Array Json) := {}
+  let mut profiles := #[]
+  for directory in ← (root/"private/receipts").readDir do
+    unless ← directory.path.isDir do continue
+    for file in ← directory.path.readDir do
+      unless file.fileName.endsWith ".json" do continue
+      let record ← read file.path
+      let value := record.getObjValD "data"
+      if file.fileName == "request-pages.json" then
+        for row in arr value "ownerHeapStages" do
+          let pair ← IO.ofExcept (fromJson? row : Except String (String × Json))
+          stages := stages.insert pair.1 ((stages[pair.1]?.getD #[]).push pair.2)
+      let owner := value.getObjValD "ownerHeap"
+      if owner != Json.null then
+        let label := (file.fileName.dropEnd 5 |>.toString)++"/"++((value.getObjValAs? String "kind").toOption.getD "")
+        stages := stages.insert label ((stages[label]?.getD #[]).push owner)
+        profiles := profiles.push (Json.mkObj [("receipt",toJson directory.fileName),("pid",record.getObjValD "pid"),("stage",toJson label),("data",value)])
+  for label in ["restore-request:start","restore-request:end","execute:start","execute:end","actor-finalized"] do
+    check ((stages[label]?.getD #[]).size == 35) "fixed actor ownership observations missing"
+  if transport then check (!profiles.isEmpty) "actual transport owner observations missing"
+  let summary := (stages.toArray.qsort (fun a b => a.1 < b.1)).map fun (label,values) => Json.mkObj [
+    ("stage",toJson label),("used",heapDistribution (values.map (number · "ownerUsedBytes"))),
+    ("committed",heapDistribution (values.map (number · "ownerCommittedBytes"))),
+    ("reserved",heapDistribution (values.map (number · "ownerReservedBytes")))]
+  write (study/"heap-stages.json") (Json.mkObj [("summary",toJson summary),("profiles",toJson profiles),
+    ("notWholeProcessLiveReachability",toJson true),("allActorStageRowsRetainedInEvidence",toJson true)])
+  let objects ← IO.ofExcept (build.getObjValAs? (Array String) "selectedObjects")
+  let changed := objects.filter (·.startsWith target.toString)
+  if coherent then
+    check ((← read (study/(if service then "service-native-sources.json" else "coherent-native-sources.json"))).getObjValD "exactExpectedChangeSet" == toJson true) "coherent source change audit failed"
+  else check (changed.size == (if transport then 3 else 2)) "undeclared native observer module set"
+  let hashes ← changed.mapM fun path => do return (path,← hash (.mk path),← hash ((System.FilePath.mk path).withExtension "source"))
+  if transport && !coherent then
+    let beforeStream := base/"readonly-pages-build/Eggshell_PublicationStream.source"
+    let old ← IO.ofExcept (fromJson? (← read beforeStream) : Except String (String × Array (String × String)))
+    IO.FS.writeFile (target/"before-stream.lean") old.1
+    let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/PublicationStream.lean","--label","b/Eggshell/PublicationStream.lean",
+      (target/"before-stream.lean").toString,(target/"Eggshell/PublicationStream.lean").toString]}
+    check (patch.exitCode == 1) "transport observer diff missing"
+    IO.FS.writeFile (study/"transport.patch") patch.stdout
+  write (study/"controls.json") (Json.mkObj [("guards",toJson controls),("changedNativeObjectAndSourceHashes",toJson hashes),
+    ("completeStdoutByteEqualToParent",toJson (32 : Nat)),("actualOutputsIncludingPriorFailuresVerified",toJson count),
+    ("protected16HeadsAnd5InputsUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),
+    ("paidComparisons",toJson "0/18"),("adopted",toJson false)])
+def coherentHeapSeal (service : Bool := false) : IO Unit := do
+  let target := base/"transport-heap-coherent-build"
+  let study := workspace/"docs/candidates/transport-heap"
+  let controls ← heapControls "transport-heap-coherent"
+  check (!controls.isEmpty && controls.all (fun (_,value) => value.getObjValD "exitCode" == toJson (0 : Nat))) "coherent native build did not complete"
+  let audit := study/(if service then "service-native-sources.json" else "coherent-native-sources.json")
+  if ← audit.pathExists then
+    if (← read audit).getObjValD "exactExpectedChangeSet" != toJson true then
+      let rejected := study/"coherent-audit-argument-error.json"
+      check (!(← rejected.pathExists)) "preserve previous audit rejection"
+      IO.FS.rename audit rejected
+  if !(← audit.pathExists) then
+    script "tools/research/StudyBuildClosureAudit.lean" (#["compare-sources",(base/"allocator-service-build").toString,target.toString,
+      audit.toString,"Eggshell.OperationPool","Eggshell.PublicationStream"]++if service then #["Eggshell.PublicationService"] else #[])
+  let objects ← ((← IO.FS.readFile (target/"runtime.rsp")).splitOn "\n").filterMapM fun row => do
+    if row.trimAscii.isEmpty then return none
+    return some (← IO.ofExcept (Json.parse row >>= Json.getStr?))
+  write (study/(if service then "service-build.json" else "coherent-build.json")) (Json.mkObj [("runtimeSha256",toJson (← hash (target/"StudyMain"))),
+    ("parentRuntimeSha256",toJson (← hash (base/"allocator-service-build/StudyMain"))),
+    ("selectedObjects",toJson objects),("sourceChangeAudit",← read audit),
+    ("selectedInterfacesAndFullDependencyClosureChecked",toJson true),("adopted",toJson false)])
+def serviceHeapPrepare : IO Unit := do
+  let study := workspace/"docs/candidates/transport-heap"
+  let source : System.FilePath := base/"transport-heap-coherent-source/Eggshell/PublicationService.lean"
+  let text ← IO.FS.readFile source
+  let previous := "def profile (stage : String) (fields : List (String × Json)) : IO Unit := do\n  if (← IO.getEnv \"EGGSHELL_TRACE_SERVICE_PROFILE\") == some \"1\" then\n    Receipt.observe (some (← Receipt.fresh)) stage (Json.mkObj fields)\n"
+  check ((text.splitOn previous).length == 2) "duplicated service profile boundary changed"
+  for name in ["coherent-build.json","heap-stages.json","controls.json"] do
+    let path := study/("stream-only-"++name)
+    check (!(← path.pathExists)) "preserve first coherent observation"
+    write path (← read (study/name))
+  let replacement := "def profile (stage : String) (fields : List (String × Json)) : IO Unit :=\n  Stream.profile stage fields\n\ntheorem profile_uses_shared_diagnostics (stage : String) (fields : List (String × Json)) :\n    profile stage fields = Stream.profile stage fields := rfl\n"
+  IO.FS.writeFile (base/"transport-heap-coherent-source/service-profile-before.lean") text
+  IO.FS.writeFile source (text.replace previous replacement)
+  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/PublicationService.lean","--label","b/Eggshell/PublicationService.lean",
+    (base/"transport-heap-coherent-source/service-profile-before.lean").toString,source.toString]}
+  check (patch.exitCode == 1) "shared profile delegation diff missing"
+  IO.FS.writeFile (study/"service-profile.patch") patch.stdout
+def coherentHeapPrepare : IO Unit := do
+  let parent := base/"allocator-service-build"
+  let sourceRoot := base/"transport-heap-coherent-source"
+  let target := base/"transport-heap-coherent-build"
+  let study := workspace/"docs/candidates/transport-heap"
+  check (!(← sourceRoot.pathExists)) "preserve materialized coherent source"
+  IO.FS.createDirAll sourceRoot
+  let parentBuild ← read (parent/"build.json")
+  let mut mapping ← read (parent/"object-mapping.json")
+  for row in arr parentBuild "modules" do
+    let path ← IO.ofExcept (row.getObjValAs? String "object")
+    let name ← IO.ofExcept (row.getObjValAs? String "module")
+    mapping := mapping.setObjVal! path (toJson name)
+  let objects ← ((← IO.FS.readFile (parent/"runtime.rsp")).splitOn "\n").filterMapM fun row => do
+    if row.trimAscii.isEmpty then return none
+    return some (← IO.ofExcept (Json.parse row >>= Json.getStr?))
+  let mut files : Std.HashMap String String := {}
+  let mut includes := #[]
+  let mut modules := #[]
+  for object in objects do
+    let witness := (System.FilePath.mk object).withExtension "source"
+    unless ← witness.pathExists do continue
+    let name ← IO.ofExcept (mapping.getObjValAs? String object)
+    let source := sourceRoot/(name.replace "." "/"++".lean")
+    let stamp ← IO.ofExcept (fromJson? (← read witness) : Except String (String × Array (String × String)))
+    files := files.insert source.normalize.toString stamp.1
+    for (relative,bytes) in stamp.2 do
+      includes := includes.push ((source.parent.get!/relative).normalize.toString,bytes)
+    modules := modules.push (name,object,← hash witness)
+  let mut conflicts := #[]
+  for (path,bytes) in includes do
+    check (path.startsWith sourceRoot.toString) "embedded source escaped materialized root"
+    if let some existing := files[path]? then
+      if existing != bytes then conflicts := conflicts.push path
+    else files := files.insert path bytes
+  write (study/"coherent-input-audit.json") (Json.mkObj [("parentModules",toJson modules),("conflictingEmbeddedSources",toJson conflicts)])
+  check (conflicts.isEmpty) "parent source witnesses disagree with embedded identity inputs"
+  for (path,bytes) in files do
+    let path := System.FilePath.mk path
+    IO.FS.createDirAll path.parent.get!
+    IO.FS.writeFile path bytes
+  for patch in [workspace/"docs/candidates/actor-heap/observer.patch",study/"transport.patch",study/"service-profile.patch"] do
+    let applied ← IO.Process.output {cmd := "/usr/bin/git",args := #["apply","--unidiff-zero",patch.toString],cwd := some sourceRoot}
+    check (applied.exitCode == 0) ("cannot apply recorded observer source: "++applied.stderr)
+  IO.FS.createDirAll (sourceRoot/".lake/build/lib")
+  discard <| run "/bin/ln" #["-s",(parent/"lib").toString,(sourceRoot/".lake/build/lib/lean").toString]
+  write (sourceRoot/"object-mapping.json") mapping
+  let mut settings := parentBuild.getObjValD "settings"
+  let parents ← IO.ofExcept (settings.getObjValAs? (Array String) "parents")
+  settings := settings.setObjVal! "parents" (toJson (#[parent.toString]++parents))
+  for (key,value) in [("project",sourceRoot.toString),("core",sourceRoot.toString),("output",target.toString),
+      ("baselineResponse",(parent/"runtime.rsp").toString),
+      ("baselineMain",(parent/"tools_research_AllocatorServiceChecks.o").toString),
+      ("objectModules",(sourceRoot/"object-mapping.json").toString)] do
+    settings := settings.setObjVal! key (toJson value)
+  settings := settings.setObjVal! "force" (toJson (#[] : Array String))
+  write (base/"transport-heap-coherent-settings.json") settings
+def finishHeapStudy : IO Unit := do
+  protectedInputs
+  check ((← IO.FS.realPath (base/"worker-cpu-target/bin/eggshelld")) == base/"allocator-service-build/StudyMain") "restore active parent alias before cleanup"
+  for (mode,count) in [("actor-heap",35),("transport-heap",73)] do
+    script "docs/candidates/shared-leases/records.lean" #["--"++mode,"verify",toString count]
+  let controls ← heapControls "transport-heap"
+  let study := workspace/"docs/candidates/transport-heap"
+  check ((← read (study/"controls.json")).getObjValD "guards" == toJson controls) "record final heap guards before cleanup"
+  let build ← read (study/"service-build.json")
+  check (build.getObjValD "runtimeSha256" == toJson (← hash (base/"transport-heap-coherent-build/StudyMain"))) "current diagnostic runtime changed"
+  let processes ← run "/bin/ps" #["-axo","command="]
+  let mut paths := #[base/"transport-heap-coherent-source/service-profile-before.lean"]
+  for (name,_) in controls do
+    let tag := name.dropEnd 11 |>.toString
+    for suffix in ["-result",".log",".guard-settings.json"] do paths := paths.push (base/(tag++suffix))
+  let mut compileLogs := #[]
+  for entry in ← (base/"transport-heap-coherent-build").readDir do
+    if entry.fileName.endsWith ".stdout" || entry.fileName.endsWith ".stderr" then
+      compileLogs := compileLogs.push (entry.fileName,← hash entry.path,(← IO.FS.readFile entry.path).utf8ByteSize)
+      paths := paths.push entry.path
+  let mut removed := #[]
+  for path in paths do
+    unless ← path.pathExists do continue
+    check (!processes.contains path.toString) "retired diagnostic path remains active"
+    let (files,bytes) ← removeTree path
+    removed := removed.push (path.toString,files,bytes)
+  protectedInputs
+  write (study/"coherent-cleanup.json") (Json.mkObj [("removed",toJson removed),("compileLogDigests",toJson compileLogs),
+    ("archive",toJson false),("logicalBytes",toJson (removed.foldl (fun n row => n+row.2.2) 0)),
+    ("currentValidatedDiagnosticRuntimeSourceAndLinkInputsRetained",toJson true),("originalsAndActiveParentUnchanged",toJson true)])
+def compactHeapRecords : IO Unit := do
+  for name in ["phase-lifetime","actor-heap","transport-heap","typed-original-reads"] do
+    for entry in ← (workspace/"docs/candidates"/name).readDir do
+      if entry.fileName.endsWith ".json" then
+        IO.FS.writeFile entry.path (← read entry.path).compress
+  let duplicate := workspace/"docs/candidates/transport-heap/observer.patch"
+  if ← duplicate.pathExists then
+    check ((← IO.FS.readFile duplicate) == (← IO.FS.readFile (workspace/"docs/candidates/actor-heap/observer.patch")))
+      "transport observer is not a duplicate"
+    IO.FS.removeFile duplicate
 def main (args : List String) : IO Unit := do
   match args with
   | ["setup",action,tag] => setup action tag
@@ -314,4 +549,15 @@ def main (args : List String) : IO Unit := do
   | ["cleanup"] => cleanStudy
   | ["restore"] => restoreStudy
   | ["complete"] => completeStudy
+  | ["actor-heap-record"] => actorHeapRecord
+  | ["transport-heap-record"] => actorHeapRecord true
+  | ["coherent-heap-prepare"] => coherentHeapPrepare
+  | ["heap-finish"] => finishHeapStudy
+  | ["heap-compact"] => compactHeapRecords
+  | ["coherent-heap-setup",action,tag] => coherentHeapSetup action tag
+  | ["coherent-heap-seal"] => coherentHeapSeal
+  | ["coherent-heap-record"] => actorHeapRecord true true
+  | ["service-heap-prepare"] => serviceHeapPrepare
+  | ["service-heap-seal"] => coherentHeapSeal true
+  | ["service-heap-record"] => actorHeapRecord true true true
   | _ => throw (IO.userError "AllocatorStudy setup ACTION FRESH_TAG | generate | link")

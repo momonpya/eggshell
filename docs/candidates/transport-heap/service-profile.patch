@@ -1,0 +1,12 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -414,3 +414,2 @@
+-def profile (stage : String) (fields : List (String × Json)) : IO Unit := do
+-  if (← IO.getEnv "EGGSHELL_TRACE_SERVICE_PROFILE") == some "1" then
+-    Receipt.observe (some (← Receipt.fresh)) stage (Json.mkObj fields)
++def profile (stage : String) (fields : List (String × Json)) : IO Unit :=
++  Stream.profile stage fields
+@@ -417,0 +417,3 @@
++theorem profile_uses_shared_diagnostics (stage : String) (fields : List (String × Json)) :
++    profile stage fields = Stream.profile stage fields := rfl
++
