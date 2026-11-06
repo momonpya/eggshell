@@ -1,0 +1,228 @@
+diff --git a/Eggshell/DB/PageMap.lean b/Eggshell/DB/PageMap.lean
+index 7c23dce7..f13aee34 100644
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -3,0 +4 @@ public import Eggshell.DB.Wire
++public import Eggshell.AdmissionLimits
+@@ -200,0 +202,6 @@ abbrev SharedPageKey := String × String × String × String × Nat
++def sharedPageCapacity : Nat := 2*1024*65536
++/-- Reserve bounded immutable seeds,including a builder,inside the same128MiB
++allowance. Actor fronts retain their existing separate2MiB bound. -/
++def sharedGenerationSlots : Nat :=
++  (sharedPageCapacity-(AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes)/(2*65536)
++
+@@ -204,2 +211,2 @@ structure SharedPageCache where
+-  recentBounded : recent.size ≤ 1024 := by simp
+-  previousBounded : previous.size ≤ 1024 := by simp
++  recentBounded : recent.size ≤ sharedGenerationSlots := by simp
++  previousBounded : previous.size ≤ sharedGenerationSlots := by simp
+@@ -207 +214 @@ structure SharedPageCache where
+-def SharedPageCache.capacity : Nat := 2*1024*65536
++def SharedPageCache.capacity : Nat := sharedPageCapacity
+@@ -217 +224 @@ def SharedPageCache.touch (cache : SharedPageCache) (key : SharedPageKey) (page
+-  if fits : cache.recent.size < 1024 ∨ key ∈ cache.recent then
++  if fits : cache.recent.size < sharedGenerationSlots ∨ key ∈ cache.recent then
+@@ -226 +233 @@ def SharedPageCache.touch (cache : SharedPageCache) (key : SharedPageKey) (page
+-      by simp [Std.HashMap.size_insert],cache.recentBounded⟩
++      by simpa [Std.HashMap.size_insert] using (show 1 ≤ sharedGenerationSlots from by decide),cache.recentBounded⟩
+@@ -230,3 +237,15 @@ theorem SharedPageCache.touch_bounded (cache : SharedPageCache) (key : SharedPag
+-  have := (cache.touch key page).recentBounded
+-  have := (cache.touch key page).previousBounded
+-  unfold capacity
++  have recent := (cache.touch key page).recentBounded
++  have previous := (cache.touch key page).previousBounded
++  change (cache.touch key page).recent.size ≤ 496 at recent
++  change (cache.touch key page).previous.size ≤ 496 at previous
++  change _ ≤ 134217728
++  omega
++
++theorem SharedPageCache.reader_seed_budget (cache : SharedPageCache) :
++    (cache.recent.size+cache.previous.size)*65536+
++      (AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes ≤ capacity := by
++  have recent := cache.recentBounded
++  have previous := cache.previousBounded
++  change cache.recent.size ≤ 496 at recent
++  change cache.previous.size ≤ 496 at previous
++  change _+69206016 ≤ 134217728
+@@ -237 +256 @@ theorem SharedPageCache.touch_recent (cache : SharedPageCache) (key : SharedPage
+-  by_cases fits : cache.recent.size < 1024 ∨ key ∈ cache.recent
++  by_cases fits : cache.recent.size < sharedGenerationSlots ∨ key ∈ cache.recent
+@@ -251 +270 @@ namespace LocalPages
+-def maxBytes : Nat := 2*1024*1024
++def maxBytes : Nat := AdmissionLimits.readerPageBytes
+@@ -289 +308,18 @@ structure Front where
+-def Front.new : IO Front := return ⟨← IO.mkRef State.empty,← IO.mkRef 0,← IO.mkRef 0⟩
++def Front.new (seed : State := State.empty) : IO Front := return ⟨← IO.mkRef seed,← IO.mkRef 0,← IO.mkRef 0⟩
++
++/-- Pure lookup of validated immutable pages;no owner or synchronization exists
++in this function's arguments or result. -/
++def readView (state : State) (key : SharedPageKey) (ref : Ref) : Option (Loaded ref) := state.find key ref
++theorem readView_same (state : State) (key : SharedPageKey) (ref : Ref) :
++    readView state key ref = state.find key ref := rfl
++theorem readView_valid (state : State) (key : SharedPageKey) (ref : Ref) (page : Loaded ref)
++    (_found : readView state key ref = some page) : agrees ref page.page = true := page.valid
++
++def seed (cache : SharedPageCache) : State :=
++  let older := cache.previous.toArray.filter fun entry => !cache.recent.contains entry.1
++  (older++cache.recent.toArray).foldl (fun state (key,page) => state.insert key page) State.empty
++
++def Front.find (front : Front) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) := do
++  let found := readView (← front.state.get) key ref
++  if found.isSome then front.hits.modify (·+1) else front.misses.modify (·+1)
++  return found
+@@ -292,18 +328,25 @@ end LocalPages
+-structure PagePool where
+-  state : Std.Mutex SharedPages
+-  /-- One exclusive request owns this bounded pin table across all its readers.
+-  Payloads remain immutable and shared. It is not one cache per source. -/
+-  front : Option LocalPages.Front := none
+-
+-def PagePool.new : IO PagePool := return ⟨← Std.Mutex.new {},none⟩
+-
+-def PagePool.forkPrivate (pool : PagePool) : IO PagePool :=
+-  return ⟨pool.state,some (← LocalPages.Front.new)⟩
+-
+-def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) := do
+-  if let some front := pool.front then
+-    if let some loaded := (← front.state.get).find key ref then
+-      front.hits.modify (·+1)
+-      return some loaded
+-    front.misses.modify (·+1)
+-  let found ← pool.state.atomically do
++inductive PagePool where
++  | owner (state : Std.Mutex SharedPages)
++  /-- A request-local front refers only to immutable page values. This
++  constructor has no shared owner,mutex,CAS or shared LRU capability. -/
++  | reader (front : LocalPages.Front)
++
++def PagePool.new : IO PagePool := PagePool.owner <$> Std.Mutex.new {}
++def PagePool.readOnly : PagePool → Bool | .owner _ => false | .reader _ => true
++
++/-- Only the image owner captures a new seed;query readers receive its value. -/
++def PagePool.captureSeed : PagePool → IO LocalPages.State
++  | .reader front => front.state.get
++  | .owner state => do
++    let cache ← state.atomically do return (← get).cache
++    return LocalPages.seed cache
++
++def PagePool.forkPrivate (_pool : PagePool) (seed : LocalPages.State) :
++    IO {reader : PagePool // reader.readOnly = true} := do
++  let front ← LocalPages.Front.new seed
++  return ⟨PagePool.reader front,rfl⟩
++
++def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Option (Loaded ref)) :=
++ match pool with
++ | .reader front => front.find key ref
++ | .owner sharedState => sharedState.atomically do
+@@ -316,3 +358,0 @@ def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Opti
+-  if let some front := pool.front then
+-    if let some loaded := found then front.state.modify (·.insert key ⟨ref,loaded⟩)
+-  return found
+@@ -320 +360,8 @@ def PagePool.find (pool : PagePool) (key : SharedPageKey) (ref : Ref) : IO (Opti
+-def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit := do
++def LocalPages.Front.insert (front : LocalPages.Front) (key : SharedPageKey) (page : CachedPage) : IO Unit := do
++    unless page.ref.bytes ≤ 65536 do throw (IO.userError "shared page exceeds its verified block bound")
++    front.state.modify (·.insert key page)
++
++def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage) : IO Unit :=
++ match pool with
++ | .reader front => front.insert key page
++ | .owner sharedState => do
+@@ -322,2 +369 @@ def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage)
+-    pool.state.atomically (modify fun state => {state with cache := state.cache.touch key page})
+-    if let some front := pool.front then front.state.modify (·.insert key page)
++    sharedState.atomically (modify fun state => {state with cache := state.cache.touch key page})
+@@ -326,2 +372,2 @@ def PagePool.insert (pool : PagePool) (key : SharedPageKey) (page : CachedPage)
+-def PagePool.stats (pool : PagePool) : IO Json := do
+-  let privateStats ← match pool.front with
++def PagePool.frontStats (front : Option LocalPages.Front) : IO Json := do
++  match front with
+@@ -334 +380,8 @@ def PagePool.stats (pool : PagePool) : IO Json := do
+-  pool.state.atomically do
++def PagePool.stats (pool : PagePool) : IO Json :=
++ match pool with
++ | .reader front => do
++    let privateStats ← frontStats (some front)
++    return Json.mkObj [("readOnly",toJson true),("sharedCacheTouched",toJson false),
++      ("capacityBytes",toJson SharedPageCache.capacity),("privateFront",privateStats)]
++ | .owner sharedState => do
++  sharedState.atomically do
+@@ -338 +391,10 @@ def PagePool.stats (pool : PagePool) : IO Json := do
+-      ("privateFront",privateStats)]
++      ("privateFront",Json.null)]
++
++theorem PagePool.reader_find_is_local (front : LocalPages.Front) (key : SharedPageKey) (ref : Ref) :
++    (PagePool.reader front).find key ref = front.find key ref := rfl
++
++theorem PagePool.reader_insert_is_local (front : LocalPages.Front) (key : SharedPageKey) (page : CachedPage) :
++    (PagePool.reader front).insert key page = front.insert key page := rfl
++
++theorem PagePool.reader_has_no_owner (front : LocalPages.Front) :
++    (PagePool.reader front).readOnly = true := rfl
+diff --git a/Eggshell/PreparedReaders.lean b/Eggshell/PreparedReaders.lean
+index 03b376a0..754dff3e 100644
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -134,0 +135 @@ structure Image where
++  pageSeed : PageMap.LocalPages.State
+@@ -236,0 +238,2 @@ structure Pool where
++  let pageSeed ← pool.pages.captureSeed
++  let seedMetadata := (toJson (pageSeed.entries.map fun (key,page) => (key,page.ref))).compress.utf8ByteSize
+@@ -238 +241 @@ structure Pool where
+-    descriptorBytes+bitmapBytes+traceBytes,count⟩
++    pageSeed,descriptorBytes+bitmapBytes+traceBytes+seedMetadata,count⟩
+@@ -314,0 +318 @@ structure Session where
++  readOnlyPages : pool.pages.readOnly = true
+@@ -327 +331 @@ are shared. A changed scope, root, producer or owner order needs a new freeze. -
+-  let catalogue ← IO.ofExcept (Catalogue.check #[frozen.image])
++  let catalogue ← IO.ofExcept (Catalogue.check #[{frozen.image with pageSeed := .empty}])
+@@ -331 +335,2 @@ are shared. A changed scope, root, producer or owner order needs a new freeze. -
+-  let pages ← frozen.pages.forkPrivate
++  let reader ← frozen.pages.forkPrivate frozen.image.pageSeed
++  let pages := reader.val
+@@ -334 +339 @@ are shared. A changed scope, root, producer or owner order needs a new freeze. -
+-  return ⟨originals,pool⟩
++  return ⟨originals,pool,reader.property⟩
+@@ -362 +367 @@ workers never concurrently mutate its catalogue or repeat its public build. -/
+-  let catalogue ← IO.ofExcept (Catalogue.check #[frozen.image])
++  let catalogue ← IO.ofExcept (Catalogue.check #[{frozen.image with pageSeed := .empty}])
+@@ -366 +371,2 @@ workers never concurrently mutate its catalogue or repeat its public build. -/
+-  let pages ← pool.pages.forkPrivate
++  let reader ← pool.pages.forkPrivate frozen.image.pageSeed
++  let pages := reader.val
+@@ -368 +374 @@ workers never concurrently mutate its catalogue or repeat its public build. -/
+-  return ⟨originals,⟨← IO.mkRef {catalogue},pages⟩⟩
++  return ⟨originals,⟨← IO.mkRef {catalogue},pages⟩,reader.property⟩
+diff --git a/Eggshell/ProjectViews.lean b/Eggshell/ProjectViews.lean
+index 2b161665..1395ec44 100644
+--- a/Eggshell/ProjectViews.lean
++++ b/Eggshell/ProjectViews.lean
+@@ -3,0 +4 @@ public import Eggshell.ProjectStore
++public import Eggshell.AdmissionLimits
+@@ -10 +11 @@ open Lean DB ProjectStore
+-def maxImages : Nat := 32
++def maxImages : Nat := AdmissionLimits.publicImages
+@@ -195 +196,3 @@ another task cannot evict its image while this callback still uses a reader. -/
+-  pool.pages.state.atomically (set ({} : PageMap.SharedPages))
++  match pool.pages with
++  | .owner sharedState => sharedState.atomically (set ({} : PageMap.SharedPages))
++  | .reader _ => throw (IO.userError "project image lifecycle requires its page-cache owner")
+diff --git a/Eggshell/AdmissionLimits.lean b/Eggshell/AdmissionLimits.lean
+index b2550359..523c8d66 100644
+--- a/Eggshell/AdmissionLimits.lean
++++ b/Eggshell/AdmissionLimits.lean
+@@ -6,0 +7,2 @@ def operations : Nat := 160
++def publicImages : Nat := 32
++def readerPageBytes : Nat := 2*1024*1024
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 5dc1970d..84daf048 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2207,0 +2208,7 @@ example : Eggshell.Plugin.OperationPlan.maxRequests = Eggshell.Numerical.maxClie
++#check Eggshell.DB.PageMap.LocalPages.readView_same
++#check Eggshell.DB.PageMap.LocalPages.readView_valid
++#check Eggshell.DB.PageMap.SharedPageCache.reader_seed_budget
++#check Eggshell.DB.PageMap.PagePool.reader_find_is_local
++#check Eggshell.DB.PageMap.PagePool.reader_insert_is_local
++#check Eggshell.DB.PageMap.PagePool.reader_has_no_owner
++#check Eggshell.PreparedReaders.Session.readOnlyPages

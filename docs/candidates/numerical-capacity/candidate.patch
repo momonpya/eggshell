@@ -1,0 +1,51 @@
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index ac93a109..ea4659e0 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -3,0 +4 @@ public import Eggshell.DaemonWire
++public import Eggshell.AdmissionLimits
+@@ -13,0 +15,6 @@ open Lean Std Async TCP Plugin.Daemon
++/-- Each admitted search may have one outstanding numerical RPC. Socket
++backlog and accepted handlers use that same capacity instead of a hidden32. -/
++def maxClients : Nat := AdmissionLimits.operations
++
++theorem max_clients_match_admission : maxClients = AdmissionLimits.operations := rfl
++
+@@ -483 +490 @@ def serve (config : Config) : IO UInt32 := do
+-  server.listen 32
++  server.listen maxClients.toUInt32
+@@ -502 +509 @@ def serve (config : Config) : IO UInt32 := do
+-      if (← clients.get).length < 32 then
++      if (← clients.get).length < maxClients then
+diff --git a/Eggshell/OperationPlan.lean b/Eggshell/OperationPlan.lean
+index dd3fc52e..d912829f 100644
+--- a/Eggshell/OperationPlan.lean
++++ b/Eggshell/OperationPlan.lean
+@@ -2,0 +3 @@ public import Eggshell.OperationWire
++public import Eggshell.AdmissionLimits
+@@ -11 +12 @@ def workers : Nat := saveWorkers
+-def maxRequests : Nat := 160
++def maxRequests : Nat := AdmissionLimits.operations
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index 73f5c2e1..ef603e1b 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -1,0 +2 @@ module
++import Eggshell.OperationPlan
+@@ -2201,0 +2203,3 @@ run_meta do
++
++#check Eggshell.Numerical.max_clients_match_admission
++example : Eggshell.Plugin.OperationPlan.maxRequests = Eggshell.Numerical.maxClients := rfl
+diff --git a/Eggshell/AdmissionLimits.lean b/Eggshell/AdmissionLimits.lean
+new file mode 100644
+index 00000000..b2550359
+--- /dev/null
++++ b/Eggshell/AdmissionLimits.lean
+@@ -0,0 +1,7 @@
++module
++@[expose] public section
++namespace Eggshell.AdmissionLimits
++/-- One bound for already admitted operations and their outstanding numerical
++RPCs. This does not create extra model workers or enlarge any byte budget. -/
++def operations : Nat := 160
++end Eggshell.AdmissionLimits

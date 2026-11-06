@@ -20,6 +20,24 @@ def save (name : String) (rows : Array (System.FilePath × System.FilePath × St
   IO.FS.writeFile (workspace/"docs/candidates"/name/"candidate.patch") source
 def main (arguments : List String) : IO Unit := do
   let core := base/"interest-traffic-core"
+  if arguments == ["readonly-pages"] then
+    check (!(← (workspace/"docs/candidates/readonly-pages/candidate.patch").pathExists)) "readonly page patch already sealed"
+    save "readonly-pages" ((#["Eggshell/DB/PageMap.lean","Eggshell/PreparedReaders.lean",
+      "Eggshell/ProjectViews.lean","Eggshell/AdmissionLimits.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"readonly-pages-parent-core"/relative,core/relative,relative))
+    return
+  if arguments == ["owned-receive"] then
+    check (!(← (workspace/"docs/candidates/owned-receive/candidate.patch").pathExists)) "owned receive patch already sealed"
+    save "owned-receive" ((#["Eggshell/DaemonWire.lean","Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"owned-receive-parent-core"/relative,core/relative,relative))
+    return
+  if arguments == ["numerical-capacity"] then
+    let output := workspace/"docs/candidates/numerical-capacity/candidate.patch"
+    check (!(← output.pathExists)) "numerical capacity patch already sealed"
+    save "numerical-capacity" ((#["Eggshell/Numerical.lean","Eggshell/OperationPlan.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>
+      (base/"numerical-capacity-parent-core"/relative,core/relative,relative))
+    IO.FS.writeFile output ((← IO.FS.readFile output)++(← patch "/dev/null" (core/"Eggshell/AdmissionLimits.lean") "Eggshell/AdmissionLimits.lean"))
+    return
   if arguments == ["numerical-waits"] then
     check (!(← (workspace/"docs/candidates/numerical-waits/candidate.patch").pathExists)) "numerical wait patch already sealed"
     save "numerical-waits" ((#["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean"] : Array String).map fun (relative : String) =>

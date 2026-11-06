@@ -6,6 +6,7 @@ open Lean Eggshell
 #print axioms Numerical.disconnected_admission_refused
 #print axioms Numerical.stopped_admission_refused
 #print axioms Numerical.expired_admission_refused
+#print axioms Plugin.Daemon.received_chunk_decreases
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def verifyReady (root : System.FilePath) : IO Unit := do
   check (!(← root.pathExists)) "preserve preceding readiness check"
@@ -141,6 +142,64 @@ def verifyBackendRetirement : IO Unit := do
   check (expected && (← backend.rawChild.get).isNone && process.stdout.trimAscii.isEmpty)
     "backend failure replaced its error or retained a reaped kernel"
 
+def socketPair : IO (Std.Async.TCP.Socket.Client × Std.Async.TCP.Socket.Client) := do
+  let server ← Std.Async.TCP.Socket.Server.mk
+  server.bind (Plugin.Daemon.loopback 0)
+  server.listen 1
+  let outgoing ← Std.Async.TCP.Socket.Client.mk
+  let connecting ← (outgoing.connect (← server.getSockName)).toIO
+  let incoming ← TaskDeadline.run server.accept ((← IO.monoMsNow)+2000)
+  TaskDeadline.wait connecting ((← IO.monoMsNow)+2000)
+  return (outgoing,incoming)
+
+def verifyOwnedReceive : IO Unit := do
+  let (sender,receiver) ← socketPair
+  let bytes := ByteArray.mk ((Array.range 70000).map Nat.toUInt8)
+  let deadline := (← IO.monoMsNow)+3000
+  let receiving ← IO.asTask (Plugin.Daemon.receiveExactly receiver bytes.size deadline) .dedicated
+  for offset in [0:bytes.size:4093] do
+    TaskDeadline.run (sender.sendAll #[bytes.extract offset (min bytes.size (offset+4093))]) deadline
+    IO.sleep 1
+  let actual ← TaskDeadline.wait receiving deadline
+  check (actual == bytes) "fragmented frame changed original bytes"
+  let raised ← try
+      let _ : Unit ← Plugin.Daemon.withOwnedReceive receiver 10 fun _ =>
+        throw (IO.userError "intentional-read-owner-failure")
+      pure false
+    catch error => pure (error.toString.contains "intentional-read-owner-failure")
+  check raised "read-owner error changed"
+  TaskDeadline.run (sender.sendAll #[bytes]) deadline
+  check ((← Plugin.Daemon.receiveExactly receiver bytes.size deadline) == bytes) "callback failure retained a read or stole later bytes"
+  let (stalledSender,stalledReceiver) ← socketPair
+  let stop ← Std.CancellationToken.new
+  let stalled ← IO.asTask (Plugin.Daemon.receiveExactly stalledReceiver 100 ((← IO.monoMsNow)+2000) (stop := some stop)) .dedicated
+  IO.sleep 5
+  stop.cancel
+  let cancelled ← try
+      let _ ← TaskDeadline.wait stalled ((← IO.monoMsNow)+2000)
+      pure false
+    catch error => pure (error.toString.contains "daemon receive cancelled")
+  check cancelled "receive stop lost its cancellation error"
+  discard <| IO.wait stalled
+  TaskDeadline.run stalledSender.shutdown ((← IO.monoMsNow)+2000)
+  let (deadlineSender,deadlineReceiver) ← socketPair
+  let expired ← try
+      let _ ← Plugin.Daemon.receiveExactly deadlineReceiver 10 ((← IO.monoMsNow)+20)
+      pure false
+    catch error => pure (error.toString.contains "deadline expired")
+  check expired "owned receive deadline did not retire its read"
+  TaskDeadline.run deadlineSender.shutdown ((← IO.monoMsNow)+2000)
+  -- Cancellation above belongs to its connection; the live peer still works.
+  TaskDeadline.run (sender.sendAll #[bytes]) ((← IO.monoMsNow)+2000)
+  check ((← Plugin.Daemon.receiveExactly receiver bytes.size ((← IO.monoMsNow)+2000)) == bytes) "cancelled request affected another peer"
+  let (eofSender,eofReceiver) ← socketPair
+  TaskDeadline.run eofSender.shutdown ((← IO.monoMsNow)+2000)
+  let eof ← try
+      let _ ← Plugin.Daemon.receiveExactly eofReceiver 1 ((← IO.monoMsNow)+2000)
+      pure false
+    catch error => pure (error.toString.contains "closed an incomplete frame")
+  check eof "owned receive did not preserve EOF"
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["--echo-raw"] => fixtureKernel false; return 0
@@ -150,12 +209,15 @@ def main (args : List String) : IO UInt32 := do
     verifyPeer
     verifyPipe
     verifyBackendRetirement
+    verifyOwnedReceive
     IO.FS.writeFile (System.FilePath.mk root/"waits.json") (Json.mkObj [
       ("livePeerAccepted",toJson true),("callbackFailureReleasesRead",toJson true),
       ("peerEofObserved",toJson true),("rawCompletionExact",toJson true),
       ("rawCancellationKillsReapsJoins",toJson true),("fixtureKernelImplementedInLean",toJson true),
       ("rawDeadlineKillsReapsJoins",toJson true),
       ("backendFailurePreservesErrorAndRetiresOnce",toJson true),
+      ("ownedReceiveFragmentExact",toJson true),("ownedReceiveCallbackReleases",toJson true),
+      ("ownedReceiveCancellationDeadlineEof",toJson true),("ownedReceivePeerUnaffected",toJson true),
       ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).pretty
     return 0
   | _ => throw (IO.userError "readiness check root required")

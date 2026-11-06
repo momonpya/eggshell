@@ -164,6 +164,23 @@ actor's result. Runtime/stdlib synchronization is not claimed to be lock-free.
 
 ## Required checks
 
+The isolated reader-page candidate now carries immutable verified page seeds
+into actor-owned fronts. The reader constructor has no shared cache owner;
+lookup, misses, insertion and statistics use local state. Lean checks the
+owner-free operation equalities, page validity and original encoded-page
+budgets. A held-owner-mutex native check and all32 ordinary hook receipts
+confirm this path does not touch the shared page cache. Required originals,
+semantic handoffs and exact parent output bytes pass at16 clients/two waves.
+
+The gated80-client run stopped at3,673,600KiB aggregate RSS before a measured
+client report existed. Retain that capacity failure and leave missing client
+times unmeasured. This is not an80-person pass. Do not raise the guard, retry
+unchanged load, or call the whole retrieval path lock-free: frame-preparation
+coordination, canonical-source pages and prepared metadata bookkeeping still
+require an ownership audit. Move immutable work out of the request path;
+retain explicit lifetime/admission transitions until their replacement has
+equivalent safety and resource guarantees.
+
 1. Native80-borrower checks over the complete16-source cut: exact original
    bindings/dependency observations, independent counters/bitmap overlays,
    one coordinator build and zero new builds per worker; reject altered cuts.

@@ -1,0 +1,107 @@
+diff --git a/Eggshell/DaemonWire.lean b/Eggshell/DaemonWire.lean
+index 953d7193..da0b6a2c 100644
+--- a/Eggshell/DaemonWire.lean
++++ b/Eggshell/DaemonWire.lean
+@@ -82 +82,16 @@ def decodeLength (bytes : ByteArray) : Nat :=
+-partial def receiveExactly (client : Socket.Client) (remaining : Nat)
++/-- Exclusive framed reads own the native operation until it resolves or is
++cancelled and joined. Cancelling a partial frame retires that request; it must
++never resume on this connection. No readiness selector starts a blocking read
++on a second worker. The caller must not have another read on this socket. -/
++def withOwnedReceive (client : Socket.Client) (amount : Nat)
++    (action : AsyncTask (Option ByteArray) → IO α) : IO α := do
++  let reading := AsyncTask.ofPromise (← client.native.recv? amount.toUInt64)
++  try action reading
++  finally
++    client.native.cancelRecv
++    discard <| IO.wait reading
++
++theorem received_chunk_decreases (remaining count : Nat)
++    (valid : 0 < count ∧ count ≤ remaining) : remaining-count < remaining := by omega
++
++def receiveExactly (client : Socket.Client) (remaining : Nat)
+@@ -88,13 +103,15 @@ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
+-  let cancel ← Std.CancellationToken.new
+-  let waiting ← (do
+-    let timer ← Selector.sleep (.ofNat (deadline - now))
+-    let cases : Array (Selectable (Option ByteArray)) := #[
+-      .case (client.recvSelector remaining.toUInt64) pure,
+-      .case timer (fun _ => throw (IO.userError "daemon receive deadline expired")),
+-      .case cancel.selector (fun _ => throw (IO.userError "daemon receive cancelled"))]
+-    let cases := match stop with
+-      | none => cases
+-      | some token => cases.push (.case token.selector (fun _ =>
+-          throw (IO.userError "daemon receive cancelled")))
+-    Selectable.one cases).toIO
+-  let chunk ← try TaskDeadline.wait waiting deadline
++  let chunk ← withOwnedReceive client remaining fun reading => do
++    let ready ← TaskDeadline.event reading
++    let cancel ← Std.CancellationToken.new
++    let waiting ← (do
++      let timer ← Selector.sleep (.ofNat (deadline - now))
++      let cases : Array (Selectable (Option ByteArray)) := #[
++        .case ready pure,
++        .case timer (fun _ => throw (IO.userError "daemon receive deadline expired")),
++        .case cancel.selector (fun _ => throw (IO.userError "daemon receive cancelled"))]
++      let cases := match stop with
++        | none => cases
++        | some token => cases.push (.case token.selector (fun _ =>
++            throw (IO.userError "daemon receive cancelled")))
++      Selectable.one cases).toIO
++    try TaskDeadline.wait waiting deadline
+@@ -102,2 +118,0 @@ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
+-      -- Cancellation unregisters the native read. Do not leave an async
+-      -- receive alive after its owning IO task has returned.
+@@ -108,3 +123,5 @@ partial def receiveExactly (client : Socket.Client) (remaining : Nat)
+-  if chunk.isEmpty then
+-    throw (IO.userError "eggshelld returned an empty frame")
+-  receiveExactly client (remaining - chunk.size) deadline (received.append chunk) stop
++  if _valid : 0 < chunk.size ∧ chunk.size ≤ remaining then
++    receiveExactly client (remaining - chunk.size) deadline (received.append chunk) stop
++  else throw (IO.userError "eggshelld returned an empty or oversized frame fragment")
++termination_by remaining
++decreasing_by exact received_chunk_decreases remaining chunk.size _valid
+diff --git a/Eggshell/Numerical.lean b/Eggshell/Numerical.lean
+index ea4659e0..0ff95ca2 100644
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -291 +291 @@ An unfinished client frame cannot keep shutdown waiting for its request budget.
+-partial def receiveLive (backend : Backend) (client : Socket.Client)
++def receiveLive (backend : Backend) (client : Socket.Client)
+@@ -297,5 +297,11 @@ partial def receiveLive (backend : Backend) (client : Socket.Client)
+-  let chunk : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
+-    let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
+-    Selectable.one #[
+-      .case (client.recvSelector remaining.toUInt64) (fun bytes => pure (some bytes)),
+-      .case timer (fun _ => pure none)])
++  let chunk ← withOwnedReceive client remaining fun reading => do
++    let ready ← TaskDeadline.event reading
++    repeat
++      let now ← IO.monoMsNow
++      unless !(← backend.stopping.get) && now < deadline do
++        throw (IO.userError "numerical frame is no longer live")
++      let result : Option (Option ByteArray) ← TaskDeadline.awaitEvent (do
++        let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
++        Selectable.one #[.case ready (fun bytes => pure (some bytes)),.case timer (fun _ => pure none)])
++      if let some result := result then return result
++    throw (IO.userError "unreachable numerical receive")
+@@ -303,5 +309,7 @@ partial def receiveLive (backend : Backend) (client : Socket.Client)
+-  | none => receiveLive backend client remaining deadline received
+-  | some none => throw (IO.userError "numerical client closed an incomplete frame")
+-  | some (some bytes) =>
+-      unless !bytes.isEmpty do throw (IO.userError "numerical client returned an empty frame")
+-      receiveLive backend client (remaining-bytes.size) deadline (received.append bytes)
++  | none => throw (IO.userError "numerical client closed an incomplete frame")
++  | some bytes =>
++      if _valid : 0 < bytes.size ∧ bytes.size ≤ remaining then
++        receiveLive backend client (remaining-bytes.size) deadline (received.append bytes)
++      else throw (IO.userError "numerical client returned an empty or oversized frame fragment")
++termination_by remaining
++decreasing_by exact received_chunk_decreases remaining bytes.size _valid
+diff --git a/Eggshell/ContractAudit.lean b/Eggshell/ContractAudit.lean
+index ef603e1b..5dc1970d 100644
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2205,0 +2206,2 @@ example : Eggshell.Plugin.OperationPlan.maxRequests = Eggshell.Numerical.maxClie
++#check Eggshell.Plugin.Daemon.withOwnedReceive
++#check Eggshell.Plugin.Daemon.received_chunk_decreases

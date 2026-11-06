@@ -80,6 +80,8 @@ def main (arguments : List String) : IO Unit := do
     | "--numerical-ready" :: tags => (destination.parent.getD destination / "numerical-ready",tags)
     | "--numerical-stages" :: tags => (destination.parent.getD destination / "numerical-stages",tags)
     | "--numerical-waits" :: tags => (destination.parent.getD destination / "numerical-waits",tags)
+    | "--owned-receive" :: tags => (destination.parent.getD destination / "owned-receive",tags)
+    | "--readonly-pages" :: tags => (destination.parent.getD destination / "readonly-pages",tags)
     | tags => (destination,tags)
   let evidencePath := destination/"evidence.json"
   let bodiesPath := destination/"bodies.json"
@@ -110,7 +112,8 @@ def main (arguments : List String) : IO Unit := do
     check ((tag.startsWith "shared-leases-" || tag.startsWith "hosted-endpoint-" ||
       tag.startsWith "source-protocol-overlap" || tag.startsWith "task-observer-" ||
       tag.startsWith "task-waiter-" || tag.startsWith "query-stages-" || tag.startsWith "provider-stages-" ||
-      tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-") &&
+      tag.startsWith "numerical-ready-" || tag.startsWith "numerical-stages-" || tag.startsWith "numerical-waits-" ||
+      tag.startsWith "owned-receive-" || tag.startsWith "readonly-pages-") &&
       !evidence.any (fun run => run.getObjValD "tag" == toJson tag)) "fresh dispatch record required"
     let guard ← read (base/(tag++".guard.json"))
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "guard is not drained"
@@ -118,7 +121,10 @@ def main (arguments : List String) : IO Unit := do
     let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
     check (probe.exitCode != 0 && probe.stdout.trimAscii.isEmpty) "guard process still live"
     let root := base/(tag++"-result")
-    let report ← if ← (root/"report.json").pathExists then read (root/"report.json") else if ← (root/"direct-events.json").pathExists then read (root/"direct-events.json") else pure Json.null
+    let incompleteReport := !(← (root/"report.json").pathExists) && (← (root/"prime-checkpoint.json").pathExists)
+    let report ← if ← (root/"report.json").pathExists then read (root/"report.json") else if ← (root/"direct-events.json").pathExists then read (root/"direct-events.json") else if incompleteReport then do
+        pure (Json.mkObj [("prime",← read (root/"prime-checkpoint.json"))])
+      else pure Json.null
     let waves := (#[report.getObjValD "prime",report.getObjValD "first",report.getObjValD "second"]++arr report "remaining").filter (· != Json.null)
     let mut captured := #[]
     let mut observations := #[]
@@ -144,7 +150,11 @@ def main (arguments : List String) : IO Unit := do
       let receipts ← (arr wave "receipts").mapM (enrichedReceipt root)
       observations := observations.push (Json.mkObj [("name",wave.getObjValD "name"),("serviceStats",wave.getObjValD "serviceStats"),
         ("persistentCpu",wave.getObjValD "persistentCpu"),("receipts",toJson receipts)])
-    let mut fields := [("tag",toJson tag),("guard",guard),("rowsIncludingPrime",toJson captured),("waves",toJson observations)]
+    for entry in ← if ← root.pathExists then root.readDir else pure #[] do
+      if entry.fileName.endsWith ".stdout" then
+        check (captured.any fun row => row.getObjValD "session" == toJson (entry.fileName.dropEnd 7 |>.toString)) "actual stdout omitted from retained evidence"
+    let mut fields := [("tag",toJson tag),("guard",guard),("rowsIncludingPrime",toJson captured),("waves",toJson observations),
+      ("stoppedBeforeClientReport",toJson incompleteReport),("missingClientLatenciesUnmeasured",toJson incompleteReport)]
     for key in ["runtimeSha256","caseCount","concurrentClients","requestOwnedActors","originalHeadsUnchanged","independentSearchActors",
       "separateMutableFronts","oneSharedHitPerBorrower","fullDescriptorAndScopeChecked","pressureInsertions","maxEncodedReferencedBytes","maxEntries","left","right","shared","earlyCompletions","parallelNativeTimers","exactPayloadsAndOrder","exceptionsPreserved","validEmptyPreserved","expiredCompletionRefused","elapsedMs","sameChatSequential","metadataAndCountBounds","saveLanesRemainIndependent","staleTokensRejected",
       "cancelledTaskJoinedPeerCompleted","expiredTaskJoined","actualHookCapacityTested","concurrentCuts","sourcesPerCut","retainedTokens","acquisitionElapsedMs","full","drained","final","oneCachePinPerDescriptor","foreignScopeRootManifestRejected","activeReleaseExpiryCloseAccounted",

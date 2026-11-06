@@ -1,0 +1,11 @@
+{
+  "beforeBuildAndRun":true,
+  "purpose":"Separate exact numerical transport/decode from whole-host graph pressure using the same existing Numerical/DaemonWire objects and real MiniLM boundary,without another full80-hook run.",
+  "server":"The new native entry invokes the unchanged Numerical.serve object from runtime56f5aadb. Preserve its exact producer bytes,API limits,authentication,gates and original scoring math. The instrumented client calls original connect/send/receive functions and compares stable encoding/coverage/score outputs with ordinary Client.request before load.",
+  "workload":"Same frozen16 owner sources,163 documents,1205 durable window references in canonical source/document/window order.80 distinct previously seen support-case questions. One query encode and two exact full-domain scoring passes per query,256-row batches. Whole-hook focus may have1200 rather than1205 rows; this is a numerical-component isolation,not an identical whole-hook comparison.",
+  "observations":"Client connect/send/header/body-ready,outer and inner JSON decoded,client trace repack and provider reparse timestamps; request/response byte counts; existing returned server events; score digests and repeated-score equality. Preserve Client.request's trace-enabled parse/repack plus provider parse in the observed load,while omitting only its small client-profile append. Do not log questions,auth secrets or full vector payloads. Failed current RPCs remain unobserved. Process CPU snapshots and guardRSS are diagnostic only.",
+  "order":["sequential native build under unchanged resource guard","ordinary-vs-observed exact controls and one16-client run","one80-client run only if16 control is fully complete and drained;otherwise stop","inspect evidence before any further runtime change or whole80 hook run"],
+  "bounds":"Each request has the original28800ms outer bound and each RPC uses min(remaining outer deadline,24000ms). Scoring authority remains advisory. AggregateRSS ceiling4194304KiB,stop3670016KiB,disk floor2097152KiB.",
+  "limitations":"No WorkGraph/retrieval/reranking/rendering or original-evidence delivery is exercised. Even a full standalone80 pass does not establish80-person8h,growth,NAS,98percent real evidence,answer quality or total-token improvement.",
+  "answeringModelCalls":0,"paidComparisons":"0/18","adopted":false
+}

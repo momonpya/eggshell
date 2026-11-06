@@ -125,4 +125,10 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 80同時のpublication hostは94.06CPU秒（system60.61秒）、数値daemonは5.43CPU秒。返った採点RPCの往復は67profileの完了済みscore区間205278ms中204449msを占めた。並行profileの総和はwall時間ではない。採点kernel中央値5ms、output-readyからclient受領までは中央値1105msで、sendとclient側の待ちはまだ分離できていない。既存resolverは呼出内で各sourceをmemo済みなので、原文cacheOptionsの再追加を主因対策として繰り返さない。[次の固定手順](docs/candidates/numerical-waits/next-plan.json)は、全hookの80同時を再試行する前に、同じ数値protocol単独で80独立要求とsend/receive境界を測り、共有hostの待機負荷とサービス自体を切り分ける。チャットごとの独立actorを維持し、重い処理と不変project準備を共有する。固定3本への復帰や重いprocess80個、予算・期限拡大で代用しない。328実出力、失敗、patch、原典headを検査し、終了DB/cache/log・不要な実行体はarchiveせず削除する。候補は未採用・製品coreは変更せず、回答モデル0/有料比較0/18。80人8時間・増大project/NAS・実98%・品質・総token改善は未達。
 
+[読み取りページの共有ロックを外す隔離候補](docs/candidates/readonly-pages/README.md)を実装した。共有hitでLRU/統計を更新する経路をやめ、読取型から共有owner/Mutex/CASへの参照を消した。不変の検証済みseedをimageに保持し、チャットごとの局所frontに渡す。scope/full Refの拒否、ページ検証の一致、ownerを使わない実装との等式、Sessionのreader-mode、既存128MiB内のseed予約と2MiB/512-entry局所上限をLeanで確認した。共有owner mutexを保持したままhit/miss/insert/statsを完了するnative検査が通り、通常ContractAuditも通った。実16並行×2波は32/32原文+ACK・32/32意味完了、親本文byte一致、全32受領で共有page cacheへのアクセスなし。最大9181ms・関連RSS2702224KiB。ただし80同時は3673600KiBでguard停止、残存0。測定波のclient reportが完成する前に停止しており、配送率やclient時間は未測定のまま残す。80人の合格とは扱わず、同じ負荷の再試行や資源上限拡大はしない。
+
+先行する[数値transportの切り分け](docs/candidates/numerical-protocol/README.md)では、既存受付160に対し数値socketのbacklog/handlerが32の不一致を発見し、既存の共通上限にそろえた候補で部品77/80→80/80となった。さらにnative readを接続ごとに一度だけ登録・取消/joinする候補は80/80・全80厳密score digest一致、wall9970→8026ms、client system CPU57.00→35.71秒。これはcomponentの結果であり、全hookやtoken削減ではない。JSON解析中央値は1ms以下で、codec書換えを主因対策にはしない。中間候補の実16×2波も32/32配送・意味完了、親本文一致だったが、中間候補の80全hookは実行していない。今回も回答モデル0/有料比較0/18、候補未採用・製品coreは変更しない。
+
+次は、共有immutable imageを読めば済む部分と受付/保持/取消の状態更新を分離する。PreparedReadersのframe準備queue、canonical-sourceのowner page pool、prepared owner/metadata/file cacheのhit bookkeepingはまだ別の同期経路として残る。読み取り全体がlock-freeとは主張しない。80同時でhostの状態保持も含めて資源境界を測り、不要な共有更新を型と証明で排除してから同じ容量負荷へ戻る。98%実根拠、80人8時間・増大project・NAS・品質・総token改善は引き続き未達。
+
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。
