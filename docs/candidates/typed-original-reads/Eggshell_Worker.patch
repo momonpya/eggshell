@@ -1,0 +1,13 @@
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -791,0 +792 @@
++  originalReads : Option Synapses.SourceViewBatch.ReadAccess := none
+@@ -798 +799,2 @@
+-    (onStage : String → IO Unit := fun _ => pure ()) : IO SearchEnvironment := do
++    (onStage : String → IO Unit := fun _ => pure ())
++    (originalReads : Option Synapses.SourceViewBatch.ReadAccess := none) : IO SearchEnvironment := do
+@@ -806 +808 @@
+-  return ⟨request.pending.sessionId,request.identity,context,configured,snapshots,onStage⟩
++  return ⟨request.pending.sessionId,request.identity,context,configured,snapshots,onStage,originalReads⟩
+@@ -889,0 +892 @@
++          originalReads := environment.originalReads

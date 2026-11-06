@@ -1,0 +1,107 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -315,2 +315 @@
+-def batchRequests (server : Server) (secret : String) (payload : Json) : IO (Array SourceViewBatch.Request) := do
+-  let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++def checkBatchRequests (server : Server) (secret : String) (requests : Array SourceViewBatch.Request) : IO Unit := do
+@@ -327,0 +327,4 @@
++
++def batchRequests (server : Server) (secret : String) (payload : Json) : IO (Array SourceViewBatch.Request) := do
++  let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++  checkBatchRequests server secret requests
+@@ -340,2 +343,4 @@
+-def sourcePalettes (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
+-  let requests ← batchRequests server secret payload
++def readSourceViews (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
++    (deadline : Nat) : IO SourceViewBatch.Palette := do
++  checkBatchRequests server secret requests
++  let started ← IO.monoMsNow
+@@ -345,5 +350,13 @@
+-    let (count,shared) ← withBatchSource server request deadline fun loaded reuse => do
+-      let mut bytes := 0
+-      for owner in request.owners do
+-        bytes := bytes+(← loaded.withMetadata owner deadline (fun ready => pure ready.bytes))
+-      return (bytes,reuse)
++    -- Count under one temporary, existing reply reservation; waiting actors
++    -- hold only coordinates. No geometry escapes into the query before its
++    -- complete metadata+geometry reservation has been admitted.
++    reserveReply server Stream.maxBytes deadline
++    let (count,shared) ← try
++      withBatchSource server request deadline fun loaded reuse => do
++        let mut bytes := 0
++        for owner in request.owners do
++          bytes := bytes+(← loaded.withMetadata owner deadline (fun ready => pure ready.bytes))
++        let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
++        let records ← server.structures.project original.index request.access.database request.owners deadline (Stream.maxBytes-4096)
++        return (bytes+records.bytes,reuse)
++    finally server.sourceReplies.atomically (modify (·-Stream.maxBytes))
+@@ -360 +373,3 @@
+-        request.access.source loaded request.owners deadline)
++        request.access.source loaded request.owners deadline (some server.structures))
++    unless sources.foldl (fun bytes source => bytes+source.capturedBytes) 0 ≤ bytes do
++      throw (IO.userError "original view exceeded its counted metadata and geometry")
+@@ -362 +377 @@
+-    let values ← server.palettes.withView lease key fun view => do
++    let (values,records) ← server.palettes.withView lease key fun view => do
+@@ -363,0 +379 @@
++      let mut records := #[]
+@@ -368,5 +384,7 @@
+-          owners := owners.push (Json.arr #[toJson owner,ready.json])
+-        values := values.push (Json.arr owners)
+-      return values
+-    return Json.mkObj [("identities",toJson (requests.map (·.access.identity))),
+-      ("lease",toJson lease),("owners",Json.arr values),("reuse",toJson reuse)]
++          owners := owners.push (owner,ready.stored.descriptor)
++        values := values.push owners
++        records := records.push (← IO.ofExcept (entry.readRecords request.owners))
++      return (values,records)
++    Stream.profile "source-views-profile" [("sources",toJson requests.size),("countedBytes",toJson bytes),
++      ("chargedBytes",toJson (SharedReadViews.charge bytes)),("elapsedMs",toJson ((← IO.monoMsNow)-started))]
++    return {identities := requests.map (·.access.identity),lease := lease,owners := values,reuse := reuse,records := records}
+@@ -374,0 +393,19 @@
++def sourcePalettes (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++  return toJson (← readSourceViews server secret requests deadline)
++
++theorem source_palettes_uses_typed_read (server : Server) (secret : String) (payload : Json) (deadline : Nat) :
++    sourcePalettes server secret payload deadline = (do
++      let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++      return toJson (← readSourceViews server secret requests deadline)) := rfl
++
++def localReadAccess (server : Server) (endpoint : Daemon.Endpoint) : SourceViewBatch.ReadAccess := {
++  pid := endpoint.pid,port := endpoint.port,generation := endpoint.generation
++  read := fun requests deadline => do
++    let some first := requests[0]? | throw (IO.userError "original batch has no read scope")
++    readSourceViews server first.access.capability requests deadline
++  release := fun requests lease => do
++    let some first := requests[0]? | throw (IO.userError "original batch release has no read scope")
++    checkBatchRequests server first.access.capability requests
++    server.palettes.release lease (SourceViewBatch.key requests) }
++
+@@ -498,15 +534,0 @@
+-def sourceRecords (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
+-  let scope ← scopedSource server secret payload
+-  let head ← IO.ofExcept (payload.getObjVal? "source" >>= fromJson? (α := PageMap.Head))
+-  let metadata ← IO.ofExcept (payload.getObjVal? "metadata" >>= fromJson? (α := CanonicalSource.Cache.Manifest))
+-  let owners ← IO.ofExcept (payload.getObjValAs? (Array String) "owners")
+-  unless owners.size ≤ 4096 && owners.all (fun owner => owner.utf8ByteSize ≤ 256) &&
+-      head.identity == scope.database && metadata.source.identity == scope.database &&
+-      metadata.implementation == CanonicalSource.Cache.implementation && digest metadata.payload do
+-    throw (IO.userError "invalid original record projection request")
+-  withPreparedSource server scope head metadata (← retainedToken payload) deadline fun loaded _ => do
+-    let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
+-    let batch ← server.structures.project original.index scope.database owners deadline (Stream.maxBytes-4096)
+-    let rows := batch.rows
+-    return toJson ({source := head,rows,cache := Json.null} : ObservedRecordView.Projection)
+-
+@@ -788 +810 @@
+-    let streamedRead := ["source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
++    let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
+@@ -791 +813 @@
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-records","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
+@@ -810 +831,0 @@
+-      else if kind == "source-records" then sourceRecords server secret payload deadline
+@@ -996 +1017 @@
+-        let task ← IO.asTask (server.operations.runSearch active job) .dedicated
++        let task ← IO.asTask (server.operations.runSearch active job (some (localReadAccess server endpoint))) .dedicated

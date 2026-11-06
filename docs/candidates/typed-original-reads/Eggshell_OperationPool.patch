@@ -1,0 +1,15 @@
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -232 +232 @@
+-    (ready : Nat → IO Unit) : IO Worker.SearchReply := do
++    (ready : Nat → IO Unit) (originalReads : Option Synapses.SourceViewBatch.ReadAccess := none) : IO Worker.SearchReply := do
+@@ -251 +251 @@
+-    let initial ← Worker.openSearchEnvironment request mark
++    let initial ← Worker.openSearchEnvironment request mark originalReads
+@@ -297 +297,2 @@
+-def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job) : IO Unit := do
++def Pool.runSearch (pool : Pool) (active : OperationPlan.Active) (job : Job)
++    (originalReads : Option Synapses.SourceViewBatch.ReadAccess := none) : IO Unit := do
+@@ -304 +305 @@
+-      pool.searchActor request job.cancelled (fun now => job.ready.set (some now))) .dedicated
++      pool.searchActor request job.cancelled (fun now => job.ready.set (some now)) originalReads) .dedicated

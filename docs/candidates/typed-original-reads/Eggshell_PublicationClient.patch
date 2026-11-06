@@ -1,0 +1,101 @@
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -57,0 +58 @@
++  localReads : Option Synapses.SourceViewBatch.ReadAccess := none
+@@ -84 +85 @@
+-  return some ⟨{endpoint with secret := access.capability},access,retained⟩
++  return some ⟨{endpoint with secret := access.capability},access,retained,none⟩
+@@ -149 +150 @@
+-  return some ⟨reference.endpoint,access,none⟩
++  return some ⟨reference.endpoint,access,none,reference.localReads⟩
+@@ -222,0 +224 @@
++  localReads : Option Synapses.SourceViewBatch.ReadAccess := none
+@@ -223,0 +226,12 @@
++def releaseBatch (endpoint : Daemon.Endpoint) (requests : Array Synapses.SourceViewBatch.Request)
++    (palette : Synapses.SourceViewBatch.Palette) (localReads : Option Synapses.SourceViewBatch.ReadAccess)
++    (deadline : Nat) : IO Unit := do
++  if let some access := localReads then
++    unless access.accepts endpoint do throw (IO.userError "original batch release changed its local service")
++    return ← access.release requests palette.lease
++  if (← IO.monoMsNow) ≥ deadline then return
++  let budget := min 1000 (← liveBudget deadline)
++  let response ← Daemon.exchange endpoint "source-release-many" (Json.mkObj [
++    ("sources",toJson requests),("lease",toJson palette.lease),("budgetMs",toJson budget)]) (budget := budget)
++  unless response == "true" do throw (IO.userError "original batch release was not acknowledged")
++
+@@ -232,8 +246,16 @@
+-  let budget ← liveBudget deadline
+-  let response ← Stream.exchange first.1.endpoint "source-palettes" (Json.mkObj [
+-    ("sources",toJson requests),("budgetMs",toJson budget)]) budget
+-  let profileReceived ← IO.monoMsNow
+-  let palette ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.SourceViewBatch.Palette))
+-  let profileDecoded ← IO.monoMsNow
+-  unless palette.identities == requests.map (·.access.identity) && Synapses.digest palette.lease &&
+-      palette.owners.size == requests.size && palette.reuse.size == requests.size do
++  let localReads := first.1.localReads.filter (fun access => access.accepts first.1.endpoint)
++  let (palette,diagnostic) ← match localReads with
++    | some access =>
++      let value ← access.read requests deadline
++      pure (value,none)
++    | none => do
++      let budget ← liveBudget deadline
++      let response ← Stream.exchange first.1.endpoint "source-palettes" (Json.mkObj [
++        ("sources",toJson requests),("budgetMs",toJson budget)]) budget
++      let profileReceived ← IO.monoMsNow
++      let value ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.SourceViewBatch.Palette))
++      let profileDecoded ← IO.monoMsNow
++      pure (value,some (response,profileReceived,profileDecoded))
++  try
++   unless palette.identities == requests.map (·.access.identity) && Synapses.digest palette.lease &&
++      palette.owners.size == requests.size && palette.reuse.size == requests.size && palette.records.size == requests.size do
+@@ -241 +263 @@
+-  for index in [:requests.size] do
++   for index in [:requests.size] do
+@@ -247,2 +269,13 @@
+-  clientProfile "source-palettes" profileStarted profileReceived profileDecoded response
+-  return ⟨first.1.endpoint,requests,palette⟩
++    let some records := palette.records[index]? | throw (IO.userError "original batch record domain disappeared")
++    unless records.map Prod.fst == request.owners && records.all (fun (owner,value) => value.all fun geometry =>
++        geometry.header.database == request.access.database && geometry.header.owner == owner) do
++      throw (IO.userError "original batch records changed their read scope")
++   match diagnostic with
++    | some (response,received,decoded) => clientProfile "source-palettes" profileStarted received decoded response
++    | none => Stream.profile "local-source-views" [("sources",toJson requests.size),
++        ("owners",toJson (requests.foldl (fun n request => n+request.owners.size) 0)),
++        ("elapsedMs",toJson ((← IO.monoMsNow)-profileStarted))]
++   return ⟨first.1.endpoint,requests,palette,localReads⟩
++  catch error =>
++    try releaseBatch first.1.endpoint requests palette localReads ((← IO.monoMsNow)+1000) catch _ => pure ()
++    throw error
+@@ -250,6 +283,2 @@
+-def SourceBatch.release (batch : SourceBatch) (deadline : Nat) : IO Unit := do
+-  if (← IO.monoMsNow) ≥ deadline then return
+-  let budget := min 1000 (← liveBudget deadline)
+-  let response ← Daemon.exchange batch.endpoint "source-release-many" (Json.mkObj [
+-    ("sources",toJson batch.requests),("lease",toJson batch.palette.lease),("budgetMs",toJson budget)]) (budget := budget)
+-  unless response == "true" do throw (IO.userError "original batch release was not acknowledged")
++def SourceBatch.release (batch : SourceBatch) (deadline : Nat) : IO Unit :=
++  releaseBatch batch.endpoint batch.requests batch.palette batch.localReads deadline
+@@ -346,22 +374,0 @@
+-def sourceRecords (reference : SourceReference) (owners : Array String) (deadline : Nat) :
+-    IO Synapses.ObservedRecordView.Projection := do
+-  let profileStarted ← IO.monoMsNow
+-  let access := reference.access
+-  let owners := (hashDistinct owners.toList).toArray
+-  let budget ← liveBudget deadline
+-  let response ← Stream.exchange reference.endpoint "source-records" (Json.mkObj [
+-    ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+-    ("metadata",toJson access.metadata),("retained",toJson reference.retained),("owners",toJson owners),("budgetMs",toJson budget)]) budget
+-  let profileReceived ← IO.monoMsNow
+-  let result ← IO.ofExcept (Json.parse response >>=
+-    fromJson? (α := Synapses.ObservedRecordView.Projection))
+-  let profileDecoded ← IO.monoMsNow
+-  unless result.source == access.source && result.rows.map Prod.fst == owners do
+-    throw (IO.userError "original record projection changed its requested source or owner domain")
+-  for (owner,found) in result.rows do
+-    if let some view := found then
+-      unless view.header.database == access.database && view.header.owner == owner do
+-        throw (IO.userError "original record view crossed its read scope")
+-  clientProfile "source-records" profileStarted profileReceived profileDecoded response
+-  return result
+-

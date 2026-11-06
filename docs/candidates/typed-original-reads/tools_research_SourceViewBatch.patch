@@ -1,0 +1,28 @@
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -3,0 +4 @@
++public import Eggshell.DaemonWire
+@@ -24,0 +26 @@
++  records : Array (Array (String × Option ObservedRecordView.Geometry))
+@@ -26,0 +29,21 @@
++/-- Explicit process-local read authority. No registration, publication or
++write operation is exposed, and this value is never serialized or global. -/
++structure ReadAccess where
++  pid : Nat
++  port : Nat
++  generation : String
++  read : Array Request → Nat → IO Palette
++  release : Array Request → String → IO Unit
++
++def ReadAccess.accepts (access : ReadAccess) (endpoint : Plugin.Daemon.Endpoint) : Bool :=
++  endpoint.session == "publisher" && endpoint.pid == access.pid &&
++    endpoint.port == access.port && endpoint.generation == access.generation
++
++theorem ReadAccess.foreign_process (access : ReadAccess) (endpoint : Plugin.Daemon.Endpoint)
++    (foreign : endpoint.pid ≠ access.pid) : access.accepts endpoint = false := by
++  simp [accepts,foreign]
++
++theorem ReadAccess.foreign_generation (access : ReadAccess) (endpoint : Plugin.Daemon.Endpoint)
++    (foreign : endpoint.generation ≠ access.generation) : access.accepts endpoint = false := by
++  simp [accepts,foreign]
++

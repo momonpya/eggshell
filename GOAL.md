@@ -29,15 +29,17 @@
 
 ## 現在地と次の順序
 
-現在は[整合したnative closureによる所有・通信の診断](docs/candidates/transport-heap/README.md)まで完了した。固定16原典・MiniLM・質問・sealed clientの2組の16同時×2波は各32/32実原文+ACK・意味完了、親の全stdoutとbyte一致した。後者の最大8363ms・関連RSS2701744KiBは診断controlであり改善の証明ではない。部分的なnative差し替えで起きたprime時のcrashと3未完了出力も残し、全253moduleの実source・interface・依存をそろえたbuildだけを有効とする。失敗3と成功70の実出力は独立照合済みで、終了DB/cache/raw logはarchiveせず削除した。
+現在は[問い合わせが保持する型付き原文view](docs/candidates/typed-original-reads/README.md)を隔離実装した。原文構造と選択metadataを同じ権限確認・既存の128MiB query-view容量へまとめ、保持量へgeometryも算入した。不変の読取interfaceをservice→独立actor→request environment→SourceContextへ明示的に渡し、global callbackを置かない。同一process内の16 record RPC＋1 palette RPCを0件へした。外部wire adapterも同じtyped検査へ委譲する。vector/3辺/完全e-class認定/選択規則は維持した。
 
 [20波のphase寿命対照](docs/candidates/phase-lifetime/README.md)ではquiet条件のRSSは約124MiBで頭打ちになり、4波だけから推測した継続的な増加は支持されなかった。[実actorのowner観測](docs/candidates/actor-heap/README.md)も、最終外側heapが数十KiB、数値側の観測usedが最大約4MiBで、約900MiBのhost RSSを説明できていない。allocator設定・強制回収・worker数・期限を変える根拠にしない。owner集計はpending remote freeを含み得るため生存graphとは同一視しない。
 
-同じPID内で、35照会が16ソースずつ、原文構造metadataのsource-records通信を560回行っていた。小さな不変値をJSON化・送受信・parseし直している事実は確認できたが、RSSの主因とは未確定である。[typed original reads](docs/candidates/typed-original-reads/plan.json)はこの内部境界を対象に、scope・capability・full Head・producer・retained lease・owner順・絶対期限と既存の保持容量を守る読取interfaceを計画した。過去に不採用のsearch-inputsを繰り返さない。
+新候補は4 kernel law・576読取依存の接続監査・通常ContractAuditを通し、2 source＋user側読取専用profileのnative試験で、wire/typed/独立DB読取の一致、foreign scope/capability/full Head/prepared root/retained token/endpoint、期限、検査失敗・取消・active borrow中のreleaseを確認した。253 native moduleの実source witnessに対して、予定した9 source bodyと正確な埋込identityだけの差と監査した。部分relinkは使っていない。過去の[不整合buildの失敗](docs/candidates/transport-heap/README.md)と[保持寿命の否定的対照](docs/candidates/phase-lifetime/README.md)も保持する。
 
 ユーザーのロック除去指示に対し、[原文構造cacheの読取と管理を分ける隔離候補](docs/candidates/record-read-image/README.md)を実装した。hitのLRU/統計更新を除き、missのDB読出しを共有Mutex外へ移した。短い参照受渡し後は要求された不変entryだけを保持し、読取型にMutex/CAS/可変参照を渡さない。6 Lean lawと実宣言の1016依存監査、通常ContractAuditが通り、元Mutexを保持した80並行reader×16batchと実miss読取、scope/Head/期限/予算の拒否、退役前image、重複fill・容量境界を確認した。全retrievalのlock-freeを証明したものではない。
 
-同候補の固定32実hookは全原文+ACK・意味完了32/32、親stdoutと全byte一致、35実出力を独立照合した。時間は6621/7614/9084ms（min/median/max）、関連sampled RSS2726000KiBで、速度・memory改善を確認していない。従って新しい80負荷は実行せず、本体未採用・回答モデル0/有料比較0/18を維持する。次はchecked typed readへ接続して同一process内の原文metadata通信を除き、固定32実hookの同期回数/保持量/本文を比較する。根拠ある改善がある場合だけ変更後80を一度測る。同じ失敗80を無変更で再試行しない。従来の[numerical-ready](docs/candidates/numerical-ready/README.md)の80同時は全ready hitでもRSS保護停止、必要原文0で不合格のまま。nested時間や中央値を加算して主因を作らない。
+新候補の固定32実hookは全原文+ACK・意味完了32/32、親stdoutと全byte一致、35実出力を独立照合した。まとめた取得は6/21/187ms、全hookは6399/7235/8399ms（min/median/max）。ただしfrontend終了code1/publisher終了0の後にguardが残存を回収し、試験全体は不合格。資源停止理由はRSSでなくleftoversで、最終残存0。元harnessは終了stderrと回収前の実process一覧を保存しておらず、原因を推測で修正しない。検索なしの32 pending session再生と80並行登録（active maintenance2/pending78）はそれぞれ2309/2297msで正常終了し、元の失敗を再現しなかった。これは80検索の合格ではない。
+
+host RSSはprime/1波/2波で174992→662016→883232KiBと増え、自己通信除去だけでは説明できなかった。最大の連続stage間隔はprovider応答検査の後からexecute:endまでで中央値3649ms。後続のdiscovery/focus/選択を含み、CPU時間や描画だけの時間とは扱わない。次はこの区間を分ける観測と、終了の正確なerror/回収前process identityの保持を行い、無駄な計算と保持を特定する。既存のrender/freshness副profileと早い時刻の2秒sampleで原因を断定しない。新たな80検索の再試行は行わず、本体未採用・回答モデル0/有料比較0/18、全体goal activeを維持する。期限・resource bounds・認定domain・重みの変更で代用しない。
 
 製品coreは変更していない。隔離sourceは全overlayを戻し、終了DB/cache/raw log・初期copy・不要な旧実行体は記録後にarchiveせず削除する。現在の診断に必要な実行体/link object/interface、16原典、対照とsealed clientを保持する。各chatの軽いactorは独立、重いDB/model/public準備は共有する。元の30秒、4 GiB ceiling/3.5 GiB stop、空き2 GiB、16並行原典所有者、完全な認定domain・私有usage分離を維持する。資源停止を成功扱いにしない。
 

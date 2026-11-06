@@ -1,0 +1,38 @@
+--- a/tools/research/SharedReadViews.lean
++++ b/tools/research/SharedReadViews.lean
+@@ -20,0 +21,2 @@
++  records : Std.HashMap String (Option ObservedRecordView.Geometry) := {}
++  recordBytes : Nat := 0
+@@ -25 +27,2 @@
+-    (loaded : CanonicalSource.Shared.Loaded) (owners : Array String) (deadline : Nat) : IO Source := do
++    (loaded : CanonicalSource.Shared.Loaded) (owners : Array String) (deadline : Nat)
++    (structures : Option ObservedRecordView.Cache := none) : IO Source := do
+@@ -30 +33,13 @@
+-  return ⟨scope,source,loaded,Std.HashSet.ofArray owners,metadata⟩
++  let batch ← match structures with
++    | none => pure ({} : ObservedRecordView.Batch)
++    | some cache => do
++      let some original := loaded.originals | throw (IO.userError "original record view is not prepared")
++      cache.project original.index source.identity owners deadline (16*1024*1024-4096)
++  return {
++    scope := scope
++    source := source
++    loaded := loaded
++    owners := Std.HashSet.ofArray owners
++    metadata := metadata
++    records := Std.HashMap.ofArray batch.rows
++    recordBytes := batch.bytes }
+@@ -31,0 +47,13 @@
++def Source.readRecords (source : Source) (owners : Array String) :
++    Except String (Array (String × Option ObservedRecordView.Geometry)) :=
++  owners.mapM fun owner => do
++    unless source.owners.contains owner do throw "original records cross the pinned owner domain"
++    let some value := source.records[owner]? | throw "original records are not captured in the pinned view"
++    return (owner,value)
++
++def Source.capturedBytes (source : Source) : Nat :=
++  source.recordBytes+source.metadata.values.fold (fun bytes _ ready => bytes+ready.bytes) 0
++
++theorem Source.geometry_is_charged (source : Source) : source.recordBytes ≤ source.capturedBytes :=
++  Nat.le_add_right _ _
++

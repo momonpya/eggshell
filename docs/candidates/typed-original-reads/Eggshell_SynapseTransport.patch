@@ -1,0 +1,63 @@
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -67 +66,0 @@
+-  originalCache : Array Json := #[]
+@@ -227,31 +225,0 @@
+-  -- Certified rows and compact prepared recipes cross this boundary. Original
+-  -- payload blocks remain in the data-side service; no full view is decoded.
+-  -- A graph resource limit cannot erase independently verified source rows.
+-  for source in prepared do
+-    if let some reference := source.canonical then
+-      try
+-        let ids := owners.filterMap fun owner =>
+-          if owner.database == source.source.head.identity then
+-            some (Persistence.selectionKey owner.original.relation) else none
+-        if ids.isEmpty then continue
+-        let structures ← Plugin.Publication.Client.sourceRecords reference ids deadline
+-        plan := {plan with originalCache := plan.originalCache.push structures.cache}
+-        for (owner,found) in structures.rows do
+-          let some geometry := found | continue
+-          let some witness := admitted.find? (fun item => item.owner.database == source.source.head.identity &&
+-            item.document.owner == owner) | throw (IO.userError "original recipe has no admitted owner")
+-          let identity ← match witness.original with
+-            | some original => pure original.identity
+-            | none => do
+-              let some raw := witness.document.source | throw (IO.userError "original recipe has no stored text")
+-              pure (ObservationContext.originalSubject witness.document.work raw)
+-          unless geometry.header.work == witness.document.work && geometry.header.original == identity &&
+-              geometry.header.characters == identity.chars &&
+-              geometry.header.occurrences == witness.document.occurrences &&
+-              geometry.spans.all (fun span => span.first < span.limit &&
+-                span.limit ≤ geometry.header.characters && span.limit-span.first ≤ 2048) do
+-            throw (IO.userError "original recipe crossed its stored content or occurrence")
+-          plan := {plan with originalStructures := plan.originalStructures.insert owner geometry}
+-      catch error =>
+-        let failure := (source.source.head.identity,error.toString)
+-        plan := {plan with canonicalFailure := plan.canonicalFailure.push failure}
+@@ -271,0 +240,18 @@
++        let some records := batch.palette.records[index]? |
++          throw (IO.userError "original structures lost their pinned project view")
++        for (owner,found) in records do
++          let some geometry := found | continue
++          let some witness := admitted.find? (fun item => item.owner.database == reference.access.database &&
++            item.document.owner == owner) | throw (IO.userError "original recipe has no admitted owner")
++          let identity ← match witness.original with
++            | some original => pure original.identity
++            | none => do
++              let some raw := witness.document.source | throw (IO.userError "original recipe has no stored text")
++              pure (ObservationContext.originalSubject witness.document.work raw)
++          unless geometry.header.work == witness.document.work && geometry.header.original == identity &&
++              geometry.header.characters == identity.chars &&
++              geometry.header.occurrences == witness.document.occurrences &&
++              geometry.spans.all (fun span => span.first < span.limit &&
++                span.limit ≤ geometry.header.characters && span.limit-span.first ≤ 2048) do
++            throw (IO.userError "original recipe crossed its stored content or occurrence")
++          plan := {plan with originalStructures := plan.originalStructures.insert owner geometry}
+@@ -289 +275 @@
+-    catch _ =>
++    catch error =>
+@@ -292 +278 @@
+-      plan := {plan with canonicalFailure := plan.canonicalFailure.push ("shared-view","metadata-unavailable")}
++      plan := {plan with canonicalFailure := plan.canonicalFailure.push ("shared-view","metadata-unavailable: "++error.toString)}
+@@ -349 +334,0 @@
+-    ("originalRecipeCache",toJson plan.originalCache),

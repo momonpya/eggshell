@@ -1,0 +1,7 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -1003,0 +1004 @@
++  originalReads : Option Synapses.SourceViewBatch.ReadAccess := none
+@@ -9727,0 +9729,2 @@
++  let synaptic := synaptic.map fun prepared => {prepared with canonical := prepared.canonical.map fun reference =>
++    {reference with localReads := sourceContext.bind (·.originalReads)}}
