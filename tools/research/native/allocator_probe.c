@@ -79,3 +79,47 @@ LEAN_EXPORT lean_obj_res eggshell_research_allocator_owner(void) {
         lean_mk_io_user_error(lean_mk_string("owner heap diagnostic exceeded512 bytes")));
     return lean_io_result_mk_ok(lean_mk_string(text));
 }
+
+/* OS-only fixture observations. A task-completion flag alone does not prove
+   its producing OS thread has exited. No allocator inspection is done here. */
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <pthread.h>
+LEAN_EXPORT lean_obj_res eggshell_research_thread_id(void) {
+    uint64_t tid = 0;
+    if (pthread_threadid_np(NULL, &tid) != 0 || tid == 0 || tid >= ((uint64_t)1 << 63))
+        return lean_io_result_mk_error(lean_mk_io_user_error(lean_mk_string("thread identity unavailable")));
+    return lean_io_result_mk_ok(lean_usize_to_nat((size_t)tid));
+}
+LEAN_EXPORT lean_obj_res eggshell_research_thread_inventory(void) {
+    thread_act_array_t threads = NULL;
+    mach_msg_type_number_t count = 0;
+    mach_task_basic_info_data_t task;
+    mach_msg_type_number_t task_count = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&task, &task_count) != KERN_SUCCESS ||
+        task_threads(mach_task_self(), &threads, &count) != KERN_SUCCESS)
+        return lean_io_result_mk_error(lean_mk_io_user_error(lean_mk_string("thread inventory unavailable")));
+    bounded_text text = {{0}, 0, false};
+    int header = snprintf(text.bytes, sizeof(text.bytes), "rssBytes=%llu\nthreads=",
+                          (unsigned long long)task.resident_size);
+    bool valid = header > 0 && (size_t)header < sizeof(text.bytes);
+    if (valid) text.used = (size_t)header;
+    for (mach_msg_type_number_t i = 0; i < count; ++i) {
+        thread_identifier_info_data_t info;
+        mach_msg_type_number_t info_count = THREAD_IDENTIFIER_INFO_COUNT;
+        kern_return_t status = thread_info(threads[i], THREAD_IDENTIFIER_INFO, (thread_info_t)&info, &info_count);
+        if (status != KERN_SUCCESS) valid = false;
+        else if (valid) {
+            char number[32];
+            snprintf(number, sizeof(number), "%llu,", (unsigned long long)info.thread_id);
+            append_stats(number, &text);
+        }
+        mach_port_deallocate(mach_task_self(), threads[i]);
+    }
+    if (vm_deallocate(mach_task_self(), (vm_address_t)threads, count * sizeof(thread_t)) != KERN_SUCCESS)
+        valid = false;
+    if (!valid || text.truncated) return lean_io_result_mk_error(
+        lean_mk_io_user_error(lean_mk_string("transient or oversized thread inventory")));
+    return lean_io_result_mk_ok(lean_mk_string(text.bytes));
+}
+#endif

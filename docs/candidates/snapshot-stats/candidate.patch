@@ -1,0 +1,106 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -185,0 +186,27 @@
++/-- Authorization consults immutable registration values after the registry
++snapshot has been handed off. No mutable registry capability is accepted. -/
++def resolveSource (sources : Array ReadSource) (secret database identity : String) : Except String ReadSource :=
++  match sources.find? (fun source => source.database == database && source.scope == identity) with
++  | none => .error "unknown prepared source scope"
++  | some source => if source.capability == secret then .ok source
++      else .error "unauthorized prepared source projection"
++
++theorem resolveSource_present (sources : Array ReadSource) (secret database identity : String)
++    (source : ReadSource)
++    (found : sources.find? (fun source => source.database == database && source.scope == identity) = some source)
++    (authorized : source.capability == secret) :
++    resolveSource sources secret database identity = .ok source := by
++  simp [resolveSource,found,authorized]
++
++theorem resolveSource_foreign (sources : Array ReadSource) (secret database identity : String)
++    (source : ReadSource)
++    (found : sources.find? (fun source => source.database == database && source.scope == identity) = some source)
++    (unauthorized : (source.capability == secret) = false) :
++    resolveSource sources secret database identity = .error "unauthorized prepared source projection" := by
++  simp [resolveSource,found,unauthorized]
++
++theorem resolveSource_missing (sources : Array ReadSource) (secret database identity : String)
++    (missing : sources.find? (fun source => source.database == database && source.scope == identity) = none) :
++    resolveSource sources secret database identity = .error "unknown prepared source scope" := by
++  simp [resolveSource,missing]
++
+@@ -189,5 +216,2 @@
+-  server.sources.atomically do
+-    let some scope := (← get).find? (fun source => source.database == database && source.scope == identity) |
+-      throw (IO.userError "unknown prepared source scope")
+-    unless scope.capability == secret do throw (IO.userError "unauthorized prepared source projection")
+-    return scope
++  let sources ← server.sources.atomically get
++  IO.ofExcept (resolveSource sources secret database identity)
+@@ -194,0 +219,7 @@
++theorem scopedSource_snapshot_boundary (server : Server) (secret : String) (payload : Json) :
++    scopedSource server secret payload = (do
++      let database ← IO.ofExcept (payload.getObjValAs? String "database")
++      let identity ← IO.ofExcept (payload.getObjValAs? String "scope")
++      let sources ← server.sources.atomically get
++      IO.ofExcept (resolveSource sources secret database identity)) := rfl
++
+@@ -680,2 +711,39 @@
+-def stats (server : Server) : IO Json := server.state.atomically do
+-  let state ← get
++/-- Only immutable scalar observations cross the publication-state lock. No
++project queue, read handle, mutable reference or synchronization capability. -/
++structure StatsSnapshot where
++  projects : Nat
++  queued : Nat
++  active : Nat
++  closed : Bool
++  admittedBytes : Nat
++  publishedGroups : Nat
++  publishedReplies : Nat
++  deriving BEq
++
++def StatsSnapshot.capture (state : State) : StatsSnapshot :=
++  ⟨state.projects.size,state.projects.foldl (fun count project => count+project.queue.size) 0,
++    (state.projects.filter (·.active)).size,state.closed,state.admittedBytes,
++    state.publishedGroups,state.publishedReplies⟩
++
++def StatsSnapshot.fields (snapshot : StatsSnapshot) : List (String × Json) :=
++  [("projects",toJson snapshot.projects),("queued",toJson snapshot.queued),
++    ("active",toJson snapshot.active),("closed",toJson snapshot.closed),
++    ("admittedBytes",toJson snapshot.admittedBytes),
++    ("publishedGroups",toJson snapshot.publishedGroups),("publishedReplies",toJson snapshot.publishedReplies)]
++
++theorem StatsSnapshot.original_fields (state : State) :
++    (StatsSnapshot.capture state).fields =
++    [("projects",toJson state.projects.size),
++      ("queued",toJson (state.projects.foldl (fun count project => count+project.queue.size) 0)),
++      ("active",toJson (state.projects.filter (·.active)).size),("closed",toJson state.closed),
++      ("admittedBytes",toJson state.admittedBytes),
++      ("publishedGroups",toJson state.publishedGroups),("publishedReplies",toJson state.publishedReplies)] := rfl
++
++theorem StatsSnapshot.exact_counters (state : State) :
++    (StatsSnapshot.capture state).closed = state.closed ∧
++    (StatsSnapshot.capture state).admittedBytes = state.admittedBytes ∧
++    (StatsSnapshot.capture state).publishedGroups = state.publishedGroups ∧
++    (StatsSnapshot.capture state).publishedReplies = state.publishedReplies := ⟨rfl,rfl,rfl,rfl⟩
++
++/-- Child caches and diagnostics run after the publication snapshot lock is released. -/
++def collectStats (server : Server) (snapshot : StatsSnapshot) : IO Json := do
+@@ -684,6 +752 @@
+-  return Json.mkObj [("projects",toJson state.projects.size),
+-    ("queued",toJson (state.projects.foldl (fun count project => count+project.queue.size) 0)),
+-    ("active",toJson (state.projects.filter (·.active)).size),("closed",toJson state.closed),
+-    ("admittedBytes",toJson state.admittedBytes),
+-    ("publishedGroups",toJson state.publishedGroups),("publishedReplies",toJson state.publishedReplies),
+-    ("preparedSources",← server.prepared.stats),("retainedSources",← server.retained.stats),("paletteQueries",← server.palettes.stats),
++  return Json.mkObj (snapshot.fields ++ [("preparedSources",← server.prepared.stats),("retainedSources",← server.retained.stats),("paletteQueries",← server.palettes.stats),
+@@ -694 +757,8 @@
+-    ("statsOwnerHeap",heap)]
++    ("statsOwnerHeap",heap)])
++def stats (server : Server) : IO Json := do
++  let snapshot ← server.state.atomically do return StatsSnapshot.capture (← get)
++  collectStats server snapshot
++
++theorem stats_snapshot_boundary (server : Server) : stats server = (do
++    let snapshot ← server.state.atomically do return StatsSnapshot.capture (← get)
++    collectStats server snapshot) := rfl
