@@ -1,0 +1,15 @@
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-runtime-client-source/tools/research/ProbeCutClient.lean:13:18: error(lean.unknownIdentifier): Unknown constant `Lean.Json.parse`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-runtime-client-source/tools/research/ProbeCutClient.lean:16:18: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  ToJson UInt32
+
+Hint: Adding the command `deriving instance Lean.ToJson for UInt32` may allow Lean to derive the missing instance.
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-runtime-client-source/tools/research/ProbeCutClient.lean:14:17: error(lean.invalidField): Invalid field notation: Type of
+  parsed
+is not known; cannot resolve field `toOption`
+
+Hint: Consider replacing the field projection `.toOption` with a call to the function `Except.toOption`.
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/read-runtime-client-source/tools/research/ProbeCutClient.lean:17:26: error(lean.invalidField): Invalid field notation: Type of
+  parsed
+is not known; cannot resolve field `isOk`
+
+Hint: Consider replacing the field projection `.isOk` with a call to the function `Except.isOk`.

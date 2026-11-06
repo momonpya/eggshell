@@ -1,0 +1,12 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -1,0 +2,3 @@
++import tools.research.RuntimeReadControls
++import tools.research.RuntimeBorrowControls
++import tools.research.ProbeCutChecks
+@@ -89,0 +93,5 @@
++  | ["combined-read-check",root] =>
++    checks (.mk root)
++    Eggshell.Research.LeaseReadChecks.run (.mk (root++"/borrow-checks"))
++    Eggshell.Research.ProbeCutChecks.run (.mk (root++"/probe-checks.json"))
++    return 0
