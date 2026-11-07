@@ -1,0 +1,18 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -492,0 +493 @@
++  let allocationStarted ← IO.getNumHeartbeats
+@@ -500,0 +502 @@
++    let allocationAcquired ← IO.getNumHeartbeats
+@@ -540,0 +543 @@
++    let allocationConstructed ← IO.getNumHeartbeats
+@@ -544,0 +548 @@
++    let allocationDomain ← IO.getNumHeartbeats
+@@ -548,0 +553,2 @@
++    let allocationSelected ← IO.getNumHeartbeats
++    let difference := Eggshell.Research.AllocationMeasure.difference
+@@ -549,0 +556,4 @@
++      ("allocations",Json.mkObj [("acquire",difference allocationStarted allocationAcquired),
++        ("units",difference allocationAcquired allocationConstructed),
++        ("domain",difference allocationConstructed allocationDomain),
++        ("selection",difference allocationDomain allocationSelected)]),

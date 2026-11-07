@@ -1,0 +1,64 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -3,0 +4 @@
++public import tools.research.AllocationMeasure
+@@ -6943,0 +6945,6 @@
++
++
++namespace AllocationProbe
++def unitSummary (result : List SharedRangeAdapter.UnitPlan × List (Nat × Nat)) : Json :=
++  Json.mkObj [("units",toJson result.1.length),("cues",toJson result.2.length),
++    ("renderedTextBytes",toJson (result.1.foldl (fun count unit => count+unit.slice.text.utf8ByteSize) 0))]
+@@ -6944,0 +6952,19 @@
++def families (items : List SharedRangeAdapter.Family) : IO Unit := do
++  let mut measured := #[]
++  for (item,index) in items.zipIdx do
++    let item := item.contextualOutputs
++    let source := (Matcher.atomText? item.owner.outcome).getD ""
++    let characters ← Eggshell.Research.AllocationMeasure.run source
++      (fun text => (IndexedCharacters.make text).chars)
++      (fun chars => Json.mkObj [("characters",toJson chars.size)])
++    let candidates ← Eggshell.Research.AllocationMeasure.run item
++      (fun family => if family.isFile then SharedRangeAdapter.prepareOutputs index family
++        else SharedRangeAdapter.prepare index family) unitSummary
++    measured := measured.push (Json.mkObj [("family",toJson index),
++      ("owner",toJson (relationKey item.owner.relation)),("fileFamily",toJson item.isFile),
++      ("nativeOutcome",toJson (Matcher.nativeOutcome item.owner)),("sourceBytes",toJson source.utf8ByteSize),
++      ("outputRanges",toJson item.outputRanges.length),
++      ("independentCharacterIndexProbe",characters),("actualCandidatePreparation",candidates)])
++  Publication.Stream.profile "allocation-family-inputs" [("families",toJson measured),
++    ("independentProbesNotAddedToProductionTotals",toJson true)]
++end AllocationProbe
+@@ -6950,0 +6977,2 @@
++    if (← IO.getEnv "EGGSHELL_RESEARCH_ALLOCATIONS") == some "1" then
++      AllocationProbe.families pending.families
+@@ -6951,0 +6980 @@
++    let allocationStarted ← IO.getNumHeartbeats
+@@ -6955,0 +6985 @@
++    let allocationQuery ← IO.getNumHeartbeats
+@@ -6968,0 +6999 @@
++    let allocationSelected ← IO.getNumHeartbeats
+@@ -6987,0 +7019 @@
++    let allocationRequests ← IO.getNumHeartbeats
+@@ -6989,0 +7022 @@
++    let allocationFetched ← IO.getNumHeartbeats
+@@ -6993,0 +7027 @@
++    let allocationMaterialized ← IO.getNumHeartbeats
+@@ -6995,0 +7030,2 @@
++    let allocationFinished ← IO.getNumHeartbeats
++    let difference := Eggshell.Research.AllocationMeasure.difference
+@@ -6996,0 +7033,8 @@
++      ("allocations",Json.mkObj [("query",difference allocationStarted allocationQuery),
++        ("select",difference allocationQuery allocationSelected),
++        ("fetchRequests",difference allocationSelected allocationRequests),
++        ("fetch",difference allocationRequests allocationFetched),
++        ("materialize",difference allocationFetched allocationMaterialized),
++        ("finish",difference allocationMaterialized allocationFinished)]),
++      ("genericUnits",toJson generic.size),
++      ("genericRenderedBytes",toJson (generic.foldl (fun count unit => count+unit.slice.text.utf8ByteSize) 0)),
+@@ -8479,0 +8524 @@
++  let allocationTrace := (← IO.getEnv "EGGSHELL_RESEARCH_ALLOCATIONS") == some "1"
+@@ -8481,0 +8527,3 @@
++    if allocationTrace then
++      Publication.Stream.profile ("allocation-discovery-"++label.replace " " "-")
++        [("label",toJson label),("currentThreadSmallAllocations",toJson (← IO.getNumHeartbeats))]

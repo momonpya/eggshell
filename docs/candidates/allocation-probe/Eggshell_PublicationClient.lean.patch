@@ -1,0 +1,18 @@
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -3,0 +4 @@
++public import tools.research.AllocationMeasure
+@@ -319,0 +321 @@
++  let allocationStarted ← IO.getNumHeartbeats
+@@ -325,0 +328 @@
++  let allocationChecked ← IO.getNumHeartbeats
+@@ -338,0 +342 @@
++  let allocationReceived ← IO.getNumHeartbeats
+@@ -355,0 +360 @@
++  let allocationValidated ← IO.getNumHeartbeats
+@@ -356,0 +362,5 @@
++  let allocationMerged ← IO.getNumHeartbeats
++  Stream.profile "source-fetch-allocations" [("precheck",Eggshell.Research.AllocationMeasure.difference allocationStarted allocationChecked),
++    ("read",Eggshell.Research.AllocationMeasure.difference allocationChecked allocationReceived),
++    ("validate",Eggshell.Research.AllocationMeasure.difference allocationReceived allocationValidated),
++    ("merge",Eggshell.Research.AllocationMeasure.difference allocationValidated allocationMerged)]
