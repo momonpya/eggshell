@@ -810,7 +810,7 @@ def retireLifecycleIntermediates : IO Unit := do
 
 /-- A completed object's bytes are expendable only when none of the retained
 executables links it. Keep source/dependency witnesses and all interfaces. -/
-def retireUnselectedObjects : IO Unit := do
+def retireUnselectedObjects (report : System.FilePath := stopStudy/"retired-unselected-objects.json") : IO Unit := do
   drained
   let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (process.exitCode == 0) "cannot inspect native owners"
@@ -843,7 +843,7 @@ def retireUnselectedObjects : IO Unit := do
       let size := (← entry.path.metadata).byteSize.toNat
       removed := removed.push (entry.path.toString,← hash entry.path,size)
       bytes := bytes+size
-  write (stopStudy/"retired-unselected-objects.json") (Json.mkObj [
+  write report (Json.mkObj [
     ("retainedExecutables",toJson executables),("retainedNativeInputs",toJson retained.size),
     ("removed",toJson removed),("bytes",toJson bytes),
     ("sourceDependencyWitnessesAndInterfacesRetained",toJson true),("archived",toJson false)])
@@ -1085,6 +1085,7 @@ def main (args : List String) : IO Unit := do
   | ["retire-unused-controls"] => retireUnusedControls
   | ["retire-lifecycle-intermediates"] => retireLifecycleIntermediates
   | ["retire-unselected-objects"] => retireUnselectedObjects
+  | ["retire-unselected-objects",report] => retireUnselectedObjects (.mk report)
   | ["seal-keeper"] => sealKeeper
   | ["seal-owned"] => sealOwned
   | ["record-stop",tag] => recordStop tag

@@ -29,7 +29,13 @@
 
 ## 現在地と次の順序
 
-現在の隔離候補は [delivery-ledger](docs/candidates/delivery-ledger/README.md)（SHA `d4349b126ae979c3a48e407a5fc1e98d7ac97796f97eb50c81e9fe472960385d`）。親`reply-ownership`/`compact-reply`と`pinned-reads`から`search-read`/`read-runtime`までの所有・読取り改善を継承する。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+現在の隔離候補は [parallel-encoder](docs/candidates/parallel-encoder/README.md)（SHA `fed891ffd63b082508c7d34bb110a2eda271f5011663dd5c2616205f3fcae8f4`）。[local-batch](docs/candidates/local-batch/README.md)と[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善を継承する。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+
+エンコーダーの`modelGate`を推論・応答待ち全体で保持する構造を除き、要求が独立したモデルとpipeを専有するLeanのpoolへ置き換えた。起動・推論・待機・停止・joinは管理Mutexの外で実行する。idleモデルを優先して再利用し、必要時だけCPU/起動枠まで増やす。このMacでは4-threadモデル最大2本。ticket世代による専有と停止確認までの枠保持をLeanで検査し、旧modelGateの不在・pipe処理がMutexを取らないこともContractAuditへ接続した。実MiniLMは2processがwarm時にも同時実行し、16要求×2波を含む48応答のvector/被覆が順次基準と一致、同時波1,387/1,001ms、関連RSS最大2,435,888KiBだった。これは80実hookの検査ではない。MiniLMのPython・重み・tokenizer・poolingは変更していない。モデル数の配分値だけで物理RSSを保証したとは扱わず、全processの既存guardを維持する。
+
+候補の実LLVM原典のモデルなし配送検査は全6回で合格した。同じsnapshot・ソース・質問・凍結必要項目で、題材1/2/3の4/4・7/7・5/5を独立した新チャット各2回、計32/32項目配送し、全本文が親local-batchとbyte一致した。時間8,916/8,435、9,810/9,923、9,993/9,969ms。意味検索・シナプス・packet検査・ACKは全6回完了、前景warm0、元出版不変。検査器の全製品core・269共通moduleが一致し、関連RSS最大2,892,464KiB、終了成功・残存0。親は内訳観測を有効にしていたので時間差を対応した因果効果としない。独立したnative新チャットを、回答モデルの1周目/2周目・総token・品質・p99・80人8時間の合格と混同しない。
+
+同じ実原典の4/16 gateは全4件/全16件が本文・意味検索・シナプス・packet・ACKまで完了し、波全体8,558/24,271ms、関連RSS最大3,530,672KiB、残存0だった。16同時のencode 32要求は2モデルを利用、admission最大3,800msであり待機自体が消えたわけではない。このgateに続く同じruntimeの80同時は、80 session初期化後、client結果の完成前にRSS3,677,376KiBで保護停止した。残存0、配送率とclient時間は未測定、80人は未達のまま。MiniLM2processが計2,215,648KiB、出版service798,608KiB、frontend236,736KiB等を占めた。次は今回の途中記録からquery側のlive量と数値境界を減らし、同じ失敗80負荷・受動heap調査を繰り返さない。候補/順位/認定domainの縮小や資源上限の拡大はしない。
 
 **実LLVM原典のモデルなし配送検査は全6件で合格した。** 同じsnapshot・ソース・質問・凍結必要項目のまま、題材1/2/3でそれぞれ4/4、7/7、5/5を独立した新チャット2件ずつで実配送し、全32/32項目を9,392〜10,958msで届けた。意味検索・シナプス探索・packet検査は6/6完了、warm要求0、ACKは6/6受理、元の出版内容は不変だった。全6本文が親`reply-ownership`の対応する実本文とbyte一致した。親の各題材2回は11,313/10,760、12,389/12,333、12,615/12,495ms、新候補は9,949/9,392、10,958/10,517、10,822/10,794msだった。280 native objectと、検査器の全製品core・269共通moduleの原文一致を確認した。関連最大RSS3,026,096KiB、全終了後残存0。これは履歴を蓄積する回答モデルの1周目/2周目ではなく、80人負荷・増大DB・p99・品質・総token改善も未検証である。
 
@@ -56,7 +62,7 @@
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 返信の生成前容量保証とACK二次処理の除去を含む新しい候補で、実際の検索・配送の容量試験を再開する。全製品coreが一致する検査器と元の入力・必須原文を固定し、少数同時の配送/ACK/資源の事前条件を確認してから80並行を一度測る。重い検査driverの保持量を80検索のlive量に混同せず、結果・失敗を全件回収する。変更なしの失敗負荷を反復せず、98%・30秒・既存RSS/disk guardを緩めない。状態の参照/照合/描画で不要な共有更新が残れば分離する。変更時は実原典の題材1の最初から戻り、正解をselectorへ渡さず、同じ凍結snapshot・準備済みproject cacheを使う。
+1. 今回の80同時の資源停止記録から、共有モデルと各要求が保持する原文/候補のlive量を減らす。長いencoder mutexを戻したり固定3検索workerで直列化せず、独立した要求の所有と不変共有を維持する。容量の事前条件を部品で確認してから新候補の実原典題材1へ戻り、全6回と4/16 gateを通した場合だけ80を測る。重い検査driverの保持量を80検索のlive量に混同しない。正解をselectorへ渡さず、変更なしの失敗負荷を反復せず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
 2. 実WorkGraph/返信の所有と、allocatorの保持を因果的に分ける。実配送guardのpeakには検査器1,146,320KiBと既存MiniLM数値process1,100,272KiBが含まれ、publication hostはその時点で286,608KiBだった。これらを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。
@@ -165,6 +171,6 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 全体goalはactive。部品の証明・試験・pushを、実用化と論文の全目標達成とは扱わない。
 
-内部batch候補のruntimeは3e3c533e…となり、280 native objectの整合、宣言した5 moduleと埋込みsourceだけの差、通常ContractAuditと3つの接続lawが通った。listenerなしの実clientによる直接select/fetch、wire handler/独立選択との原文一致、別generation/capability拒否、scope/head/root/expiry・release/cancel・全予約回収の部品検査も通った。管理Mutexを保持した80 readerの不変値読取りは2ms、別のfile metadata 80×128読取りは30msだが、80実hookや直接select/fetch全体のlock-free証明とはしない。関連RSSはビルド2,677,728KiB・部品150,720KiB、残存0。候補の全6実配送・16/80負荷・新seedと両周・総token/品質は未検証であり未採用。encoderの直列待ちも未解決で、goalはactive。
+内部batch候補3e3c533e…の部品検査に続き、全6実hookも必要原文32/32・親本文byte一致・意味/シナプス/ACK完了となった。実際の内部select/fetchは各6回、自己接続のwire呼出し0回、関連RSS最大2,741,648KiB、残存0。管理Mutexを保持した80 readerの不変値読取り2msとfile metadata 80×128読取り30msは部品値のままとする。encoderの長い排他は後続parallel-encoderで除き、4/16合格・80資源停止という現在地を上記に集約した。新seedと両周・総token/品質は未検証で、本体未採用。
 
-[実原典の共有service容量](docs/candidates/memory-capacity/README.md)では製品d4349b12…を固定した軽いnative clientで、4同時は4/4原文+ACK・意味完了、16同時は成功3/16・意味6/16となった。16件中6件は親本文と一致したが3件のACKは期限を超えた。80は未実行、関連RSS最大2,812,368KiB、資源停止なし・両service正常終了・残存0。読取準備2ms、operation queue1msの一方でencoder gate待ち最大8,737msを確認した。候補準備後の15〜20秒を「通信だけの時間」と説明しない。失敗負荷を繰り返さず行った4同時の内訳診断は、選択〜描画約3.5〜4.4秒、同じserviceへの選択要求約2.1MB/結果約1MB・元行取得約5.5〜5.8MBのJSON往復を特定した。診断は80の入場gateから除外した。[内部batch候補](docs/candidates/local-batch/README.md)で同じscope/head/manifest/lease/元行検査を通す直接の選択・取得へ接続し、上記の部品検査まで通った。encoder pipeとmutable projection cacheの所有に伴う直列区間は別に残し、Mutexだけを削除して競合を作らない。新候補の実hook・容量検査は未実施で未採用。LLVMの新seed→題材1/2/3→2周目、最新AGENTSの同条件・同数複数反復による総token/品質比較も未実施である。終了済み30私有session/重複receiptと旧実行体・prefixコピーを記録後に削除し、archiveせず、現在の原典・project cache・親の正本とnative依存は保持した。全体goalは引き続きactive。
+旧[実原典の共有service容量](docs/candidates/memory-capacity/README.md)ではd4349b12…の16同時が成功3/16・意味6/16となり、encoder gate最大8,737msを確認した。失敗を繰り返さず行った4同時診断で、選択〜描画3.5〜4.4秒と内部の巨大JSON自己往復も特定した。その2点をlocal-batch/parallel-encoderの別候補で修正し、現在地は上記へ更新した。診断だけの4同時を80入場gateには使わない。mutable projection cacheに伴うscore gateは別に残り、全検索のlock-freeは主張しない。終了済みsession/重複receiptと旧実行体・prefixコピー、未選択の657 native object約224.6MBを記録後に削除し、archiveせず、原典・project cache・比較元の正本・使用中native依存/interface/source witnessは保持した。全体goalはactive。

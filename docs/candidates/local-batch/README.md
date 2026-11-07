@@ -16,4 +16,18 @@ wireとlocalが同じ検査付き関数を呼ぶ3つのLean lawを通常Contract
 
 ビルドの関連RSS最大2,677,728KiB、部品検査150,720KiB、guard停止なし・残存0。終了した部品のDBと私有派生物は記録後に削除した。旧allocatorと2つの旧client実行体348,329,040 bytesもSHAとnative入力を保持して削除し、archiveしない。
 
-次は部品の検査後、同じ固定原典で題材1の最初から全6件を再検査する。すべての本文と受領・期限が通る前に16/80負荷や回答モデルへ進まない。別に残っているencoder admissionの直列待ちを、この候補だけで解決した扱いにしない。最新runtimeでの空DB・LLVM seed・題材1/2/3・2周目、最新AGENTSの反復した総トークン/品質比較も必要である。
+## 実フック全6回
+
+[実配送の記録](delivery-cells.json)は全6回で必要原文32/32、比較元d4349b12…の本文と全byte一致。意味検索、シナプス、packet検査、ACKが全6回で完了し、前景warm要求は0、原典headとpage prefixは不変だった。検査器091e1130…は全製品coreを含み、269共通moduleのsourceが一致した。
+
+| 題材 | 各回の必要原文 | 実フック2回の時間 |
+| --- | --- | --- |
+| 1 | 4/4 | 9,028 / 8,717ms |
+| 2 | 7/7 | 10,200 / 10,297ms |
+| 3 | 5/5 | 10,177 / 10,289ms |
+
+既存の観測を有効にして、local selectとlocal fetchがそれぞれ6回、内部`source-plan`/`source-fetch-many`のwire呼出しは0回であることも実際に確認した。これは独立した新チャット各2回のnative検査で、回答モデルの1周目/2周目ではない。比較元の保存済み測定では同じ観測を有効にしていないので、時間差を対応した因果効果やp99とは主張しない。
+
+関連RSS最大2,741,648KiB、guard停止なし、両serviceは各回exit0・残存0だった。stderrの`state.guard`待機は0件だが、未完了session maintenanceの通知が3件ある。保存側の継続進捗まで解決した扱いにはしない。記録後に終了済み6sessionと重複receipt/profileを削除し、本文・stdout・監査・現行cache・原典は保持した。
+
+別に残るencoder admissionの直列待ちは[並行エンコーダー候補](../parallel-encoder/README.md)で修正する。新候補では題材1の最初から全6回、続いて4/16/80負荷を確認する。最新runtimeでの空DB・LLVM seed・題材1/2/3・2周目、最新AGENTSの反復した総トークン/品質比較も必要である。引き続き未採用。

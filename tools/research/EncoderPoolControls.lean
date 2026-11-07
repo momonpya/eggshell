@@ -1,0 +1,146 @@
+import tools.research.EncoderPool
+import Lean.Data.Json.FromToJson
+import Init.System.Promise
+open Lean Eggshell.Research.EncoderPool
+namespace Eggshell.Research.EncoderPoolControls
+def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
+def rejects (action : IO α) : IO Bool := try discard action; pure false catch _ => pure true
+def waitUntil (condition : IO Bool) : IO Unit := do
+  let deadline := (← IO.monoMsNow)+3000
+  repeat
+    if ← condition then return
+    check ((← IO.monoMsNow) < deadline) "pool concurrency barrier expired"
+    IO.sleep 1
+
+def overlap : IO Json := do
+  let pool ← Pool.make (α := Nat) 2
+  let entered ← Std.Mutex.new (#[] : Array Nat)
+  let finished ← Std.Mutex.new (0 : Nat)
+  let release ← IO.Promise.new
+  let disposed ← Std.Mutex.new (0 : Nat)
+  let dispose := fun (_ : Nat) => disposed.atomically (modify (·+1))
+  let tasks ← (Array.range 2).mapM fun _ => IO.asTask (pool.withResource (pure true)
+    (fun ticket => pure ticket.index) dispose fun _ value _ => do
+      entered.atomically (modify (·.push value))
+      discard <| IO.wait release.result!
+      finished.atomically (modify (·+1))
+      return value) .dedicated
+  try
+    waitUntil (do return (← entered.atomically get).size == 2)
+    check ((← pool.take?).isNone) "third request acquired an already owned slot"
+    let values ← entered.atomically get
+    check (values.toList.eraseDups.length == 2) "two concurrent owners received the same pipe slot"
+    -- Both callbacks must finish their work while management is held. Their
+    -- short give-back is intentionally allowed only after this lock releases.
+    pool.state.atomically do
+      release.resolve ()
+      waitUntil (do return (← finished.atomically get) == 2)
+    for task in tasks do discard <| IO.ofExcept (← IO.wait task)
+    let snapshot ← pool.state.atomically get
+    check (snapshot.starts == 2 && snapshot.slots.size == 2) "pool grew past its resident credits"
+    let reused ← pool.withResource (pure true) (fun _ => throw (IO.userError "warm reuse spawned a third encoder"))
+      dispose (fun _ resource _ => pure resource)
+    check (values.contains reused) "warm reuse returned an unregistered encoder"
+    pool.close dispose
+    check ((← disposed.atomically get) == 2) "close lost or repeated an encoder retirement"
+    check (← rejects (pool.withResource (pure true) (fun _ => pure 9) dispose (fun _ value _ => pure value)))
+      "closed pool accepted a new encoder"
+    return Json.mkObj [("simultaneousOwners",toJson (2 : Nat)),("differentPipeSlots",toJson true),
+      ("workFinishedWhileManagementLockHeld",toJson true),("warmReuseDidNotSpawn",toJson true),
+      ("boundedAndExactlyOnceClose",toJson true)]
+  finally
+    release.resolve ()
+    for task in tasks do IO.cancel task
+    for task in tasks do discard <| IO.wait task
+
+def retiring : IO Json := do
+  let pool ← Pool.make (α := Nat) 1
+  let entered ← IO.Promise.new
+  let release ← IO.Promise.new
+  let disposed ← IO.mkRef (0 : Nat)
+  let dispose := fun (_ : Nat) => do
+    disposed.modify (·+1)
+    entered.resolve ()
+    discard <| IO.wait release.result!
+  let work ← IO.asTask (show IO Unit from pool.withResource (pure true) (fun _ => pure 7) dispose fun _ _ retire => do
+    retire
+    throw (IO.userError "fixture inference failed")) .dedicated
+  try
+    waitUntil (do return (← disposed.get) == 1)
+    check ((← pool.take?).isNone) "retiring process released its resident credit too early"
+    let state ← pool.state.atomically get
+    check (match state.slots[0]? with | some (Slot.retiring _ _) => true | _ => false)
+      "unjoined child is not retained as retiring"
+    release.resolve ()
+    let result ← IO.wait work
+    let failed := match result with | .error _ => true | .ok _ => false
+    check (failed && (← disposed.get) == 1) "transport failure lost or repeated retirement"
+    let some next ← pool.take? | throw (IO.userError "confirmed stop did not restore its credit")
+    let old : Ticket Nat := {index := 0,token := next.token-1,cached := none}
+    pool.giveBack old false dispose
+    let state ← pool.state.atomically get
+    check (match state.slots[0]? with | some (Slot.running token _) => token == next.token | _ => false)
+      "late completion changed a new request's slot"
+    pool.giveBack next false dispose
+    pool.close dispose
+    check ((← disposed.get) == 1) "empty startup reservation disposed a resource twice"
+    return Json.mkObj [("creditHeldUntilStopFinished",toJson true),
+      ("failureRetiredOnce",toJson true),("lateCompletionRejected",toJson true)]
+  finally
+    release.resolve ()
+    IO.cancel work
+    discard <| IO.wait work
+
+def failureAndClose : IO Json := do
+  let pool ← Pool.make (α := Nat) 1
+  let disposed ← IO.mkRef (0 : Nat)
+  let dispose := fun (_ : Nat) => disposed.modify (·+1)
+  check (← rejects (pool.withResource (pure true) (fun _ => throw (IO.userError "fixture spawn failed"))
+    dispose (fun _ resource _ => pure resource))) "startup failure was accepted"
+  check ((← disposed.get) == 0) "failed startup retired an unrelated resource"
+  let entered ← IO.Promise.new
+  let release ← IO.Promise.new
+  let work ← IO.asTask (pool.withResource (pure true) (fun _ => pure 11) dispose fun _ resource _ => do
+    entered.resolve ()
+    discard <| IO.wait release.result!
+    return resource) .dedicated
+  try
+    discard <| IO.wait entered.result!
+    pool.close dispose
+    check ((← disposed.get) == 0) "shutdown stopped a pipe still owned by its request"
+    release.resolve ()
+    check ((← IO.ofExcept (← IO.wait work)) == 11 && (← disposed.get) == 1)
+      "active owner did not retire on return to the closed pool"
+    return Json.mkObj [("failedStartupReleasedCredit",toJson true),
+      ("shutdownPreservedActiveOwner",toJson true),("activeReturnRetiredExactlyOnce",toJson true)]
+  finally
+    release.resolve ()
+    IO.cancel work
+    discard <| IO.wait work
+
+def idlePreferred : IO Json := do
+  let pool ← Pool.make (α := Nat) 2
+  let some first ← pool.take? | throw (IO.userError "first slot missing")
+  let some second ← pool.take? | throw (IO.userError "second slot missing")
+  check (← pool.install first 1) "first resource rejected"
+  check (← pool.install second 2) "second resource rejected"
+  let disposed ← IO.mkRef ([] : List Nat)
+  let dispose := fun value => disposed.modify (value :: ·)
+  pool.giveBack first false dispose
+  pool.giveBack second true dispose
+  let reused ← pool.withResource (pure true) (fun _ => throw (IO.userError "spawned despite an idle model"))
+    dispose (fun _ value _ => pure value)
+  check (reused == 2) "empty slot was preferred to a warm encoder"
+  pool.close dispose
+  check ((← disposed.get).length == 2) "idle preference lost a model"
+  return Json.mkObj [("warmModelPreferredOverEmptySlot",toJson true)]
+
+def run (output : System.FilePath) : IO Unit := do
+  let report := Json.mkObj [("overlap",← overlap),("retirement",← retiring),
+    ("failureAndShutdown",← failureAndClose),("idlePreferred",← idlePreferred),("allPassed",toJson true),
+    ("realModelOrFullHookCapacity",toJson false),("adopted",toJson false)]
+  IO.FS.writeFile output report.pretty
+end Eggshell.Research.EncoderPoolControls
+def main (args : List String) : IO Unit := do
+  let [output] := args | throw (IO.userError "output required")
+  Eggshell.Research.EncoderPoolControls.run (.mk output)

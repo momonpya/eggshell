@@ -1,0 +1,24 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2269,0 +2270,21 @@
++
++#check Eggshell.Research.EncoderPool.closed_reservation_refused
++#check Eggshell.Research.EncoderPool.running_reservation_refused
++#check Eggshell.Research.EncoderPool.retiring_reservation_refused
++#check Eggshell.Research.EncoderPool.stale_return_unchanged
++#check Eggshell.Research.EncoderPool.stale_retirement_unchanged
++#check Eggshell.Research.EncoderPool.capacity_bounded
++
++run_elab do
++  let environment ← Lean.getEnv
++  if environment.contains `Eggshell.Numerical.Backend.modelGate then
++    throwError "Encoder still has a service-wide inference mutex"
++  let some declaration := environment.find? ``Eggshell.Numerical.Backend.encode |
++    throwError "Missing parallel encoder"
++  let some body := declaration.value? | throwError "Missing encoder body"
++  unless body.getUsedConstants.contains ``Eggshell.Research.EncoderPool.Pool.withResource do
++    throwError "Encoder bypasses exclusive per-request ownership"
++  let some pipe := (environment.find? ``Eggshell.Numerical.encodePipe).bind (·.value?) |
++    throwError "Missing owned encoder exchange"
++  for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically] do
++    if pipe.getUsedConstants.contains forbidden then throwError "Encoder pipe waits under a shared mutex"

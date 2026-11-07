@@ -1,0 +1,115 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -8,0 +9 @@
++public import tools.research.EncoderPool
+@@ -28 +29,2 @@
+-    MiniLM.embeddingSource,BlockScore.implementation,include_str "Numerical.lean",include_str "DaemonWire.lean")).compress.toUTF8)
++    MiniLM.embeddingSource,BlockScore.implementation,include_str "Numerical.lean",include_str "DaemonWire.lean",
++    include_str "../tools/research/EncoderPool.lean")).compress.toUTF8)
+@@ -292 +294,2 @@
+-  modelGate : Std.Mutex Unit
++  encoders : Research.EncoderPool.Pool Kernel
++  hardwareThreads : Nat
+@@ -294 +296,0 @@
+-  child : IO.Ref (Option Kernel)
+@@ -299 +300,0 @@
+-  starts : IO.Ref Nat
+@@ -329,0 +331,30 @@
++/-- Every request owns its pipe until the response read has joined. Only a
++failed owner retires that encoder; other in-flight encoders remain live. -/
++def encodePipe (child : Kernel) (body : String) (deadline : Nat) (live : IO Bool)
++    (retire : IO Unit) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
++  let running ← IO.asTask (do
++    mark "encode-pipe-write:start"
++    child.stdin.putStr (if body.endsWith "\n" then body else body++"\n")
++    child.stdin.flush
++    mark "encode-pipe-write:end"
++    mark "encode-line-read:start"
++    let result ← child.stdout.getLine
++    mark "encode-line-read:end"
++    return result) .dedicated
++  let ready ← TaskDeadline.event running
++  try
++    repeat
++      let now ← IO.monoMsNow
++      unless (← live) && now < deadline do throw (IO.userError "encoder pipe expired or disconnected")
++      let result ← TaskDeadline.awaitEvent (do
++        let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
++        Research.OwnedSelect.one #[.case ready (fun value => pure (some value)),.case timer (fun _ => pure none)])
++      if let some value := result then
++        discard <| IO.wait running
++        unless !value.isEmpty do throw (IO.userError "numerical encoder closed its response")
++        return value
++    throw (IO.userError "unreachable encoder wait")
++  catch error =>
++    try retire finally discard <| IO.wait running
++    throw error
++
+@@ -336,4 +367,6 @@
+-  repeat
+-    unless admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline do
+-      throw (IO.userError "numerical request is no longer live")
+-    let result ← backend.modelGate.tryAtomically do
++  let live := do return admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline
++  backend.encoders.withResource live (fun ticket => do
++      mark "encode-spawn:start"
++      let child ← spawnKernel config ((← directory config) / s!"model-{ticket.index}.guard")
++      return child) stopKernel (fun ticket child retire => do
++      if ticket.cached.isNone then mark "encode-spawn:end"
+@@ -341,23 +374,6 @@
+-      unless admissionLive (← backend.stopping.get) (← waiting) (← IO.monoMsNow) deadline do
+-        throw (IO.userError "numerical gate admission expired")
+-      mark "encode-child:start"
+-      let child ← match ← backend.child.get with
+-        | some child => pure child
+-        | none => do
+-            let child ← spawnKernel config ((← directory config) / "model.guard")
+-            backend.child.set (some child)
+-            backend.starts.modify (·+1)
+-            pure child
+-      mark "encode-child:end"
+-      try
+-        mark "encode-kernel:start"
+-        child.stdin.putStr body
+-        child.stdin.flush
+-        let result ← awaitLine child deadline backend.stopping.get
+-        mark "encode-kernel:end"
+-        return result
+-      catch error =>
+-        backend.stopping.set true
+-        throw error
+-    if let some result := result then return result
+-    IO.sleep 5
++      mark s!"encode-slot:{ticket.index}"
++      mark s!"encode-model:{child.pid.toNat}"
++      mark "encode-kernel:start"
++      let result ← encodePipe child body deadline live retire mark
++      mark "encode-kernel:end"
++      return result)
+@@ -488,2 +504,8 @@
+-      | "stats" => pure ((Json.mkObj [("modelStarts",toJson (← backend.starts.get)),
+-          ("modelPid",toJson ((← backend.child.get).map (·.pid.toNat))),
++      | "stats" => do
++        let models ← backend.encoders.state.atomically get
++        let pids := models.slots.filterMap fun slot => match slot with
++          | .idle child | .running _ (some child) | .retiring _ child => some child.pid.toNat
++          | _ => none
++        pure ((Json.mkObj [("modelStarts",toJson models.starts),
++          ("modelPids",toJson pids),("modelCapacity",toJson models.slots.size),
++          ("hardwareThreads",toJson backend.hardwareThreads),
+@@ -517 +539,10 @@
+-  let backend : Backend := ⟨← Std.Mutex.new (),← Std.Mutex.new (),← IO.mkRef none,← IO.mkRef none,← IO.mkRef 0,← ProjectionCache.Cache.make,← IO.mkRef {},← IO.mkRef 0,← IO.mkRef false⟩
++  let hardwareThreads := (System.Platform.Internal.getHardwareConcurrency ()).toNat
++  let backend : Backend := {
++    encoders := ← Research.EncoderPool.Pool.make (Research.EncoderPool.capacity hardwareThreads)
++    hardwareThreads
++    scoreGate := ← Std.Mutex.new ()
++    rawChild := ← IO.mkRef none
++    rawStarts := ← IO.mkRef 0
++    projections := ← ProjectionCache.Cache.make
++    pages := ← IO.mkRef {}
++    stopping := ← IO.mkRef false }
+@@ -544,2 +575 @@
+-    backend.modelGate.atomically do
+-      if let some child ← backend.child.get then stopKernel child
++    backend.encoders.close stopKernel
