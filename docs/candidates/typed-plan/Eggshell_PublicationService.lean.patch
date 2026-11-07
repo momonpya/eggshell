@@ -1,0 +1,25 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -491 +491 @@
+-    (reserve : IO Unit := pure ()) : IO Json := do
++    (reserve : IO Unit := pure ()) : IO SourceViewBatch.Plan := do
+@@ -556,2 +556 @@
+-    let result := Json.mkObj [("identities",toJson (requests.map (·.access.identity))),
+-      ("lease",toJson lease),("choice",toJson choice)]
++    let result : SourceViewBatch.Plan := {identities := requests.map (·.access.identity),lease,choice}
+@@ -568 +567 @@
+-  selectSourcePlan server secret requests lease query deadline (do
++  let result ← selectSourcePlan server secret requests lease query deadline (do
+@@ -570,0 +570 @@
++  return toJson result
+@@ -583,2 +583 @@
+-    let query ← IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceQuery) selector)
+-    selectSourcePlan server first.access.capability requests lease query deadline
++    selectSourcePlan server first.access.capability requests lease selector deadline
+@@ -597 +596 @@
+-    (requests : Array SourceViewBatch.Request) (lease : String) (selector : Json) (deadline : Nat) :
++    (requests : Array SourceViewBatch.Request) (lease : String) (selector : SharedRangeAdapter.ServiceQuery) (deadline : Nat) :
+@@ -600,2 +599 @@
+-      let query ← IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceQuery) selector)
+-      selectSourcePlan server first.access.capability requests lease query deadline) := rfl
++      selectSourcePlan server first.access.capability requests lease selector deadline) := rfl

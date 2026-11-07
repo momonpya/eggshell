@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-07更新。状態はactive。共有モデル候補の80同時は資源上限内だったが、全80件が未完了となった。配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-08更新。状態はactive。直近候補は実LLVM全6hookの必要原文32/32・親本文一致を保ったが、16並行でメモリ保護停止した。80人継続利用、総token・品質の採用比較は未達・未検証である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -42,6 +42,8 @@
 [delivery-key-sets](docs/candidates/delivery-key-sets/README.md)は検索後の配送キーに残った2か所の二次処理を除いた隔離候補。通常runtimeは`7e07c787…`、Handoff/DeliveryKeysの2変更と検査用1追加だけをnative sourceで照合した。キーと最初の出現順を含む全リストの等式をLeanで証明し、実ACK6554キーのAB/BA/ABで107/132/130→0/0/1ms、独立キー倍増で544/518/507→2/2/1ms、全12組と351小例で一致した。実LLVM題材1/2/3各2新チャットも全32/32・親本文byte一致・意味/シナプス/packet/ACK完了・sharedImage=true・前景warm0・原文不変で、8354/7876、9272/9233、9270/9290msだった。関連RSS最大3001824KiB、資源停止なし・全service終了成功・残存0。回答モデルの両周や反復した全hook速度効果、総token改善、80人の98%達成の証拠ではない。推論全体のmutexは親から既に除かれ、共有model1/native計算枠2の容量待ちは残る。原因を変えない80負荷は再実行していない。終了session/重複receipt/検査器と不要な旧runtime/prefixを削除し、原典/current project cache/model/採用比較基準/現親と候補/native witnessは保持、archiveなし。次は残る数値の待機と検索後の再構築を分け、質問非依存の準備を共有する。未採用・回答モデル0・有料比較0/18・goal activeを維持する。
 
 2026-11-08の[typed-fetch](docs/candidates/typed-fetch/README.md)は、同一サービス内で使わないwire用JSON、原文行の比較ごとのJSON化、返却する証拠とは別の行別診断JSONを除く隔離候補。runtime `06d83c0f…`の289 native object・5 source変更＋検査1追加を照合し、5,702行の順序・originの一致と併合291/290/291→140/138/140msを確認した。実LLVM全6hookは32/32・親本文byte一致・意味/シナプス/packet/ACK完了で、8139/7529、8873/8906、9150/9125ms。約1.1万件のwitness検証は維持し、診断は各44〜47万bytesへ減った。続く4並行は4/4・6994msだったが、16並行の途中でRSS3687680KiBとなり保護停止、残存0。80は開始していない。停止時は全16件sharedImage=true・focus完了・delivery-domain到達、packet検証6件・service返信4件だったが、client/ACKの完了一覧はなく成功件数に換算しない。cache統計はprime→4の間に原文/owner/view/imageのload数が1/30/40/1で不変・eviction0であり、16の時点の再構築やheap漏れを否定する証拠にはしない。peakの出版serviceは1748928KiB、モデルは1基1146608KiBだった。論理cache chargeをRSS全体と同一視しない。次は原文取得・抽出で要求ごとに複製・復号・検証している構造を固定入力で切り分け、scope/snapshotに結び付いた検証済み原文参照を共有する。原因を変えない16/80、受動heap調査、compute枠だけの追加は繰り返さない。候補/認定domain/予算/期限/資源上限は維持する。終了した旧実行体・未参照の旧生成物・合成DB・session/receiptは削除、必要な原典/current DB/cache/model/native入力と失敗の小記録は保持、archiveなし。総token/品質比較0/18、本体未採用、goal active。
+
+後続の[typed-plan](docs/candidates/typed-plan/README.md)は、同一service内の選択問い合わせ/結果をJSON ASTへ変換して復号し直す往復を型付き参照へ置き換えた隔離候補。runtime `bb0d5972…`の292 native object、直接7変更＋3追加、全製品coreとの検査器275共通source一致を確認した。固定3入力×AB/BA/ABの全9組が一致し、親の往復7〜13msを除いたが、これを8秒前後のhookの主因とは扱わない。実LLVM全6hookは必要原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了・sharedImage=true・前景warm0、8001/7494、8822/9017、9050/8808msだった。続く4並行は4/4・6274ms、16並行はRSS3696880KiBで保護停止、全client/ACK完了一覧なし・残存0。80は未実行。同じ製品のエンコーダ再検査は順次16＋16同時×2波の48応答がvector/被覆一致、波1048/1037ms・同じmodelで独立推論の区間が重なり、起動1・compute2・RSS最大1326288KiB・残存0だった。推論全体のmutexはなく、管理状態と物理pipeの短い同期は残る。今回model/compute数は変更していない。次は共有checked viewから要求ごとに原文/候補を組み直し保持する経路を、元bytes・順序・scope・証拠の一致を保って減らす。同じ失敗負荷、compute枠だけの追加、資源上限の緩和はしない。終了した旧未参照生成物約3.73GB、合成DB、session・重複receiptは記録して削除、archiveなし。総token/品質比較0/18、本体未採用、goal activeを維持する。
 
 ## 直近の経緯
 

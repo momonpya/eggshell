@@ -1,0 +1,75 @@
+--- a/tools/research/RuntimeReadControls.lean
++++ b/tools/research/RuntimeReadControls.lean
+@@ -10,0 +11 @@
++#print axioms SourceViewBatch.Plan.wire_exact
+@@ -264,2 +265,2 @@
+-    let localPlan ← direct.select requests palette.lease (toJson query) deadline
+-    check (localPlan == actualPlan) "direct selector differs from wire-handler result"
++    let localPlan ← direct.select requests palette.lease query deadline
++    check (toJson localPlan == actualPlan) "direct selector differs from wire-handler result"
+@@ -277 +278 @@
+-    check ((← batch.select (toJson query) deadline) == toJson expectedChoice)
++    check (toJson (← batch.select query deadline) == toJson expectedChoice)
+@@ -278,0 +280,8 @@
++    for changed in [{localPlan with identities := #[]},{localPlan with lease := "foreign"}] do
++      let forged := {direct with select := fun _ _ _ _ => pure changed}
++      check (← rejects (({batch with localReads := some forged}).select query deadline))
++        "typed selector accepted a foreign original boundary"
++    check (← rejects (({batch with endpoint := {endpoint with generation := "foreign"}}).select query deadline))
++      "typed selector accepted a foreign service generation"
++    check (← rejects (direct.select requests palette.lease {query with works := #[]} deadline))
++      "typed selector bypassed its finite-domain validation"
+@@ -286 +295 @@
+-    check (← rejects (direct.select foreign palette.lease (toJson query) deadline))
++    check (← rejects (direct.select foreign palette.lease query deadline))
+@@ -322,0 +332,46 @@
++def generateReadFixture (root : System.FilePath) : IO Unit := do
++  let mut owners := #[]
++  for index in [:2] do
++    let owner := root/toString index
++    let database := owner/"source.egg"
++    let source ← Persistence.ensureSnapshot database
++    let session := s!"typed-read-fixture-{index}"
++    let domain := Sha256.hex session.toUTF8
++    let known ← Journal.knowledge source [] false
++    let mut tools := []
++    for item in [:4] do
++      let body := s!"recorded head source/key-17 警告 owner {index} item {item}\n" ++
++        String.join (List.replicate 48 s!"Independent observation {index}/{item}: original output bytes, provenance, scoped owner and recorded range.\n") ++
++        "recorded tail source/key-11 探索\n"
++      let tool : ToolEvent := {
++        name := "synthetic_observation"
++        useId := s!"read-{item}"
++        input := (Json.mkObj [("owner",toJson index),("item",toJson item)]).compress
++        response := (Json.mkObj [("output",toJson body)]).compress }
++      let occurrence : Occurrence := ⟨session,"turn",tool.useId⟩
++      discard <| Journal.append source ⟨⟨domain,item*2+1⟩,.start occurrence (canonicalToolWork tool)
++        (Sha256.hex "typed source read fixture".toUTF8) known,none⟩
++      discard <| Journal.append source ⟨⟨domain,item*2+2⟩,.finish occurrence tool.name
++        (canonicalJson tool.input) (canonicalJson tool.response) (some source.directory.toString),none⟩
++      tools := tools++[tool]
++    let pending : PendingTurn := {
++      sessionId := session
++      turnId := "turn"
++      cwd := owner.toString
++      prompt := "typed source read fixture"
++      profile := "work"
++      write := some source.directory.toString
++      read := []
++      semanticMatcher := none
++      handoffChars := 500000
++      projection := .none
++      tools
++      finalMessage := none }
++    let request ← NativePublication.prepare pending source.directory true
++    let publication ← NativePublication.runPrepared source.directory #[request]
++    check (publication.size == 1 && publication.all (·.source.complete)) "synthetic source publication did not ACK"
++    let pinned ← DB.PageMap.pin database
++    owners := owners.push (Json.mkObj [("owner",toJson index),("database",toJson database.toString),
++      ("identity",toJson pinned.head.identity),("observations",toJson (4 : Nat)),("publicationAcked",toJson true)])
++  IO.FS.writeFile (root/"generated.json") (toJson owners).compress
++
+@@ -327 +382,2 @@
+-  let originalRoot : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/frontend-quiescence-fixture-small1/work.project/owners"
++  let originalRoot := root/"focus-fixture/owners"
++  generateReadFixture originalRoot

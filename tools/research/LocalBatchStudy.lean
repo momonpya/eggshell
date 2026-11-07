@@ -281,7 +281,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
     "actual hooks did not use the direct selected-original path"
   check (!requiresKeyedImage || keyedImageUsed) "delivery passed but candidate shared keyed path was not exercised"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership","delivery-key-sets","typed-fetch"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   let guardTag := (result.getObjValAs? String "guardTag").toOption.getD (tag++"-cells1")

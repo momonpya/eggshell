@@ -1,0 +1,19 @@
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -294 +294,2 @@
+-def SourceBatch.select (batch : SourceBatch) (query : Json) (deadline : Nat) : IO Json := do
++def SourceBatch.select (batch : SourceBatch) (query : SharedRangeAdapter.ServiceQuery) (deadline : Nat) :
++    IO SharedRangeAdapter.ServiceChoice := do
+@@ -305 +306 @@
+-        ("selector",query),("budgetMs",toJson budget)]) budget
++        ("selector",toJson query),("budgetMs",toJson budget)]) budget
+@@ -307 +308 @@
+-      let result ← IO.ofExcept (Json.parse response)
++      let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.SourceViewBatch.Plan))
+@@ -309,2 +310 @@
+-  unless result.getObjValD "identities" == toJson batch.palette.identities &&
+-      result.getObjValD "lease" == toJson batch.palette.lease do
++  unless result.identities == batch.palette.identities && result.lease == batch.palette.lease do
+@@ -315 +315 @@
+-  return result.getObjValD "choice"
++  return result.choice
