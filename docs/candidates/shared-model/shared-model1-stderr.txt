@@ -1,0 +1,9 @@
+<string>:200: UserWarning: The model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 now uses mean pooling instead of CLS embedding. In order to preserve the previous behaviour, consider either pinning fastembed version to 0.5.1 or using `add_custom_model` functionality.
+<string>:200: UserWarning: The model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 now uses mean pooling instead of CLS embedding. In order to preserve the previous behaviour, consider either pinning fastembed version to 0.5.1 or using `add_custom_model` functionality.
+<string>:208: UserWarning: The model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 now uses mean pooling instead of CLS embedding. In order to preserve the previous behaviour, consider either pinning fastembed version to 0.5.1 or using `add_custom_model` functionality.
+Traceback (most recent call last):
+  File "<string>", line 341, in <module>
+    options.run_tag = str(identity)
+    ^^^^^^^^^^^^^^^
+AttributeError: 'onnxruntime.capi.onnxruntime_pybind11_state.RunOptions' object has no attribute 'run_tag' and no __dict__ for setting new attributes
+uncaught exception: shared model closed before its response
