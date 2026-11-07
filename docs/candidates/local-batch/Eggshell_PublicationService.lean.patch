@@ -1,0 +1,101 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -430,10 +429,0 @@
+-
+-def localReadAccess (server : Server) (endpoint : Daemon.Endpoint) : SourceViewBatch.ReadAccess := {
+-  pid := endpoint.pid,port := endpoint.port,generation := endpoint.generation
+-  read := fun requests deadline => do
+-    let some first := requests[0]? | throw (IO.userError "original batch has no read scope")
+-    readSourceViews server first.access.capability requests deadline
+-  release := fun requests lease => do
+-    let some first := requests[0]? | throw (IO.userError "original batch release has no read scope")
+-    checkBatchRequests server first.access.capability requests
+-    server.palettes.release lease (SourceViewBatch.key requests) }
+@@ -454,4 +444,3 @@
+-def sourceFetchMany (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
+-  let requests ← batchRequests server secret payload
+-  let wanted ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Fetch) "requests")
+-  let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
++def readSelectedRows (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
++    (lease : String) (wanted : Array SourceViewBatch.Fetch) (deadline : Nat) : IO SourceViewBatch.Reply := do
++  checkBatchRequests server secret requests
+@@ -478 +467 @@
+-    return toJson ({identities := requests.map (·.access.identity),parts} : SourceViewBatch.Reply)
++    return {identities := requests.map (·.access.identity),parts}
+@@ -479,0 +469,13 @@
++def sourceFetchMany (server : Server) (secret : String) (payload : Json) (deadline : Nat) : IO Json := do
++  let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++  let wanted ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Fetch) "requests")
++  let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
++  return toJson (← readSelectedRows server secret requests lease wanted deadline)
++
++theorem source_fetch_many_uses_typed_read (server : Server) (secret : String) (payload : Json) (deadline : Nat) :
++    sourceFetchMany server secret payload deadline = (do
++      let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++      let wanted ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Fetch) "requests")
++      let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
++      return toJson (← readSelectedRows server secret requests lease wanted deadline)) := rfl
++
+@@ -486,2 +488,3 @@
+-def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline : Nat)
+-    (reservedReply : IO.Ref Nat) : IO Json := do
++def selectSourcePlan (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
++    (lease : String) (query : SharedRangeAdapter.ServiceQuery) (deadline : Nat)
++    (reserve : IO Unit := pure ()) : IO Json := do
+@@ -489,3 +492 @@
+-  let requests ← batchRequests server secret payload
+-  let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
+-  let query ← IO.ofExcept (payload.getObjVal? "selector" >>= fromJson? (α := SharedRangeAdapter.ServiceQuery))
++  checkBatchRequests server secret requests
+@@ -556,6 +557 @@
+-    -- Computation already owns a charged, bounded read-view borrower. Acquire
+-    -- the output reservation only when a result exists, before releasing
+-    -- that borrower or encoding wire bytes. An expired waiter remains charged
+-    -- until withView's finalizer releases its immutable source references.
+-    reserveReply server Stream.maxBytes deadline
+-    reservedReply.set Stream.maxBytes
++    reserve
+@@ -562,0 +559,28 @@
++
++def sourcePlan (server : Server) (secret : String) (payload : Json) (deadline : Nat)
++    (reservedReply : IO.Ref Nat) : IO Json := do
++  let requests ← IO.ofExcept (payload.getObjValAs? (Array SourceViewBatch.Request) "sources")
++  let lease ← IO.ofExcept (payload.getObjValAs? String "lease")
++  let query ← IO.ofExcept (payload.getObjVal? "selector" >>= fromJson? (α := SharedRangeAdapter.ServiceQuery))
++  -- Keep the borrower charged while an external reply waits for its wire
++  -- reservation. The local path creates no socket reply or send queue item.
++  selectSourcePlan server secret requests lease query deadline (do
++    reserveReply server Stream.maxBytes deadline
++    reservedReply.set Stream.maxBytes)
++
++def localReadAccess (server : Server) (endpoint : Daemon.Endpoint) : SourceViewBatch.ReadAccess := {
++  pid := endpoint.pid,port := endpoint.port,generation := endpoint.generation
++  read := fun requests deadline => do
++    let some first := requests[0]? | throw (IO.userError "original batch has no read scope")
++    readSourceViews server first.access.capability requests deadline
++  release := fun requests lease => do
++    let some first := requests[0]? | throw (IO.userError "original batch release has no read scope")
++    checkBatchRequests server first.access.capability requests
++    server.palettes.release lease (SourceViewBatch.key requests)
++  select := fun requests lease selector deadline => do
++    let some first := requests[0]? | throw (IO.userError "original selection has no read scope")
++    let query ← IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceQuery) selector)
++    selectSourcePlan server first.access.capability requests lease query deadline
++  fetch := fun requests lease wanted deadline => do
++    let some first := requests[0]? | throw (IO.userError "original fetch has no read scope")
++    readSelectedRows server first.access.capability requests lease wanted deadline }
+@@ -563,0 +588,14 @@
++theorem local_fetch_uses_checked_rows (server : Server) (endpoint : Daemon.Endpoint)
++    (requests : Array SourceViewBatch.Request) (lease : String)
++    (wanted : Array SourceViewBatch.Fetch) (deadline : Nat) :
++    (localReadAccess server endpoint).fetch requests lease wanted deadline = (do
++      let some first := requests[0]? | throw (IO.userError "original fetch has no read scope")
++      readSelectedRows server first.access.capability requests lease wanted deadline) := rfl
++
++theorem local_selection_uses_checked_plan (server : Server) (endpoint : Daemon.Endpoint)
++    (requests : Array SourceViewBatch.Request) (lease : String) (selector : Json) (deadline : Nat) :
++    (localReadAccess server endpoint).select requests lease selector deadline = (do
++      let some first := requests[0]? | throw (IO.userError "original selection has no read scope")
++      let query ← IO.ofExcept (fromJson? (α := SharedRangeAdapter.ServiceQuery) selector)
++      selectSourcePlan server first.access.capability requests lease query deadline) := rfl
++

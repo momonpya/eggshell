@@ -1,0 +1,19 @@
+# 同じサービス内の選択と原文取得を直接呼ぶ候補
+
+`delivery-ledger` d4349b12…から分離した未採用のLean候補。全hookの80並行、総トークン、品質の改善はまだ確認していない。
+
+既存のprocess-local `ReadAccess`はpalette取得とreleaseだけを直接呼び、後続の選択と原文取得は同じサービスへsocketで送り直していた。選択要求約2.1MBと選択結果約1MB、原文約5.5〜5.8MBのJSON往復が残り、共通のwire reply予約と送信処理にも入っていた。
+
+この候補では同じread authorityに選択と原文取得を加える。サービスの実処理を`selectSourcePlan`と`readSelectedRows`へ分け、外部のwire handlerも内部の呼出しも同じ処理を使う。内部原文取得は型付きの値で返し、内部選択はJSONオブジェクトを直接渡す。文字列への符号化、socketの自己接続、再解析、内部wire replyの予約を通さない。質問に依存する選択自体は残る。
+
+capability、完全なsource head、manifest、lease、所有者、元行の範囲と順序、原文検査を維持する。違うサービスのprocess/generationを持つlocal capabilityは拒否する。外部への応答では、元と同じくimmutable viewのborrowerを保持したままwire予約を取得する。認定・順位・候補数・配送予算・期限・worker数は変えず、新しい共有Mutex/Ref/CASも加えない。元のpoolの寿命管理までlock-freeになったとは主張しない。
+
+wireとlocalが同じ検査付き関数を呼ぶ3つのLean lawを通常ContractAuditへ接続し、native検査には独立した選択結果、wire handlerとの原文一致、listenerのないclientからの直接利用、別generation/capabilityの拒否を加えた。
+
+[検査結果](controls.json)は合格した。runtimeは`3e3c533ec69638a1606503082d54c573f043c8d0cc2296ec3248d9ec1702181a`。[280 objectの整合](native-closure.json)、[宣言した5 moduleだけの変更と埋込みsourceの一致](native-sources.json)を確認した。別にentryへ検査用コマンドを追加している。部品ではファイル原文3行の独立選択・元行とwire handlerの一致、実clientの直接select/fetch、別service generationとcapabilityの拒否が通った。従来のscope/head/manifest/expiry、release/cancel時の寿命と全予約回収も通り、元headは不変だった。
+
+管理poolの両Mutexを保持した80 readerの不変metadata/records/focus読取りは2ms、別のfile metadataを80×128回読む検査は30msだった。これらは小さな部品検査で、直接select/fetch全体が管理Mutexを一切使わないという証拠ではない。選択と原文取得はleaseの借用・返却を行う。
+
+ビルドの関連RSS最大2,677,728KiB、部品検査150,720KiB、guard停止なし・残存0。終了した部品のDBと私有派生物は記録後に削除した。旧allocatorと2つの旧client実行体348,329,040 bytesもSHAとnative入力を保持して削除し、archiveしない。
+
+次は部品の検査後、同じ固定原典で題材1の最初から全6件を再検査する。すべての本文と受領・期限が通る前に16/80負荷や回答モデルへ進まない。別に残っているencoder admissionの直列待ちを、この候補だけで解決した扱いにしない。最新runtimeでの空DB・LLVM seed・題材1/2/3・2周目、最新AGENTSの反復した総トークン/品質比較も必要である。

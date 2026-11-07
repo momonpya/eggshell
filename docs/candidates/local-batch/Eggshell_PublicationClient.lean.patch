@@ -1,0 +1,55 @@
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -296,7 +296,13 @@
+-  let budget ← liveBudget deadline
+-  let response ← Stream.exchange batch.endpoint "source-plan" (Json.mkObj [
+-    ("sources",toJson batch.requests),("lease",toJson batch.palette.lease),
+-    ("selector",query),("budgetMs",toJson budget)]) budget
+-  let profileReceived ← IO.monoMsNow
+-  let result ← IO.ofExcept (Json.parse response)
+-  let profileDecoded ← IO.monoMsNow
++  let (result,diagnostic) ← match batch.localReads with
++    | some access => do
++      unless access.accepts batch.endpoint do throw (IO.userError "original selection changed its local service")
++      let result ← access.select batch.requests batch.palette.lease query deadline
++      pure (result,none)
++    | none => do
++      let budget ← liveBudget deadline
++      let response ← Stream.exchange batch.endpoint "source-plan" (Json.mkObj [
++        ("sources",toJson batch.requests),("lease",toJson batch.palette.lease),
++        ("selector",query),("budgetMs",toJson budget)]) budget
++      let received ← IO.monoMsNow
++      let result ← IO.ofExcept (Json.parse response)
++      pure (result,some (response,received,(← IO.monoMsNow)))
+@@ -306 +312,3 @@
+-  clientProfile "source-plan" profileStarted profileReceived profileDecoded response
++  match diagnostic with
++  | some (response,received,decoded) => clientProfile "source-plan" profileStarted received decoded response
++  | none => Stream.profile "local-source-plan" [("elapsedMs",toJson ((← IO.monoMsNow)-profileStarted))]
+@@ -318,7 +326,13 @@
+-  let budget ← liveBudget deadline
+-  let response ← Stream.exchange batch.endpoint "source-fetch-many" (Json.mkObj [
+-    ("sources",toJson batch.requests),("lease",toJson batch.palette.lease),
+-    ("requests",toJson requests),("budgetMs",toJson budget)]) budget
+-  let profileReceived ← IO.monoMsNow
+-  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.SourceViewBatch.Reply))
+-  let profileDecoded ← IO.monoMsNow
++  let (result,diagnostic) ← match batch.localReads with
++    | some access => do
++      unless access.accepts batch.endpoint do throw (IO.userError "original fetch changed its local service")
++      let result ← access.fetch batch.requests batch.palette.lease requests deadline
++      pure (result,none)
++    | none => do
++      let budget ← liveBudget deadline
++      let response ← Stream.exchange batch.endpoint "source-fetch-many" (Json.mkObj [
++        ("sources",toJson batch.requests),("lease",toJson batch.palette.lease),
++        ("requests",toJson requests),("budgetMs",toJson budget)]) budget
++      let received ← IO.monoMsNow
++      let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.SourceViewBatch.Reply))
++      pure (result,some (response,received,(← IO.monoMsNow)))
+@@ -343 +357,4 @@
+-  clientProfile "source-fetch-many" profileStarted profileReceived profileDecoded response
++  match diagnostic with
++  | some (response,received,decoded) => clientProfile "source-fetch-many" profileStarted received decoded response
++  | none => Stream.profile "local-source-fetch" [("elapsedMs",toJson ((← IO.monoMsNow)-profileStarted)),
++      ("rows",toJson merged.size)]

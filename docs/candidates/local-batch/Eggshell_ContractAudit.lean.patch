@@ -1,0 +1,10 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2259 +2259 @@
+-  let some declaration := environment.find? ``Eggshell.Plugin.Publication.Service.sourcePlan |
++  let some declaration := environment.find? ``Eggshell.Plugin.Publication.Service.selectSourcePlan |
+@@ -2265,0 +2266,4 @@
++
++#check Eggshell.Plugin.Publication.Service.source_fetch_many_uses_typed_read
++#check Eggshell.Plugin.Publication.Service.local_fetch_uses_checked_rows
++#check Eggshell.Plugin.Publication.Service.local_selection_uses_checked_plan

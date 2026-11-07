@@ -1,0 +1,27 @@
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -70,0 +71,10 @@
++structure Fetch where
++  source : Nat
++  requests : Array OwnerPalette.Fetch
++  deriving ToJson,FromJson
++
++structure Reply where
++  identities : Array Json
++  parts : Array (Nat × OwnerPalette.Reply)
++  deriving ToJson,FromJson
++
+@@ -78,0 +89,2 @@
++  select : Array Request → String → Json → Nat → IO Json
++  fetch : Array Request → String → Array Fetch → Nat → IO Reply
+@@ -92,10 +103,0 @@
+-structure Fetch where
+-  source : Nat
+-  requests : Array OwnerPalette.Fetch
+-  deriving ToJson,FromJson
+-
+-structure Reply where
+-  identities : Array Json
+-  parts : Array (Nat × OwnerPalette.Reply)
+-  deriving ToJson,FromJson
+-

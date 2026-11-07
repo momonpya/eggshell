@@ -1,0 +1,36 @@
+--- a/tools/research/RuntimeReadControls.lean
++++ b/tools/research/RuntimeReadControls.lean
+@@ -91 +91,7 @@
+-      (``sourcePlan,``SharedReadViews.Source.readMetadata),
++      (``sourcePlan,``selectSourcePlan),
++      (``selectSourcePlan,``SharedReadViews.Source.readMetadata),
++      (``sourceFetchMany,``readSelectedRows),
++      (``localReadAccess,``selectSourcePlan),
++      (``localReadAccess,``readSelectedRows),
++      (``Publication.Client.SourceBatch.select,``SourceViewBatch.ReadAccess.select),
++      (``Publication.Client.SourceBatch.fetch,``SourceViewBatch.ReadAccess.fetch),
+@@ -114 +120 @@
+-  unless (← body ``sourcePlan).getUsedConstants.contains ``PreparedSourceView.fileReady do
++  unless (← body ``selectSourcePlan).getUsedConstants.contains ``PreparedSourceView.fileReady do
+@@ -250,0 +257,21 @@
++    let endpoint : Daemon.Endpoint := ⟨"publisher",(← IO.Process.getPID).toNat,12348,"","local-batch-check"⟩
++    let direct := localReadAccess server endpoint
++    let localPlan ← direct.select requests palette.lease (toJson query) deadline
++    check (localPlan == actualPlan) "direct selector differs from wire-handler result"
++    let wanted : Array SourceViewBatch.Fetch := #[⟨0,#[⟨owners[0]!,#[0]⟩]⟩]
++    let localRows ← direct.fetch requests palette.lease wanted deadline
++    let wireRows ← sourceFetchMany server access.capability (Json.mkObj [
++      ("sources",toJson requests),("lease",toJson palette.lease),("requests",toJson wanted)]) deadline
++    check (toJson localRows == wireRows) "direct original rows differ from wire-handler rows"
++    let batch : Publication.Client.SourceBatch := ⟨endpoint,requests,palette,some direct⟩
++    check ((← batch.select (toJson query) deadline) == toJson expectedChoice)
++      "actual client bypasses the direct selector"
++    let originals ← batch.fetch wanted deadline
++    check (!originals.isEmpty) "actual direct client lost original rows"
++    check (← rejects (({batch with endpoint := {endpoint with generation := "foreign"}}).fetch wanted deadline))
++      "direct client accepted a foreign service generation"
++    let foreign := requests.modify 0 fun request => {request with access := {request.access with capability := "foreign"}}
++    check (← rejects (direct.fetch foreign palette.lease wanted deadline))
++      "direct original rows bypassed capability checking"
++    check (← rejects (direct.select foreign palette.lease (toJson query) deadline))
++      "direct selector bypassed capability checking"
