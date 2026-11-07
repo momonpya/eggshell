@@ -1,0 +1,18 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -489,0 +490,3 @@
++        #[``Eggshell.SelectionAudit.Snapshot.ofSelection],
++        #[``Eggshell.EqualityDependency.DirectIndex.make]),
++      (``Eggshell.SelectionAudit.Snapshot.ofSelection,
+@@ -509 +512,2 @@
+-        #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe,
++        #[``Eggshell.Plugin.prepareDeferredSelectionAudit, ``Eggshell.Plugin.auditDeferredSelection,
++          ``Eggshell.SelectionAudit.Admission.observe,
+@@ -2023 +2027,2 @@
+-      (``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.Plugin.auditRenderedSelection)] do
++      (``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.Plugin.auditRenderedSelection),
++      (``Eggshell.Plugin.prepareDeferredSelectionAudit, ``Eggshell.Plugin.prepareDeferredSelectionAudit)] do
+@@ -2079 +2084,2 @@
+-      ``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.Synapses.Transport.build] do
++      ``Eggshell.Plugin.prepareDeferredSelectionAudit, ``Eggshell.Plugin.auditDeferredSelection,
++      ``Eggshell.Synapses.Transport.build] do

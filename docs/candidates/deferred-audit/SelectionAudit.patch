@@ -1,0 +1,42 @@
+--- a/Eggshell/SelectionAudit.lean
++++ b/Eggshell/SelectionAudit.lean
+@@ -221,4 +221,3 @@
+-def Snapshot.ofReport (persistent runLocal : List UnionEdge)
+-    {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
+-    {current : Value} {selection : Selection}
+-    (report : SelectionDependency.Report graph equality policy current selection)
++def Snapshot.ofSelection (persistent runLocal : List UnionEdge)
++    (equality : Equality) (current : Value) (selection : Selection)
++    (premises : List SelectionDependency.Comparison)
+@@ -230 +229 @@
+-    report.premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
++    premises.zipIdx.foldl (fun positions (premise, index) => positions.insert premise index) {}
+@@ -239 +238 @@
+-        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length)
++        premises := branch.premises.map (fun premise => positions.getD premise premises.length)
+@@ -246 +245 @@
+-  premises := report.premises.map DiscoveryAudit.ComparisonRow.encode
++  premises := premises.map DiscoveryAudit.ComparisonRow.encode
+@@ -257,0 +257,22 @@
++def Snapshot.ofReport (persistent runLocal : List UnionEdge)
++    {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
++    {current : Value} {selection : Selection}
++    (report : SelectionDependency.Report graph equality policy current selection)
++    (owners : List String) (bindings : List (Value × String) := [])
++    (admissions : List (Admission × String) := []) (history : List Admission := [])
++    (trail : DiscoveryAudit.Trail := {}) (runAll : List AllEdge := [])
++    (finalPass : Option Nat := none) : Snapshot :=
++  Snapshot.ofSelection persistent runLocal equality current selection report.premises
++    owners bindings admissions history trail runAll finalPass
++
++theorem snapshot_ofReport_deferred (persistent runLocal : List UnionEdge)
++    {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
++    {current : Value} {selection : Selection}
++    (report : SelectionDependency.Report graph equality policy current selection)
++    (owners : List String) (bindings : List (Value × String))
++    (admissions : List (Admission × String)) (history : List Admission)
++    (trail : DiscoveryAudit.Trail) (runAll : List AllEdge) (finalPass : Option Nat) :
++    Snapshot.ofReport persistent runLocal report owners bindings admissions history trail runAll finalPass =
++      Snapshot.ofSelection persistent runLocal equality current selection report.premises
++        owners bindings admissions history trail runAll finalPass := rfl
++

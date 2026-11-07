@@ -236,8 +236,16 @@ def encoderAudit (currentName : String := "resident-source") (outputName : Strin
   let validated := base/"typed-plan-build"
   let current := base/(currentName++"-build")
   let controls ← read (workspace/"docs/candidates/typed-plan/encoder-controls.json")
-  check (controls.getObjValD "runtimeSha256" == toJson (← hash (validated/"StudyMain")))
-    "numerical controls belong to another binary"
+  if ← (validated/"StudyMain").pathExists then
+    check (controls.getObjValD "runtimeSha256" == toJson (← hash (validated/"StudyMain")))
+      "numerical controls belong to another binary"
+  else
+    let retired ← read (workspace/"docs/candidates/deferred-audit/retired-earlier-products.json")
+    let rows ← IO.ofExcept (retired.getObjValAs? (Array Json) "executables")
+    check (retired.getObjValD "completed" == toJson true && rows.any (fun row =>
+      row.getObjValD "path" == toJson (validated/"StudyMain").toString &&
+      row.getObjValD "sha256" == controls.getObjValD "runtimeSha256"))
+      "missing validated executable has no matching completed retirement record"
   let report := controls.getObjValD "controls"
   check (report.getObjValD "all48RepliesExactVectorsAndCoverage" == toJson true)
     "exact concurrent vectors are not established"
@@ -269,6 +277,42 @@ def encoderAudit (currentName : String := "resident-source") (outputName : Strin
     ("compiledBoundary",toJson compared),("previousNativeWaves",toJson waves),
     ("all48RepliesExactVectorsAndCoverage",toJson true),("newEncoderRuns",toJson (0 : Nat)),
     ("entireReadPathLockFree",toJson false),("eightyUsersValidated",toJson false),("adopted",toJson false)])
+
+def inspectDecodedReaders : IO Unit := do
+  drained
+  let family := "deferred-audit"
+  let actual ← linkedWitnesses (base/(family++"-build"))
+  let take := fun (text first last : String) => do
+    let parts := text.splitOn first
+    check (parts.length == 2) "ambiguous decoded-reader declaration"
+    let tail := parts[1]!.splitOn last
+    check (tail.length > 1) "missing decoded-reader declaration end"
+    pure (first++tail[0]!)
+  let mut modules := #[]
+  let mut texts : Std.HashMap String String := {}
+  for name in ["Eggshell.GraphStore","Eggshell.PreparedReaders","Eggshell.Handoff"] do
+    let some witness := actual[name]? | throw (IO.userError "missing actual reader source witness")
+    let row ← IO.ofExcept (Json.parse witness >>= Json.getArr?)
+    let text ← IO.ofExcept row[0]!.getStr?
+    let path := base/(family++"-source")/(name.replace "." "/"++".lean")
+    check (text == (← IO.FS.readFile path)) "reader observation does not match its actual linked source"
+    texts := texts.insert name text
+    modules := modules.push (Json.mkObj [("module",toJson name),("sourceSha256",toJson (← hash path)),
+      ("actualLinkedSourceEqual",toJson true)])
+  let graph := texts["Eggshell.GraphStore"]!
+  let readers ← take graph "@[no_expose] def NodeReaders.new" "\n@[no_expose] def NodeReaders.at"
+  let memo ← take graph "private structure NodeMemo" "\n/-- A request-local DAG reader"
+  let frame ← take texts["Eggshell.PreparedReaders"]! "structure Image where" "\ndef maxBytes"
+  let federation ← take texts["Eggshell.Handoff"]! "def federatedDiscovery (" "\ndef "
+  check (readers.contains "snapshots.mapM fun _ => NodeMemo.new" && memo.contains "IO.mkRef {}" &&
+    federation.contains "let readers ← Persistence.Store.NodeReaders.new sources" && !frame.contains "NodeReader")
+    "the proposed repeated decoded-value allocation is not present"
+  write (workspace/"docs/candidates"/family/"decoded-reader-observation.json") (Json.mkObj [
+    ("runtimeSha256",toJson (← hash (base/(family++"-build/StudyMain")))),("modules",toJson modules),
+    ("requestLocalMemo",toJson memo),("readerCreation",toJson readers),("sharedImageFields",toJson frame),
+    ("federatedReaderCreation",toJson "let readers ← Persistence.Store.NodeReaders.new sources"),
+    ("newLoadRuns",toJson (0 : Nat)),("measuredHeapCauseEstablished",toJson false),
+    ("next",toJson "Share checked decoded immutable nodes by full project/scope/head; retain private overlays and replay original read observations. Preserve Outcome membership and Exact checks.")])
 
 def measurementSummary : IO Unit := do
   let evidence ← read (folder/"measurements.json")
@@ -350,16 +394,19 @@ def canonicalComponent (tag : String) (family : String := "canonical-order") : I
 
 def canonicalAudit (family : String := "canonical-order") : IO Unit := do
   drained
-  check (["canonical-order","rendering-lifetime","single-canonical"].contains family) "unknown native refinement"
+  check (["canonical-order","rendering-lifetime","single-canonical","deferred-audit"].contains family) "unknown native refinement"
   let rendering := family == "rendering-lifetime"
   let single := family == "single-canonical"
-  let parent := if rendering || single then "canonical-order" else "resident-source"
+  let deferred := family == "deferred-audit"
+  let parent := if deferred then "single-canonical" else if rendering || single then "canonical-order" else "resident-source"
   let target := base/(family++"-build")
   let destination := workspace/"docs/candidates"/family
   let auditTool := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
   discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
     "inspect",target.toString,(destination/"native-closure.json").toString]
-  let changes := if single then #["Eggshell.CanonicalSourceDelivery","Eggshell.PublicationClient","Eggshell.Handoff",
+  let changes := if deferred then #["Eggshell.Handoff","Eggshell.SelectionAudit","Eggshell.ContractAudit",
+      "+tools.research.DeferredAuditChecks"]
+    else if single then #["Eggshell.CanonicalSourceDelivery","Eggshell.PublicationClient","Eggshell.Handoff",
       "tools.research.RuntimeReadControls","+tools.research.SingleCanonicalChecks"]
     else if rendering then #["Eggshell.Handoff","Eggshell.SelectionAudit","Eggshell.ContractAudit",
       "+tools.research.RenderingLifetimeChecks"]
@@ -373,7 +420,9 @@ def canonicalAudit (family : String := "canonical-order") : IO Unit := do
   let nativeEntry ← IO.ofExcept ((← read (target/entryName)).getArr?)
   let parentEntry ← IO.ofExcept ((← read (base/(parent++"-build")/entryName)).getArr?)
   let before ← IO.ofExcept parentEntry[0]!.getStr?
-  let expected := if single then before.replace "import tools.research.CanonicalOrderChecks"
+  let expected := if deferred then before.replace "import tools.research.SingleCanonicalChecks"
+      "import tools.research.SingleCanonicalChecks\nimport tools.research.DeferredAuditChecks"
+    else if single then before.replace "import tools.research.CanonicalOrderChecks"
       "import tools.research.CanonicalOrderChecks\nimport tools.research.SingleCanonicalChecks" |>.replace
       "  | [\"canonical-order-check\",fixture,sha,output] =>"
       ("  | [\"single-canonical-check\",fixture,sha,output] =>\n"++
@@ -388,7 +437,7 @@ def canonicalAudit (family : String := "canonical-order") : IO Unit := do
      "    Eggshell.Research.CanonicalOrderChecks.run (.mk fixture) sha (.mk output); return 0\n"++
      "  | [\"resident-source-check\",fixture,sha,output] =>")
   check (nativeEntry[0]! == toJson expected) "entry changed beyond the comparison dispatch"
-  let checkName := if single then "SingleCanonicalChecks" else if rendering then "RenderingLifetimeChecks" else "CanonicalOrderChecks"
+  let checkName := if deferred then "DeferredAuditChecks" else if single then "SingleCanonicalChecks" else if rendering then "RenderingLifetimeChecks" else "CanonicalOrderChecks"
   let checks ← IO.ofExcept ((← read (target/("tools_research_"++checkName++".source"))).getArr?)
   check (checks[0]! == toJson (← IO.FS.readFile (workspace/("tools/research/"++checkName++".lean"))))
     "native checks differ from recorded independent parent"
@@ -401,7 +450,7 @@ def canonicalAudit (family : String := "canonical-order") : IO Unit := do
     check (difference.exitCode == 1) "expected native refinement is absent"
     IO.FS.writeFile (destination/(name++".patch")) difference.stdout
   write (destination/"entry-source.json") (Json.mkObj [
-    (if rendering then "onlyCheckedImportAdded" else "onlyComparisonDispatchAdded",toJson true),
+    (if rendering || deferred then "onlyCheckedImportAdded" else "onlyComparisonDispatchAdded",toJson true),
     ("independentParentAndNativeChecksExact",toJson true)])
 
 def canonicalCollectComponent (tag : String) (family : String := "canonical-order") : IO Unit := do
@@ -434,18 +483,21 @@ def canonicalPrepareAuditor (family : String := "canonical-order") : IO Unit := 
   guard (family++"-auditor-build1") #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
     (workspace/"tools/research/StudyBuildMain.lean").toString,(base/(family++"-auditor-settings.json")).toString]
 
-def canonicalPrepareCells (family : String := "canonical-order") : IO Unit := do
+def canonicalPrepareCells (family : String := "canonical-order") (attempt : Nat := 1) : IO Unit := do
   drained
+  check (attempt > 0) "positive actual delivery attempt required"
   let target := base/(family++"-build")
   let auditor := base/(family++"-auditor-build")
   let destination := workspace/"docs/candidates"/family
   let auditTool := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
-  discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
-    "inspect",auditor.toString,(destination/"auditor-closure.json").toString]
-  discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
-    "common-sources",target.toString,auditor.toString,(destination/"auditor-sources.json").toString]
+  if attempt == 1 then
+    discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
+      "inspect",auditor.toString,(destination/"auditor-closure.json").toString]
+    discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
+      "common-sources",target.toString,auditor.toString,(destination/"auditor-sources.json").toString]
   let proof ← read (destination/"auditor-sources.json")
-  check (proof.getObjValD "allProductCorePresent" == toJson true && proof.getObjValD "commonSourcesUnchanged" == toJson true)
+  check (proof.getObjValD "allProductCorePresent" == toJson true && proof.getObjValD "commonSourcesUnchanged" == toJson true &&
+    proof.getObjValD "auditorSha256" == toJson (← hash (auditor/"StudyMain")))
     "actual delivery driver differs from product core"
   let installation := base/(family++"-prefix")
   let digest ← hash (target/"StudyMain")
@@ -453,18 +505,19 @@ def canonicalPrepareCells (family : String := "canonical-order") : IO Unit := do
   write manifest (Json.mkObj [("root",toJson installation.toString),
     ("runtime",Json.mkObj [("path",toJson (target/"StudyMain").toString),("sha256",toJson digest)]),
     ("models",toJson (base/"prefix/share/eggshell/minilm").toString)])
-  guard (family++"-install1") #[(auditor/"StudyMain").toString,"install-prefix",manifest.toString]
+  if attempt == 1 then guard (family++"-install1") #[(auditor/"StudyMain").toString,"install-prefix",manifest.toString]
   let original ← read (base/"resident-source-cells2.json")
-  let root := base/(family++"-cells-result")
+  let label := family++"-cells"++(if attempt == 1 then "" else toString attempt)
+  let root := base/(label++"-result")
   let probes ← IO.ofExcept (original.getObjValAs? (Array Json) "probes")
   let probes ← probes.mapM fun probe => do
     let cell := (System.FilePath.mk (← IO.ofExcept (probe.getObjValAs? String "destination"))).fileName.get!
     return probe.setObjVal! "destination" (toJson (root/cell).toString)
       |>.setObjVal! "runtime" (Json.mkObj [("path",toJson (installation/"libexec/eggshell").toString),("sha256",toJson digest)])
       |>.setObjVal! "pluginRoot" (toJson (installation/"share/eggshell/codex-plugin").toString)
-  write (base/(family++"-cells.json")) (Json.mkObj [("output",toJson root.toString),("probes",toJson probes)])
-  guard (family++"-cells1") #["/usr/bin/env","LEAN_NUM_THREADS=1",(auditor/"StudyMain").toString,
-    "cells",(base/(family++"-cells.json")).toString]
+  write (base/(label++".json")) (Json.mkObj [("output",toJson root.toString),("probes",toJson probes)])
+  guard (family++"-cells"++toString attempt) #["/usr/bin/env","LEAN_NUM_THREADS=1",(auditor/"StudyMain").toString,
+    "cells",(base/(label++".json")).toString]
 
 def canonicalRetire : IO Unit := do
   drained
@@ -555,7 +608,7 @@ def inspectRendering (family tag : String) : IO Unit := do
 
 def sealInstalled (family : String) : IO Unit := do
   drained
-  check (["canonical-order","rendering-lifetime","single-canonical"].contains family) "unknown immutable product"
+  check (["canonical-order","rendering-lifetime","single-canonical","deferred-audit"].contains family) "unknown immutable product"
   let target := base/(family++"-build/StudyMain")
   let path := base/(family++"-prefix/libexec/eggshell")
   let digest ← hash target
@@ -751,13 +804,14 @@ def retireReferenceDriver : IO Unit := do
   IO.FS.removeFile (root/"StudyMain")
   write (destination/"retired-reference-driver.json") (record.setObjVal! "completed" (toJson true))
 
-def retireSingleAuditor : IO Unit := do
+def retireSingleAuditor (family : String := "single-canonical") : IO Unit := do
   drained
-  let destination := workspace/"docs/candidates/single-canonical"
+  check (["single-canonical","deferred-audit"].contains family) "unknown ended delivery helper"
+  let destination := workspace/"docs/candidates"/family
   check ((← read (destination/"delivery-cells.json")).getObjValD "actualDeliveryAllSixPassed" == toJson true &&
-    (← (base/"single-canonical-capacity-settings.json").pathExists))
+    (← (base/(family++"-capacity-settings.json")).pathExists))
     "finish actual delivery and prepare the capacity driver before retiring the ended helper"
-  let root := base/"single-canonical-auditor-build"
+  let root := base/(family++"-auditor-build")
   let expected := (← read (destination/"auditor-sources.json")).getObjValD "auditorSha256"
   check (expected == toJson (← hash (root/"StudyMain"))) "ended helper differs from its audited binary"
   for row in (← IO.FS.readFile (root/"runtime.rsp")).splitOn "\n" do
@@ -787,13 +841,22 @@ def singleRecords : IO Unit := do
     ("stderr",toJson (← IO.FS.readFile stderr)),("stderrSha256",toJson (← hash stderr)),
     ("guardRecordPresent",toJson false),("testStarted",toJson false),("adopted",toJson false)])
 
-def retireSingleCapacity : IO Unit := do
+def retireSingleCapacity (family : String := "single-canonical") : IO Unit := do
   drained
-  let destination := workspace/"docs/candidates/single-canonical"
-  check ((← read (destination/"capacity-small-cleanup.json")).getObjValD "completed" == toJson true &&
-    (← (destination/"single-canonical-capacity-small1.json").pathExists))
+  check (["single-canonical","deferred-audit"].contains family) "unknown ended capacity helper"
+  let destination := workspace/"docs/candidates"/family
+  let cleanup ← read (destination/"capacity-small-cleanup.json")
+  let small ← read (destination/"capacity-small.json")
+  let successful := (small.getObjValD "report").getObjValD "allPhasesPassed" == toJson true
+  check ((cleanup.getObjValD "completed" == toJson true || successful) &&
+    (← (destination/(family++"-capacity-small1.json")).pathExists))
     "preserve terminal evidence and clean owned sessions first"
-  let root := base/"single-canonical-capacity-build"
+  if successful then
+    let large ← read (destination/"capacity-80.json")
+    check ((large.getObjValD "guard").getObjValD "state" == toJson "finished" &&
+      (large.getObjValD "guard").getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+      (← (destination/"capacity-80-cleanup.json").pathExists)) "finish the larger stage before retiring its client"
+  let root := base/(family++"-capacity-build")
   let digest ← hash (root/"StudyMain")
   check ((← read (destination/"capacity-sources.json")).getObjValD "auditorSha256" == toJson digest)
     "capacity helper changed after audit"
@@ -803,7 +866,8 @@ def retireSingleCapacity : IO Unit := do
     if ← response.pathExists then
       check (!(← IO.FS.readFile response).contains (root.toString++"/"))
         "another native product still depends on the ended capacity helper"
-  let paths := #[root,base/"single-canonical-capacity-source",base/"single-canonical-capacity-small-result"]
+  let paths := #[root,base/(family++"-capacity-source"),base/(family++"-capacity-small-result"),
+    base/(family++"-capacity-80-result")]
   let record := Json.mkObj [("runtimeSha256",toJson digest),("removed",toJson (paths.map (·.toString))),
     ("nativeEntrySource",← read (root/"tools_research_MemoryCapacity.source")),
     ("noOtherNativeResponseReferencesRemovedRoot",toJson true),
@@ -812,16 +876,18 @@ def retireSingleCapacity : IO Unit := do
   for path in paths do if ← path.pathExists then IO.FS.removeDirAll path
   write (destination/"retired-capacity-helper.json") (record.setObjVal! "completed" (toJson true))
 
-def singleRetireLogs : IO Unit := do
+def singleRetireLogs (family : String := "single-canonical") : IO Unit := do
   drained
-  let destination := workspace/"docs/candidates/single-canonical"
+  check (["single-canonical","deferred-audit"].contains family) "unknown ended log family"
+  let destination := workspace/"docs/candidates"/family
   let attempts ← IO.ofExcept ((← read (destination/"attempts.json")).getArr?)
   let mut paths : Array System.FilePath := #[]
   for attempt in attempts do
     let name ← IO.ofExcept (attempt.getObjValAs? String "name")
-    check (name.startsWith "single-canonical-" && name.endsWith ".json" &&
+    check (name.startsWith (family++"-") && name.endsWith ".json" &&
       name.toList.all (fun c => c.isAlphanum || c == '-' || c == '.')) "log tag escaped the ended trial"
     let tag := (name.dropEnd 5).toString
+    if (attempt.getObjValD "record").getObjValD "logs" == Json.null then continue
     for log in ← IO.ofExcept ((attempt.getObjValD "record").getObjValAs? (Array Json) "logs") do
       if log.getObjValD "present" == toJson false then continue
       let extension ← IO.ofExcept (log.getObjValAs? String "name")
@@ -864,6 +930,7 @@ def main (args : List String) : IO Unit := do
   | ["summary"] => measurementSummary
   | ["encoder-audit"] => encoderAudit
   | ["encoder-audit",current,destination] => encoderAudit current destination
+  | ["inspect-decoded-readers"] => inspectDecodedReaders
   | ["cleanup-measurements"] => cleanupMeasurements
   | ["canonical-setup",tag] => canonicalSetup tag
   | ["canonical-component",tag] => canonicalComponent tag
@@ -876,6 +943,9 @@ def main (args : List String) : IO Unit := do
   | ["prepare-auditor",family] => canonicalPrepareAuditor family
   | ["canonical-prepare-cells"] => canonicalPrepareCells
   | ["prepare-cells",family] => canonicalPrepareCells family
+  | ["prepare-cells",family,attempt] => do
+    let some attempt := attempt.toNat? | throw (IO.userError "invalid actual delivery attempt")
+    canonicalPrepareCells family attempt
   | ["canonical-retire"] => canonicalRetire
   | ["collect-record",family,tag] => collectRecord family tag
   | ["inspect-renderer",family,tag] => inspectRendering family tag
@@ -891,9 +961,12 @@ def main (args : List String) : IO Unit := do
   | ["single-collect-controls",tag] => singleCollectControls tag
   | ["retire-reference-driver"] => retireReferenceDriver
   | ["retire-single-auditor"] => retireSingleAuditor
+  | ["retire-auditor",family] => retireSingleAuditor family
   | ["single-records"] => singleRecords
   | ["retire-single-capacity"] => retireSingleCapacity
+  | ["retire-capacity",family] => retireSingleCapacity family
   | ["single-retire-logs"] => singleRetireLogs
+  | ["retire-logs",family] => singleRetireLogs family
   | ["single-compact-retirements"] => singleCompactRetirements
   | ["seal-installed"] =>
     drained
