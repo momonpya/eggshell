@@ -136,7 +136,8 @@ def main (args : List String) : IO Unit := do
     let (newEntry,current) ← sourceWitnesses (.mk candidate)
     let additions := allowed.filterMap fun name =>
       if name.startsWith "+" then some (name.drop 1 |>.toString) else none
-    let allowed := allowed.filter fun name => !name.startsWith "+"
+    let literalClaims := allowed.filter (·.startsWith "@")
+    let allowed := allowed.filter fun name => !name.startsWith "+" && !name.startsWith "@"
     let mut changed := #[]
     let mut removed := #[]
     let mut added := #[]
@@ -157,6 +158,22 @@ def main (args : List String) : IO Unit := do
     for name in additions do
       let some bytes := current[name]? | throw (IO.userError "declared added source absent")
       addedLiterals := addedLiterals.push (← decode bytes).1
+    let mut declaredLiteralFiles := #[]
+    for claim in literalClaims do
+      let value := claim.drop 1 |>.toString
+      let expected := value.take 64 |>.toString
+      let separator := value.drop 64 |>.take 1 |>.toString
+      let file := value.drop 65 |>.toString
+      unless expected.length == 64 && expected.toList.all (fun c =>
+          ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f')) && separator == ":" && file.startsWith "/" do
+        throw (IO.userError "literal approval requires @SHA256:ABSOLUTE_PATH")
+      let actual ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",file]}
+      unless actual.exitCode == 0 && (actual.stdout.splitOn " ").headD "" == expected do
+        throw (IO.userError "declared numerical literal digest differs from its file")
+      let bytes ← IO.FS.readFile (.mk file)
+      addedLiterals := addedLiterals.push bytes
+      declaredLiteralFiles := declaredLiteralFiles.push (Json.mkObj [("path",toJson file),
+        ("sha256",toJson expected),("bytes",toJson bytes.utf8ByteSize)])
     let mut direct := #[]
     let mut literalContainers := #[]
     let mut literalsApproved := true
@@ -184,6 +201,7 @@ def main (args : List String) : IO Unit := do
       ("directSourceChanges",toJson (direct.qsort (· < ·))),("literalContainers",toJson literalContainers),
       ("literalChangesExactlyMatchDeclaredSourceBytes",toJson literalsApproved),
       ("removed",toJson removed),("added",toJson added),("declaredAddedModules",toJson additions),
+      ("declaredLiteralFiles",toJson declaredLiteralFiles),
       ("exactExpectedChangeSet",toJson ok)]).pretty
     unless ok do throw (IO.userError "native source comparison changed more than the declared candidate")
     return

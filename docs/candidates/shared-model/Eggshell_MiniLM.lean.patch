@@ -1,0 +1,7 @@
+--- a/Eggshell/MiniLM.lean
++++ b/Eggshell/MiniLM.lean
+@@ -17,0 +18,4 @@
++/-- One native ONNX session serves independent asynchronous numerical calls.
++Token preparation and numerical operations are inherited from embeddingSource. -/
++def sharedEmbeddingSource : String := include_str "../runtime/shared_embedding.py"
++

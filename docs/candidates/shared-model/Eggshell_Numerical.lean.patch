@@ -1,0 +1,116 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -9,0 +10 @@
++public import tools.research.SharedEncoder
+@@ -29 +30 @@
+-def implementation : String := Sha256.hex (toJson (MiniLM.embeddingSource,
++def implementation : String := Sha256.hex (toJson (MiniLM.embeddingSource,MiniLM.sharedEmbeddingSource,
+@@ -31 +32 @@
+-  include_str "../tools/research/EncoderPool.lean")).compress.toUTF8
++  include_str "../tools/research/EncoderPool.lean",include_str "../tools/research/SharedEncoder.lean")).compress.toUTF8
+@@ -270 +271 @@
+-    args := #["-c",MiniLM.embeddingSource,config.model,config.models.toString,"4",lease.toString,"shared"]
++    args := #["-c",MiniLM.sharedEmbeddingSource,config.model,config.models.toString,"4",lease.toString,"shared"]
+@@ -313 +314,4 @@
+-  encoders : Research.EncoderPool.Pool Kernel
++  /-- Short handle loans end before inference; only one model is resident. -/
++  models : Research.EncoderPool.Pool Research.SharedEncoder.Server
++  /-- Independent native runs, rather than duplicate model processes. -/
++  encoders : Research.EncoderPool.Pool Unit
+@@ -350,29 +354,14 @@
+-/-- Every request owns its pipe until the response read has joined. Only a
+-failed owner retires that encoder; other in-flight encoders remain live. -/
+-def encodePipe (child : Kernel) (body : String) (deadline : Nat) (live : IO Bool)
+-    (retire : IO Unit) (mark : String → IO Unit := fun _ => pure ()) : IO String := do
+-  let running ← IO.asTask (do
+-    mark "encode-pipe-write:start"
+-    child.stdin.putStr (if body.endsWith "\n" then body else body++"\n")
+-    child.stdin.flush
+-    mark "encode-pipe-write:end"
+-    mark "encode-line-read:start"
+-    let result ← child.stdout.getLine
+-    mark "encode-line-read:end"
+-    return result) .dedicated
+-  let ready ← TaskDeadline.event running
+-  try
+-    repeat
+-      let now ← IO.monoMsNow
+-      unless (← live) && now < deadline do throw (IO.userError "encoder pipe expired or disconnected")
+-      let result ← TaskDeadline.awaitEvent (do
+-        let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
+-        Research.OwnedSelect.one #[.case ready (fun value => pure (some value)),.case timer (fun _ => pure none)])
+-      if let some value := result then
+-        discard <| IO.wait running
+-        unless !value.isEmpty do throw (IO.userError "numerical encoder closed its response")
+-        return value
+-    throw (IO.userError "unreachable encoder wait")
+-  catch error =>
+-    try retire finally discard <| IO.wait running
+-    throw error
++/-- Borrowing publishes only a handle. The loan is returned before any
++request runs, so model ownership cannot serialize native inference. Startup
++belongs to the service; individual client cancellation does not discard it. -/
++def Backend.model (backend : Backend) (config : Config) (mark : String → IO Unit) :
++    IO Research.SharedEncoder.Server := do
++  let live := do return !(← backend.stopping.get)
++  backend.models.withResource live (fun _ => do
++      mark "encode-spawn:start"
++      let server ← Research.SharedEncoder.Server.start
++        (spawnKernel config ((← directory config)/"model.guard")) live
++      mark "encode-spawn:end"
++      return server) Research.SharedEncoder.Server.close (fun _ server _ => do
++        if ← server.closed then throw (IO.userError "shared encoder needs a new service generation")
++        return server)
+@@ -387,5 +376 @@
+-  backend.encoders.withResource live (fun ticket => do
+-      mark "encode-spawn:start"
+-      let child ← spawnKernel config ((← directory config) / s!"model-{ticket.index}.guard")
+-      return child) stopKernel (fun ticket child retire => do
+-      if ticket.cached.isNone then mark "encode-spawn:end"
++  backend.encoders.withResource live (fun _ => pure ()) (fun _ => pure ()) (fun ticket _ _ => do
+@@ -394 +379,6 @@
+-      mark s!"encode-model:{child.pid.toNat}"
++      mark "encode-model-handle:start"
++      let server ← backend.model config mark
++      mark "encode-model-handle:end"
++      unless ← live do throw (IO.userError "encoder client disconnected before inference")
++      mark s!"encode-model:{server.core.child.pid.toNat}"
++      mark "encode-shared-session:1"
+@@ -396 +386 @@
+-      let result ← encodePipe child body deadline live retire mark
++      let result ← server.request body deadline live
+@@ -398 +388,10 @@
+-      return result)
++      let result ← IO.ofExcept (Json.parse result)
++      let started ← IO.ofExcept (result.getObjValAs? Nat "submittedNs")
++      let finished ← IO.ofExcept (result.getObjValAs? Nat "finishedNs")
++      let elapsed := (finished-started)/1000
++      -- Model initialization precedes this native request and is measured by
++      -- encode-spawn. These fields describe this already-loaded computation.
++      return (result.setObjVal! "timing" (Json.mkObj [("leaseUs",toJson (0 : Nat)),
++        ("initializeUs",toJson (0 : Nat)),("startupUs",toJson (0 : Nat)),
++        ("encodeUs",toJson elapsed),("scoreUs",toJson (0 : Nat)),
++        ("requestUs",toJson elapsed),("modelLoaded",toJson true)])).compress)
+@@ -524,3 +523,4 @@
+-        let models ← backend.encoders.state.atomically get
+-        let pids := models.slots.filterMap fun slot => match slot with
+-          | .idle child | .running _ (some child) | .retiring _ child => some child.pid.toNat
++        let models ← backend.models.state.atomically get
++        let computes ← backend.encoders.state.atomically get
++        let servers := models.slots.filterMap fun slot => match slot with
++          | .idle server | .running _ (some server) | .retiring _ server => some server
+@@ -527,0 +528,3 @@
++        let pids := servers.map (·.core.child.pid.toNat)
++        let idle ← servers.foldlM (fun count server => do
++          return count + if !(← server.closed) && (← server.pending) == 0 then 1 else 0) (0 : Nat)
+@@ -530,2 +533,2 @@
+-          ("waitingEncodes",toJson models.waiting),
+-          ("idleModels",toJson ((models.slots.filter Research.EncoderPool.Slot.isIdle).size)),
++          ("computeCapacity",toJson computes.slots.size),("waitingEncodes",toJson computes.waiting),
++          ("waitingModelHandles",toJson models.waiting),("idleModels",toJson idle),
+@@ -564,0 +568 @@
++    models := ← Research.EncoderPool.Pool.make 1
+@@ -599 +603,2 @@
+-    backend.encoders.close stopKernel
++    backend.encoders.close (fun _ => pure ())
++    backend.models.close Research.SharedEncoder.Server.close

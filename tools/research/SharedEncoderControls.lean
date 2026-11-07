@@ -23,7 +23,7 @@ def verify (rows : Array Json) (index : Nat) (reply : String) : IO Unit := do
 
 run_elab do
   let environment ← Lean.getEnv
-  for target in [``SharedEncoder.Server.request,``SharedEncoder.waitReply] do
+  for target in [``SharedEncoder.Server.request,``SharedEncoder.waitReply,``SharedEncoder.waitStartup] do
     let some body := (environment.find? target).bind (·.value?) | throwError "Missing shared request/wait body"
     for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically] do
       if body.getUsedConstants.contains forbidden then throwError "Shared request waits in a management transaction"
@@ -103,9 +103,31 @@ def run (root : System.FilePath) : IO Unit := do
   check taskEnded "shared encoder reader outlived shutdown"
   write (root/"shutdown.json") (Json.mkObj [("readerJoined",toJson true),("closed",toJson true),
     ("pending",toJson (← server.pending)),("pid",toJson server.core.child.pid.toNat)])
+  let startupLive ← IO.mkRef true
+  let startupPid ← IO.mkRef (none : Option Nat)
+  let starting ← IO.asTask (SharedEncoder.Server.start (do
+      let child ← IO.Process.spawn {
+        cmd := "/bin/sleep"
+        args := #["10"]
+        stdin := .piped
+        stdout := .piped
+        stderr := .inherit }
+      startupPid.set (some child.pid.toNat)
+      return child) startupLive.get) .dedicated
+  let activationDeadline := (← IO.monoMsNow)+1000
+  while (← startupPid.get).isNone do
+    check ((← IO.monoMsNow) < activationDeadline) "startup fixture did not start"
+    IO.sleep 1
+  let began ← IO.monoMsNow
+  startupLive.set false
+  let stopped ← IO.wait starting
+  let .error error := stopped | throw (IO.userError "service stop did not cancel unready model startup")
+  check (error.toString.contains "startup expired or service stopped" && (← IO.monoMsNow)-began < 1000)
+    "startup ignored its service lifetime"
+  let pid := (← startupPid.get).get!
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","stat="]}
+  check (process.exitCode != 0 || process.stdout.trimAscii.toString.startsWith "Z") "startup child survived cancellation"
+  write (root/"startup-stop.json") (Json.mkObj [("cancelled",toJson true),("processExited",toJson true),
+    ("elapsedMs",toJson ((← IO.monoMsNow)-began)),("pid",toJson pid)])
 
 end Eggshell.Research.SharedEncoderControls
-def main (args : List String) : IO UInt32 := do
-  match args with
-  | [root] => Eggshell.Research.SharedEncoderControls.run (.mk root); return 0
-  | _ => throw (IO.userError "OUTPUT required")

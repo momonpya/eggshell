@@ -1,6 +1,6 @@
-# モデル1組を共有する非同期推論の部品検査
+# モデル1組を共有する非同期推論
 
-80同時でMiniLM2基の保持が計2,217,632KiBに達したため、コピーを増やす代わりに、同じモデルsessionへの独立した推論を並行実行した。ONNX Runtimeは[同じsessionへの並行Run](https://onnxruntime.ai/docs/reference/high-level-design.html)と、[ネイティブのthread poolを使うRunAsync](https://onnxruntime.ai/docs/api/c/struct_ort_api.html)を提供する。ここでは既存Python bindingの`run_async`を使う数値部品だけを検査した。実フックにはまだ接続しておらず、製品候補・80人容量の合格でもない。
+80同時でMiniLM2基の保持が計2,217,632KiBに達したため、コピーを増やす代わりに、同じモデルsessionへの独立した推論を並行実行した。ONNX Runtimeは[同じsessionへの並行Run](https://onnxruntime.ai/docs/reference/high-level-design.html)と、[ネイティブのthread poolを使うRunAsync](https://onnxruntime.ai/docs/api/c/struct_ort_api.html)を提供する。前半は数値部品の検査、後半は通常runtimeへの接続を記す。80人容量・実フック配送・採用の合格はまだである。
 
 制御・入力・要求IDの照合・同時実行数・基準との比較・時刻/RSS・guard・収集・削除は[Lean](../../../tools/research/ModelAllocationStudy.lean)。既存数値境界の`encode_groups`から、同期ONNX呼出し1行だけを中断可能な数値generatorへ置き換える。tokenizer、全token小片、1要求内の32小片batch、入力feed、pooling、正規化は元の実装bytesを残す。別要求とのbatch混合はしない。Pythonのworker pool・scheduler・選択器・保存処理は追加していない。ORT自身が推論を実行し、callbackがその要求の数値計算だけを再開する。出力frameの書込みはBufferedWriterの同期を利用し、推論全体のMutexにはしない。
 
@@ -36,6 +36,26 @@
 
 現在のf92製品・検査器と比較基準を保持し、既に役割を終えたelastic-encoder/keyed-inputsの製品・prefixコピー・検査器6実行体（論理759,368,576 bytes）を、元のnative記録のSHAと実process不在を照合して[削除](retired-parent-executables.json)した。archiveは作らず、DB・project cache・モデル・原典・継承に使うobject/interface/source witnessは残した。
 
-次は通常の`Numerical.Backend`に接続する。物理モデルを1つ保持するpoolと、同時推論の2つのcompute slotを分ける。モデルのhandleだけを短く借り、推論前に返すことで、モデルの所有権を推論の排他に使わない。モデルは最初のencodeで準備し、cached-vector採点だけでは読み込まない。個別取消は共有モデルを壊さず、サービス終了は初期化中のモデルも速やかに止める。そのstartup取消を追加検査し、実装全体のnative依存とContractAuditを確認する。モデル・vector・順位・認定domain・予算・期限を変えない。
+## 通常の数値サービスへ接続
 
-その接続候補をソース一致・ContractAudit・数値/取消部品で確認してから、同じ元snapshotの題材1から全6実フック、4/16 gate、合格した場合だけ80同時へ進む。単一DBだけでなく、プロジェクト別write DBと他DB read-onlyの境界、成長・保存/背景準備・80人8時間・NASも残る。採用には同一条件の総トークン/品質比較が必要であり、回答モデル0・有料比較0/18・本体未採用。goalはactive。
+隔離した製品runtimeは`ffb25590c28bc01b4f0baf46122ab26635763a125fa59dc0e1a8ace712ff9778`。`Numerical.Backend`で、物理モデル1つのpoolと、2つのcompute slotを分けた。モデルhandleの借用は推論前に終える。最初のencodeで準備するため、cached-vectorの採点だけではモデルを読み込まない。サービス終了は初期化中にも伝わる。未使用になった独占pipeの`encodePipe`は除いた。モデル・vector・順位・認定domain・予算・期限は変えない。
+
+[製品全体のnative依存](native-closure-current.json)は285 objectで整合した。[親とのソース比較](native-sources-current.json)は、282→284 module、削除0、宣言した4変更＋2追加だけで一致した。実行入口への追加検査dispatchも[別に照合](entry-source.json)した。初回のソース監査は、新しい数値kernelのliteralが未申告で不合格だった。旧pathの変更を許可する条件は保ち、新規literalだけを明示したファイルとSHAで照合する機能を加えた。[誤ったSHAの拒否](literal-rejection.json)も確認した。初回の不合格記録は残す。
+
+[製品runtimeのnative検査](runtime-controls.json)では、通常の数値RPCを使う順次16要求＋並行16要求×2波の全48応答でvector/被覆が一致した。両波で同じmodel PID、異なるcompute slotの要求区間が重なり、起動数は1、物理model容量1・compute容量2、波後idle model1だった。波1,072 / 1,095ms、関連RSS最大1,333,072KiB、guard停止なし・残存0。これは8 objectだけのclientではなく、前記製品そのものの数値serviceを起動した検査である。
+
+同じ実行体で、基準digestと比較する直接transport34応答・個別取消・停止後pending0/reader回収も通った。さらに準備応答を返さない子プロセスで初期化中のサービス停止を検査し、8msで終了した。このguardの関連RSS最大1,521,936KiB、停止なし・残存0。2回のビルド失敗は検査器の予約語と記述形式であり、モデルやフックの失敗ではない。修正前の診断とguardを保存した。
+
+## 実フック全6回
+
+[auditorのnative依存](auditor-closure.json)と[全製品core・271共通moduleの一致](auditor-sources.json)を確認し、同じ元snapshot・質問・予算で題材1から実行した。[配送記録](delivery-cells.json)は必要原文32/32、親f92の全6本文とbyte一致、意味検索・ACKの全件完了、前景warm0、全6回`sharedImage=true`だった。
+
+| 題材 | 各回の必要原文 | 独立した新チャット各2回のhook時間 |
+| --- | --- | --- |
+| 1 | 4/4 | 8,920 / 8,466ms |
+| 2 | 7/7 | 9,875 / 9,823ms |
+| 3 | 5/5 | 10,104 / 10,278ms |
+
+関連RSS最大3,020,272KiB、guard停止なし・残存0。frontendは5〜8ms、publicationは55〜69msで終了し、全件exit0だった。これは回答モデルを動かす1周目/2周目や、80人・p99の証拠ではない。数値の一部や単独hookの微小差を、総トークン改善や容量改善へ換算しない。終了したsession/重複受領記録は[削除済み](delivery-cleanup.json)。
+
+現在は同じ実原典で4/16・80同時を測るcapacity clientをビルド中。4/16 gateを通した場合だけ80へ進む。プロジェクト別write DBと他DB read-onlyの境界、成長・保存/背景準備・80人8時間・NASも残る。採用には同一条件の総トークン/品質比較が必要であり、回答モデル0・有料比較0/18・本体未採用。goalはactive。

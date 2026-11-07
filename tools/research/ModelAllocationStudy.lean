@@ -676,10 +676,11 @@ def prepareTransport : IO Unit := do
   let command ← IO.Process.output {cmd := (compiler/"bin/lean").toString,args := #["-j1","-M1536","--run",
     (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",
     (base/"keyed-discovery-build").toString,source.toString,(base/"shared-transport-build").toString,
-    "tools.research.SharedEncoderControls",(base/"shared-transport-settings.json").toString],cwd := some workspace}
+    "tools.research.SharedEncoderMain",(base/"shared-transport-settings.json").toString],cwd := some workspace}
   check (command.exitCode == 0) (command.stdout++command.stderr)
-  IO.FS.writeFile (source/"tools/research/SharedEncoder.lean")
-    (← IO.FS.readFile (workspace/"tools/research/SharedEncoder.lean"))
+  for name in ["SharedEncoder","SharedEncoderControls"] do
+    IO.FS.writeFile (source/"tools/research"/(name++".lean"))
+      (← IO.FS.readFile (workspace/"tools/research"/(name++".lean")))
   writeSharedKernel (source/"runtime/shared_embedding.py")
 
 def refreshTransport (tag : String := "shared-transport-build1") : IO Unit := do

@@ -1,0 +1,22 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2311,0 +2312,6 @@
++#check Eggshell.Research.SharedEncoder.Reply.foreign_rejected
++#check Eggshell.Research.SharedEncoder.Reply.bound
++#check Eggshell.Research.SharedEncoder.State.reserve_fresh
++#check Eggshell.Research.SharedEncoder.State.reserve_older
++#check Eggshell.Research.SharedEncoder.State.extract_preserves_generation
++#check Eggshell.Research.SharedEncoder.State.retire_once
+@@ -2332,4 +2338,8 @@
+-  let some pipe := (environment.find? ``Eggshell.Numerical.encodePipe).bind (·.value?) |
+-    throwError "Missing owned encoder exchange"
+-  for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically] do
+-    if pipe.getUsedConstants.contains forbidden then throwError "Encoder pipe waits under a shared mutex"
++  unless body.getUsedConstants.contains ``Eggshell.Research.SharedEncoder.Server.request &&
++    body.getUsedConstants.contains ``Eggshell.Numerical.Backend.model do
++    throwError "Encoder bypasses its shared model or bound request owner"
++  for target in [``Eggshell.Research.SharedEncoder.Server.request,``Eggshell.Research.SharedEncoder.waitReply,
++      ``Eggshell.Research.SharedEncoder.waitStartup] do
++    let some waiting := (environment.find? target).bind (·.value?) | throwError "Missing owned shared encoder wait"
++    for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically] do
++      if waiting.getUsedConstants.contains forbidden then throwError "Shared encoder waits under a management mutex"

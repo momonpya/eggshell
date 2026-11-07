@@ -20,12 +20,12 @@ def drained : IO Unit := do
   let result ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (!result.stdout.contains "controller/StudyMain guard ") "native guard active"
 def parentFor (family : String) : IO String := do
-  check (["runtime-key","elastic-encoder","keyed-inputs","keyed-discovery"].contains family) "unknown isolated runtime"
+  check (["runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model"].contains family) "unknown isolated runtime"
   return if family == "runtime-key" then "parallel-encoder" else if family == "elastic-encoder" then "runtime-key"
-    else if family == "keyed-inputs" then "elastic-encoder" else "keyed-inputs"
+    else if family == "keyed-inputs" then "elastic-encoder" else if family == "shared-model" then "keyed-discovery" else "keyed-inputs"
 def prepareKeyed (family : String := "keyed-inputs") : IO Unit := do
   drained
-  check (["keyed-inputs","keyed-discovery"].contains family) "unknown shared keyed candidate"
+  check (["keyed-inputs","keyed-discovery","shared-model"].contains family) "unknown shared keyed candidate"
   let parent ← parentFor family
   let source := base/(family++"-source")
   check (!(← source.pathExists)) "fresh keyed input candidate required"
@@ -33,6 +33,21 @@ def prepareKeyed (family : String := "keyed-inputs") : IO Unit := do
   command #["-j1","-M1536","--run",(workspace/"tools/research/DiscoveryStagesStudy.lean").toString,
     "materialize-native",(base/(parent++"-build")).toString,source.toString,(base/(family++"-build")).toString,
     "tools.research.ReplayReadinessChecks",(base/(family++"-settings.json")).toString]
+  if family == "shared-model" then
+    let controls ← read (workspace/"docs/candidates/shared-model/transport-controls.json")
+    check ((controls.getObjValD "report").getObjValD "allPassed" == toJson true &&
+      (controls.getObjValD "guard").getObjValD "ownedPids" == toJson (#[] : Array Nat)) "shared Lean transport preflight required"
+    for name in ["SharedEncoder","SharedEncoderControls"] do
+      IO.FS.writeFile (source/"tools/research"/(name++".lean")) (← IO.FS.readFile (workspace/"tools/research"/(name++".lean")))
+    command #["-j1","-M768","--run",(workspace/"tools/research/ModelAllocationStudy.lean").toString,
+      "write-shared-kernel",(source/"runtime/shared_embedding.py").toString]
+    let entry := source/"tools/research/ReplayReadinessChecks.lean"
+    let original ← IO.FS.readFile entry
+    let imported := "import tools.research.NumericalParallelControls\n"
+    let anchor := "  | [\"parallel-encoder-check\",root] => Eggshell.Research.NumericalParallelControls.run (.mk root); return 0\n"
+    check ((original.splitOn imported).length == 2 && (original.splitOn anchor).length == 2) "shared model entry anchors changed"
+    IO.FS.writeFile entry ((original.replace imported (imported++"import tools.research.SharedEncoderControls\n")).replace anchor
+      (anchor++"  | [\"shared-transport-check\",root] => Eggshell.Research.SharedEncoderControls.run (.mk root); return 0\n"))
 def prepare : IO Unit := do
   drained
   let source := base/"runtime-key-source"
@@ -147,12 +162,17 @@ def freezeSource (family : String := "runtime-key") : IO Unit := do
   let files := if family == "runtime-key" then ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/ReplayReadinessChecks.lean"]
     else if family == "elastic-encoder" then ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/EncoderPool.lean","tools/research/NumericalParallelControls.lean"]
     else if family == "keyed-discovery" then ["Eggshell/Handoff.lean"]
+    else if family == "shared-model" then ["Eggshell/MiniLM.lean","Eggshell/Numerical.lean","Eggshell/ContractAudit.lean",
+      "tools/research/NumericalParallelControls.lean","tools/research/SharedEncoder.lean","tools/research/SharedEncoderControls.lean",
+      "tools/research/ReplayReadinessChecks.lean","runtime/shared_embedding.py"]
     else ["Eggshell/PreparedReaders.lean","Eggshell/KeyedSearchProvider.lean","Eggshell/BuiltinSearch.lean",
       "Eggshell/KeyedSearchClient.lean","Eggshell/Handoff.lean","Eggshell/ContractAudit.lean",
       "tools/research/ActorReadsChecks.lean","tools/research/ReplayReadinessChecks.lean"]
   for relative in files do
+    let original := base/(parent++"-source")/relative
+    let prior := if ← original.pathExists then original.toString else "/dev/null"
     let result ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/"++relative,"--label","b/"++relative,
-      (base/(parent++"-source")/relative).toString,(base/(family++"-source")/relative).toString]}
+      prior,(base/(family++"-source")/relative).toString]}
     check (result.exitCode == 1) "missing declared runtime patch"
     IO.FS.writeFile (study/(relative.replace "/" "_"++".patch")) result.stdout
 def sealRuntime (family : String := "runtime-key") (closureName : String := "native-closure.json") : IO Unit := do
@@ -164,11 +184,19 @@ def sealRuntime (family : String := "runtime-key") (closureName : String := "nat
   let changes := if family == "runtime-key" then #["Eggshell.Numerical","Eggshell.ContractAudit","+tools.research.RuntimeIdentityChecks"]
     else if family == "elastic-encoder" then #["Eggshell.Numerical","Eggshell.ContractAudit","tools.research.EncoderPool","tools.research.NumericalParallelControls"]
     else if family == "keyed-discovery" then #["Eggshell.Handoff"]
+    else if family == "shared-model" then #["Eggshell.MiniLM","Eggshell.Numerical","Eggshell.ContractAudit",
+      "tools.research.NumericalParallelControls","+tools.research.SharedEncoder","+tools.research.SharedEncoderControls"]
     else #["Eggshell.PreparedReaders","Eggshell.KeyedSearchProvider","Eggshell.BuiltinSearch",
       "Eggshell.KeyedSearchClient","Eggshell.Handoff","Eggshell.ContractAudit",
       "tools.research.ActorReadsChecks"]
+  let literalClaims ← if family == "shared-model" then do
+      let file := base/"shared-model-source/runtime/shared_embedding.py"
+      pure #["@"++(← hash file)++":"++file.toString]
+    else pure #[]
+  let comparisonName := if family == "shared-model" && closureName != "native-closure.json" then
+    "native-sources-current.json" else "native-sources.json"
   command (#["-j1","-M1536","--run",audit,"compare-sources",(base/(parent++"-build")).toString,
-    (base/(family++"-build")).toString,(study/"native-sources.json").toString]++changes)
+    (base/(family++"-build")).toString,(study/comparisonName).toString]++changes++literalClaims)
   if family == "keyed-inputs" then
     -- The generic comparison deliberately excludes executable entry modules.
     -- Check the exact added test dispatch and its selected native witnesses.
@@ -193,6 +221,18 @@ def sealRuntime (family : String := "runtime-key") (closureName : String := "nat
     check (before == actual) "single-source connection changed the native entry"
     write (study/"entry-source.json") (Json.mkObj [("entryAndIncludedLiteralsUnchanged",toJson true),
       ("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
+  if family == "shared-model" then
+    let before ← IO.FS.readFile (base/(parent++"-source/tools/research/ReplayReadinessChecks.lean"))
+    let imported := "import tools.research.NumericalParallelControls\n"
+    let anchor := "  | [\"parallel-encoder-check\",root] => Eggshell.Research.NumericalParallelControls.run (.mk root); return 0\n"
+    let expected := (before.replace imported (imported++"import tools.research.SharedEncoderControls\n")).replace anchor
+      (anchor++"  | [\"shared-transport-check\",root] => Eggshell.Research.SharedEncoderControls.run (.mk root); return 0\n")
+    let witness : String × Array (String × String) ← IO.ofExcept (fromJson? (← read
+      (base/(family++"-build/tools_research_ReplayReadinessChecks.source"))))
+    check (witness.1 == expected && expected == (← IO.FS.readFile
+      (base/(family++"-source/tools/research/ReplayReadinessChecks.lean")))) "shared model entry changed beyond its declared native check"
+    write (study/"entry-source.json") (Json.mkObj [("exactAddedTransportCommandOnly",toJson true),
+      ("nativeWitnessMatchesSource",toJson true),("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
   freezeSource family
 def prepareAuditor (family : String := "runtime-key") : IO Unit := do
   drained
@@ -218,12 +258,73 @@ def prepareAuditor (family : String := "runtime-key") : IO Unit := do
         ("topic",toJson topic),("destination",toJson (root/s!"topic-{topic}-chat-{repetition}").toString),
         ("captureReply",toJson false)])
   write (base/(family++"-cells.json")) (Json.mkObj [("output",toJson root.toString),("probes",toJson probes)])
-def configureDiscoveryGate : IO Unit := do
+def recordSharedBuild (tag : String) : IO Unit := do
   drained
-  check (!(← (base/"keyed-discovery-auditor-build/StudyMain").pathExists)) "configure the auditor before its first build"
+  check (tag.startsWith "shared-model-build") "known shared model build required"
+  let path := workspace/"docs/candidates/shared-model"/(tag++".json")
+  check (!(← path.pathExists)) "preserve shared model build evidence"
+  let guard ← read (base/(tag++".guard.json"))
+  check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+    "shared model build has not drained"
+  let mut failures := #[]
+  for entry in ← (base/"shared-model-build").readDir do
+    if entry.fileName.endsWith "-lean.stdout" then
+      let output ← IO.FS.readFile entry.path
+      if output.contains "error:" || output.contains "error(" then
+        failures := failures.push (Json.mkObj [("file",toJson entry.fileName),("diagnostics",toJson output)])
+  write path (Json.mkObj [("guard",guard),("failures",toJson failures)])
+def rejectWrongLiteral : IO Unit := do
+  drained
+  let output := workspace/"docs/candidates/shared-model/rejected-literal-output.json"
+  check (!(← output.pathExists)) "preserve literal rejection evidence"
+  let claim := "@" ++ String.ofList (List.replicate 64 '0') ++ ":" ++
+    (base/"shared-model-source/runtime/shared_embedding.py").toString
+  let result ← IO.Process.output {cmd := (compiler/"bin/lean").toString,args := #["-j1","-M768","--run",
+    (workspace/"tools/research/StudyBuildClosureAudit.lean").toString,"compare-sources",
+    (base/"keyed-discovery-build").toString,(base/"shared-model-build").toString,output.toString,
+    "Eggshell.MiniLM","Eggshell.Numerical","Eggshell.ContractAudit","tools.research.NumericalParallelControls",
+    "+tools.research.SharedEncoder","+tools.research.SharedEncoderControls",claim]}
+  check (result.exitCode != 0 && result.stderr.contains "literal digest differs" && !(← output.pathExists))
+    "native audit accepted a numerical source with an incorrect digest"
+  write (workspace/"docs/candidates/shared-model/literal-rejection.json") (Json.mkObj [
+    ("wrongDigestRejected",toJson true),("comparisonOutputNotWritten",toJson true),
+    ("exitCode",toJson result.exitCode.toNat),("diagnostic",toJson result.stderr)])
+def collectShared : IO Unit := do
+  drained
+  let study := workspace/"docs/candidates/shared-model"
+  let runtimeHash ← hash (base/"shared-model-build/StudyMain")
+  let source ← read (study/"native-sources-current.json")
+  check (source.getObjValD "exactExpectedChangeSet" == toJson true &&
+    source.getObjValD "candidateRuntimeSha256" == toJson runtimeHash) "unsealed shared model runtime"
+  let mut guards := #[]
+  for tag in ["shared-model-build3","shared-model-transport-controls1","shared-model-controls1"] do
+    let value ← read (base/(tag++".guard.json"))
+    check (value.getObjValD "state" == toJson "finished" && value.getObjValD "exitCode" == toJson (0 : Nat) &&
+      value.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "shared model native check is not complete"
+    guards := guards.push value
+  let direct := base/"shared-model-transport-controls1-result"
+  let transport ← read (direct/"report.json")
+  let shutdown ← read (direct/"shutdown.json")
+  let startup ← read (direct/"startup-stop.json")
+  let numerical ← read (base/"shared-model-controls1-result/report.json")
+  check (transport.getObjValD "allPassed" == toJson true && shutdown.getObjValD "pending" == toJson (0 : Nat) &&
+    shutdown.getObjValD "readerJoined" == toJson true && startup.getObjValD "cancelled" == toJson true &&
+    startup.getObjValD "processExited" == toJson true && numerical.getObjValD "allPassed" == toJson true &&
+    (numerical.getObjValD "stats").getObjValD "modelStarts" == toJson (1 : Nat) &&
+    (numerical.getObjValD "warmWave").getObjValD "sharedModelRequestIntervalsOverlap" == toJson true)
+    "shared model transport, startup or actual numerical RPC failed"
+  write (study/"runtime-controls.json") (Json.mkObj [("runtimeSha256",toJson runtimeHash),("guards",toJson guards),
+    ("transport",transport),("shutdown",shutdown),("startupStop",startup),("numerical",numerical),
+    ("adopted",toJson false),("answeringModelCalls",toJson (0 : Nat))])
+  for tag in ["shared-model-transport-controls1","shared-model-controls1"] do
+    IO.FS.writeFile (study/(tag++"-stderr.txt")) (← IO.FS.readFile (base/(tag++".stderr")))
+def configureDiscoveryGate (family : String := "keyed-discovery") : IO Unit := do
+  drained
+  check (["keyed-discovery","shared-model"].contains family) "known shared reader gate required"
+  check (!(← (base/(family++"-auditor-build/StudyMain")).pathExists)) "configure the auditor before its first build"
   let helper := "tools/research/RealDeliveryProbe.lean"
-  IO.FS.writeFile (base/"keyed-discovery-auditor-source"/helper) (← IO.FS.readFile (workspace/helper))
-  let path := base/"keyed-discovery-cells.json"
+  IO.FS.writeFile (base/(family++"-auditor-source")/helper) (← IO.FS.readFile (workspace/helper))
+  let path := base/(family++"-cells.json")
   let input ← read path
   let probes ← IO.ofExcept (input.getObjValAs? (Array Json) "probes")
   check (probes.size == 6) "retain all six native cases"
@@ -313,8 +414,10 @@ def setup (action tag : String) (family : String := "runtime-key") : IO Unit := 
     | "probe" => pure #[(base/(family++"-build/StudyMain")).toString,"runtime-identity-check","factored",(base/(tag++"-result")).toString]
     | "controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT="++(base/(family++"-controls-data")).toString,
-      "EGGSHELL_PREFIX="++(base/"runtime-key-prefix").toString,"EGGSHELL_TRACE_NUMERICAL_STAGES=1",
+      "EGGSHELL_PREFIX="++(base/(if family == "shared-model" then "prefix" else "runtime-key-prefix")).toString,"EGGSHELL_TRACE_NUMERICAL_STAGES=1",
       (base/(family++"-build/StudyMain")).toString,"parallel-encoder-check",(base/(tag++"-result")).toString]
+    | "transport-controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      (base/(family++"-build/StudyMain")).toString,"shared-transport-check",(base/(tag++"-result")).toString]
     | "keyed-controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT="++(base/"real-source-search-read-trial-result/data").toString,
       "EGGSHELL_PREFIX="++(base/"elastic-encoder-prefix").toString,
@@ -375,6 +478,17 @@ def main (args : List String) : IO Unit := match args with
   | ["discovery","setup",action,tag] => setup action tag "keyed-discovery"
   | ["discovery","configure-gate"] => configureDiscoveryGate
   | ["discovery","recover",tag] => recoverStoppedOwner tag "keyed-discovery" false
+  | ["shared","prepare"] => prepareKeyed "shared-model"
+  | ["shared","setup",action,tag] => setup action tag "shared-model"
+  | ["shared","freeze"] => freezeSource "shared-model"
+  | ["shared","seal"] => sealRuntime "shared-model"
+  | ["shared","seal-current"] => sealRuntime "shared-model" "native-closure-current.json"
+  | ["shared","prepare-auditor"] => prepareAuditor "shared-model"
+  | ["shared","seal-auditor"] => sealAuditor "shared-model"
+  | ["shared","configure-gate"] => configureDiscoveryGate "shared-model"
+  | ["shared","record-build",tag] => recordSharedBuild tag
+  | ["shared","reject-wrong-literal"] => rejectWrongLiteral
+  | ["shared","collect"] => collectShared
   | _ => throw (IO.userError "prepare|freeze|seal|prepare-auditor|seal-auditor|setup")
 end Eggshell.Research.RuntimeIdentityStudy
 def main := Eggshell.Research.RuntimeIdentityStudy.main

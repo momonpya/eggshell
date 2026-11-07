@@ -1,0 +1,6 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -9,0 +10 @@
++import tools.research.SharedEncoderControls
+@@ -101,0 +103 @@
++  | ["shared-transport-check",root] => Eggshell.Research.SharedEncoderControls.run (.mk root); return 0

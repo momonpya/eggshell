@@ -1,0 +1,42 @@
+--- a/tools/research/NumericalParallelControls.lean
++++ b/tools/research/NumericalParallelControls.lean
+@@ -31 +31 @@
+-def model? (reply : Json) : Option String := do
++def marker? (reply : Json) (markerPrefix : String) : Option String := do
+@@ -37 +37 @@
+-  names.find? (·.startsWith "encode-model:")
++  names.find? (·.startsWith markerPrefix)
+@@ -47,0 +48,2 @@
++      check (marker? reply "encode-shared-session:" == some "encode-shared-session:1")
++        "actual numerical RPC did not use the shared session"
+@@ -51 +53,2 @@
+-        ("exactVectorsAndCoverage",toJson true),("model",toJson (model? reply)),
++        ("exactVectorsAndCoverage",toJson true),("model",toJson (marker? reply "encode-model:")),
++        ("lane",toJson (marker? reply "encode-slot:")),
+@@ -81 +84,2 @@
+-          if am != Json.null && bm != Json.null && am != bm && as_ < be && bs < ae then overlapped := true
++          if am != Json.null && am == bm && a.getObjValD "lane" != b.getObjValD "lane" &&
++              as_ < be && bs < ae then overlapped := true
+@@ -83 +87 @@
+-      ("rows",toJson rows),("differentModelIntervalsOverlap",toJson overlapped),("endStats",stats)]
++      ("rows",toJson rows),("sharedModelRequestIntervalsOverlap",toJson overlapped),("endStats",stats)]
+@@ -99 +103,3 @@
+-        return vectors (← encode client (payload index))
++        let reply ← encode client (payload index)
++        check (marker? reply "encode-shared-session:" == some "encode-shared-session:1") "reference bypassed shared model"
++        return vectors reply
+@@ -108 +114 @@
+-    check (capacity == 2 && starts ≥ 3 && pids.size == 1 &&
++    check (capacity == 1 && starts == 1 && pids.size == 1 && stats.getObjValD "computeCapacity" == toJson (2 : Nat) &&
+@@ -111,3 +117,3 @@
+-      "actual service did not expand for demand and return to one warm standby"
+-    check (warm.getObjValD "differentModelIntervalsOverlap" == toJson true)
+-      "warm encoder intervals remained serialized"
++      "actual service duplicated its shared model or failed to drain compute slots"
++    check (warm.getObjValD "sharedModelRequestIntervalsOverlap" == toJson true)
++      "independent requests to the shared model remained serialized"
+@@ -116,2 +122,2 @@
+-      ("all48RepliesExactVectorsAndCoverage",toJson true),("pythonNumericalSourceUnchanged",toJson true),
+-      ("oneWarmStandbyAfterEachBurst",toJson true),
++      ("all48RepliesExactVectorsAndCoverage",toJson true),("sameModelTokenizerPooling",toJson true),
++      ("oneSharedModelAfterEachBurst",toJson true),

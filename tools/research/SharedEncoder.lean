@@ -143,13 +143,26 @@ resolving promises happen after it, so EOF and shutdown cannot reap twice. -/
       core.route (← IO.ofExcept (Json.parse line))
   catch error => core.abort error.toString
 
-@[no_expose] def Server.start (create : IO Kernel) : IO Server := do
+def waitStartup (task : Task (Except IO.Error String)) (live : IO Bool) : IO String := do
+  let ready ← TaskDeadline.event task
+  let deadline := (← IO.monoMsNow)+15000
+  repeat
+    let now ← IO.monoMsNow
+    unless (← live) && !(← IO.checkCanceled) && now < deadline do
+      throw (IO.userError "shared encoder startup expired or service stopped")
+    let value ← TaskDeadline.awaitEvent (do
+      let timer ← Selector.sleep (.ofNat (min 5 (deadline-now)))
+      OwnedSelect.one #[.case ready (fun value => pure (some value)),.case timer (fun _ => pure none)])
+    if let some value := value then return value
+  throw (IO.userError "unreachable shared encoder startup")
+
+@[no_expose] def Server.start (create : IO Kernel) (live : IO Bool := pure true) : IO Server := do
   let child ← create
   try
     child.stdin.putStrLn (Json.mkObj [("operation",toJson "ready")]).compress
     child.stdin.flush
     let task ← IO.asTask child.stdout.getLine .dedicated
-    let line ← try TaskDeadline.wait task ((← IO.monoMsNow)+15000)
+    let line ← try waitStartup task live
       catch error =>
         try child.kill catch _ => pure ()
         discard <| IO.wait task

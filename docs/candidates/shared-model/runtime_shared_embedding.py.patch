@@ -1,0 +1,350 @@
+--- a/runtime/shared_embedding.py
++++ b/runtime/shared_embedding.py
+@@ -0,0 +1,347 @@
++"""Isolated numerical experiment: retain every tokenizer overflow segment.
++
++Original DB windows, source bytes and equality rules are untouched. Each window
++gets a bundle of vectors; retrieval compares all query/source vector pairs.
++This module is not imported by the production provider.
++"""
++from __future__ import annotations
++
++import hashlib
++import json
++from pathlib import Path
++
++
++def positions(text, encodings):
++    """Source character positions with an attended, non-special token offset.
++
++    These are tokenizer offsets, not evidence that a model understood a fact.
++    Whitespace and characters discarded by model normalization are separate.
++    """
++    result = set()
++    for encoding in encodings:
++        for span, special, attended in zip(encoding.offsets, encoding.special_tokens_mask,
++                                           encoding.attention_mask):
++            if not special and attended:
++                start, stop = span
++                if not 0 <= start <= stop <= len(text):
++                    raise ValueError("Tokenizer offsets exceed the original source")
++                result.update(range(start, stop))
++    return result
++
++
++class Planner:
++    def __init__(self, tokenizer, overlap=16):
++        from tokenizers import Tokenizer
++
++        configured = tokenizer.truncation
++        if configured is None:
++            raise ValueError("The model must declare its context length")
++        self.context = configured["max_length"]
++        self.budget = self.context - tokenizer.num_special_tokens_to_add(False)
++        if not 0 <= overlap < self.budget:
++            raise ValueError("Overlap must leave room for new source tokens")
++        self.overlap = overlap
++        # Clone once per encoder, not once per window. No global assets change.
++        self.complete = Tokenizer.from_str(tokenizer.to_str())
++        self.complete.no_padding()
++        self.complete.no_truncation()
++
++    def plan(self, text):
++        return _plan(self, text)
++
++
++def _plan(planner, text):
++    complete = planner.complete
++    raw = complete.encode(text, add_special_tokens=False)
++    reference = list(zip(raw.ids, raw.offsets, raw.special_tokens_mask))
++    mapped = positions(text, [raw])
++    source_tokens = len(raw.ids)
++    # Split the complete encoding before adding model special tokens. The
++    # installed tokenizer's encode(...).overflowing shortcut itself loses a
++    # tail in some examples; token/offset equality below rejects that route.
++    raw.truncate(planner.budget, stride=planner.overlap)
++    raw_segments = [raw, *raw.overflowing]
++    expected_segments = []
++    offset = 0
++    while True:
++        expected_segments.append(reference[offset:offset+planner.budget])
++        if offset+planner.budget >= len(reference):
++            break
++        offset += planner.budget-planner.overlap
++    if [list(zip(part.ids, part.offsets, part.special_tokens_mask)) for part in raw_segments] != expected_segments:
++        raise ValueError("Segment sequence differs from the complete source encoding")
++    segments = [complete.post_process(part) for part in raw_segments]
++    if any(len(part.ids) > planner.context for part in segments):
++        raise ValueError("A segment exceeds the declared model context")
++    # Token identity and offset are checked, not merely enclosing spans. No
++    # substring decode/re-encode can silently drop boundary subword tokens.
++    for segment, expected in zip(segments, expected_segments):
++        present = [(i, o, s) for i, o, s in zip(segment.ids, segment.offsets,
++                    segment.special_tokens_mask) if not s]
++        if present != expected:
++            raise ValueError("Postprocessing omits or invents original source tokens")
++    embedded = positions(text, segments)
++    visible = {i for i, char in enumerate(text) if not char.isspace()}
++    return segments, dict(characters=len(text), visibleCharacters=len(visible),
++        tokenizerMappedCharacters=len(mapped & visible),
++        embeddedCharacters=len(embedded & visible), sourceTokens=source_tokens,
++        segments=len(segments), contextTokens=planner.context,
++        overlapTokens=planner.overlap, completeTokenOffsets=embedded == mapped)
++
++
++def encode_groups(active, texts, planner=None):
++    """Run the pinned FastEmbed ONNX/pooling kernel on overflow token IDs.
++
++    Batches remain bounded to 32 segments. The model's own postprocessor is
++    used; only token preparation expands from one segment to all segments.
++    """
++    import numpy as np
++    from fastembed.common.onnx_model import OnnxOutputContext
++
++    numerical = active.model
++    if numerical.model is None or numerical.tokenizer is None:
++        numerical.load_onnx_model()
++    if planner is None:
++        planner = Planner(numerical.tokenizer)
++    planned = [planner.plan(text) for text in texts]
++    segments = [(owner, part) for owner, (parts, _) in enumerate(planned) for part in parts]
++    groups = [[] for _ in texts]
++    names = {node.name for node in numerical.model.get_inputs()}
++    padding = numerical.tokenizer.padding
++    if padding is None:
++        raise ValueError("The model must declare padding")
++    for offset in range(0, len(segments), 32):
++        batch = segments[offset:offset+32]
++        width = max(len(part.ids) for _, part in batch)
++        for _, part in batch:
++            part.pad(width, direction=padding["direction"], pad_id=padding["pad_id"],
++                     pad_type_id=padding["pad_type_id"], pad_token=padding["pad_token"])
++        ids = np.asarray([part.ids for _, part in batch], dtype=np.int64)
++        mask = np.asarray([part.attention_mask for _, part in batch], dtype=np.int64)
++        feeds = {"input_ids": ids}
++        if "attention_mask" in names:
++            feeds["attention_mask"] = mask
++        if "token_type_ids" in names:
++            feeds["token_type_ids"] = np.zeros_like(ids)
++        feeds = numerical._preprocess_onnx_input(feeds)
++        output = numerical.model.run(numerical.ONNX_OUTPUT_NAMES, feeds)[0]
++        context = OnnxOutputContext(model_output=output,
++            attention_mask=feeds.get("attention_mask", mask), input_ids=feeds["input_ids"])
++        vectors = list(numerical._post_process_onnx_output(context))
++        if len(vectors) != len(batch):
++            raise ValueError("Numerical segment count mismatch")
++        for (owner, _), vector in zip(batch, vectors):
++            vector = np.asarray(vector, dtype=np.float32)
++            norm = np.linalg.norm(vector)
++            normalized = vector if norm == 0 else vector / norm
++            if not np.isfinite(normalized).all():
++                raise ValueError("Nonfinite segment vector")
++            groups[owner].append(normalized)
++    return groups, [coverage for _, coverage in planned]
++
++
++def contract(active, model_sha256, planner):
++    """Content-derived cache identity proposal; no manually maintained version."""
++    value = dict(model=active.model_name, modelSha256=model_sha256,
++        tokenizerSha256=hashlib.sha256(active.model.tokenizer.to_str().encode()).hexdigest(),
++        numericalClass=type(active.model).__name__, overlapTokens=planner.overlap,
++        contextTokens=planner.context, sourceBudgetTokens=planner.budget,
++        implementationSha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
++    return dict(value, digest=hashlib.sha256(json.dumps(value, sort_keys=True,
++                separators=(",", ":")).encode()).hexdigest())
++
++"""Numerical boundary only: FastEmbed inference and the existing NumPy kernels.
++
++Selection, identity, windows, persistence, ranking, and protocol supervision are Lean.
++"""
++import time
++
++process_started = time.perf_counter_ns()
++
++import json
++import sys
++import fcntl
++
++import numpy as np
++
++encoder = None
++planner = None
++lease = None
++startup_us = (time.perf_counter_ns() - process_started) // 1000
++first_reply = True
++timing = {}
++
++
++def elapsed_us(started):
++    return (time.perf_counter_ns() - started) // 1000
++
++
++def reply(result, requested):
++    global first_reply
++    result["timing"] = dict(timing, startupUs=startup_us if first_reply else 0,
++                            requestUs=elapsed_us(requested), modelLoaded=encoder is not None)
++    print(json.dumps(result, allow_nan=False, separators=(",", ":")), flush=True)
++    first_reply = False
++
++def model():
++    global encoder, lease, planner
++    if encoder is None:
++        # Cache-only scoring needs no encoder. A real encoder owns this lease
++        # throughout its lifetime; the caller's process-group deadline also
++        # stops its own waiting child without cancelling the current holder.
++        lease = open(sys.argv[4], "a")
++        started = time.perf_counter_ns()
++        fcntl.flock(lease.fileno(), fcntl.LOCK_EX)
++        timing["leaseUs"] = elapsed_us(started)
++        started = time.perf_counter_ns()
++        try:
++            verify_context_inputs()
++            from fastembed import TextEmbedding
++            encoder = TextEmbedding(model_name=sys.argv[1], cache_dir=sys.argv[2], threads=int(sys.argv[3]), local_files_only=True)
++            planner = Planner(encoder.model.tokenizer)
++        finally:
++            timing["initializeUs"] = elapsed_us(started)
++    return encoder
++
++
++def packed_vector(encoded):
++    if not isinstance(encoded, str) or not 0 < len(encoded) <= 4096 * 16 or len(encoded) % 16:
++        raise ValueError("invalid packed vector dimension")
++    raw = bytes.fromhex(encoded)
++    if len(raw) * 2 != len(encoded):
++        raise ValueError("noncanonical packed vector")
++    vector = np.frombuffer(raw, dtype="<f8")
++    if not np.isfinite(vector).all():
++        raise ValueError("nonfinite packed vector")
++    return np.asarray(vector, dtype=np.float32)
++
++
++CONTEXT_INPUTS = json.loads('{"model":"sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2","modelFiles":{"models--qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q/refs/main":"f5719ccbb70b50cf31f07542d53c3f498e8ee4f420527130b74c666f8dd80860","models--qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q/snapshots/faf4aa4225822f3bc6376869cb1164e8e3feedd0/config.json":"c8ec081fdad2df991bf5abbf18418fec7a5cdaa421f60ffb060a30040b8c376f","models--qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q/snapshots/faf4aa4225822f3bc6376869cb1164e8e3feedd0/model_optimized.onnx":"634d0f66c29dc934c8fa72b8a4fe91dd4d420a22f1d82a241058d4316e659a99","models--qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q/snapshots/faf4aa4225822f3bc6376869cb1164e8e3feedd0/special_tokens_map.json":"8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835","models--qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q/snapshots/faf4aa4225822f3bc6376869cb1164e8e3feedd0/tokenizer.json":"fa685fc160bbdbab64058d4fc91b60e62d207e8dc60b9af5c002c5ab946ded00","models--qdrant--paraphrase-multilingual-MiniLM-L12-v2-onnx-Q/snapshots/faf4aa4225822f3bc6376869cb1164e8e3feedd0/tokenizer_config.json":"0666eebf692422757e1dddf3c9fb1ded73ba3dc726c5828671fc89e45bf3609f"},"runtimeFiles":{"bin/python":"b502cb4c5b46b8d4192ec6bcb600ce8922f1afc396fcf646e8765c6eba74a0bf","lib/python3.14/site-packages/fastembed/__init__.py":"7d5baddda3e49a0812685f4c476c696477a26f5aa6de98280c088ab39b7b4065","lib/python3.14/site-packages/fastembed/common/__init__.py":"d0b11760d80cee25bbb987b53bb41df07541a50d7d7dc75f4e48cb0235e063b7","lib/python3.14/site-packages/fastembed/common/model_description.py":"6d912942c7b54e62c78e7d259a8cb70ed3e3877214d2d13e2e5a9319d610918a","lib/python3.14/site-packages/fastembed/common/model_management.py":"8f5e95e7641e25cd5591c28db38fa21be9de09ff60d0f58195f0cf5da551db60","lib/python3.14/site-packages/fastembed/common/onnx_model.py":"8b2d85430028dfc705fb368fbdf58f779eff3871dfc1f3b987e71302dddb566f","lib/python3.14/site-packages/fastembed/common/preprocessor_utils.py":"4f131ba66d533ee5a9132b31504b4d5d8bb3418afaa6e7438782b7c04b84f810","lib/python3.14/site-packages/fastembed/common/types.py":"0a29e1cde1aaaf985bb0ef3e5976307baa137f3164d96c4a7e8c813ab1f27071","lib/python3.14/site-packages/fastembed/common/utils.py":"af11cee52ad15b6eda4d669783843636ef2beb7001a8605139d8cd09aceb686a","lib/python3.14/site-packages/fastembed/embedding.py":"a049bf9a66fae78e71af78a2cfbcefca2c8a077e1d5409130bcd8bcaa110562d","lib/python3.14/site-packages/fastembed/image/__init__.py":"610dcd1d2216d6e7d1e6211a073cc9d5c55e388144e4ee93a5f74d2ad5ab6ef8","lib/python3.14/site-packages/fastembed/image/image_embedding.py":"cb886b2e8155e1c78c74ec1ea1e8cf3d9b0b23ac84dd2aaff73de76520aa2753","lib/python3.14/site-packages/fastembed/image/image_embedding_base.py":"e06b76cc87d3bd0349c75f1b9ac283a7427a9d1f568c4f450304fd68ab00dbbb","lib/python3.14/site-packages/fastembed/image/onnx_embedding.py":"b8d71c49f09173f1798a73b260e1f03b34e1495f9fea50f7a1eb201ec1b3ce6f","lib/python3.14/site-packages/fastembed/image/onnx_image_model.py":"1de5d522a2f5c8ec62c148841ae689f715a83e1ba5f73b91f8404e11e1df4eda","lib/python3.14/site-packages/fastembed/image/transform/functional.py":"ed1dfd19d1f315b6e389059c4607a04d786e0abd93be1d98752c6668e408073e","lib/python3.14/site-packages/fastembed/image/transform/operators.py":"142f7e99655104c34ee93db8b42adb245bfbba9873ea39eb6d2d65f0050243b1","lib/python3.14/site-packages/fastembed/late_interaction/__init__.py":"f818b566d8338296c59bd6e977957741c251385e1c3a0ca266510797efb34128","lib/python3.14/site-packages/fastembed/late_interaction/colbert.py":"86311047ff3ee26f8120a2bc36091ed85acaece04d89329154563d8b9c3e55af","lib/python3.14/site-packages/fastembed/late_interaction/jina_colbert.py":"a1f28d75472dc3497526b89c1c1b6e60da6accb89bc1bdde1dd9df97f435724e","lib/python3.14/site-packages/fastembed/late_interaction/late_interaction_embedding_base.py":"09dd93d364473921d06c5657d31b2d7ef902d98dcd7b08c1fd33e02b824b4247","lib/python3.14/site-packages/fastembed/late_interaction/late_interaction_text_embedding.py":"72329828ee9da6fcf64277c60b61607d896ccbed81144db17b3f1f77218b4577","lib/python3.14/site-packages/fastembed/late_interaction/token_embeddings.py":"c7d8e2803464fdce722d45f0caecec77b1f70fadb41bbe37d1d29a26cc576ed1","lib/python3.14/site-packages/fastembed/late_interaction_multimodal/__init__.py":"1005618047ad68a6463af890c88b276b33fc9f662ab5b88475134dd56c93d566","lib/python3.14/site-packages/fastembed/late_interaction_multimodal/colmodernvbert.py":"cf9c50eb38cdff9701c62ad3381a840d86bf234a352b2693ec22b2240447a51b","lib/python3.14/site-packages/fastembed/late_interaction_multimodal/colpali.py":"66c1453b26cb42f45155152bb7988f8ee8ca3205e99c0a965f54e6566748834a","lib/python3.14/site-packages/fastembed/late_interaction_multimodal/late_interaction_multimodal_embedding.py":"a66adbd1d43796756c1a0a99747d47c5a824db67174294c220d57a63301e29c2","lib/python3.14/site-packages/fastembed/late_interaction_multimodal/late_interaction_multimodal_embedding_base.py":"56dbe141f41ad0c7a0540df54831777113ce051654301a3d58ad86b05a9d5c51","lib/python3.14/site-packages/fastembed/late_interaction_multimodal/onnx_multimodal_model.py":"e17687598fcfb6b8ccc55b6eb9afa810918d01d1fcd2ff979736bb15cbe6f07c","lib/python3.14/site-packages/fastembed/parallel_processor.py":"067d734057b1f5ed8d0bfb9fa249631d783636f139fc7043a9a048091e9d9c9d","lib/python3.14/site-packages/fastembed/postprocess/__init__.py":"a6cd3af0c8158cbeb004c995a9343650644b626fcbdde9629a7ce88c61bb6ae9","lib/python3.14/site-packages/fastembed/postprocess/muvera.py":"ef813f1ea3fd83d99c3827ae0655cc52aba3dae81371ed9c5279c450eb43b8a1","lib/python3.14/site-packages/fastembed/rerank/cross_encoder/__init__.py":"dc04bbb52d5600b10e26634877d5f193507023ec747c9287152572269489be47","lib/python3.14/site-packages/fastembed/rerank/cross_encoder/custom_text_cross_encoder.py":"a8d1c0d6826d41c28fef4cceb5b733a1644a9742f9e3482fac5bebdba12eb85d","lib/python3.14/site-packages/fastembed/rerank/cross_encoder/onnx_text_cross_encoder.py":"34b49ad6ec5470ada07ba6c1ad22818b25c75cbdd6cd76bf464ae85cad21c733","lib/python3.14/site-packages/fastembed/rerank/cross_encoder/onnx_text_model.py":"b97c4c01608e55e9805a07bc9499aa52480a4f1edd99212ac8bb8fda234cd9bd","lib/python3.14/site-packages/fastembed/rerank/cross_encoder/text_cross_encoder.py":"ab00ca4f13c8e8b5a61fc1d9ad3cf589c9fe69d0e392bc5c86e1a9854776f3d5","lib/python3.14/site-packages/fastembed/rerank/cross_encoder/text_cross_encoder_base.py":"689ba292d42426bb8a6269e91358d8d67d5b0261c74b5a86c26ba5657c427b33","lib/python3.14/site-packages/fastembed/sparse/__init__.py":"19e52837f7e98813e8aa43b570e213c5ff29a3495575c3d5d3b0847c42ec508d","lib/python3.14/site-packages/fastembed/sparse/bm25.py":"85a91ac795aa335f29126db0a47db9ae15b1473b5f9baef755b664fa0aa1308b","lib/python3.14/site-packages/fastembed/sparse/bm42.py":"df05ef73b43af61e04c3ad4f969b53a5bfec2b61a98188457c39ca258e1e20ff","lib/python3.14/site-packages/fastembed/sparse/minicoil.py":"6fea4e249ef075346881d4c8dbec9f05cdba3d08effe947cd831933c42f75ef4","lib/python3.14/site-packages/fastembed/sparse/sparse_embedding_base.py":"2aae16714adc444ef87652392f70ba1f9c24efef87005c0ff10ccc1789623c41","lib/python3.14/site-packages/fastembed/sparse/sparse_text_embedding.py":"e8c4d0b3cd12105892246a0c219c9153543e0a5d82a8116e9e771aa267a635c6","lib/python3.14/site-packages/fastembed/sparse/splade_pp.py":"b9d0de017fb42721ef842d1d00fabd4971ac61ac91309865037bf504394b64cd","lib/python3.14/site-packages/fastembed/sparse/utils/minicoil_encoder.py":"e8f2e21665f2b68e2cc92b04c7dafc5d062a5a23bc303a71e3c551f114d0ff3f","lib/python3.14/site-packages/fastembed/sparse/utils/sparse_vectors_converter.py":"6f9cee2a42c07b1c896c6c7b6effc269f47d7b09a554341ad48d122db47eb464","lib/python3.14/site-packages/fastembed/sparse/utils/tokenizer.py":"e5b808ef6632aa895362e7d7c6c0a2b993f58dc21732a0f5a0268d680c6b3f06","lib/python3.14/site-packages/fastembed/sparse/utils/vocab_resolver.py":"b61171e7078c73fffdca995753e3c0d006a7c767d1daa5a36c17fc714473a361","lib/python3.14/site-packages/fastembed/text/__init__.py":"e7f27cfc0487a06f8bad516f27f179a30e7a3c7bf98bd8f8b33880cb132a29d9","lib/python3.14/site-packages/fastembed/text/clip_embedding.py":"8b70d00d55fd725e4fb925b37fbe21a3da1cbf3c46d7b6294f4dbe182c34a2be","lib/python3.14/site-packages/fastembed/text/custom_text_embedding.py":"f9a69317fcc3716bda5d5a555fe4fd37ff539390fb4faaf10f20d3e86d75a266","lib/python3.14/site-packages/fastembed/text/multitask_embedding.py":"7f31518514a1ccc9636856ab649137151b85b10b34d0cb3aedc6e56d5e130228","lib/python3.14/site-packages/fastembed/text/onnx_embedding.py":"c3752705280b27a74e34d2b75f48bcb4ac0e3ba96f4a8897f1273423e4508100","lib/python3.14/site-packages/fastembed/text/onnx_text_model.py":"f0867d16e0589dac8cc50427c53c2d1b1ff5c8423e031e64886a47f4cd7dc73f","lib/python3.14/site-packages/fastembed/text/pooled_embedding.py":"a7b62c7eec9d506f457c77ede5cdf297cf0bc89b6df29b8e2f3c2cc138bace57","lib/python3.14/site-packages/fastembed/text/pooled_normalized_embedding.py":"9c00ccdee745d276abddb90b0a1376f7d203c455aca3de096ebb4ad2bcb41f68","lib/python3.14/site-packages/fastembed/text/text_embedding.py":"de7c6c2bb8b0b05f70b02d0bb62308e1cef50cdb0c618ff74d0d75598ac326a7","lib/python3.14/site-packages/fastembed/text/text_embedding_base.py":"1e3dd7639f40cf6db91e8cb9ce4021570d80a23db5a7045df61116af9b4410c8","lib/python3.14/site-packages/numpy/__init__.py":"09295a80660f17925ae23765ce8cbd7ff7ceae968d5f2f89349f1cb74c0b9e11","lib/python3.14/site-packages/numpy/_core/_multiarray_tests.cpython-314-darwin.so":"c0a63130a30be78bccf1707b1ff25075defaed2d1b777ad81c7482e9ab0ae6bd","lib/python3.14/site-packages/numpy/_core/_multiarray_umath.cpython-314-darwin.so":"78491aea1633199b1987687703ef86383bd3dc2ba52dc1ae535175764b1eb58b","lib/python3.14/site-packages/numpy/_core/_operand_flag_tests.cpython-314-darwin.so":"0a9210271a5215c1c9e715cf978f82ca92e4b3043e7ffb3a714beab868a72e3a","lib/python3.14/site-packages/numpy/_core/_rational_tests.cpython-314-darwin.so":"64588bdb181dc04c8c3c48ea64d30cbbe3ecebdfa85021f8db0d8a050890d0c0","lib/python3.14/site-packages/numpy/_core/_simd.cpython-314-darwin.so":"2b2fb717cb8cce14f8964990aab8223fe5054414cc979b48fe6e517d66aae4fe","lib/python3.14/site-packages/numpy/_core/_struct_ufunc_tests.cpython-314-darwin.so":"35d4e72fa2e66448bc4cd332e36c7a43f669527d36e4df8c6f4e3cf5dcae63a2","lib/python3.14/site-packages/numpy/_core/_umath_tests.cpython-314-darwin.so":"500cc7702c0bf53f5c5211f9e17a190ccd2fe1c150b211a190e6739b9c916cb1","lib/python3.14/site-packages/onnxruntime/__init__.py":"63301d3d4e828419c6520fbd0dd05af7667274c99c38f9592d4c0a9c5161ff55","lib/python3.14/site-packages/onnxruntime/capi/libonnxruntime.1.29.0.dylib":"5039a93886b71ddfcf62912a2be5b357cf51fa9a6579ad9302c78323f5f7c302","lib/python3.14/site-packages/onnxruntime/capi/onnxruntime_pybind11_state.so":"8782d76f99e12b7d39c603d887896d0f51d47db15984b6ea2511594fbab9023a","lib/python3.14/site-packages/tokenizers/__init__.py":"b1cee924695651af5c3dab98e8c34406ab355a2cc1d633228646c470210e649e","lib/python3.14/site-packages/tokenizers/tokenizers.abi3.so":"01a6e7dc78d57760f4297a1cf8c40fc3e77bcabe855c590a36d0072709284091"}}')
++def verify_context_inputs():
++    if sys.argv[1] != CONTEXT_INPUTS["model"]:
++        raise ValueError("Model differs from the compiled encoder contract")
++    for category, root in [("modelFiles", Path(sys.argv[2])), ("runtimeFiles", Path(sys.prefix))]:
++        for relative, expected in CONTEXT_INPUTS[category].items():
++            path = root / relative
++            digest = hashlib.sha256()
++            with path.open("rb") as stream:
++                for chunk in iter(lambda: stream.read(1048576), b""):
++                    digest.update(chunk)
++            if digest.hexdigest() != expected:
++                raise ValueError("Encoder input differs from the compiled contract: "+relative)
++
++if sys.argv[6:] == ["--preload"]:
++    next(model().embed(["eggshell"], batch_size=1))
++    raise SystemExit(0)
++
++def encode_async(active, texts, planner=None):
++    """Run the pinned FastEmbed ONNX/pooling kernel on overflow token IDs.
++
++    Batches remain bounded to 32 segments. The model's own postprocessor is
++    used; only token preparation expands from one segment to all segments.
++    """
++    import numpy as np
++    from fastembed.common.onnx_model import OnnxOutputContext
++
++    numerical = active.model
++    if numerical.model is None or numerical.tokenizer is None:
++        numerical.load_onnx_model()
++    if planner is None:
++        planner = Planner(numerical.tokenizer)
++    planned = [planner.plan(text) for text in texts]
++    segments = [(owner, part) for owner, (parts, _) in enumerate(planned) for part in parts]
++    groups = [[] for _ in texts]
++    names = {node.name for node in numerical.model.get_inputs()}
++    padding = numerical.tokenizer.padding
++    if padding is None:
++        raise ValueError("The model must declare padding")
++    for offset in range(0, len(segments), 32):
++        batch = segments[offset:offset+32]
++        width = max(len(part.ids) for _, part in batch)
++        for _, part in batch:
++            part.pad(width, direction=padding["direction"], pad_id=padding["pad_id"],
++                     pad_type_id=padding["pad_type_id"], pad_token=padding["pad_token"])
++        ids = np.asarray([part.ids for _, part in batch], dtype=np.int64)
++        mask = np.asarray([part.attention_mask for _, part in batch], dtype=np.int64)
++        feeds = {"input_ids": ids}
++        if "attention_mask" in names:
++            feeds["attention_mask"] = mask
++        if "token_type_ids" in names:
++            feeds["token_type_ids"] = np.zeros_like(ids)
++        feeds = numerical._preprocess_onnx_input(feeds)
++        output = (yield (numerical.ONNX_OUTPUT_NAMES, feeds))[0]
++        context = OnnxOutputContext(model_output=output,
++            attention_mask=feeds.get("attention_mask", mask), input_ids=feeds["input_ids"])
++        vectors = list(numerical._post_process_onnx_output(context))
++        if len(vectors) != len(batch):
++            raise ValueError("Numerical segment count mismatch")
++        for (owner, _), vector in zip(batch, vectors):
++            vector = np.asarray(vector, dtype=np.float32)
++            norm = np.linalg.norm(vector)
++            normalized = vector if norm == 0 else vector / norm
++            if not np.isfinite(normalized).all():
++                raise ValueError("Nonfinite segment vector")
++            groups[owner].append(normalized)
++    return groups, [coverage for _, coverage in planned]
++
++
++import os
++import onnxruntime as ort
++
++active_requests = {}
++
++def emit_async(value):
++    # BufferedWriter serializes each whole frame; no inference spans this IO.
++    frame = (json.dumps(value, allow_nan=False, separators=(",", ":")) + "\n").encode()
++    sys.stdout.buffer.write(frame)
++    sys.stdout.buffer.flush()
++
++def finish_async(state, value):
++    active_requests.pop(state["id"], None)
++    value.update(id=state["id"], pid=os.getpid(), nativeCalls=state["calls"],
++                 submittedNs=state["submitted"], finishedNs=time.perf_counter_ns())
++    emit_async(value)
++
++def advance_async(state, output=None, first=False):
++    try:
++        names, feeds = next(state["generator"]) if first else state["generator"].send(output)
++        state["calls"] += 1
++        encoder.model.model.run_async(names, feeds, completed_async, state, state["options"])
++    except StopIteration as done:
++        groups, coverage = done.value
++        finish_async(state, dict(vectors=[[row.tolist() for row in group] for group in groups], coverage=coverage))
++    except Exception as error:
++        finish_async(state, dict(error=str(error)))
++
++def completed_async(outputs, state, error):
++    if error:
++        finish_async(state, dict(error=error))
++    else:
++        advance_async(state, outputs)
++
++for line in sys.stdin:
++    request = json.loads(line)
++    operation = request["operation"]
++    if operation == "ready":
++        model()
++        emit_async(dict(ready=True, pid=os.getpid(), sessions=1))
++    elif operation == "start":
++        identity = request["id"]
++        if identity in active_requests:
++            raise ValueError("duplicate active numerical request")
++        options = ort.RunOptions()
++        state = dict(id=identity, options=options, submitted=time.perf_counter_ns(), calls=0,
++                     generator=encode_async(encoder, request["texts"], planner))
++        active_requests[identity] = state
++        advance_async(state, first=True)
++    elif operation == "cancel":
++        state = active_requests.get(request["id"])
++        if state is not None:
++            state["options"].terminate = True
++        emit_async(dict(operation="cancel", id=request["id"], found=state is not None))
++    elif operation == "profile":
++        if active_requests:
++            raise ValueError("profile requested before numerical completion")
++        emit_async(dict(profile=encoder.model.model.end_profiling(), sessions=1, pid=os.getpid()))
++    else:
++        raise ValueError("unknown numerical probe operation")
