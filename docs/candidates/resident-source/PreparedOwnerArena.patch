@@ -1,0 +1,14 @@
+--- a/tools/research/PreparedOwnerArena.lean
++++ b/tools/research/PreparedOwnerArena.lean
+@@ -24,3 +23,0 @@
+-  palette : OwnerPalette.Ready stored layout
+-  units : PreparedFileUnits.Ready owner stored.rows layout
+-  published : PublishedPlanMetadata.Ready owner stored layout
+@@ -36 +33 @@
+-      | .ok layout => return ⟨database,owner,stored,layout,checked,⟨registry,loaded⟩,inScope,OwnerPalette.prepare stored layout,PreparedFileUnits.prepare owner stored.rows layout,PublishedPlanMetadata.prepare owner stored layout⟩
++      | .ok layout => return ⟨database,owner,stored,layout,checked,⟨registry,loaded⟩,inScope⟩
+@@ -43,2 +40,2 @@
+-  let published ← PublishedPlanMetadata.check ready.owner ready.stored ready.layout metadata
+-  return {ready with published}
++  let _ ← PublishedPlanMetadata.check ready.owner ready.stored ready.layout metadata
++  return ready

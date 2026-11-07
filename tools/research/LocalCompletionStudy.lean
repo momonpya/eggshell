@@ -348,7 +348,7 @@ def stage (receipt : Json) (name : String) : IO Json := do
   return (selected.getObjValD "record").getObjValD "data"
 def collectCells (family : String := "local-completion") (attempt : Nat := 1) : IO Unit := do
   drained
-  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan"].contains family) "known completed delivery family required"
+  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source"].contains family) "known completed delivery family required"
   let folder := workspace/"docs/candidates"/family
   check (attempt > 0) "positive delivery attempt required"
   let guardTag := family++"-cells"++toString attempt
@@ -361,7 +361,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
   for topic in [1:4] do
     for repetition in [:2] do
       let cell := root/s!"topic-{topic}-chat-{repetition}"
-      let parent := if family == "typed-plan" then "typed-fetch-cells2-result" else if family == "typed-fetch" then "delivery-key-sets-cells-result"
+      let parent := if family == "resident-source" then "typed-plan-cells-result" else if family == "typed-plan" then "typed-fetch-cells2-result" else if family == "typed-fetch" then "delivery-key-sets-cells-result"
         else if family == "delivery-key-sets" then "selection-membership-cells-result" else "encoder-events-cells-result"
       let parentBody := base/parent/s!"topic-{topic}-chat-{repetition}"/"body.txt"
       check ((← IO.FS.readBinFile (cell/"body.txt")) == (← IO.FS.readBinFile parentBody)) "actual delivery body changed"
@@ -373,7 +373,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
       let synapse ← stage receipt "synaptic-delivery.json"
       let keyed ← stage receipt "provider-keyed-inputs.json"
       let receiptBytes := (← (cell/"receipt.json").metadata).byteSize.toNat
-      if ["typed-fetch","typed-plan"].contains family then
+      if ["typed-fetch","typed-plan","resident-source"].contains family then
         check (synapse.getObjValD "sharedRows" == Json.null &&
           (synapse.getObjValAs? Nat "sharedWitnessesChecked").toOption.getD 0 > 0)
           "unused diagnostic row array remains or source witness verification disappeared"

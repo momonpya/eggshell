@@ -23,7 +23,8 @@ def hash (path : System.FilePath) : IO String :=
   return ((← command "/usr/bin/shasum" #["-a","256",path.toString]).splitOn " ").headD ""
 def drained : IO Unit := do
   let all ← command "/bin/ps" #["-axo","command="]
-  check (!(all.splitOn "\n").any (fun row => row.contains "controller/StudyMain guard ")) "native resource guard active"
+  let guardCommand := (base/"controller/StudyMain").toString++" guard "
+  check (!(all.splitOn "\n").any (fun row => row.trimAscii.toString.startsWith guardCommand)) "native resource guard active"
   for entry in ← base.readDir do
     if entry.fileName.startsWith "memory-capacity-" && entry.fileName.endsWith ".guard.json" then
       let value ← read entry.path
@@ -275,7 +276,7 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
@@ -283,7 +284,7 @@ def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan"].contains family then
+  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source"].contains family then
     check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
@@ -593,6 +594,35 @@ def auditStoppedQueries (family : String := "parallel-encoder") (mode : String :
   write (destination/"stopped-query-stages.json") (Json.mkObj [("ownerPid",toJson owner),("mode",toJson mode),
     ("queries",toJson rows.size),("files",toJson (totals.toArray.qsort (fun a b => a.1 < b.1))),
     ("rows",toJson rows),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
+def cleanupStoppedEndpoints (family mode : String) (owner : Nat) : IO Unit := do
+  drained
+  discard <| cohort family
+  let destination := workspace/"docs/candidates"/family
+  let evidence ← read (destination/("capacity-"++mode++".json"))
+  let guard := evidence.getObjValD "guard"
+  stoppedOwnerAbsent guard owner
+  let pids := (guard.getObjValD "peakProcesses").getArr?.toOption.getD #[] |>.filterMap fun row =>
+    (row.getObjValAs? Nat "pid").toOption
+  let mut paths := #[shared/"data/publisher/endpoint.json",shared/"data/publisher/operations.json",shared/"data/daemon.json"]
+  let numerical := shared/"data/numerical"
+  if ← numerical.isDir then
+    for entry in ← numerical.readDir do
+      if ← entry.path.isDir then paths := paths.push (entry.path/"endpoint.json")
+  let mut removed := #[]
+  for path in paths do
+    if !(← path.pathExists) then continue
+    let value ← read path
+    let pid ← IO.ofExcept (value.getObjValAs? Nat "pid")
+    if !pids.contains pid then continue
+    let fingerprint ← hash path
+    let actual ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
+    check (actual.exitCode != 0 && actual.stdout.trimAscii.isEmpty) "ended endpoint PID is live or reused"
+    check ((← hash path) == fingerprint) "endpoint changed while checking its ended owner"
+    removed := removed.push (Json.mkObj [("path",toJson path.toString),("pid",toJson pid),("sha256",toJson fingerprint)])
+    IO.FS.removeFile path
+  write (destination/("capacity-"++mode++"-endpoints-cleanup.json"))
+    (Json.mkObj [("removed",toJson removed),("ownerPid",toJson owner),("archived",toJson false),
+      ("onlyStoppedGuardOwnedPids",toJson true),("projectDbCacheAndModelsRetained",toJson true)])
 def cleanupStoppedCapacity (family mode : String) (owner : Nat) : IO Unit := do
   drained
   discard <| cohort family
@@ -629,6 +659,7 @@ def cleanupStoppedCapacity (family mode : String) (owner : Nat) : IO Unit := do
   write output (record false)
   for path in removed do IO.FS.removeDirAll path
   write output (record true)
+  cleanupStoppedEndpoints family mode owner
 def prepareIdentityProbe : IO Unit := do
   drained
   check (!(← (base/"runtime-identity-source").pathExists)) "fresh identity probe required"
@@ -677,6 +708,9 @@ def main (args : List String) : IO Unit := do
   | ["cleanup-stopped-capacity",family,mode,owner] =>
     let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
     cleanupStoppedCapacity family mode owner
+  | ["cleanup-stopped-endpoints",family,mode,owner] =>
+    let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
+    cleanupStoppedEndpoints family mode owner
   | ["prepare-identity-probe"] => prepareIdentityProbe
   | ["setup-identity-probe",action,tag] => setupIdentityProbe action tag
   | ["prepare-capacity",family] => prepareParallel family
