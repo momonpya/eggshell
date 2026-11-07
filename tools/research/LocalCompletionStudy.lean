@@ -386,14 +386,17 @@ def collectCells (family : String := "local-completion") : IO Unit := do
     ("allParentBodiesByteEqual",toJson true),("candidatePathPassed",toJson true),("cells",toJson cells),("guard",guard),
     ("answeringModelCalls",toJson (0 : Nat)),("fullEightyOrAdoptionClaim",toJson false)])
 
-def postFocus : IO Unit := do
+def postFocus (family : String := "local-completion") : IO Unit := do
   drained
+  check (["local-completion","selection-membership"].contains family) "known capacity family required"
+  let folder := workspace/"docs/candidates"/family
   let input := folder/"capacity-80.json"
   let evidence ← read input
   let mut rows := #[]
   let mut queue := #[]
   let mut readiness := #[]
   let mut afterFocus := #[]
+  let mut afterDomain := #[]
   for cell in (evidence.getObjValD "cells").getArr?.toOption.getD #[] do
     unless cell.getObjValD "phase" == toJson "phase-80" do continue
     let client := cell.getObjValD "client"
@@ -402,6 +405,12 @@ def postFocus : IO Unit := do
     let root := base/"real-source-search-read-trial-result/data/receipts"/id
     let service ← read (root/"operation-service.json")
     let data := service.getObjValD "data"
+    if ← (root/"delivery-domain.json").pathExists then
+      let domain ← read (root/"delivery-domain.json")
+      let observed ← IO.ofExcept (domain.getObjValAs? Nat "observedMs")
+      let finished ← IO.ofExcept (data.getObjValAs? Nat "finishedAt")
+      check (observed ≤ finished) "post-domain clocks are not ordered"
+      afterDomain := afterDomain.push (finished-observed)
     if let .ok value := data.getObjValAs? Nat "queueMs" then queue := queue.push value
     if let .ok value := data.getObjValAs? Nat "readyMs" then readiness := readiness.push value
     let numerical := (cell.getObjValD "numerical").getArr?.toOption.getD #[]
@@ -423,7 +432,8 @@ def postFocus : IO Unit := do
   let digest ← hash input
   write (folder/"capacity-post-focus.json") (Json.mkObj [("inputSha256",toJson digest),("clients",toJson rows.size),
     ("queueMs",stats queue),("readyMs",stats readiness),("completedFocusClients",toJson afterFocus.size),
-    ("afterCompletedFocusMs",stats afterFocus),("rows",toJson rows),("newModelOrHookRuns",toJson (0 : Nat)),
+    ("afterCompletedFocusMs",stats afterFocus),("afterPreparedDomainMs",stats afterDomain),
+    ("rows",toJson rows),("newModelOrHookRuns",toJson (0 : Nat)),
     ("conclusion",toJson "post-focus work remains; timing alone does not identify a function or establish CPU cost")])
 
 partial def treeBytes (path : System.FilePath) : IO Nat := do
@@ -487,6 +497,7 @@ def main (args : List String) : IO Unit := match args with
   | ["collect-cells"] => collectCells
   | ["collect-cells",family] => collectCells family
   | ["post-focus"] => postFocus
+  | ["post-focus",family] => postFocus family
   | ["retire-ended"] => retireEnded
   | _ => throw (IO.userError "local completion: prepare/setup/collect/refresh/controls/product/seal")
 end Eggshell.Research.LocalCompletionStudy

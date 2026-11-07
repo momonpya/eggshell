@@ -320,6 +320,45 @@ def sealActual : IO Unit := do
   run #["common-sources",(base/"selection-membership-build").toString,native.toString,(destination/"auditor-sources.json").toString]
   let sources ← read (destination/"auditor-sources.json")
   check (sources.getObjValD "commonSourcesUnchanged" == toJson true && sources.getObjValD "allProductCorePresent" == toJson true) "actual hook auditor changed the core"
+def retireActual : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/selection-membership"
+  let record := destination/"retired-ended-experiments.json"
+  check (!(← record.pathExists)) "retain previous retirement"
+  for mode in ["small","80"] do
+    let evidence ← read (destination/("capacity-"++mode++".json"))
+    check ((evidence.getObjValD "guard").getObjValD "ownedPids" == toJson (#[] : Array Nat)) "capacity still owns processes"
+    check (← (destination/("capacity-"++mode++"-cleanup.json")).pathExists) "cleanup private capacity sessions first"
+  check ((← read (destination/"capacity-post-focus.json")).getObjValD "clients" == toJson (80 : Nat)) "retain failed records until diagnosed"
+  let input ← read (base/"selection-membership-capacity-80-input.json")
+  let original : System.FilePath := .mk (← IO.ofExcept (input.getObjValAs? String "project"))
+  check (original == base/"real-source-search-read-trial-result/work.egg") "unexpected original scope"
+  let expected ← IO.ofExcept (input.getObjValAs? (Array (String × String)) "sourceFiles")
+  for (name,digest) in expected do
+    check (!name.contains '/' && !name.contains '\\') "original file escaped project"
+    let actual := ((← command "/usr/bin/shasum" #["-a","256",(original/name).toString]).splitOn " ").headD ""
+    check (actual == digest) "original project changed during failed load"
+  let processes ← command "/bin/ps" #["-axo","command="]
+  let mut removed := #[]
+  let mut bytes := 0
+  for (name,proof) in [("selection-membership-auditor-build/StudyMain","auditor-sources.json"),
+      ("selection-membership-capacity-build/StudyMain","capacity-sources.json")] do
+    let path := base/name
+    let digest := ((← command "/usr/bin/shasum" #["-a","256",path.toString]).splitOn " ").headD ""
+    check (!processes.contains path.toString && (← read (destination/proof)).getObjValD "auditorSha256" == toJson digest) "helper remains live or changed"
+    bytes := bytes+(← path.metadata).byteSize.toNat
+    removed := removed.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson digest)])
+  let recordData := Json.mkObj [("helpers",toJson removed),("helperBytes",toJson bytes),("archived",toJson false),
+    ("completed",toJson false),("originalProjectFilesUnchanged",toJson true),
+    ("currentRuntimePrefixOriginalsProjectCacheModelsNativeSourcesObjectsInterfacesAndGoldenBodiesRetained",toJson true)]
+  write record recordData
+  for row in removed do IO.FS.removeFile (.mk (← IO.ofExcept (row.getObjValAs? String "path")))
+  let mut directories := #[]
+  for name in ["selection-membership-capacity-small-result","selection-membership-capacity-80-result"] do
+    let path := base/name
+    IO.FS.removeDirAll path
+    directories := directories.push path.toString
+  write record (recordData.setObjVal! "completed" (toJson true) |>.setObjVal! "removedDirectories" (toJson directories))
 def main (args : List String) : IO Unit := match args with
   | ["setup"] => setup
   | ["seal"] => sealProduct
@@ -338,6 +377,7 @@ def main (args : List String) : IO Unit := match args with
   | ["support-runtime"] => supportRuntime
   | ["prepare-actual"] => prepareActual
   | ["seal-actual"] => sealActual
+  | ["retire-actual"] => retireActual
   | ["collect",name] => collect name
   | _ => throw (IO.userError "setup/collect required")
 end PostFocusStudy
