@@ -1,0 +1,193 @@
+--- a/tools/research/EncoderPool.lean
++++ b/tools/research/EncoderPool.lean
+@@ -3,0 +4,3 @@
++public import Init.Data.Queue
++import all Init.Data.Queue
++public import Eggshell.TaskDeadline
+@@ -19,0 +23,70 @@
++structure Watch where
++  identity : Nat
++  ready : IO.Promise (Except IO.Error Unit)
++
++/-- Wait identities are never recycled. Queue edits cannot create credits;
++they only notify an owner to attempt the original reservation operation. -/
++structure WakeQueue where
++  next : Nat
++  items : Std.Queue Watch
++  older : ∀ watch ∈ items.dList ++ items.eList, watch.identity < next
++
++def WakeQueue.empty : WakeQueue := ⟨0,{dList := [],eList := []},by simp⟩
++
++def WakeQueue.register (queue : WakeQueue) (ready : IO.Promise (Except IO.Error Unit)) : WakeQueue × Watch :=
++  let watch : Watch := ⟨queue.next,ready⟩
++  (⟨queue.next+1,queue.items.enqueue watch,by
++    intro entry present
++    simp only [Std.Queue.enqueue,List.mem_append,List.mem_cons] at present
++    rcases present with present | same | present
++    · exact Nat.lt_trans (queue.older entry (List.mem_append_left _ present)) (Nat.lt_succ_self _)
++    · subst entry; exact Nat.lt_succ_self _
++    · exact Nat.lt_trans (queue.older entry (List.mem_append_right _ present)) (Nat.lt_succ_self _)⟩,watch)
++
++def WakeQueue.remove (queue : WakeQueue) (identity : Nat) : WakeQueue :=
++  ⟨queue.next,
++    { dList := queue.items.dList.filter (fun watch => watch.identity != identity)
++      eList := queue.items.eList.filter (fun watch => watch.identity != identity) },by
++    intro entry present
++    rcases List.mem_append.mp present with present | present
++    · exact queue.older entry (List.mem_append_left _ (List.mem_filter.mp present).1)
++    · exact queue.older entry (List.mem_append_right _ (List.mem_filter.mp present).1)⟩
++
++def WakeQueue.pop (queue : WakeQueue) : WakeQueue × Option Watch :=
++  match found : queue.items.dList with
++  | watch :: rest =>
++    (⟨queue.next,{queue.items with dList := rest},by
++      intro entry present
++      exact queue.older entry (by
++        simp only [found,List.mem_append,List.mem_cons]
++        exact (List.mem_append.mp present).imp (Or.inr) id)⟩,some watch)
++  | [] =>
++    match reversed : queue.items.eList.reverse with
++    | [] => (queue,none)
++    | watch :: rest =>
++      (⟨queue.next,{dList := rest,eList := []},by
++        intro entry present
++        have member : entry ∈ queue.items.eList.reverse := by
++          simp only [List.append_nil] at present
++          simp only [reversed,List.mem_cons]
++          exact Or.inr present
++        exact queue.older entry (List.mem_append_right _ (List.mem_reverse.mp member))⟩,some watch)
++
++def WakeQueue.clear (queue : WakeQueue) : WakeQueue := ⟨queue.next,{dList := [],eList := []},by simp⟩
++
++theorem WakeQueue.register_fresh (queue : WakeQueue) (ready) (watch : Watch)
++    (present : watch ∈ queue.items.dList ++ queue.items.eList) :
++    watch.identity ≠ (queue.register ready).2.identity := by
++  have older := queue.older watch present
++  simp only [WakeQueue.register]
++  omega
++
++theorem WakeQueue.remove_preserves_generation (queue : WakeQueue) (identity : Nat) :
++    (queue.remove identity).next = queue.next := rfl
++
++theorem WakeQueue.removed_absent (queue : WakeQueue) (identity : Nat) (watch : Watch)
++    (present : watch ∈ (queue.remove identity).items.dList ++ (queue.remove identity).items.eList) :
++    watch.identity ≠ identity := by
++  simp only [WakeQueue.remove,List.mem_append,List.mem_filter] at present
++  rcases present with ⟨_,different⟩ | ⟨_,different⟩ <;> simpa using different
++
+@@ -25,0 +99 @@
++  wake : WakeQueue := WakeQueue.empty
+@@ -26,0 +101,18 @@
++def Slot.available : Slot α → Bool | .empty | .idle _ => true | _ => false
++
++def State.notifyPlan (state : State α) : State α × Option Watch :=
++  if state.slots.any Slot.available then
++    let (wake,watch) := state.wake.pop
++    ({state with wake},watch)
++  else (state,none)
++
++theorem State.notification_preserves_credits (state : State α) :
++    state.notifyPlan.1.slots = state.slots := by
++  simp only [State.notifyPlan]
++  split <;> rfl
++
++theorem State.notification_preserves_generation (state : State α) :
++    state.notifyPlan.1.next = state.next := by
++  simp only [State.notifyPlan]
++  split <;> rfl
++
+@@ -208,0 +301,40 @@
++def publish (watch : Option Watch) : IO Unit := do
++  if let some watch := watch then watch.ready.resolve (.ok ())
++
++/-- Registration and the failed reservation are one state transaction. A
++return cannot slip between them and leave an unwakeable subscriber. -/
++def Pool.takeOrWatch (pool : Pool α) : IO (Ticket α ⊕ Watch) := pool.state.atomically do
++  let state ← get
++  if state.closed then throw (IO.userError "encoder pool is closed")
++  match state.reserve with
++  | some (state,ticket) => set state; return .inl ticket
++  | none =>
++      let ready ← IO.Promise.new
++      let (wake,watch) := state.wake.register ready
++      set {state with wake}
++      return .inr watch
++
++def Pool.removeWatch (pool : Pool α) (identity : Nat) : IO Unit := do
++  let removed ← pool.state.atomically do
++    let state ← get
++    let removed := state.wake.items.toArray.find? (·.identity == identity)
++    set {state with wake := state.wake.remove identity}
++    return removed
++  -- The completion observer outlives a cancelled await. Resolve its source
++  -- before releasing the final promise; do not resolve inside management.
++  if let some removed := removed then
++    removed.ready.resolve (.error (IO.userError "encoder notification owner left admission"))
++
++/-- The readiness observer is installed once. Timer wakes only check the
++caller's cooperative lifetime; they never reacquire the pool mutex. -/
++def awaitWake (watch : Watch) (live : IO Bool) : IO Unit := do
++  let ready ← Eggshell.TaskDeadline.event watch.ready.result!
++  repeat
++    unless (← live) && !(← IO.checkCanceled) do
++      throw (IO.userError "encoder request is no longer live")
++    let finished ← Eggshell.TaskDeadline.awaitEvent (do
++      let timer ← Std.Async.Selector.sleep (.ofNat 25)
++      Eggshell.Research.OwnedSelect.one #[.case ready (fun _ => pure true),.case timer (fun _ => pure false)])
++    if finished then return
++  throw (IO.userError "unreachable encoder notification")
++
+@@ -214 +346,5 @@
+-      pool.state.atomically (modify (·.retired ticket))
++      let watch ← pool.state.atomically do
++        let (state,watch) := ((← get).retired ticket).notifyPlan
++        set state
++        return watch
++      publish watch
+@@ -218,2 +354,2 @@
+-def Pool.returnPlan (pool : Pool α) (ticket : Ticket α) (keep : Bool) : IO (Array (Ticket α × α)) :=
+-  pool.state.atomically do
++def Pool.returnPlan (pool : Pool α) (ticket : Ticket α) (keep : Bool) : IO (Array (Ticket α × α)) := do
++  let (retired,watch) ← pool.state.atomically do
+@@ -221,0 +358 @@
++    let (state,watch) := state.notifyPlan
+@@ -223 +360,3 @@
+-    return (retired.map (fun resource => (ticket,resource))).toArray ++ spare
++    return ((retired.map (fun resource => (ticket,resource))).toArray ++ spare,watch)
++  publish watch
++  return retired
+@@ -235 +374 @@
+-  let idle ← pool.state.atomically do
++  let (idle,watchers) ← pool.state.atomically do
+@@ -237,2 +376,4 @@
+-    set state
+-    return idle
++    let watchers := state.wake.items.toArray
++    set {state with wake := state.wake.clear}
++    return (idle,watchers)
++  for watch in watchers do watch.ready.resolve (.ok ())
+@@ -243,3 +384,6 @@
+-    unless ← live do throw (IO.userError "encoder request is no longer live")
+-    if let some ticket ← pool.take? then return ticket
+-    IO.sleep 1
++    unless (← live) && !(← IO.checkCanceled) do throw (IO.userError "encoder request is no longer live")
++    match ← pool.takeOrWatch with
++    | .inl ticket => return ticket
++    | .inr watch =>
++        try awaitWake watch live
++        finally pool.removeWatch watch.identity
+@@ -248,2 +392,2 @@
+-def Pool.queueLeavePlan (pool : Pool α) : IO (Array (Ticket α × α)) :=
+-  pool.state.atomically do
++def Pool.queueLeavePlan (pool : Pool α) : IO (Array (Ticket α × α)) := do
++  let (spare,watch) ← pool.state.atomically do
+@@ -251,0 +396 @@
++    let (state,watch) := state.notifyPlan
+@@ -253 +398,3 @@
+-    return spare
++    return (spare,watch)
++  publish watch
++  return spare
+@@ -286,0 +434,2 @@
++    unless (← live) && !(← IO.checkCanceled) do
++      throw (IO.userError "encoder request expired before startup")

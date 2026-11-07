@@ -220,7 +220,7 @@ def completedStudyReady (family nativeTag : String) : IO Unit := do
   let trace := search.getObjValD "trace"
   let ack ← stage receipt "ack.json"
   let synapse ← stage receipt "synaptic-delivery.json"
-  let keyedImage ← if ["keyed-inputs","keyed-discovery","shared-model"].contains tag then stage receipt "provider-keyed-inputs.json" else pure Json.null
+  let keyedImage ← if ["keyed-inputs","keyed-discovery","shared-model","encoder-events"].contains tag then stage receipt "provider-keyed-inputs.json" else pure Json.null
   check (trace.getObjValD "semantic" == toJson "completed" && trace.getObjValD "warmRequests" == toJson (0 : Nat) &&
     ack.getObjValD "rpcCompleted" == toJson true && ack.getObjValD "offerAccepted" == toJson true &&
     synapse.getObjValD "complete" == toJson true && synapse.getObjValD "packetVerified" == toJson true &&
@@ -241,8 +241,8 @@ def completedStudyReady (family nativeTag : String) : IO Unit := do
 def collectCells (tag : String := "local-batch") (parentTag : String := "delivery-ledger")
     (profile : Bool := true) (guardTag : String := "") : IO Unit := do
   completedStudyReady tag (if guardTag.isEmpty then tag++"-cells1" else guardTag)
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model"].contains tag &&
-    ["delivery-ledger","local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery"].contains parentTag) "unknown frozen delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events"].contains tag &&
+    ["delivery-ledger","local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model"].contains parentTag) "unknown frozen delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let root := base/(tag++"-cells-result")
   check ((← read (root/"result.json")).getObjValD "allSixPassed" == toJson true)
@@ -266,7 +266,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
   let directFetches := profiles.filter (fun row => row.getObjValD "stage" == toJson "local-source-fetch")
   let wire := profiles.filter fun row => row.getObjValD "stage" == toJson "server-envelope-profile" &&
     [toJson "source-plan",toJson "source-fetch-many"].contains ((row.getObjValD "data").getObjValD "kind")
-  let requiresKeyedImage := ["keyed-inputs","keyed-discovery","shared-model"].contains tag
+  let requiresKeyedImage := ["keyed-inputs","keyed-discovery","shared-model","encoder-events"].contains tag
   let keyedImageUsed := cells.all fun cell => (cell.getObjValD "keyedInputImage").getObjValD "sharedImage" == toJson true
   write (study/"delivery-cells.json") (Json.mkObj [("cells",toJson cells),("profiles",toJson profiles),
     ("actualDeliveryAllSixPassed",toJson true),("allParentBodiesByteEqual",toJson true),
@@ -282,7 +282,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
   check (!requiresKeyedImage || keyedImageUsed) "delivery passed but candidate shared keyed path was not exercised"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
   completedStudyReady tag (tag++"-cells1")
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   check (result.getObjValD "actualDeliveryAllSixPassed" == toJson true &&

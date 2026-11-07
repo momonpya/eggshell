@@ -20,9 +20,10 @@ def drained : IO Unit := do
   let result ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (!result.stdout.contains "controller/StudyMain guard ") "native guard active"
 def parentFor (family : String) : IO String := do
-  check (["runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model"].contains family) "unknown isolated runtime"
+  check (["runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events"].contains family) "unknown isolated runtime"
   return if family == "runtime-key" then "parallel-encoder" else if family == "elastic-encoder" then "runtime-key"
-    else if family == "keyed-inputs" then "elastic-encoder" else if family == "shared-model" then "keyed-discovery" else "keyed-inputs"
+    else if family == "keyed-inputs" then "elastic-encoder" else if family == "shared-model" then "keyed-discovery"
+    else if family == "encoder-events" then "shared-model" else "keyed-inputs"
 def prepareKeyed (family : String := "keyed-inputs") : IO Unit := do
   drained
   check (["keyed-inputs","keyed-discovery","shared-model"].contains family) "unknown shared keyed candidate"
@@ -162,6 +163,7 @@ def freezeSource (family : String := "runtime-key") : IO Unit := do
   let files := if family == "runtime-key" then ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/ReplayReadinessChecks.lean"]
     else if family == "elastic-encoder" then ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/EncoderPool.lean","tools/research/NumericalParallelControls.lean"]
     else if family == "keyed-discovery" then ["Eggshell/Handoff.lean"]
+    else if family == "encoder-events" then ["tools/research/EncoderPool.lean","Eggshell/ContractAudit.lean"]
     else if family == "shared-model" then ["Eggshell/MiniLM.lean","Eggshell/Numerical.lean","Eggshell/ContractAudit.lean",
       "tools/research/NumericalParallelControls.lean","tools/research/SharedEncoder.lean","tools/research/SharedEncoderControls.lean",
       "tools/research/ReplayReadinessChecks.lean","runtime/shared_embedding.py"]
@@ -184,6 +186,7 @@ def sealRuntime (family : String := "runtime-key") (closureName : String := "nat
   let changes := if family == "runtime-key" then #["Eggshell.Numerical","Eggshell.ContractAudit","+tools.research.RuntimeIdentityChecks"]
     else if family == "elastic-encoder" then #["Eggshell.Numerical","Eggshell.ContractAudit","tools.research.EncoderPool","tools.research.NumericalParallelControls"]
     else if family == "keyed-discovery" then #["Eggshell.Handoff"]
+    else if family == "encoder-events" then #["tools.research.EncoderPool","Eggshell.ContractAudit"]
     else if family == "shared-model" then #["Eggshell.MiniLM","Eggshell.Numerical","Eggshell.ContractAudit",
       "tools.research.NumericalParallelControls","+tools.research.SharedEncoder","+tools.research.SharedEncoderControls"]
     else #["Eggshell.PreparedReaders","Eggshell.KeyedSearchProvider","Eggshell.BuiltinSearch",
@@ -193,7 +196,7 @@ def sealRuntime (family : String := "runtime-key") (closureName : String := "nat
       let file := base/"shared-model-source/runtime/shared_embedding.py"
       pure #["@"++(← hash file)++":"++file.toString]
     else pure #[]
-  let comparisonName := if family == "shared-model" && closureName != "native-closure.json" then
+  let comparisonName := if ["shared-model","encoder-events"].contains family && closureName != "native-closure.json" then
     "native-sources-current.json" else "native-sources.json"
   command (#["-j1","-M1536","--run",audit,"compare-sources",(base/(parent++"-build")).toString,
     (base/(family++"-build")).toString,(study/comparisonName).toString]++changes++literalClaims)
@@ -219,6 +222,12 @@ def sealRuntime (family : String := "runtime-key") (closureName : String := "nat
     let before ← IO.FS.readFile (base/(parent++"-build/tools_research_ReplayReadinessChecks.source"))
     let actual ← IO.FS.readFile (base/(family++"-build/tools_research_ReplayReadinessChecks.source"))
     check (before == actual) "single-source connection changed the native entry"
+    write (study/"entry-source.json") (Json.mkObj [("entryAndIncludedLiteralsUnchanged",toJson true),
+      ("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
+  if family == "encoder-events" then
+    let before ← IO.FS.readFile (base/(parent++"-build/tools_research_ReplayReadinessChecks.source"))
+    let actual ← IO.FS.readFile (base/(family++"-build/tools_research_ReplayReadinessChecks.source"))
+    check (before == actual) "event-based admission changed the product entry"
     write (study/"entry-source.json") (Json.mkObj [("entryAndIncludedLiteralsUnchanged",toJson true),
       ("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
   if family == "shared-model" then
@@ -320,7 +329,7 @@ def collectShared : IO Unit := do
     IO.FS.writeFile (study/(tag++"-stderr.txt")) (← IO.FS.readFile (base/(tag++".stderr")))
 def configureDiscoveryGate (family : String := "keyed-discovery") : IO Unit := do
   drained
-  check (["keyed-discovery","shared-model"].contains family) "known shared reader gate required"
+  check (["keyed-discovery","shared-model","encoder-events"].contains family) "known shared reader gate required"
   check (!(← (base/(family++"-auditor-build/StudyMain")).pathExists)) "configure the auditor before its first build"
   let helper := "tools/research/RealDeliveryProbe.lean"
   IO.FS.writeFile (base/(family++"-auditor-source")/helper) (← IO.FS.readFile (workspace/helper))
@@ -414,7 +423,7 @@ def setup (action tag : String) (family : String := "runtime-key") : IO Unit := 
     | "probe" => pure #[(base/(family++"-build/StudyMain")).toString,"runtime-identity-check","factored",(base/(tag++"-result")).toString]
     | "controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
       "EGGSHELL_DATA_ROOT="++(base/(family++"-controls-data")).toString,
-      "EGGSHELL_PREFIX="++(base/(if family == "shared-model" then "prefix" else "runtime-key-prefix")).toString,"EGGSHELL_TRACE_NUMERICAL_STAGES=1",
+      "EGGSHELL_PREFIX="++(base/(if ["shared-model","encoder-events"].contains family then "prefix" else "runtime-key-prefix")).toString,"EGGSHELL_TRACE_NUMERICAL_STAGES=1",
       (base/(family++"-build/StudyMain")).toString,"parallel-encoder-check",(base/(tag++"-result")).toString]
     | "transport-controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
       (base/(family++"-build/StudyMain")).toString,"shared-transport-check",(base/(tag++"-result")).toString]
@@ -441,6 +450,33 @@ def setup (action tag : String) (family : String := "runtime-key") : IO Unit := 
   write path (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
     ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
     ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
+
+def collectEventControls : IO Unit := do
+  drained
+  let folder := workspace/"docs/candidates/encoder-events"
+  let destination := folder/"runtime-controls.json"
+  check (!(← destination.pathExists)) "preserve existing event-encoder numerical controls"
+  let source ← read (folder/"native-sources-current.json")
+  let digest ← hash (base/"encoder-events-build/StudyMain")
+  check (source.getObjValD "exactExpectedChangeSet" == toJson true &&
+    source.getObjValD "candidateRuntimeSha256" == toJson digest) "unsealed event-encoder runtime"
+  let mut guards := #[]
+  for tag in ["encoder-events-runtime-build1","encoder-events-numerical1","encoder-events-transport1"] do
+    let guard ← read (base/(tag++".guard.json"))
+    check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
+      guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) && guard.getObjValD "guardTriggered" == toJson false)
+      "event-encoder native owner did not pass and drain"
+    guards := guards.push (Json.mkObj [("tag",toJson tag),("guard",guard)])
+  let numerical ← read (base/"encoder-events-numerical1-result/report.json")
+  let transport ← read (base/"encoder-events-transport1-result/report.json")
+  let startup ← read (base/"encoder-events-transport1-result/startup-stop.json")
+  check (numerical.getObjValD "allPassed" == toJson true &&
+    numerical.getObjValD "all48RepliesExactVectorsAndCoverage" == toJson true &&
+    transport.getObjValD "allPassed" == toJson true &&
+    transport.getObjValD "parallelRepliesExact" == toJson (34 : Nat)) "event-encoder changed numerical results or cancellation"
+  write destination (Json.mkObj [("runtimeSha256",toJson digest),("guards",toJson guards),
+    ("numericalService",numerical),("sharedTransport",transport),("startupStop",startup),
+    ("fullHookOrEightyUsers",toJson false),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
 def main (args : List String) : IO Unit := match args with
   | ["prepare"] => prepare
   | ["freeze"] => freezeSource
@@ -489,6 +525,14 @@ def main (args : List String) : IO Unit := match args with
   | ["shared","record-build",tag] => recordSharedBuild tag
   | ["shared","reject-wrong-literal"] => rejectWrongLiteral
   | ["shared","collect"] => collectShared
+  | ["event-encoder","setup",action,tag] => setup action tag "encoder-events"
+  | ["event-encoder","freeze"] => freezeSource "encoder-events"
+  | ["event-encoder","seal"] => sealRuntime "encoder-events"
+  | ["event-encoder","seal-current"] => sealRuntime "encoder-events" "native-closure-current.json"
+  | ["event-encoder","prepare-auditor"] => prepareAuditor "encoder-events"
+  | ["event-encoder","seal-auditor"] => sealAuditor "encoder-events"
+  | ["event-encoder","configure-gate"] => configureDiscoveryGate "encoder-events"
+  | ["event-encoder","collect"] => collectEventControls
   | _ => throw (IO.userError "prepare|freeze|seal|prepare-auditor|seal-auditor|setup")
 end Eggshell.Research.RuntimeIdentityStudy
 def main := Eggshell.Research.RuntimeIdentityStudy.main

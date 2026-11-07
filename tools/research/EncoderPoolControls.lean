@@ -1,8 +1,20 @@
 import tools.research.EncoderPool
 import Lean.Data.Json.FromToJson
 import Init.System.Promise
+import Lean
 open Lean Eggshell.Research.EncoderPool
 namespace Eggshell.Research.EncoderPoolControls
+run_elab do
+  let environment ← Lean.getEnv
+  let some body := (environment.find? ``awaitWake).bind (·.value?) | throwError "Missing encoder event wait"
+  for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically,``Pool.take?,``Pool.takeOrWatch,``IO.sleep] do
+    if body.getUsedConstants.contains forbidden then throwError "Encoder event wait polls the pool or sleeps a thread"
+
+#check WakeQueue.register_fresh
+#check WakeQueue.remove_preserves_generation
+#check WakeQueue.removed_absent
+#check State.notification_preserves_credits
+#check State.notification_preserves_generation
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def rejects (action : IO α) : IO Bool := try discard action; pure false catch _ => pure true
 def waitUntil (condition : IO Bool) : IO Unit := do
@@ -205,10 +217,94 @@ def cancelledWaiter : IO Json := do
     IO.cancel waiter
     discard <| IO.wait waiter
 
+def notificationBeforeWait : IO Json := do
+  let pool ← Pool.make (α := Nat) 1
+  let some active ← pool.take? | throw (IO.userError "notification fixture lacks its active owner")
+  let .inr watch ← pool.takeOrWatch | throw (IO.userError "full pool did not register a notification")
+  pool.giveBack active false (fun _ => pure ())
+  check (← watch.ready.isResolved) "return lost its notification before the observer registered"
+  awaitWake watch (pure true)
+  let some acquired ← pool.take? | throw (IO.userError "notification consumed a resource credit")
+  pool.giveBack acquired false (fun _ => pure ())
+  pool.close (fun _ => pure ())
+  return Json.mkObj [("notificationBeforeObserverPreserved",toJson true),
+    ("notificationDidNotConsumeOrCreateCredit",toJson true)]
+
+def eightyWaiters (closing : Bool) : IO Json := do
+  let pool ← Pool.make (α := Nat) 2
+  let some first ← pool.take? | throw (IO.userError "first admission owner missing")
+  let some second ← pool.take? | throw (IO.userError "second admission owner missing")
+  check (← pool.install first 1) "first admission resource rejected"
+  check (← pool.install second 2) "second admission resource rejected"
+  let lives ← (Array.range 80).mapM fun _ => IO.mkRef true
+  let calls ← (Array.range 80).mapM fun _ => IO.mkRef (0 : Nat)
+  let active ← Std.Mutex.new (#[] : Array Nat)
+  let maximum ← Std.Mutex.new (0 : Nat)
+  let disposed ← Std.Mutex.new (0 : Nat)
+  let dispose := fun (_ : Nat) => disposed.atomically (modify (·+1))
+  let tasks ← (lives.zip calls).mapIdxM fun index (live,call) => IO.asTask (pool.withResource
+    (do call.modify (·+1); live.get)
+    (fun ticket => pure ticket.index) dispose fun ticket _ _ => do
+      active.atomically do
+        let slots ← get
+        check (!slots.contains ticket.index) "two request owners acquired one inference credit"
+        set (slots.push ticket.index)
+        maximum.atomically (modify (max (slots.size+1)))
+      -- A fixture operation yields while its credit remains exclusively owned.
+      IO.sleep 2
+      active.atomically (modify (·.filter (· != ticket.index)))
+      return index) .dedicated
+  try
+    waitUntil (do return (← pool.state.atomically get).wake.items.toArray.size == 80)
+    let queuedAt ← IO.monoMsNow
+    IO.sleep 100
+    let registered ← pool.state.atomically get
+    check (registered.wake.next == 80 && registered.wake.items.toArray.size == 80)
+      "blocked requests repeatedly re-registered with the resource pool"
+    let liveChecks ← calls.mapM (·.get)
+    check (liveChecks.all (· < 20)) "event waiter still spins at millisecond frequency"
+    if closing then pool.close dispose
+    else
+      for (live,index) in lives.zipIdx do
+        if index % 3 == 0 then live.set false
+      waitUntil (do return (← pool.state.atomically get).wake.items.toArray.size == 53)
+    let stateBeforeReturn ← pool.state.atomically get
+    check ((← disposed.atomically get) == 0 && stateBeforeReturn.slots.size == 2)
+      "cancellation or shutdown stopped an unrelated active owner"
+    pool.giveBack first true dispose
+    pool.giveBack second true dispose
+    let rows ← tasks.mapM fun task => do return (← IO.wait task).isOk
+    let expected := if closing then 0 else 53
+    check ((rows.filter id).size == expected) "cancelled or closed requests crossed admission"
+    check ((← maximum.atomically get) ≤ 2) "notification enlarged the inference capacity"
+    let state ← pool.state.atomically get
+    check (state.waiting == 0 && state.wake.items.isEmpty && (← active.atomically get).isEmpty)
+      "event admission leaked a subscriber, demand or resource owner"
+    pool.close dispose
+    check ((← disposed.atomically get) ≥ 2) "event admission lost a resource during shutdown"
+    return Json.mkObj [("blockedRequests",toJson (80 : Nat)),("completedRequests",toJson expected),
+      ("rejectedRequests",toJson (80-expected)),("closedWhileQueued",toJson closing),
+      ("maximumConcurrentCreditOwners",toJson (← maximum.atomically get)),
+      ("oneSubscriptionDuringBlockedInterval",toJson true),
+      ("observedCooperativeLiveChecks",toJson liveChecks),
+      ("wallMsAfterRegistration",toJson ((← IO.monoMsNow)-queuedAt)),
+      ("noRemainingWaitersOrOwners",toJson true)]
+  finally
+    for live in lives do live.set false
+    pool.close dispose
+    for task in tasks do IO.cancel task
+    for task in tasks do discard <| IO.wait task
+
 def run (output : System.FilePath) : IO Unit := do
-  let report := Json.mkObj [("overlap",← overlap),("retirement",← retiring),
-    ("failureAndShutdown",← failureAndClose),("idlePreferred",← idlePreferred),
-    ("demandAndStandby",← demandAndStandby),("cancelledWaiter",← cancelledWaiter),("allPassed",toJson true),
+  let stage := fun name action => do
+    IO.eprintln ("checking "++name)
+    action
+  let report := Json.mkObj [("overlap",← stage "overlap" overlap),("retirement",← stage "retirement" retiring),
+    ("failureAndShutdown",← stage "failureAndShutdown" failureAndClose),("idlePreferred",← stage "idlePreferred" idlePreferred),
+    ("demandAndStandby",← stage "demandAndStandby" demandAndStandby),("cancelledWaiter",← stage "cancelledWaiter" cancelledWaiter),
+    ("notificationBeforeWait",← stage "notificationBeforeWait" notificationBeforeWait),
+    ("eightyWithCancellation",← stage "eightyWithCancellation" (eightyWaiters false)),
+    ("eightyWithShutdown",← stage "eightyWithShutdown" (eightyWaiters true)),("allPassed",toJson true),
     ("realModelOrFullHookCapacity",toJson false),("adopted",toJson false)]
   IO.FS.writeFile output report.pretty
 end Eggshell.Research.EncoderPoolControls

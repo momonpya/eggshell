@@ -29,7 +29,7 @@
 
 ## 現在地と次の順序
 
-現在の隔離候補は [shared-model](docs/candidates/shared-model/README.md)（SHA `ffb25590c28bc01b4f0baf46122ab26635763a125fa59dc0e1a8ace712ff9778`）。物理モデル1組と推論2枠を分け、[keyed-discovery](docs/candidates/keyed-discovery/README.md)の共有reader、[runtime-key](docs/candidates/runtime-key/README.md)の固定識別と、[local-batch](docs/candidates/local-batch/README.md)/[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善を継承する。実LLVM全6回は原文32/32、親f92本文byte一致、意味検索/ACK完了、全件sharedImage=trueだった。80人容量は未達。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残す。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+現在の隔離候補は [encoder-events](docs/candidates/encoder-events/README.md)（SHA `5b9fdf5f43db3a1be7c074b5038e35e96e70faaf2641c2b00cac07f9db0d6e7c`）。[shared-model](docs/candidates/shared-model/README.md)の物理モデル1組・推論2枠を保ち、枠の1ms再照会を通知待機へ置き換えた。[keyed-discovery](docs/candidates/keyed-discovery/README.md)の共有reader、[runtime-key](docs/candidates/runtime-key/README.md)の固定識別と、[local-batch](docs/candidates/local-batch/README.md)/[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善も継承する。実LLVM全6回は原文32/32、親shared-modelの全本文とbyte一致、意味検索/ACK完了、全件sharedImage=trueだった。新候補の4/16/80同時は未実行で、80人容量は未達。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残す。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
 
 後続の[keyed-inputs](docs/candidates/keyed-inputs/README.md)（SHA `bdaa25d2713d553e59f278cc163700722dd810bd46eee43850680365d6db175f`）は、windows/lexical/numericの検証済みmetadataを共有するimageを加えた。型と通常監査、1,345依存/108型、実DBの80 readerを管理ページMutex保持中に4msで借用する部品検査が通った。実フック全6回も原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、8,462〜10,061ms、関連RSS最大3,010,912KiB・残存0だったが、**全件sharedImage=falseで変更が使われておらず、candidatePathPassed=falseとして不合格**。4/16/80負荷は再実行していない。
 
@@ -46,6 +46,10 @@
 その後、auditorの全製品core・271共通moduleとnative依存の一致を確認し、同じ元snapshotで題材1から全6実hookを実行した。原文32/32・親f92の全本文byte一致、意味検索/ACKの全件完了、全件sharedImage=true、前景warm0。時間は8,920 / 8,466、9,875 / 9,823、10,104 / 10,278ms、関連RSS最大3,020,272KiB・残存0、両serviceは全件exit0だった。独立したnative新チャットであり、回答モデルの両周ではない。終了session/重複receiptは削除した。元DB・現行project cache・原典・必要なnative依存を保持する。
 
 同じshared-modelの4/16 gateは全4/4・16/16で本文byte一致・意味/シナプス/ACKが完了し、波8,091/26,751ms、関連RSS最大2,976,976KiBだった。このruntimeで初めて続けた80同時は、資源停止なし・RSS最大2,671,952KiB・残存0だが、全80件が未完了通知となった（波18,596ms、意味/シナプス/ACK 0/80）。全80受領でsharedImage=true、両serviceはexit0。新しい負荷なしの[Lean集計](docs/candidates/shared-model/capacity-numerical.json)では、返答を記録できたencode23件のmodel handle借用は全0ms、一方compute admissionは中央値2,927/最大11,264ms、output-readyから受領まで中央値2,325ms。blocks29件もkernel往復中央値7msに対してoutput-ready後3,299msだった。native推論時間と混同せず、未受領RPCは未測定のままにする。長いモデルmutexの除去と共有化だけで80人化が済んだとは扱わない。終了session/重複受領は削除し、同じ失敗80を繰り返さない。
+
+続く[encoder-events](docs/candidates/encoder-events/README.md)は、枠の1ms再照会を一度の通知登録へ置き換えた。登録と取得の失敗を同じ管理処理に入れ、返却時に待機者を起こす。通知IDの世代/新規性・取消の除外・通知による枠の不変をLeanで確認した。4 objectのnative部品は、先着通知、80待機の27件だけの取消と残る53件完了、80件待機中の終了と全件拒否を通り、全件退出・関連RSS最大106,224KiB・残存0だった。最初の取消promise未解決panicは停止記録を残し、解決後に解放する形へ修正して全件再検査した。25msのcooperative寿命確認は残すが、timerごとのpool再照会と専用threadのsleepはない。物理model1・compute2、順位/認定domain/予算/期限は維持する。通常runtime `5b9fdf5f…`を構築し、直接2 module変更・埋込みも実バイトのみ・入口同一を照合した。通常の数値RPC48応答、直接transport34応答のvector/被覆一致、同一モデルの並行実行・個別取消・pending0/reader回収・準備中の停止8msが通った。関連RSS最大1,422,784KiB・残存0。
+
+同じ実LLVM snapshotの全6フックは原文32/32、親shared-modelの本文と全byte一致、意味検索/ACK完了、全件sharedImage=true・前景warm0だった。時間は8,886/8,556、9,913/9,913、10,172/10,252ms、関連RSS最大3,010,320KiB・残存0・全service exit0。回答モデルの両周や80人の成功には数えない。集計の起動前にdisk floorへ達したため、終了済み旧capacity client・auditor・prefix実行体3つ、論理353,255,440 bytesを記録して削除し、実験を再実行せず集計を再開した。終了session/重複受領も削除した。原典5ファイルは元SHA一致、現在のDB/cache、親製品、採用比較基準、必要なnative依存は保持する。新候補の4/16/80同時と総token/品質は未検証のまま。
 
 前の80同時の途中記録を新しい負荷なしで調べ、全80件がkeyed providerに到達し、12件だけが数値/字句/routerの段階記録を持つことを確認した。検索後の選択だけを原因としない。数値serviceの接続キーが、固定の実装本文73,215 bytesを接続/数値通信のたびにJSON化・再ハッシュしていた。固定本文のdigestを一度だけ計算する純粋な定数へ分離し、モデル・モデル配置・Python配置・実装digestを引き続き結ぶことをLeanと通常監査で検査した。共有Ref/Mutex/CAS、質問cache、数値/順位変更は加えていない。native80設定×3回でキー生成は親196〜198ms→候補0〜1ms、各キー列はその参照式と一致した。これは全hookや80容量の改善率ではない。
 
@@ -90,7 +94,7 @@ elastic-encoderは需要中の並行2基を維持し、待ち要求がなくな�
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 共有モデルの80同時で残った受付待機と数値応答の遅れを、数値protocol単独の固定負荷で分ける。`EncoderPool.waitTicket`の1ms再照会と反復timerを、取消・期限・停止・一度だけの枠返却を保つevent待機へ置き換える候補を検査する。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。部品を確認してから新候補の実原典題材1へ戻り、全6回と4/16 gateを通した場合だけ80を測る。正解をselectorへ渡さず、変更なしの失敗負荷を反復せず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
+1. 通知待機の部品・通常数値service・実LLVM全6フックまで完了した。次は、実質問3件をSearchRank.windowsで分け、同じ固定DBの全窓を256件ずつ使う数値protocol単独の負荷で受付・推論・送受信を分ける。実経路と同じ2回の質問埋込み・2回の全件採点を保持し、16要求を確認後に80要求へ進む。親と候補のprotocolと原入力を揃える。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。その後も4/16の実hook gateを通した場合だけ80を測る。正解をselectorへ渡さず、変更なしの失敗負荷を反復せず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
 2. output-ready以後の送受信と共有hostの待機負荷を分け、数値kernelの時間だけで全検索を説明しない。実WorkGraph/返信の所有とallocator保持も区別し、検査器やモデルのRSSを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。

@@ -1,0 +1,19 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2345,0 +2346,16 @@
++
++
++#check Eggshell.Research.EncoderPool.WakeQueue.register_fresh
++#check Eggshell.Research.EncoderPool.WakeQueue.remove_preserves_generation
++#check Eggshell.Research.EncoderPool.WakeQueue.removed_absent
++#check Eggshell.Research.EncoderPool.State.notification_preserves_credits
++#check Eggshell.Research.EncoderPool.State.notification_preserves_generation
++
++run_elab do
++  let environment ← Lean.getEnv
++  let some waiting := (environment.find? ``Eggshell.Research.EncoderPool.awaitWake).bind (·.value?) |
++    throwError "Missing event-based encoder admission"
++  for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically,
++      ``Eggshell.Research.EncoderPool.Pool.take?,``Eggshell.Research.EncoderPool.Pool.takeOrWatch,``IO.sleep] do
++    if waiting.getUsedConstants.contains forbidden then
++      throwError "Encoder event wait polls pool management or sleeps a dedicated thread"

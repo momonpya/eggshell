@@ -825,6 +825,184 @@ def retireKeyedParent : IO Unit := do
   write destination record
   for file in files do IO.FS.removeFile (.mk (← IO.ofExcept (file.getObjValAs? String "path")))
   write destination (record.setObjVal! "completed" (toJson true))
+
+def prepareEventPool : IO Unit := do
+  drained
+  let source := base/"encoder-events-source"
+  check (!(← source.pathExists)) "fresh isolated event-pool source required"
+  let result ← IO.Process.output {cmd := (compiler/"bin/lean").toString,args := #["-j1","-M1536","--run",
+    (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",
+    (base/"shared-model-build").toString,source.toString,(base/"encoder-events-build").toString,
+    "tools.research.EncoderPoolControls",(base/"encoder-events-settings.json").toString],cwd := some workspace}
+  check (result.exitCode == 0) (result.stdout++result.stderr)
+  for name in ["EncoderPool","EncoderPoolControls"] do
+    IO.FS.writeFile (source/"tools/research"/(name++".lean"))
+      (← IO.FS.readFile (workspace/"tools/research"/(name++".lean")))
+  IO.FS.createDirAll (workspace/"docs/candidates/encoder-events")
+
+def setupEventPool (action tag : String) : IO Unit := do
+  drained
+  check (tag.startsWith "encoder-events-") "event-pool guard escaped its scope"
+  let settings := base/(tag++".guard-settings.json")
+  check (!(← settings.pathExists)) "preserve previous event-pool run"
+  let args ← match action with
+    | "build" => pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+        (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"encoder-events-settings.json").toString]
+    | "controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/"encoder-events-build/StudyMain").toString,
+        (base/(tag++"-result.json")).toString]
+    | _ => throw (IO.userError "build or controls required")
+  write settings (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
+    ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
+    ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
+
+def refreshEventPool (tag : String) : IO Unit := do
+  drained
+  check (tag.startsWith "encoder-events-") "known event-pool owner required"
+  let guard ← read (base/(tag++".guard.json"))
+  check (guard.getObjValD "state" == toJson "finished" &&
+    guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "event-pool build did not drain"
+  let destination := workspace/"docs/candidates/encoder-events"/(tag++".json")
+  check (!(← destination.pathExists)) "preserve event-pool build diagnostics"
+  let modules ← #["EncoderPool","EncoderPoolControls"].mapM fun name => do
+    let path := base/"encoder-events-source/tools/research"/(name++".lean")
+    let output := base/"encoder-events-build"/("tools_research_"++name++"-lean.stdout")
+    let diagnostics ← if ← output.pathExists then pure (toJson (← IO.FS.readFile output)) else pure Json.null
+    return Json.mkObj [("module",toJson name),("sourceSha256",toJson (← hash path)),
+      ("diagnostics",diagnostics)]
+  let logs ← #["stdout","stderr"].mapM fun extension => do
+    let path := base/(tag++"."++extension)
+    return (extension,toJson (← IO.FS.readFile path))
+  write destination (Json.mkObj [("guard",guard),("modules",toJson modules),("logs",Json.mkObj logs.toList),
+    ("runtimeSha256",toJson (← hash (base/"encoder-events-build/StudyMain")))])
+  for name in ["EncoderPool","EncoderPoolControls"] do
+    IO.FS.writeFile (base/"encoder-events-source/tools/research"/(name++".lean"))
+      (← IO.FS.readFile (workspace/"tools/research"/(name++".lean")))
+
+def collectEventPool (buildTag controlTag : String) : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/encoder-events/controls.json"
+  check (!(← destination.pathExists)) "preserve previous event-pool evidence"
+  check (buildTag.startsWith "encoder-events-build") "known event-pool build required"
+  let build ← read (base/(buildTag++".guard.json"))
+  check (controlTag.startsWith "encoder-events-controls") "known event-pool controls required"
+  let guard ← read (base/(controlTag++".guard.json"))
+  for value in [build,guard] do
+    check (value.getObjValD "state" == toJson "finished" && value.getObjValD "exitCode" == toJson (0 : Nat) &&
+      value.getObjValD "ownedPids" == toJson (#[] : Array Nat) && value.getObjValD "guardTriggered" == toJson false)
+      "event-pool owner failed or did not drain"
+  let report ← read (base/(controlTag++"-result.json"))
+  check (report.getObjValD "allPassed" == toJson true &&
+    (report.getObjValD "eightyWithCancellation").getObjValD "completedRequests" == toJson (53 : Nat) &&
+    (report.getObjValD "eightyWithShutdown").getObjValD "completedRequests" == toJson (0 : Nat))
+    "event-pool cancellation or shutdown controls failed"
+  let mut sources := #[]
+  for name in ["EncoderPool","EncoderPoolControls"] do
+    let source := base/"encoder-events-source/tools/research"/(name++".lean")
+    let witness := base/"encoder-events-build"/("tools_research_"++name++".source")
+    let pair ← IO.ofExcept (fromJson? (← read witness) : Except String (String × Array (String × String)))
+    check (pair.1 == (← IO.FS.readFile source) && pair.1 == (← IO.FS.readFile (workspace/"tools/research"/(name++".lean"))))
+      "event-pool native source differs from the current isolated implementation"
+    sources := sources.push (Json.mkObj [("module",toJson name),("sha256",toJson (← hash source)),
+      ("nativeSourceWitnessSha256",toJson (← hash witness))])
+  write destination (Json.mkObj [("buildGuard",build),("guard",guard),("report",report),
+    ("sources",toJson sources),("runtimeSha256",toJson (← hash (base/"encoder-events-build/StudyMain"))),
+    ("componentOnly",toJson true),("realModelOrFullHookCapacity",toJson false),
+    ("adopted",toJson false),("answeringModelCalls",toJson (0 : Nat))])
+
+def prepareEventRuntime : IO Unit := do
+  drained
+  let folder := workspace/"docs/candidates/encoder-events"
+  let controls ← read (folder/"controls.json")
+  let closure ← read (folder/"component-closure.json")
+  check ((controls.getObjValD "report").getObjValD "allPassed" == toJson true &&
+    closure.getObjValD "consistent" == toJson true) "event-pool native component gate required"
+  let retirement := folder/"component-retirement.json"
+  check (!(← retirement.pathExists)) "preserve previous component transition"
+  let source := base/"encoder-events-source"
+  let executable := base/"encoder-events-build/StudyMain"
+  check (controls.getObjValD "runtimeSha256" == toJson (← hash executable)) "event component executable changed"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0 && !process.stdout.contains executable.toString) "event component is still running"
+  let path := base/"encoder-events-settings.json"
+  let settings ← read path
+  check (settings.getObjValD "mainModule" == toJson "tools.research.EncoderPoolControls")
+    "event workspace is not the tested component"
+  for name in ["EncoderPool","EncoderPoolControls"] do
+    check ((← IO.FS.readFile (source/"tools/research"/(name++".lean"))) ==
+      (← IO.FS.readFile (workspace/"tools/research"/(name++".lean")))) "event component source changed"
+  let entry := "tools/research/ReplayReadinessChecks.lean"
+  IO.FS.writeFile (source/entry) (← IO.FS.readFile (base/"shared-model-source"/entry))
+  let audit := source/"Eggshell/ContractAudit.lean"
+  IO.FS.writeFile audit ((← IO.FS.readFile audit)++r#"
+
+#check Eggshell.Research.EncoderPool.WakeQueue.register_fresh
+#check Eggshell.Research.EncoderPool.WakeQueue.remove_preserves_generation
+#check Eggshell.Research.EncoderPool.WakeQueue.removed_absent
+#check Eggshell.Research.EncoderPool.State.notification_preserves_credits
+#check Eggshell.Research.EncoderPool.State.notification_preserves_generation
+
+run_elab do
+  let environment ← Lean.getEnv
+  let some waiting := (environment.find? ``Eggshell.Research.EncoderPool.awaitWake).bind (·.value?) |
+    throwError "Missing event-based encoder admission"
+  for forbidden in [``Std.Mutex.atomically,``Std.Mutex.tryAtomically,
+      ``Eggshell.Research.EncoderPool.Pool.take?,``Eggshell.Research.EncoderPool.Pool.takeOrWatch,``IO.sleep] do
+    if waiting.getUsedConstants.contains forbidden then
+      throwError "Encoder event wait polls pool management or sleeps a dedicated thread"
+"#)
+  let record := Json.mkObj [("path",toJson executable.toString),("sha256",controls.getObjValD "runtimeSha256"),
+    ("bytes",toJson (← executable.metadata).byteSize.toNat),("completed",toJson false),
+    ("componentEvidenceAndNativeDependenciesRetained",toJson true),("archived",toJson false)]
+  write retirement record
+  IO.FS.removeFile executable
+  write retirement (record.setObjVal! "completed" (toJson true))
+  write path (settings.setObjVal! "mainModule" (toJson "tools.research.ReplayReadinessChecks"))
+
+def retireSharedClients : IO Unit := do
+  drained
+  let folder := workspace/"docs/candidates/encoder-events"
+  let retirement := folder/"retired-shared-clients.json"
+  check (!(← retirement.pathExists)) "preserve previous ended-client retirement"
+  let current ← read (folder/"auditor-sources.json")
+  check (current.getObjValD "allProductCorePresent" == toJson true &&
+    current.getObjValD "commonSourcesUnchanged" == toJson true &&
+    current.getObjValD "productSha256" == toJson (← hash (base/"encoder-events-build/StudyMain")) &&
+    current.getObjValD "auditorSha256" == toJson (← hash (base/"encoder-events-auditor-build/StudyMain")))
+    "retain the coherent current product and auditor"
+  let native ← read (base/"encoder-events-cells1.guard.json")
+  check (native.getObjValD "state" == toJson "finished" && native.getObjValD "exitCode" == toJson (0 : Nat) &&
+    native.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "current actual delivery is still running"
+  let cohort ← read (base/"encoder-events-cells-result/progress.json")
+  let rows ← IO.ofExcept cohort.getArr?
+  check (rows.size == 6 && rows.all (fun row => (row.getObjValD "availableDelivery").getObjValD "targetMet" == toJson true))
+    "retain all six completed actual delivery records"
+  let old ← read (workspace/"docs/candidates/shared-model/auditor-sources.json")
+  let capacity ← read (workspace/"docs/candidates/shared-model/capacity-sources.json")
+  let parent := base/"shared-model-build/StudyMain"
+  check (old.getObjValD "productSha256" == toJson (← hash parent)) "retain the parent product for comparisons"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot inspect ended executable ownership"
+  let mut files := #[]
+  for (relative,digest) in [("shared-model-capacity-build/StudyMain",capacity.getObjValD "auditorSha256"),
+    ("shared-model-auditor-build/StudyMain",old.getObjValD "auditorSha256"),
+    ("shared-model-prefix/libexec/eggshell",old.getObjValD "productSha256")] do
+    let path := base/relative
+    check ((← path.pathExists) && !process.stdout.contains path.toString && digest == toJson (← hash path))
+      "ended executable is active, absent or differs from its frozen native provenance"
+    files := files.push (Json.mkObj [("path",toJson path.toString),("sha256",digest),
+      ("bytes",toJson (← path.metadata).byteSize.toNat)])
+  let blocked := base/"encoder-events-collect1.guard.json"
+  check (!(← blocked.pathExists)) "collector preflight unexpectedly started a guard"
+  let failure ← IO.FS.readFile (base/"encoder-events-collect1.stderr")
+  check (failure.contains "not enough disk space to start") "unexpected collector preflight failure"
+  write (folder/"collect-preflight.json") (Json.mkObj [("message",toJson failure),
+    ("childStarted",toJson false),("settings",← read (base/"encoder-events-collect1.guard-settings.json")),
+    ("experimentNotRepeated",toJson true),("resourceLimitsUnchanged",toJson true)])
+  let record := Json.mkObj [("removed",toJson files),("archived",toJson false),("completed",toJson false),
+    ("parentProductBaselineCurrentRuntimeOriginalsProjectCacheModelsObjectsAndSourceWitnessesRetained",toJson true)]
+  write retirement record
+  for file in files do IO.FS.removeFile (.mk (← IO.ofExcept (file.getObjValAs? String "path")))
+  write retirement (record.setObjVal! "completed" (toJson true))
 def main (args : List String) : IO Unit := match args with
   | ["setup",tag] => setup tag
   | ["run",root] => run (.mk root)
@@ -847,6 +1025,12 @@ def main (args : List String) : IO Unit := match args with
   | ["collect-transport"] => collectTransport
   | ["retire-superseded"] => retireSuperseded
   | ["retire-keyed-parent"] => retireKeyedParent
+  | ["prepare-event-pool"] => prepareEventPool
+  | ["setup-event-pool",action,tag] => setupEventPool action tag
+  | ["refresh-event-pool",tag] => refreshEventPool tag
+  | ["collect-event-pool",buildTag,controlTag] => collectEventPool buildTag controlTag
+  | ["prepare-event-runtime"] => prepareEventRuntime
+  | ["retire-shared-clients"] => retireSharedClients
   | _ => throw (IO.userError "setup TAG | run OUTPUT")
 end Eggshell.Research.ModelAllocationStudy
 def main := Eggshell.Research.ModelAllocationStudy.main
