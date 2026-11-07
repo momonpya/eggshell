@@ -27,12 +27,12 @@ def guard (tag : String) (args : Array String) : IO Unit := do
   write path (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
     ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
     ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
-partial def ensure (name : String) (seen : IO.Ref (Std.HashSet String)) : IO Unit := do
+partial def ensureAt (destination : System.FilePath) (name : String) (seen : IO.Ref (Std.HashSet String)) : IO Unit := do
   if ["Init","Std","Lean"].any (fun rootName => name == rootName || name.startsWith (rootName++".")) then return
   if (← seen.get).contains name then return
   seen.modify (·.insert name)
   let relative := name.replace "." "/"++".lean"
-  let path := source/relative
+  let path := destination/relative
   if !(← path.pathExists) then
     let original := base/"resident-source-source"/relative
     check (← original.pathExists) ("missing frozen module: "++name)
@@ -44,7 +44,8 @@ partial def ensure (name : String) (seen : IO.Ref (Std.HashSet String)) : IO Uni
     if !line.startsWith introducer then continue
     let words := ((line.drop introducer.length).toString.splitOn " ").filter (!·.isEmpty)
     let words := if words.head? == some "all" then words.drop 1 else words
-    if let some imported := words.head? then ensure imported seen
+    if let some imported := words.head? then ensureAt destination imported seen
+def ensure (name : String) (seen : IO.Ref (Std.HashSet String)) : IO Unit := ensureAt source name seen
 def prepare : IO Unit := do
   drained
   check (!(← source.pathExists) && !(← build.pathExists)) "fresh diagnostic source required"
@@ -315,6 +316,183 @@ def cleanupMeasurements : IO Unit := do
     removed := removed.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson digest)])
   write (folder/"measurement-cleanup.json") (Json.mkObj [("removed",toJson removed),
     ("savedScalarProfiles",toJson true),("archiveCreated",toJson false),("originalAndProjectCacheUnchanged",toJson true)])
+
+def canonicalSetup (tag : String) : IO Unit := do
+  drained
+  let candidate := base/"canonical-order-source"
+  let destination := workspace/"docs/candidates/canonical-order"
+  IO.FS.createDirAll destination
+  IO.FS.writeFile (candidate/"tools/research/CanonicalOrderChecks.lean")
+    (← IO.FS.readFile (workspace/"tools/research/CanonicalOrderChecks.lean"))
+  let entry := candidate/"tools/research/ReplayReadinessChecks.lean"
+  let text ← IO.FS.readFile entry
+  unless text.contains "import tools.research.CanonicalOrderChecks" do
+    let marker := "import tools.research.ResidentSourceChecks"
+    check ((text.splitOn marker).length == 2) "actual parent entry changed"
+    IO.FS.writeFile entry (text.replace marker (marker++"\nimport tools.research.CanonicalOrderChecks") |>.replace
+      "  | [\"resident-source-check\",fixture,sha,output] =>"
+      ("  | [\"canonical-order-check\",fixture,sha,output] =>\n"++
+       "    Eggshell.Research.CanonicalOrderChecks.run (.mk fixture) sha (.mk output); return 0\n"++
+       "  | [\"resident-source-check\",fixture,sha,output] =>"))
+  write (destination/"plan.json") (Json.mkObj [("parentRuntimeSha256",toJson (← hash (base/"resident-source-build/StudyMain"))),
+    ("change",toJson "memoize exact per-origin and per-file ordering values; retain validation, full order and all provenance"),
+    ("duplicateNormalizationStillPresent",toJson true),("adopted",toJson false),("answeringModelCalls",toJson (0 : Nat))])
+  guard tag #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+    (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"canonical-order-settings.json").toString]
+
+def canonicalComponent (tag : String) : IO Unit := do
+  drained
+  let fixture := base/"real-source-search-read-trial-result/data/reply-witnesses/affacad8c38e209788a0eafb78d716bda6237f42a0b995594a4af87c9089a6f2.json"
+  guard tag #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/"canonical-order-build/StudyMain").toString,
+    "canonical-order-check",fixture.toString,(← hash fixture),(base/(tag++"-result.json")).toString]
+
+def canonicalAudit : IO Unit := do
+  drained
+  let target := base/"canonical-order-build"
+  let destination := workspace/"docs/candidates/canonical-order"
+  let auditTool := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
+    "inspect",target.toString,(destination/"native-closure.json").toString]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
+    "compare-sources",(base/"resident-source-build").toString,target.toString,
+    (destination/"native-sources.json").toString,"Eggshell.CanonicalSourceDelivery","+tools.research.CanonicalOrderChecks"]
+  check ((← read (destination/"native-sources.json")).getObjValD "exactExpectedChangeSet" == toJson true)
+    "canonical ordering changed unrelated native sources"
+  let entryName := "tools_research_ReplayReadinessChecks.source"
+  let nativeEntry ← IO.ofExcept ((← read (target/entryName)).getArr?)
+  let parentEntry ← IO.ofExcept ((← read (base/"resident-source-build"/entryName)).getArr?)
+  let before ← IO.ofExcept parentEntry[0]!.getStr?
+  let expected := before.replace "import tools.research.ResidentSourceChecks"
+      "import tools.research.ResidentSourceChecks\nimport tools.research.CanonicalOrderChecks" |>.replace
+    "  | [\"resident-source-check\",fixture,sha,output] =>"
+    ("  | [\"canonical-order-check\",fixture,sha,output] =>\n"++
+     "    Eggshell.Research.CanonicalOrderChecks.run (.mk fixture) sha (.mk output); return 0\n"++
+     "  | [\"resident-source-check\",fixture,sha,output] =>")
+  check (nativeEntry[0]! == toJson expected) "entry changed beyond the comparison dispatch"
+  let checks ← IO.ofExcept ((← read (target/"tools_research_CanonicalOrderChecks.source")).getArr?)
+  check (checks[0]! == toJson (← IO.FS.readFile (workspace/"tools/research/CanonicalOrderChecks.lean")))
+    "native checks differ from recorded independent parent"
+  let relative := "Eggshell/CanonicalSourceDelivery.lean"
+  let difference ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/"++relative,"--label","b/"++relative,
+    (base/"resident-source-source"/relative).toString,(base/"canonical-order-source"/relative).toString]}
+  check (difference.exitCode == 1) "expected ordering refinement is absent"
+  IO.FS.writeFile (destination/"CanonicalSourceDelivery.patch") difference.stdout
+  write (destination/"entry-source.json") (Json.mkObj [("onlyComparisonDispatchAdded",toJson true),
+    ("independentParentAndNativeChecksExact",toJson true)])
+
+def canonicalCollectComponent (tag : String) : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/canonical-order"
+  let g ← read (base/(tag++".guard.json"))
+  check (g.getObjValD "state" == toJson "finished" && g.getObjValD "exitCode" == toJson (0 : Nat) &&
+    g.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "component did not finish and release its owners"
+  let report ← read (base/(tag++"-result.json"))
+  write (destination/"component.json") (Json.mkObj [("report",report),("guard",g),
+    ("runtimeSha256",toJson (← hash (base/"canonical-order-build/StudyMain"))),
+    ("adopted",toJson false),("answeringModelCalls",toJson (0 : Nat))])
+
+def canonicalPrepareAuditor : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/canonical-order"
+  check ((← read (destination/"native-sources.json")).getObjValD "exactExpectedChangeSet" == toJson true)
+    "verify the product before the actual delivery driver"
+  let candidate := base/"canonical-order-source"
+  let target := base/"canonical-order-build"
+  ensureAt candidate "tools.research.RealDeliveryProbe" (← IO.mkRef {})
+  let settings ← read (base/"canonical-order-settings.json")
+  let parents ← IO.ofExcept (settings.getObjValAs? (Array String) "parents")
+  write (base/"canonical-order-auditor-settings.json") (settings.setObjVal! "output"
+      (toJson (base/"canonical-order-auditor-build").toString)
+    |>.setObjVal! "mainModule" (toJson "tools.research.RealDeliveryProbe")
+    |>.setObjVal! "parents" (toJson (#[target.toString]++parents))
+    |>.setObjVal! "baselineResponse" (toJson (target/"runtime.rsp").toString)
+    |>.setObjVal! "baselineMain" (toJson (target/"tools_research_ReplayReadinessChecks.o").toString))
+  guard "canonical-order-auditor-build1" #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+    (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"canonical-order-auditor-settings.json").toString]
+
+def canonicalPrepareCells : IO Unit := do
+  drained
+  let target := base/"canonical-order-build"
+  let auditor := base/"canonical-order-auditor-build"
+  let destination := workspace/"docs/candidates/canonical-order"
+  let auditTool := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
+    "inspect",auditor.toString,(destination/"auditor-closure.json").toString]
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
+    "common-sources",target.toString,auditor.toString,(destination/"auditor-sources.json").toString]
+  let proof ← read (destination/"auditor-sources.json")
+  check (proof.getObjValD "allProductCorePresent" == toJson true && proof.getObjValD "commonSourcesUnchanged" == toJson true)
+    "actual delivery driver differs from product core"
+  let installation := base/"canonical-order-prefix"
+  let digest ← hash (target/"StudyMain")
+  let manifest := base/"canonical-order-install.json"
+  write manifest (Json.mkObj [("root",toJson installation.toString),
+    ("runtime",Json.mkObj [("path",toJson (target/"StudyMain").toString),("sha256",toJson digest)]),
+    ("models",toJson (base/"prefix/share/eggshell/minilm").toString)])
+  guard "canonical-order-install1" #[(auditor/"StudyMain").toString,"install-prefix",manifest.toString]
+  let original ← read (base/"resident-source-cells2.json")
+  let root := base/"canonical-order-cells-result"
+  let probes ← IO.ofExcept (original.getObjValAs? (Array Json) "probes")
+  let probes ← probes.mapM fun probe => do
+    let cell := (System.FilePath.mk (← IO.ofExcept (probe.getObjValAs? String "destination"))).fileName.get!
+    return probe.setObjVal! "destination" (toJson (root/cell).toString)
+      |>.setObjVal! "runtime" (Json.mkObj [("path",toJson (installation/"libexec/eggshell").toString),("sha256",toJson digest)])
+      |>.setObjVal! "pluginRoot" (toJson (installation/"share/eggshell/codex-plugin").toString)
+  write (base/"canonical-order-cells.json") (Json.mkObj [("output",toJson root.toString),("probes",toJson probes)])
+  guard "canonical-order-cells1" #["/usr/bin/env","LEAN_NUM_THREADS=1",(auditor/"StudyMain").toString,
+    "cells",(base/"canonical-order-cells.json").toString]
+
+def canonicalRetire : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/canonical-order"
+  check ((← read (destination/"capacity-80-cleanup.json")).getObjValD "completed" == toJson true &&
+    (← read (destination/"delivery-cells.json")).getObjValD "allParentBodiesByteEqual" == toJson true)
+    "preserve and clean ended owners before retiring their scratch data"
+  for path in [destination/"capacity-small-cleanup.json",destination/"delivery-cleanup.json",
+      folder/"delivery-cleanup.json",folder/"measurement-cleanup.json"] do
+    check (← path.pathExists) "ended receipts are not yet accounted for"
+  let oldDigest ← IO.ofExcept ((← read (folder/"installed-runtime.json")).getObjValAs? String "sha256")
+  let capacityDigest ← IO.ofExcept ((← read (destination/"capacity-sources.json")).getObjValAs? String "auditorSha256")
+  let mut executables := #[]
+  for (path,expected) in [(base/"allocation-probe-build/StudyMain",oldDigest),
+      (base/"allocation-probe-prefix/libexec/eggshell",oldDigest),
+      (base/"canonical-order-capacity-build/StudyMain",capacityDigest)] do
+    check ((← hash path) == expected) "ended executable changed or is not the recorded runtime"
+    executables := executables.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson expected),
+      ("logicalBytes",toJson (← path.metadata).byteSize.toNat)])
+  let directories := #[base/"allocation-probe-cells-result",base/"canonical-order-capacity-small-result",
+    base/"canonical-order-capacity-80-result"]
+  for path in directories do check (← path.isDir) "ended scratch directory disappeared unexpectedly"
+  let mut logs : Array (System.FilePath × String) := #[]
+  for tag in ["canonical-order-build1","canonical-order-build2","canonical-order-build3",
+      "canonical-order-auditor-build1","canonical-order-install1","canonical-order-cells1","canonical-order-capacity-build1"] do
+    let saved ← read (destination/(tag++".json"))
+    for extension in ["stdout","stderr"] do
+      let path := base/(tag++"."++extension)
+      check ((← IO.FS.readFile path) == (← IO.ofExcept (saved.getObjValAs? String extension)))
+        "raw log differs from its preserved ended record"
+      logs := logs.push (path,← hash path)
+  for mode in ["small","80"] do
+    let tag := "canonical-order-capacity-"++mode++"1"
+    let stdoutPath := base/(tag++".stdout")
+    check ((← IO.FS.readFile stdoutPath).isEmpty) "uncollected capacity stdout"
+    let stderrPath := base/(tag++".stderr")
+    check ((← IO.FS.readFile stderrPath) == (← IO.FS.readFile (destination/("capacity-"++mode++"-stderr.txt"))))
+      "capacity stderr differs from preserved evidence"
+    logs := logs.push (stdoutPath,← hash stdoutPath) |>.push (stderrPath,← hash stderrPath)
+  for extension in ["stdout","stderr"] do
+    let path := base/("canonical-order-component1."++extension)
+    check ((← IO.FS.readFile path).isEmpty) "uncollected component output"
+    logs := logs.push (path,← hash path)
+  let record := Json.mkObj [("executables",toJson executables),("scratchDirectories",toJson (directories.map (·.toString))),
+    ("duplicateLogs",toJson (logs.map fun (path,digest) => Json.mkObj [("path",toJson path.toString),("sha256",toJson digest)])),
+    ("archiveCreated",toJson false),("sizesAreLogicalNotReclaimedPhysicalBytes",toJson true),
+    ("currentProductAuditorNativeInputsOriginalDbProjectCacheModelsAndEvidenceRetained",toJson true)]
+  write (destination/"retired-ended-artifacts.json") (record.setObjVal! "completed" (toJson false))
+  for row in executables do IO.FS.removeFile (.mk (← IO.ofExcept (row.getObjValAs? String "path")))
+  for (path,_) in logs do IO.FS.removeFile path
+  for path in directories do IO.FS.removeDirAll path
+  write (destination/"retired-ended-artifacts.json") (record.setObjVal! "completed" (toJson true))
 def main (args : List String) : IO Unit := do
   match args with
   | ["prepare"] => prepare
@@ -329,6 +507,25 @@ def main (args : List String) : IO Unit := do
   | ["summary"] => measurementSummary
   | ["encoder-audit"] => encoderAudit
   | ["cleanup-measurements"] => cleanupMeasurements
+  | ["canonical-setup",tag] => canonicalSetup tag
+  | ["canonical-component",tag] => canonicalComponent tag
+  | ["canonical-audit"] => canonicalAudit
+  | ["canonical-collect-component",tag] => canonicalCollectComponent tag
+  | ["canonical-prepare-auditor"] => canonicalPrepareAuditor
+  | ["canonical-prepare-cells"] => canonicalPrepareCells
+  | ["canonical-retire"] => canonicalRetire
+  | ["canonical-seal-installed"] =>
+    drained
+    let target := base/"canonical-order-build/StudyMain"
+    let path := base/"canonical-order-prefix/libexec/eggshell"
+    let digest ← hash target
+    check ((← hash path) == digest) "installed runtime differs from canonical-order product"
+    let link := path.withExtension "shared"
+    check (!(← link.pathExists)) "sharing temporary exists"
+    discard <| command "/bin/ln" #[target.toString,link.toString]
+    IO.FS.rename link path
+    write (workspace/"docs/candidates/canonical-order/installed-runtime.json")
+      (Json.mkObj [("sha256",toJson digest),("sharesImmutableProductInode",toJson true)])
   | ["seal-installed"] =>
     drained
     let path := base/"allocation-probe-prefix/libexec/eggshell"
@@ -343,7 +540,8 @@ def main (args : List String) : IO Unit := do
     drained
     let g ← read (base/(tag++".guard.json"))
     check (g.getObjValD "state" == toJson "finished" && g.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "owner not drained"
-    write (folder/(tag++".json")) (Json.mkObj [("guard",g),
+    let destination := if tag.startsWith "canonical-order-" then workspace/"docs/candidates/canonical-order" else folder
+    write (destination/(tag++".json")) (Json.mkObj [("guard",g),
       ("stdout",toJson (← IO.FS.readFile (base/(tag++".stdout")))),
       ("stderr",toJson (← IO.FS.readFile (base/(tag++".stderr"))))])
   | _ => throw (IO.userError "unknown allocation operation")

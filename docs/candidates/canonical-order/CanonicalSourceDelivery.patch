@@ -1,0 +1,64 @@
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -16,0 +17,13 @@
++/-- Compare the exact existing encodings, creating them once per origin in
++this bounded row. Singleton rows require no encoding at all. -/
++def orderOrigins (origins : Array Origin) : Array Origin :=
++  let encode := fun origin : Origin => (toJson origin).compress
++  let memo := if origins.size < 2 then ({} : ExactMemo.Table encode) else
++    origins.foldl (fun memo origin => (ExactMemo.read encode memo origin).2) {}
++  origins.qsort fun a b => (ExactMemo.read encode memo a).1 < (ExactMemo.read encode memo b).1
++
++theorem orderOrigins_exact (origins : Array Origin) : orderOrigins origins =
++    origins.qsort (fun a b => (toJson a).compress < (toJson b).compress) := by
++  unfold orderOrigins
++  simp only [ExactMemo.read_exact]
++
+@@ -21,2 +34 @@
+-    ({key,code := atom.code,origins := atom.origins.toArray.qsort fun a b =>
+-      (toJson a).compress < (toJson b).compress} : StoredRow)
++    ({key,code := atom.code,origins := orderOrigins atom.origins.toArray} : StoredRow)
+@@ -29 +41,4 @@
+-  unfold storeCached Registry.store
++  unfold storeCached
++  rw [show orderOrigins = (fun origins => origins.qsort (fun a b =>
++    (toJson a).compress < (toJson b).compress)) from funext orderOrigins_exact]
++  unfold Registry.store
+@@ -50,0 +66,37 @@
++/-- A file's complete encoded identity is shared by every line in that file.
++Full identity still resolves memo collisions; no digest chooses row order. -/
++def orderRows (rows : Array StoredRow) : Array StoredRow :=
++  let encode := fun file : File => (toJson file).compress
++  let memo := rows.foldl (fun memo row => (ExactMemo.read encode memo row.key.file).2)
++    ({} : ExactMemo.Table encode)
++  rows.qsort fun a b =>
++    if a.key.file == b.key.file then a.key.line < b.key.line
++    else (ExactMemo.read encode memo a.key.file).1 < (ExactMemo.read encode memo b.key.file).1
++
++theorem orderRows_exact (rows : Array StoredRow) : orderRows rows =
++    rows.qsort (fun a b => if a.key.file == b.key.file then a.key.line < b.key.line
++      else (toJson a.key.file).compress < (toJson b.key.file).compress) := by
++  unfold orderRows
++  simp only [ExactMemo.read_exact]
++
++def mergePreparedOrder (parts : Array StoredRow) : Except String (Array StoredRow) := do
++  let mut atoms : Std.HashMap Key Atom := {}
++  for row in parts do
++    unless row.key.file.valid && 0 < row.key.line && !row.code.contains '\n' && !row.origins.isEmpty &&
++        row.origins.all (fun origin => origin.occurrence.valid && origin.binding.valid) do
++      throw "invalid shared original row"
++    if let some previous := atoms[row.key]? then
++      unless previous.code == row.code do throw "conflicting shared original code"
++      let origins := row.origins.foldl (fun origins origin => origins.insert origin) previous.origins
++      atoms := atoms.insert row.key {previous with origins}
++    else
++      let origins := row.origins.foldl (fun origins origin => origins.insert origin) ({} : Std.HashSet Origin)
++      atoms := atoms.insert row.key ⟨row.code,origins⟩
++  return orderRows (storeCached ⟨atoms⟩)
++
++theorem mergePreparedOrder_exact (parts : Array StoredRow) : mergePreparedOrder parts = merge parts := by
++  unfold mergePreparedOrder merge
++  simp only [orderRows_exact,storeCached_exact]
++
++@[csimp] theorem merge_compiled : merge = mergePreparedOrder := (funext mergePreparedOrder_exact).symm
++

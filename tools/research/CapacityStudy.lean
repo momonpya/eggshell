@@ -276,7 +276,7 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
@@ -284,7 +284,7 @@ def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source"].contains family then
+  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order"].contains family then
     check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
@@ -566,6 +566,16 @@ def auditStoppedQueries (family : String := "parallel-encoder") (mode : String :
   let earlier := (evidence.getObjValD "cells").getArr?.toOption.getD #[] |>.filter (fun row =>
     row.getObjValD "phase" != toJson targetPhase)
   let primes := earlier.map (fun row => (row.getObjValD "client").getObjValD "receipt")
+  -- PIDs can be reused by a later experiment. Bound the join by the actual
+  -- publisher markers from this run's preceding prime/completed phases.
+  let mut firstObserved := 0
+  for id in primes do
+    let name ← IO.ofExcept id.getStr?
+    let marker ← readDiagnostic (shared/"data/receipts"/name/"provider-keyed-profile.json")
+    check (marker.getObjValD "pid" == toJson owner) "stopped audit selected a different publisher"
+    firstObserved := max firstObserved (← IO.ofExcept (marker.getObjValAs? Nat "observedMs"))
+  let lastObserved ← IO.monoMsNow
+  check (firstObserved > 0 && firstObserved ≤ lastObserved) "stopped publisher interval is missing"
   let mut rows := #[]
   let mut totals : Std.HashMap String Nat := {}
   for entry in ← (shared/"data/receipts").readDir do
@@ -573,6 +583,8 @@ def auditStoppedQueries (family : String := "parallel-encoder") (mode : String :
     if !(← marker.pathExists) || primes.contains (toJson entry.fileName) then continue
     let value ← readDiagnostic marker
     if value.getObjValD "pid" != toJson owner then continue
+    let observed ← IO.ofExcept (value.getObjValAs? Nat "observedMs")
+    if observed < firstObserved || lastObserved < observed then continue
     let mut stages := #[]
     let mut bytes := 0
     for item in ← entry.path.readDir do
@@ -589,11 +601,26 @@ def auditStoppedQueries (family : String := "parallel-encoder") (mode : String :
           ("stage",value.getObjValD "stage"),("observedMs",value.getObjValD "observedMs"),("pid",value.getObjValD "pid"),
           ("diagnosticReadError",value.getObjValD "diagnosticReadError"),
           ("data",keepFields data ["transport","sources","requestBytes","status","elapsedMs","queueMs",
-            "workMs","startedAt","finishedAt","readyMs","phase","inputMs","restoreMs","matrixMs"])])
+            "workMs","startedAt","finishedAt","readyMs","phase","inputMs","restoreMs","matrixMs",
+            "complete","counters","graphOutcomes","scope","reason","message","error","kind","numericalTrace"])])
     rows := rows.push (Json.mkObj [("receipt",toJson entry.fileName),("bytes",toJson bytes),("stages",toJson stages)])
+  let name ← cohort family
+  let phaseRoot := base/(name++"-"++mode++"-result")/targetPhase
+  let mut partialClients : Array Json := #[]
+  if ← phaseRoot.isDir then
+    for entry in ← phaseRoot.readDir do
+      if !entry.fileName.startsWith "client-" then continue
+      let path := entry.path/"result.json"
+      if ← path.pathExists then partialClients := partialClients.push (← read path)
+  let count := if mode == "small" then 16 else 80
+  let identities ← partialClients.mapM fun row => IO.ofExcept (row.getObjValAs? Nat "client")
+  check (identities.all (· < count) && identities.toList.eraseDups.length == identities.size)
+    "stopped client domain is invalid"
   write (destination/"stopped-query-stages.json") (Json.mkObj [("ownerPid",toJson owner),("mode",toJson mode),
     ("queries",toJson rows.size),("files",toJson (totals.toArray.qsort (fun a b => a.1 < b.1))),
-    ("rows",toJson rows),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
+    ("rows",toJson rows),("publisherObservedAfter",toJson firstObserved),("publisherObservedBefore",toJson lastObserved),
+    ("savedPartialClientResults",toJson partialClients),("clientsWithoutSavedResult",toJson (count-partialClients.size)),
+    ("partialResultsNotFullPhaseRate",toJson true),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
 def cleanupStoppedEndpoints (family mode : String) (owner : Nat) : IO Unit := do
   drained
   discard <| cohort family

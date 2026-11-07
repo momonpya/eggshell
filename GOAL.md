@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-08更新。状態はactive。直近候補は実LLVM全6hookの必要原文32/32・親本文一致を保ったが、16並行でメモリ保護停止した。80人継続利用、総token・品質の採用比較は未達・未検証である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-08更新。状態はactive。直近候補は実LLVM全6hookの必要原文32/32・親本文一致を保ち、4/16並行も全件完了したが、80並行でメモリ保護停止した。80人継続利用、総token・品質の採用比較は未達・未検証である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -29,7 +29,9 @@
 
 ## 現在地と次の順序
 
-直近の[割当て計測と数値経路照合](docs/candidates/allocation-probe/README.md)では、現候補のリンク済みencoder関連6 moduleが並行推論を検証したtyped-planと同じ原文・埋込みであることを確認した。推論全体のmutexには回帰していない。モデル1基・独立compute2枠であり、過去の16要求×2波は1,048/1,037ms、全48応答のvector/被覆一致。今回モデル試験や失敗16/80は再実行していない。計測付き全6実hookも原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、7,638〜9,139ms、関連RSS最大2,887,072KiB・残存0だった。原文取得後のmergeだけで約699〜756万のcurrent-thread小オブジェクト割当てがあり、materializeでも再mergeする。一方、独立した文字索引生成は8.7〜10.8msであり、文字cache追加を主対策にはしない。全経路のlock-freeや生存heapの原因確定、80人容量の合格とは扱わない。
+直近の[canonical-order](docs/candidates/canonical-order/README.md)は、原文sortの各比較で同じOrigin/FileのJSONを作る処理を除いた。4つの一般定理と実宣言への接続を確認し、実5,702行のAB/BA/ABは全原文・origin・順序一致、割当て6,835,715→2,138,601、約130ms→45〜47msだった。正常/不正76ケースも一致。全6実hookは原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、7,115〜8,858ms、関連RSS最大2,865,056KiB。全製品core一致のclientを用いた4/16並行は4/4・6,632ms、16/16・16,056ms、関連RSS最大2,816,880KiBで残存0。続く80は3,675,664KiBで保護停止し、publisher2,143,728KiB/model814,832KiBだった。保存された21最終結果は未完了通知、59件は最終結果なしであり0/80という率にはしない。全80のkeyed到達・focus48/domain20の記録は成功件数ではない。同じ失敗80は繰り返さず、取得完了前から保持するquery表現と原文の再正規化を直す。RSSを生存graph量とは断定せず、文字配列も単体の実行時間だけで保持量を判断しない。モデル/compute/順位/認定domain/予算/期限/資源上限は不変。回答モデル0・有料比較0/18・本体未採用、80人8時間/成長/NAS/総token/品質は未達・未検証。
+
+直前の[割当て計測と数値経路照合](docs/candidates/allocation-probe/README.md)では、現候補のリンク済みencoder関連6 moduleが並行推論を検証したtyped-planと同じ原文・埋込みであることを確認した。推論全体のmutexには回帰していない。モデル1基・独立compute2枠であり、過去の16要求×2波は1,048/1,037ms、全48応答のvector/被覆一致。今回モデル試験や失敗16/80は再実行していない。計測付き全6実hookも原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、7,638〜9,139ms、関連RSS最大2,887,072KiB・残存0だった。原文取得後のmergeだけで約699〜756万のcurrent-thread小オブジェクト割当てがあり、materializeでも再mergeする。独立した文字索引生成は8.7〜10.8msだったが、これは保持量の診断ではない。全経路のlock-freeや生存heapの原因確定、80人容量の合格とは扱わない。
 
 先行候補は[local-completion](docs/candidates/local-completion/README.md)（SHA `ba2d1d30…`）。要求ごとのmailboxへ待機を移し、共有の取消登録も退出時に解除する。80待機中に無関係な1000完了を起こしてwake0、指定1要求だけのwake、27件の取消/残り53完了、全件終了/登録0をnativeで確認した。通常の数値48応答と直接transport34応答も一致した。同じ実LLVMの数値protocolは16/16・2,648ms、80/80・11,076ms、全vector/scoreが親基準一致・関連RSS最大1,670,688KiB・残存0。親28,259msは保存記録で、反復速度比較ではない。実フック全6回も必要原文32/32・親本文byte一致・意味/シナプス/ACK完了・sharedImage=true・前景warm0、8,746〜10,675ms、関連RSS最大2,859,248KiB・残存0だった。独立したnative新チャットであり、回答モデルの両周ではない。続く同一容量harnessは4/4・8,099ms、16/16・20,992msを通ったが、80同時は0/80・29,388msの未完了通知だった。資源停止なし・関連RSS最大3,210,864KiB・両service正常終了・残存0。handoffChars=500000は従来の容量条件。終了記録の再集計で受付queue中央値2ms、focus数値完了52件でもその後の終了まで中央値15,904msが残った。次は数値後の準備・選択・描画を分離し、質問に依存しない再構築を除く。同じ失敗80負荷は繰り返さない。本体未採用・回答モデル0・有料比較0/18、80人8時間・成長・NAS・総token/品質は未達/未検証、goalはactive。
 
@@ -118,7 +120,7 @@ elastic-encoderは需要中の並行2基を維持し、待ち要求がなくな�
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 固定原典の全6hookで約699〜756万の小オブジェクト割当てが集中した原文mergeと、materializeの再正規化を先に除く。原文・全origin・conflict拒否・順序の一致をLeanと固定入力で確認し、共有snapshotで準備済みの表現を利用する。文字索引は約9〜11msなので、文字cache追加を主対策にしない。実本文の全6件照合後に容量を測る。同じ失敗16/80負荷を計測だけのために再実行しない。重みやgoldによる調整、長いencoder mutex、固定3検索workerへの回帰、単なるcompute枠の増加で代用しない。98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
+1. canonical-orderでsortの反復符号化を除き、16並行は回復した。次は80停止記録のfocus48/domain20を使い、取得完了前に作るquery用グラフ/配送表現の共有・寿命と、取得後/materializeの二重正規化を直す。不変の原文・座標・費用はproject snapshotから借用し、質問依存の重み/選択だけをquery内に置く。原文・全origin・conflict拒否・順序の一致をLeanと固定入力で確認し、全6本文の照合後に容量を測る。同じ失敗80負荷を計測だけのために再実行しない。文字配列の共有も保持byteと寿命で判断し、約9〜11msの単体時間だけで主因や無関係と決めない。重みやgoldによる調整、長いencoder mutex、固定3検索workerへの回帰、単なるcompute枠の増加で代用しない。98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
 2. 数値のadmission・native kernel・完了通知と数値後の仕事を区別する。focus完了から終了までの経過時間を特定関数のCPU時間と断定しない。実WorkGraph/返信の所有とallocator保持も区別し、検査器やモデルのRSSを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。
