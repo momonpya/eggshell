@@ -282,7 +282,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
   check (!requiresKeyedImage || keyedImageUsed) "delivery passed but candidate shared keyed path was not exercised"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
   completedStudyReady tag (tag++"-cells1")
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   check (result.getObjValD "actualDeliveryAllSixPassed" == toJson true &&

@@ -33,6 +33,8 @@
 
 先行[encoder-native-wait](docs/candidates/encoder-native-wait/README.md)（SHA `88de092f…`）は同じ数値80/80が28,259msとなった。Lean 4.33.0のIO.waitAnyが共通mutex/全体通知を使うことを確認し、上記local-completionへ進めた。元snapshot・必要項目・順位・認定domain・予算・期限・資源上限は維持している。
 
+続く[post-focusの診断と修正](docs/candidates/post-focus/README.md)で、同じruntimeの題材2は10919ms・本文byte一致だった。候補単位123ms、費用表9ms、選択1015ms、fetch851ms、原文組立403ms、最終描画776ms。詳細入力の採取hookは内部Handoffありでも外部は未完了通知となり、成功には数えない。採取した11160 offers/21450 weightsの固定問題をモデル・hookなしで再生し、実フックの3038件の選択順と一致した。純粋な選択742msのうちfillが690msだったため、選択済み集合を毎回foldし直す処理を、要求専用の証明付きmapの1件更新へ変更した。2 moduleだけの隔離候補はLeanの全選択順一致を示し、AB/BA/ABの3組で737/739/740→474/485/469ms、全3038件一致・RSS最大133040KiB・残存0だった。通常runtimeへ戻す構築を進め、新候補の全6hook→4/16→80で検査する。重み・原典・順位・認定・予算・期限・worker・資源上限は維持、本体未採用、回答モデル0・有料比較0/18、98%・80人8時間・成長・NAS・総token/品質の達成を主張しない。
+
 ## 直近の経緯
 
 先行する[数値protocol単独の同一入力比較](docs/candidates/encoder-events/protocol/README.md)では、16並行は両版16/16だが、80並行は親shared-model 80/80・20,845msに対しencoder-events 3/80・28,908msへ回帰した。資源停止なし。pipe読取り中央値は両版2ms、読取り後の完了待合せが0→25msだった。これを受けたnative-waitの結果と次の作業は上記を現在地とする。以下の単独6hook成功を80人容量の成功にしない。
@@ -102,7 +104,7 @@ elastic-encoderは需要中の並行2基を維持し、待ち要求がなくな�
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 数値protocol80/80と実LLVM全6hookの原文32/32、容量4/16まで完了した。80全hookは失敗で、保存済み記録から数値完了後の経過時間が残ると確認した。次は原文transport・候補準備・選択・描画を段階ごとに追い、出版で済ませる構造の再構築を検出する。stage計測だけのために同じ80全hookを再実行せず、既存記録と固定入力の限定replayを先に使う。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。正解をselectorへ渡さず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
+1. 数値protocol80/80と実LLVM全6hookの原文32/32、容量4/16まで完了した。80全hookは失敗で、数値後の同一runtime1hookと固定入力replayから選択ループの690msを確認し、membershipの全履歴再構築を除く修正を実装した。次はこの候補を通常entryへ戻し、同じ実LLVM全6hookの本文・意味・ACK、4/16 gate、通過後の80を検査する。選択単体の約36%短縮を全検索へ外挿しない。既知の未改善80をstage計測だけのために再実行せず、重みやgoldによる調整をしない。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
 2. 数値のadmission・native kernel・完了通知と数値後の仕事を区別する。focus完了から終了までの経過時間を特定関数のCPU時間と断定しない。実WorkGraph/返信の所有とallocator保持も区別し、検査器やモデルのRSSを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。

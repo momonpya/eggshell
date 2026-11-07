@@ -1,0 +1,48 @@
+--- a/tools/WinnerUpdates.lean
++++ b/tools/WinnerUpdates.lean
+@@ -34 +34,26 @@
+-def State.advance (state : State prior stored depth) (layout : Sparse.Layout p)
++
++def advanceKnown (seen : Known prior) (next : Selection p) (winner : Fin p.offers.size)
++    (extension : next.selected = prior.selected++[winner]) : Known next := {
++  selected := seen.selected.insert winner ()
++  exact := by
++    intro index
++    rw [Std.HashMap.contains_insert,seen.exact,extension,List.contains_append]
++    simp only [List.contains_cons,List.contains_nil,Bool.or_false]
++    rw [BEq.comm (a := winner) (b := index)]
++    exact Bool.or_comm _ _}
++
++theorem scoreSeen (stored : Sparse.Values prior) (first second : Known prior) (index : Fin p.offers.size) :
++    Sparse.score? prior stored first index = Sparse.score? prior stored second index := by
++  rw [Sparse.score_exact,Sparse.score_exact]
++  simp only [Deferred.score?]
++
++theorem ratingSeen (stored : Sparse.Values prior) (first second : Known prior) :
++    ratingAt prior stored first = ratingAt prior stored second := by
++  funext position
++  unfold ratingAt
++  by_cases inside : position < p.offers.size
++  · simp only [dif_pos inside]
++    rw [scoreSeen stored first second]
++  · simp only [dif_neg inside]
++
++def State.advanceUsing (state : State prior stored depth) (layout : Sparse.Layout p)
+@@ -36 +61 @@
+-    (updated : Sparse.Values next) (same : updated = stored.advance layout next winner extension) :
++    (updated : Sparse.Values next) (same : updated = stored.advance layout next winner extension) (seen : Known next) :
+@@ -39 +63,0 @@
+-  let seen := known next
+@@ -49 +73 @@
+-      exact rating_at_index updated (known next) position value current
++      exact rating_at_index updated seen position value current
+@@ -56 +80 @@
+-      exact congrArg some current
++      exact congrArg some ((congrFun (ratingSeen updated seen (known next)) position).trans current)
+@@ -70,0 +95,6 @@
++
++def State.advance (state : State prior stored depth) (layout : Sparse.Layout p)
++    (next : Selection p) (winner : Fin p.offers.size) (extension : next.selected = prior.selected++[winner])
++    (updated : Sparse.Values next) (same : updated = stored.advance layout next winner extension) : State next updated depth :=
++  state.advanceUsing layout next winner extension updated same (known next)
++

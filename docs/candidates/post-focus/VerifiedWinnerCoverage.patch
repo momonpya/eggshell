@@ -1,0 +1,43 @@
+--- a/tools/VerifiedWinnerCoverage.lean
++++ b/tools/VerifiedWinnerCoverage.lean
+@@ -40,0 +41,34 @@
++
++/-- Carry exact selected membership through each winner; never enumerate the
++entire selected history to prepare the next selection or rating update. -/
++def fillKnown (layout : Sparse.Layout p) (fuel : Nat) (prior : Selection p) (stored : Sparse.Values prior)
++    (state : State prior stored (depth p)) (seen : Known prior) : Selection p :=
++  match fuel with
++  | 0 => prior
++  | fuel+1 =>
++      let resolved := state.resolveWith seen
++      match resolved.score with
++      | none => prior
++      | some score =>
++          let next := score.proposal.result
++          let updated := stored.advance layout next score.index rfl
++          let nextSeen := advanceKnown seen next score.index rfl
++          fillKnown layout fuel next updated
++            (resolved.state.advanceUsing layout next score.index rfl updated rfl nextSeen) nextSeen
++
++theorem fillKnown_exact (layout : Sparse.Layout p) (fuel : Nat) (prior : Selection p)
++    (stored : Sparse.Values prior) (state : State prior stored (depth p)) (seen : Known prior) :
++    fillKnown layout fuel prior stored state seen = SharedCoverage.fill fuel prior := by
++  induction fuel generalizing prior with
++  | zero => rfl
++  | succ fuel ih =>
++      rw [SharedCoverage.fill,← Sparse.best_exact stored,← (state.resolveWith seen).exact]
++      cases found : (state.resolveWith seen).score with
++      | none => simp only [fillKnown,found,Option.map_none]
++      | some score =>
++          simpa only [fillKnown,found,Option.map_some] using
++            (ih score.proposal.result (stored.advance layout _ score.index rfl)
++              (state.resolveWith seen |>.state.advanceUsing layout _ score.index rfl
++                (stored.advance layout _ score.index rfl) rfl (advanceKnown seen _ score.index rfl))
++              (advanceKnown seen _ score.index rfl))
++
+@@ -48 +82 @@
+-  pure (SharedCoverage.prefer (fill layout p.offers.size initial stored state) (SharedCoverage.bestSingleton initial))
++  pure (SharedCoverage.prefer (fillKnown layout p.offers.size initial stored state (known initial)) (SharedCoverage.bestSingleton initial))
+@@ -53 +87 @@
+-  simp only [choose?,Sparse.choose?,fill_exact,Sparse.fill_exact]
++  simp only [choose?,Sparse.choose?,fillKnown_exact,Sparse.fill_exact]

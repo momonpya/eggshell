@@ -346,12 +346,14 @@ def stage (receipt : Json) (name : String) : IO Json := do
   let some selected := stages.find? (fun item => item.getObjValD "name" == toJson name) |
     throw (IO.userError ("missing actual delivery stage "++name))
   return (selected.getObjValD "record").getObjValD "data"
-def collectCells : IO Unit := do
+def collectCells (family : String := "local-completion") : IO Unit := do
   drained
-  let guard ← read (base/"local-completion-cells1.guard.json")
+  check (["local-completion","selection-membership"].contains family) "known completed delivery family required"
+  let folder := workspace/"docs/candidates"/family
+  let guard ← read (base/(family++"-cells1.guard.json"))
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
     "actual delivery still owns a process"
-  let root := base/"local-completion-cells-result"
+  let root := base/(family++"-cells-result")
   check ((← read (root/"result.json")).getObjValD "allSixPassed" == toJson true) "all six actual hooks required"
   let mut cells := #[]
   for topic in [1:4] do
@@ -483,6 +485,7 @@ def main (args : List String) : IO Unit := match args with
   | ["prepare-auditor"] => prepareAuditor
   | ["seal-auditor"] => sealAuditor
   | ["collect-cells"] => collectCells
+  | ["collect-cells",family] => collectCells family
   | ["post-focus"] => postFocus
   | ["retire-ended"] => retireEnded
   | _ => throw (IO.userError "local completion: prepare/setup/collect/refresh/controls/product/seal")
