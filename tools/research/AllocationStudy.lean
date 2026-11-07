@@ -231,10 +231,10 @@ def linkedWitnesses (root : System.FilePath) : IO (Std.HashMap String String) :=
     result := result.insert name witness
   return result
 
-def encoderAudit : IO Unit := do
+def encoderAudit (currentName : String := "resident-source") (outputName : String := "allocation-probe") : IO Unit := do
   drained
   let validated := base/"typed-plan-build"
-  let current := base/"resident-source-build"
+  let current := base/(currentName++"-build")
   let controls ← read (workspace/"docs/candidates/typed-plan/encoder-controls.json")
   check (controls.getObjValD "runtimeSha256" == toJson (← hash (validated/"StudyMain")))
     "numerical controls belong to another binary"
@@ -243,7 +243,7 @@ def encoderAudit : IO Unit := do
     "exact concurrent vectors are not established"
   let original ← linkedWitnesses validated
   let mut compared := #[]
-  for root in [current,build] do
+  for root in (if currentName == "resident-source" then [current,build] else [current]) do
     let actual ← linkedWitnesses root
     for name in ["Eggshell.Numerical","Eggshell.MiniLM","Eggshell.TaskDeadline",
         "tools.research.SharedEncoder","tools.research.EncoderPool","tools.research.EventScope"] do
@@ -262,9 +262,10 @@ def encoderAudit : IO Unit := do
     waves := waves.push (Json.mkObj [("name",toJson name),("requests",wave.getObjValD "requests"),
       ("wallMs",wave.getObjValD "wallMs"),("overlap",toJson true),
       ("modelProcesses",toJson (1 : Nat)),("computeCapacity",toJson (2 : Nat))])
-  write (folder/"encoder-boundary.json") (Json.mkObj [("validatedRuntimeSha256",controls.getObjValD "runtimeSha256"),
+  let destination := workspace/"docs/candidates"/outputName
+  IO.FS.createDirAll destination
+  write (destination/"encoder-boundary.json") (Json.mkObj [("validatedRuntimeSha256",controls.getObjValD "runtimeSha256"),
     ("currentRuntimeSha256",toJson (← hash (current/"StudyMain"))),
-    ("diagnosticRuntimeSha256",toJson (← hash (build/"StudyMain"))),
     ("compiledBoundary",toJson compared),("previousNativeWaves",toJson waves),
     ("all48RepliesExactVectorsAndCoverage",toJson true),("newEncoderRuns",toJson (0 : Nat)),
     ("entireReadPathLockFree",toJson false),("eightyUsersValidated",toJson false),("adopted",toJson false)])
@@ -506,6 +507,7 @@ def main (args : List String) : IO Unit := do
   | ["measurements"] => collectMeasurements
   | ["summary"] => measurementSummary
   | ["encoder-audit"] => encoderAudit
+  | ["encoder-audit",current,destination] => encoderAudit current destination
   | ["cleanup-measurements"] => cleanupMeasurements
   | ["canonical-setup",tag] => canonicalSetup tag
   | ["canonical-component",tag] => canonicalComponent tag
