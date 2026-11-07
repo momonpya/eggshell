@@ -252,7 +252,7 @@ def cleanup (prepacking : Bool := false) : IO Unit := do
 /-- The existing numerical generator is suspended only at its ONNX call.
 The batching, feeds, tokenizer, pooling and normalization bytes are retained.
 ORT owns asynchronous execution; this adds no Python worker pool or scheduler. -/
-def sharedKernel (kernel : String) : IO String := do
+def sharedKernel (kernel : String) (profile : Bool := true) : IO String := do
   let boundary := "\nfor line in sys.stdin:\n"
   check ((kernel.splitOn boundary).length == 2) "one numerical protocol boundary required"
   let loader := "            from fastembed import TextEmbedding\n"
@@ -271,7 +271,7 @@ def sharedKernel (kernel : String) : IO String := do
   check ((original.splitOn call).length == 2) "one synchronous ONNX call required"
   let generator := "def encode_async(" ++ original.replace call
     "        output = (yield (numerical.ONNX_OUTPUT_NAMES, feeds))[0]\n"
-  return ((kernel.splitOn boundary)[0]!.replace loader profiling) ++ "\n\n" ++ generator ++ r#"
+  return ((kernel.splitOn boundary)[0]!.replace loader (if profile then profiling else loader)) ++ "\n\n" ++ generator ++ r#"
 
 import os
 import onnxruntime as ort
@@ -650,6 +650,134 @@ def cleanupShared : IO Unit := do
   write (destination/"cleanup.json") record
   for path in paths do IO.FS.removeFile path
   write (destination/"cleanup.json") (record.setObjVal! "completed" (toJson true))
+
+def writeSharedKernel (destination : System.FilePath) : IO Unit := do
+  drained
+  check (destination == base/"shared-transport-source/runtime/shared_embedding.py" ||
+    destination == base/"shared-model-source/runtime/shared_embedding.py") "shared numerical kernel escaped its isolated source"
+  check (!(← destination.pathExists)) "preserve existing isolated numerical source"
+  let result := (← read (workspace/"docs/candidates/shared-model/controls.json")).getObjValD "experiment"
+  let original := base/"keyed-discovery-source/runtime/embedding.py"
+  check (result.getObjValD "originalKernelSha256" == toJson (← hash original)) "checked numerical source changed"
+  let kernel ← IO.FS.readFile original
+  let checked := base/"shared-kernel-source-check.txt"
+  check (!(← checked.pathExists)) "preserve earlier source check"
+  try
+    IO.FS.writeFile checked (← sharedKernel kernel)
+    check (result.getObjValD "sharedKernelSha256" == toJson (← hash checked)) "checked asynchronous numerical implementation changed"
+  finally if ← checked.pathExists then IO.FS.removeFile checked
+  IO.FS.createDirAll destination.parent.get!
+  IO.FS.writeFile destination (← sharedKernel kernel false)
+
+def prepareTransport : IO Unit := do
+  drained
+  let source := base/"shared-transport-source"
+  check (!(← source.pathExists)) "fresh isolated shared transport source required"
+  let command ← IO.Process.output {cmd := (compiler/"bin/lean").toString,args := #["-j1","-M1536","--run",
+    (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",
+    (base/"keyed-discovery-build").toString,source.toString,(base/"shared-transport-build").toString,
+    "tools.research.SharedEncoderControls",(base/"shared-transport-settings.json").toString],cwd := some workspace}
+  check (command.exitCode == 0) (command.stdout++command.stderr)
+  IO.FS.writeFile (source/"tools/research/SharedEncoder.lean")
+    (← IO.FS.readFile (workspace/"tools/research/SharedEncoder.lean"))
+  writeSharedKernel (source/"runtime/shared_embedding.py")
+
+def refreshTransport (tag : String := "shared-transport-build1") : IO Unit := do
+  drained
+  check (tag.startsWith "shared-transport-build") "known shared transport build required"
+  let guard ← read (base/(tag++".guard.json"))
+  check (guard.getObjValD "state" == toJson "finished" &&
+    guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "transport build has not drained"
+  let destination := workspace/"docs/candidates/shared-model"/(tag++".json")
+  check (!(← destination.pathExists)) "preserve previous transport build audit"
+  let modules ← #["SharedEncoder","SharedEncoderControls"].mapM fun name => do
+    let source := base/"shared-transport-source/tools/research"/(name++".lean")
+    let output := base/"shared-transport-build"/("tools_research_"++name++"-lean.stdout")
+    let diagnostics ← if ← output.pathExists then pure (toJson (← IO.FS.readFile output)) else pure Json.null
+    return Json.mkObj [("module",toJson name),("sourceSha256",toJson (← hash source)),
+      ("diagnostics",diagnostics)]
+  write destination (Json.mkObj [("guard",guard),("modules",toJson modules)])
+  for name in ["SharedEncoder","SharedEncoderControls"] do
+    IO.FS.writeFile (base/"shared-transport-source/tools/research"/(name++".lean"))
+      (← IO.FS.readFile (workspace/"tools/research"/(name++".lean")))
+
+def setupTransport (action tag : String) : IO Unit := do
+  drained
+  let settings := base/(tag++".guard-settings.json")
+  check (!(← settings.pathExists)) "fresh shared transport guard required"
+  let args ← match action with
+    | "build" => pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+        (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"shared-transport-settings.json").toString]
+    | "controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/"shared-transport-build/StudyMain").toString,
+        (base/(tag++"-result")).toString]
+    | _ => throw (IO.userError "build or controls required")
+  write settings (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
+    ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
+    ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
+
+def collectTransport : IO Unit := do
+  drained
+  let guard ← read (base/"shared-transport-controls1.guard.json")
+  let build ← read (base/"shared-transport-build7.guard.json")
+  for value in [guard,build] do
+    check (value.getObjValD "state" == toJson "finished" && value.getObjValD "exitCode" == toJson (0 : Nat) &&
+      value.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "native shared transport has not passed and drained"
+  let root := base/"shared-transport-controls1-result"
+  let report ← read (root/"report.json")
+  let shutdown ← read (root/"shutdown.json")
+  check (report.getObjValD "allPassed" == toJson true && report.getObjValD "parallelRepliesExact" == toJson (34 : Nat) &&
+    shutdown.getObjValD "closed" == toJson true && shutdown.getObjValD "readerJoined" == toJson true &&
+    shutdown.getObjValD "pending" == toJson (0 : Nat)) "native shared transport closure incomplete"
+  let sources ← #["SharedEncoder","SharedEncoderControls"].mapM fun name => do
+    let witness : String × Array (String × String) ← IO.ofExcept (fromJson? (← read
+      (base/"shared-transport-build"/("tools_research_"++name++".source"))))
+    check (witness.1 == (← IO.FS.readFile (workspace/"tools/research"/(name++".lean"))))
+      "native transport source differs from its checked Lean implementation"
+    for (path,contents) in witness.2 do
+      let actual := (base/"shared-transport-source/tools/research"/path).normalize
+      check (actual.toString.startsWith (base/"shared-transport-source").toString &&
+        (← IO.FS.readFile actual) == contents) "transport literal source changed"
+    return Json.mkObj [("module",toJson name),("sourceSha256",toJson (← hash
+      (workspace/"tools/research"/(name++".lean"))))]
+  let destination := workspace/"docs/candidates/shared-model"
+  write (destination/"transport-controls.json") (Json.mkObj [("guard",guard),("buildGuard",build),
+    ("report",report),("shutdown",shutdown),("sources",toJson sources),
+    ("runtimeSha256",toJson (← hash (base/"shared-transport-build/StudyMain"))),
+    ("componentOnly",toJson true),("allProductCorePresent",toJson false),
+    ("adopted",toJson false),("answeringModelCalls",toJson (0 : Nat))])
+  IO.FS.writeFile (destination/"transport-controls-stderr.txt") (← IO.FS.readFile (base/"shared-transport-controls1.stderr"))
+
+def retireSuperseded : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/shared-model/retired-parent-executables.json"
+  check (!(← destination.pathExists)) "preserve previous executable retirement"
+  let current ← read (workspace/"docs/candidates/keyed-discovery/auditor-sources.json")
+  check (current.getObjValD "allProductCorePresent" == toJson true &&
+    current.getObjValD "commonSourcesUnchanged" == toJson true &&
+    current.getObjValD "productSha256" == toJson (← hash (base/"keyed-discovery-build/StudyMain")) &&
+    current.getObjValD "auditorSha256" == toJson (← hash (base/"keyed-discovery-auditor-build/StudyMain")))
+    "preserve current coherent product and auditor"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot inspect executable ownership"
+  let mut files := #[]
+  for family in ["elastic-encoder","keyed-inputs"] do
+    let source ← read (workspace/"docs/candidates"/family/"auditor-sources.json")
+    check (source.getObjValD "commonSourcesUnchanged" == toJson true &&
+      source.getObjValD "allProductCorePresent" == toJson true) "old executable provenance is incomplete"
+    for (relative,digest) in [(family++"-build/StudyMain",source.getObjValD "productSha256"),
+      (family++"-prefix/libexec/eggshell",source.getObjValD "productSha256"),
+      (family++"-auditor-build/StudyMain",source.getObjValD "auditorSha256")] do
+      let path := base/relative
+      if !(← path.pathExists) then continue
+      check (!process.stdout.contains path.toString && digest == toJson (← hash path))
+        "superseded executable is running or differs from its native provenance"
+      files := files.push (Json.mkObj [("path",toJson path.toString),("sha256",digest),
+        ("bytes",toJson (← path.metadata).byteSize.toNat)])
+  let record := Json.mkObj [("removed",toJson files),("archived",toJson false),("completed",toJson false),
+    ("baselineCurrentProductModelsOriginalsObjectsInterfacesAndSourceWitnessesRetained",toJson true)]
+  write destination record
+  for file in files do IO.FS.removeFile (.mk (← IO.ofExcept (file.getObjValAs? String "path")))
+  write destination (record.setObjVal! "completed" (toJson true))
 def main (args : List String) : IO Unit := match args with
   | ["setup",tag] => setup tag
   | ["run",root] => run (.mk root)
@@ -664,6 +792,13 @@ def main (args : List String) : IO Unit := match args with
   | ["run-shared-cancel",root] => cancelShared (.mk root)
   | ["collect-shared"] => collectShared
   | ["cleanup-shared"] => cleanupShared
+  | ["write-shared-kernel",path] => writeSharedKernel (.mk path)
+  | ["prepare-transport"] => prepareTransport
+  | ["refresh-transport"] => refreshTransport
+  | ["refresh-transport",tag] => refreshTransport tag
+  | ["setup-transport",action,tag] => setupTransport action tag
+  | ["collect-transport"] => collectTransport
+  | ["retire-superseded"] => retireSuperseded
   | _ => throw (IO.userError "setup TAG | run OUTPUT")
 end Eggshell.Research.ModelAllocationStudy
 def main := Eggshell.Research.ModelAllocationStudy.main
