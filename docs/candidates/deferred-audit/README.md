@@ -42,6 +42,8 @@ guardはexit0、関連RSS最大2,866,592KiB、両service正常終了・残存0�
 
 これは重複した復元処理の存在の確認であり、RSSの全原因を確定したものではない。過去のallocator/単純graph移譲試験も実hostの増大を再現できていないので繰り返さない。次はproject/scope/完全headに結び付いた検証済みDAGの不変imageと要求内overlayを分け、live Outcome/Exact検査と元read observationの再生を保って、復号・割当ての重複を減らせるかを先に部品で確かめる。
 
+その後、実装前に[元DAGの量を確認](../decoded-dag/README.md)したところ、全40 live Outcomeの原文は重複を除いて736,103bytesだった。上記は当時の次案であり、decoded cacheを今回の主対策として先に追加する計画は取り下げた。原文bytesはheapの上限ではなく、容量超過の原因を確定した結果でもない。実local取得・出版済みextentを保持したまま、要求内で拡大する構造と重複生成を調べる。
+
 ## 実行上の失敗も残す
 
 最初のbuildは空き容量の下限で停止した。使わなくなった旧実行体と、現在のnative入力から参照されないcompiler cacheを削除して再開した。原典・現project cache・モデル・native再リンク入力は保持した。別のbuildでは検査器の`unless`の構文ミスがあり、修正した。中間実行体はフック試験に使っていない。

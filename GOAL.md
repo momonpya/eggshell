@@ -35,10 +35,12 @@ runtime a2ed21ff…の全6実hookは必要原文32/32・親本文byte一致・�
 
 [実際にリンクされたコードの確認](docs/candidates/deferred-audit/decoded-reader-observation.json)では、共有PreparedReaders.Imageはページ/索引メタデータを持つ一方、federatedDiscoveryは要求ごとにNodeReaders.newを呼び、Value/owner/originの空の私有NodeMemoから復元していた。これは重複する復元処理の存在の確認であり、RSSの全原因の確定ではない。既存のprepared-owners/source-ownersは元DAGで同一性を検査する索引で、decoded Valueを共有する機構ではない。
 
+続く[元DAGの構造確認](docs/candidates/decoded-dag/README.md)では、全40 live Outcomeの子孫は重複を除いて202ノード・Atom原文736,103bytesだった。所有者ごとの原文bytesを足しても738,911bytes。Value木を復元せずAtom本体も読まないメタデータの測定であり、heapの上限ではないが、大きな元DAGを毎回復号することを今回の容量超過の主原因とする根拠は得られなかった。decoded cacheの追加を先に行う計画は取り下げる。新しい負荷再試行・モデル投入はしていない。
+
 次の順序：
 
-1. プロジェクト・権限scope・完全なsnapshot/headに結び付いた、検証済みdecoded DAGの不変imageを共有する。要求ごとの可変memo・counter・traceはoverlayへ分離する。出版差分で準備し、変化しない部分を再復元しない。Outcomeのlive membership/Exact検査と元のread observationの再生を保つ。新しい回答cacheや推薦による認定は導入しない。
-2. 同じ元DBで復元Value・依存記録・再読・異なるDB/版/scope・壊れたframeの拒否を検査し、重複した復号/割当てが減ることを部品で測る。省略した型情報や完全domainを元に戻さず、全6実hookを題材1から再評価する。
+1. 実リンク済みの取得・候補・来歴・選択・描画の経路で、大きな要求別の展開と重複生成を具体的に特定する。古いJSON witnessを現local経路の割当てと取り違えない。型付き原文取得と出版済みextentは既に使われており、旧wire変換やlexerの除去を再実装しない。元DAGの量だけで大きな新cacheを追加しない。
+2. 特定した重複だけを一般的に除き、不変の準備はproject/scope/完全snapshotに結び付ける。要求ごとの可変状態・依存記録・鮮度/Exact検査は保つ。同じ元DBで原文・来歴・順序・不正入力拒否と実割当ての減少を部品で確認してから、全6実hookを題材1から再評価する。
 3. 同じ予算/順位/domain/期限/モデル/資源上限で4/16を通してから80へ進む。失敗した同じ負荷、重み調整、受動heap census、worker/compute枠だけの追加は繰り返さない。過去のallocator/単純graph移譲試験は増大を再現できておらず、類似の試験を反復しない。
 4. 安定したruntime SHAで空DB/new chatからseedを作り、題材1/2/3と2周目、事前固定した現行/候補の同数複数反復を実施する。キャッシュ生成/保存完了・必要原文・総token・品質を揃える。以下A〜Fの80人持続利用・増大project・NASの契約まで達成して初めて完了とする。
 
