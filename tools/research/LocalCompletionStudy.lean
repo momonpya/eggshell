@@ -348,7 +348,7 @@ def stage (receipt : Json) (name : String) : IO Json := do
   return (selected.getObjValD "record").getObjValD "data"
 def collectCells (family : String := "local-completion") : IO Unit := do
   drained
-  check (["local-completion","selection-membership"].contains family) "known completed delivery family required"
+  check (["local-completion","selection-membership","delivery-key-sets"].contains family) "known completed delivery family required"
   let folder := workspace/"docs/candidates"/family
   let guard ← read (base/(family++"-cells1.guard.json"))
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
@@ -359,7 +359,8 @@ def collectCells (family : String := "local-completion") : IO Unit := do
   for topic in [1:4] do
     for repetition in [:2] do
       let cell := root/s!"topic-{topic}-chat-{repetition}"
-      let parentBody := base/"encoder-events-cells-result"/s!"topic-{topic}-chat-{repetition}"/"body.txt"
+      let parent := if family == "delivery-key-sets" then "selection-membership-cells-result" else "encoder-events-cells-result"
+      let parentBody := base/parent/s!"topic-{topic}-chat-{repetition}"/"body.txt"
       check ((← IO.FS.readBinFile (cell/"body.txt")) == (← IO.FS.readBinFile parentBody)) "actual delivery body changed"
       let receipt ← read (cell/"receipt.json")
       let audit ← read (cell/"audit.json")

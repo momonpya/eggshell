@@ -1,0 +1,10 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -15,0 +16 @@
++public import tools.research.DeliveryKeys
+@@ -7499 +7500 @@
+-      let fittedKeys := fittedSlices.flatMap (·.keys) |>.eraseDups
++      let fittedKeys := Research.DeliveryKeys.distinct (fittedSlices.flatMap (·.keys))
+@@ -7510 +7511 @@
+-        (fittedKeys ++ newlyCovered.map deliveryKey).eraseDups
++        Research.DeliveryKeys.distinct (fittedKeys ++ newlyCovered.map deliveryKey)

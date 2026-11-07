@@ -39,6 +39,8 @@
 
 同候補の容量は4/4・7984ms、16/16・20062msが本文/意味/シナプス/ACKを完了したが、続く80は0/80・29359msの未完了通知だった。資源停止なし・RSS最大3257552KiB・両service正常終了・残存0。保存済み80記録の再集計では受付queue中央値2ms、focus完了53件でも終了まで中央値15690msが残り、delivery-domain到達32件もその後中央値7467msだった。encodeのmodel handleは全0ms、compute admission中央値8584ms、kernel往復280ms。選択の改善だけでは全体を期限内にできていない。次は原文取得・復元・描画の固定入力replayとcache load/hit/eviction・符号化の内訳を先に作る。変えていない80負荷や重み調整を繰り返さない。終了データと検査器は削除し、元project全4ファイルのSHA不変を確認した。goalはactive、採用/98%/80人8時間/成長/NAS/総token/品質は未達・未検証のまま。
 
+[delivery-key-sets](docs/candidates/delivery-key-sets/README.md)は検索後の配送キーに残った2か所の二次処理を除いた隔離候補。通常runtimeは`7e07c787…`、Handoff/DeliveryKeysの2変更と検査用1追加だけをnative sourceで照合した。キーと最初の出現順を含む全リストの等式をLeanで証明し、実ACK6554キーのAB/BA/ABで107/132/130→0/0/1ms、独立キー倍増で544/518/507→2/2/1ms、全12組と351小例で一致した。実LLVM題材1/2/3各2新チャットも全32/32・親本文byte一致・意味/シナプス/packet/ACK完了・sharedImage=true・前景warm0・原文不変で、8354/7876、9272/9233、9270/9290msだった。関連RSS最大3001824KiB、資源停止なし・全service終了成功・残存0。回答モデルの両周や反復した全hook速度効果、総token改善、80人の98%達成の証拠ではない。推論全体のmutexは親から既に除かれ、共有model1/native計算枠2の容量待ちは残る。原因を変えない80負荷は再実行していない。終了session/重複receipt/検査器と不要な旧runtime/prefixを削除し、原典/current project cache/model/採用比較基準/現親と候補/native witnessは保持、archiveなし。次は残る数値の待機と検索後の再構築を分け、質問非依存の準備を共有する。未採用・回答モデル0・有料比較0/18・goal activeを維持する。
+
 ## 直近の経緯
 
 先行する[数値protocol単独の同一入力比較](docs/candidates/encoder-events/protocol/README.md)では、16並行は両版16/16だが、80並行は親shared-model 80/80・20,845msに対しencoder-events 3/80・28,908msへ回帰した。資源停止なし。pipe読取り中央値は両版2ms、読取り後の完了待合せが0→25msだった。これを受けたnative-waitの結果と次の作業は上記を現在地とする。以下の単独6hook成功を80人容量の成功にしない。

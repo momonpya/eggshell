@@ -1,0 +1,7 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -14,0 +15 @@
++import tools.research.DeliveryKeySetsChecks
+@@ -101,0 +103,2 @@
++  | ["delivery-key-sets-check",fixture,sha,output] =>
++    Eggshell.Research.DeliveryKeySetsChecks.run (.mk fixture) sha (.mk output); return 0

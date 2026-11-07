@@ -1,0 +1,10 @@
+--- a/tools/research/DeliveryKeys.lean
++++ b/tools/research/DeliveryKeys.lean
+@@ -102,0 +103,7 @@
++/-- Preserve first occurrence and exact equality; hashes only select buckets. -/
++def distinct (keys : List String) : List String := keys.eraseDups
++@[noinline] def distinctCompiled (keys : List String) : List String := hashDistinct keys
++@[csimp] theorem distinct_compiled : distinct = distinctCompiled := by
++  funext keys
++  exact (HashDistinct.reference keys).symm
++
