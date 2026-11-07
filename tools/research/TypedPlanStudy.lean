@@ -37,12 +37,28 @@ partial def treeFiles (root : System.FilePath) : IO (Array System.FilePath) := d
     if kind == .dir then paths := paths ++ (← treeFiles entry.path)
     else paths := paths.push entry.path
   return paths
-def sweepRetiredArtifacts : IO Unit := do
+def sweepRetiredArtifacts (current : Bool := false) (essential : Bool := false) (witnesses : Bool := false)
+    (frontends : Bool := false) : IO Unit := do
   drained
-  let output := folder/"retired-unreferenced-native-artifacts.json"
+  let destination := if current then workspace/"docs/candidates/single-canonical" else folder
+  IO.FS.createDirAll destination
+  let output := destination/(if frontends then "retired-old-frontend-caches.json" else
+    if witnesses then "retired-unreferenced-native-witnesses.json" else
+    if essential then "retired-duplicate-native-artifacts.json" else "retired-unreferenced-native-artifacts.json")
   check (!(← output.pathExists)) "preserve previous native retirement"
-  let retained := ["controller","delivery-ledger-build","delivery-key-sets-build","typed-fetch-build","typed-fetch-auditor-build"]
+  let retained := if frontends then ["controller","typed-plan-build","canonical-order-build","canonical-order-auditor-build",
+      "single-canonical-build","single-canonical-auditor-build"]
+    else if witnesses then ["controller","typed-plan-build","canonical-order-build","canonical-order-auditor-build","single-canonical-build"]
+    else if essential then ["controller","typed-plan-build","canonical-order-build","canonical-order-auditor-build"]
+    else if current then ["controller","delivery-ledger-build","delivery-key-sets-build","typed-fetch-build",
+      "typed-plan-build","resident-source-build","canonical-order-build","canonical-order-auditor-build"]
+    else ["controller","delivery-ledger-build","delivery-key-sets-build","typed-fetch-build","typed-fetch-auditor-build"]
   let mut keptFiles : Std.HashSet String := {}
+  let mut absentNativeCompanions : Array String := #[]
+  if witnesses then
+    for family in ["canonical-order","single-canonical"] do
+      check ((← read (workspace/"docs/candidates"/family/"native-closure.json")).getObjValD "consistent" == toJson true)
+        "validate the current Lean native closure before pruning old witnesses"
   for name in retained do
     let root := base/name
     for row in (← IO.FS.readFile (root/"runtime.rsp")).splitOn "\n" do
@@ -51,6 +67,33 @@ def sweepRetiredArtifacts : IO Unit := do
       if !object.endsWith ".o" then continue
       check (← (System.FilePath.mk object).pathExists) ("a retained native object is already missing: "++object)
       keptFiles := keptFiles.insert (← IO.FS.realPath (.mk object)).toString
+      let relative := (object.drop (base.toString.length+1)).toString
+      let inSweptBuild := object.startsWith (base.toString++"/") &&
+        (relative.splitOn "/" |>.headD "").endsWith "-build"
+      if witnesses && inSweptBuild then
+        for suffix in ["source","dependencies"] do
+          let path := (System.FilePath.mk object).withExtension suffix
+          if ← path.pathExists then keptFiles := keptFiles.insert (← IO.FS.realPath path).toString
+          else absentNativeCompanions := absentNativeCompanions.push path.toString
+    if !frontends || ["single-canonical-build","single-canonical-auditor-build"].contains name then
+      for path in ← treeFiles (root/"lib") do
+        keptFiles := keptFiles.insert (← IO.FS.realPath path).toString
+  -- The old adoption baseline was already partially retired before this sweep.
+  -- Its binary and all surviving inputs remain protected; missing old objects
+  -- are reported rather than silently treating them as current valid inputs.
+  let mut alreadyMissingBaseline : Array String := #[]
+  if current then
+    let root := base/"../shared-snapshot/fixed-frame-price-runtime-build"
+    for row in (← IO.FS.readFile (root/"runtime.rsp")).splitOn "\n" do
+      if row.trimAscii.isEmpty then continue
+      let path := System.FilePath.mk (← IO.ofExcept (Json.parse row >>= Json.getStr?))
+      if !path.toString.endsWith ".o" then continue
+      if ← path.pathExists then keptFiles := keptFiles.insert (← IO.FS.realPath path).toString
+      else alreadyMissingBaseline := alreadyMissingBaseline.push path.toString
+      if witnesses then
+        for suffix in ["source","dependencies"] do
+          let witness := path.withExtension suffix
+          if ← witness.pathExists then keptFiles := keptFiles.insert (← IO.FS.realPath witness).toString
     for path in ← treeFiles (root/"lib") do
       keptFiles := keptFiles.insert (← IO.FS.realPath path).toString
   let mut removed := #[]
@@ -59,16 +102,20 @@ def sweepRetiredArtifacts : IO Unit := do
     unless entry.fileName.endsWith "-build" do continue
     for path in ← treeFiles entry.path do
       let name := path.fileName.getD ""
-      unless [".o",".olean",".olean.private",".olean.server",".ir",".ir.sig"].any (fun suffix => name.endsWith suffix) do continue
+      let suffixes := [".o",".olean",".olean.private",".olean.server",".ir",".ir.sig"]++
+        (if witnesses then [".source",".dependencies"] else [])
+      unless suffixes.any (fun suffix => name.endsWith suffix) do continue
       if (← path.symlinkMetadata).type != .file then continue
       if keptFiles.contains (← IO.FS.realPath path).toString then continue
       let size := (← path.metadata).byteSize.toNat
       removed := removed.push (Json.mkObj [("path",toJson path.toString),("bytes",toJson size)])
       bytes := bytes+size
   let report := Json.mkObj [("retainedBuilds",toJson retained),("protectedActualFiles",toJson keptFiles.size),
+    ("alreadyMissingOldBaselineObjects",toJson alreadyMissingBaseline),
+    ("absentSelectedNativeCompanions",toJson absentNativeCompanions),
     ("removed",toJson removed),("bytes",toJson bytes),("completed",toJson false),
     ("retainedResponsesAndActualLibraryTargetsChecked",toJson true),
-    ("sourceAndDependencyWitnessesAndDbCacheModelsRetained",toJson true),("archived",toJson false)]
+    ("currentSelectedSourceAndDependencyWitnessesAndDbCacheModelsRetained",toJson true),("archived",toJson false)]
   write output report
   for row in removed do IO.FS.removeFile (.mk (← IO.ofExcept (row.getObjValAs? String "path")))
   for path in keptFiles do check (← (System.FilePath.mk path).pathExists) "retirement removed a protected native input"
@@ -267,6 +314,10 @@ def main (args : List String) : IO Unit := do
   match args with
   | ["retire"] => retire
   | ["sweep-retired-artifacts"] => sweepRetiredArtifacts
+  | ["sweep-current-artifacts"] => sweepRetiredArtifacts true
+  | ["sweep-current-duplicates"] => sweepRetiredArtifacts true true
+  | ["sweep-current-witnesses"] => sweepRetiredArtifacts true true true
+  | ["sweep-old-frontend-caches"] => sweepRetiredArtifacts true true true true
   | ["prepare"] => prepare
   | ["extract-types"] => extractTypes
   | ["lower-bundle-data"] =>

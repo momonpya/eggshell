@@ -1,0 +1,11 @@
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -318 +318 @@
+-    (deadline : Nat) : IO (Array Synapses.CanonicalSource.StoredRow) := do
++    (deadline : Nat) : IO Synapses.CanonicalSource.Delivery.Merged := do
+@@ -356 +356 @@
+-  let merged ← IO.ofExcept (Synapses.CanonicalSource.Delivery.merge rows)
++  let merged ← IO.ofExcept (Synapses.CanonicalSource.Delivery.Merged.prepare rows)
+@@ -360 +360 @@
+-      ("rows",toJson merged.size)]
++      ("rows",toJson merged.rows.size)]

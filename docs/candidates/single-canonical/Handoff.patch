@@ -1,0 +1,45 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -6159,0 +6160,23 @@
++
++/-- Service rows have already passed the pinned-source checks and one complete
++normalization. Additional shared generic units still require their original
++union/conflict check; a packet containing only fetched rows reuses that result. -/
++def materializeFetched (units : Array UnitPlan) (indices : List Nat)
++    (fetched : Option Synapses.CanonicalSource.Delivery.Merged) : Option (List TransportSlice) := do
++  let some fetched := fetched | materialize units indices #[]
++  if indices.any (fun index => (units[index]?.map fun unit => unit.slice.shared.isSome).getD false) then
++    materialize units indices fetched.rows
++  else
++    let legacy ← materialize units indices #[]
++    if fetched.rows.isEmpty then return legacy
++    let shared ← Synapses.CanonicalSource.Delivery.Part.check? fetched.rows
++    return legacy ++ [{owner := none,keys := shared.keys,text := shared.render,shared := some shared,members := [],visibleKeys := []}]
++
++theorem materializeFetched_with_additional (units : Array UnitPlan) (indices : List Nat)
++    (fetched : Synapses.CanonicalSource.Delivery.Merged)
++    (additional : indices.any (fun index => (units[index]?.map fun unit => unit.slice.shared.isSome).getD false) = true) :
++    materializeFetched units indices (some fetched) = materialize units indices fetched.rows := by
++  simp [materializeFetched,additional]
++
++theorem materializeFetched_empty (units : Array UnitPlan) (indices : List Nat) :
++    materializeFetched units indices none = materialize units indices #[] := rfl
+@@ -6923 +6946 @@
+-    (generic : Array SharedRangeAdapter.UnitPlan) (rows : Array Synapses.CanonicalSource.StoredRow) :
++    (generic : Array SharedRangeAdapter.UnitPlan) (rows : Option Synapses.CanonicalSource.Delivery.Merged) :
+@@ -6925 +6948 @@
+-  let slices ← SharedRangeAdapter.materialize generic choice.generic.toList rows
++  let slices ← SharedRangeAdapter.materializeFetched generic choice.generic.toList rows
+@@ -6933 +6956 @@
+-    (generic : Array SharedRangeAdapter.UnitPlan) (rows : Array Synapses.CanonicalSource.StoredRow) :
++    (generic : Array SharedRangeAdapter.UnitPlan) (rows : Option Synapses.CanonicalSource.Delivery.Merged) :
+@@ -6935 +6958 @@
+-  let some slices := SharedRangeAdapter.materialize generic choice.generic.toList rows |
++  let some slices := SharedRangeAdapter.materializeFetched generic choice.generic.toList rows |
+@@ -6988 +7011 @@
+-    let rows ← if choice.sourceKeys.isEmpty then pure #[] else batch.fetch requests deadline
++    let rows ← if choice.sourceKeys.isEmpty then pure none else some <$> batch.fetch requests deadline
+@@ -6991 +7014,2 @@
+-    unless rows.map (·.key) == choice.sourceKeys do throw (IO.userError "selected original payload domain changed")
++    unless (rows.map fun rows => rows.rows.map (·.key)).getD #[] == choice.sourceKeys do
++      throw (IO.userError "selected original payload domain changed")

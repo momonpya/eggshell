@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-08更新。状態はactive。直近候補は実LLVM全6hookの必要原文32/32・親本文一致を保ち、4/16並行も全件完了したが、80並行でメモリ保護停止した。80人継続利用、総token・品質の採用比較は未達・未検証である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-08更新。状態はactive。直近のsingle-canonical候補は実LLVM全6hookで必要原文32/32・親本文一致を保ち、原文の再正規化を省いた。推論全体のmutexへの回帰がないことも現実行体で照合した。80人継続利用、総token・品質の採用比較は未達・未検証である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -29,9 +29,13 @@
 
 ## 現在地と次の順序
 
+直近の[single-canonical](docs/candidates/single-canonical/README.md)はcanonical-orderを比較元にした隔離候補。取得のscope/snapshot/lease/原文検査は保ち、元のnormalizerが生成した配列をprivate constructorの値として描画まで渡す。他のshared原文を追加する場合は従来の結合・矛盾拒否を保つ。取得結果の射影と生成元、追加原文がある場合、取得原文がない場合の一般定理をLeanで確認したが、正規化の一般的な冪等性と全materializerの関数等式は未証明。実5,702行・10,901出典と正常/不正75入力・483結合ケースで拒否と全原文/出典/順序/本文一致。AB/BA/ABの描画は約48〜50→3ms、小オブジェクト割当て2,205,813→67,213個だった。全6実hookは32/32・親本文byte一致・意味/シナプス/packet/ACK完了、7,265〜8,692ms、関連RSS最大2,881,552KiB・残存0。モデル1基・compute2枠を含むencoder関連6 moduleのnative source/literalは並行推論を確認済みの実装と一致する。16要求2波の1,048/1,037ms・全48vector/被覆一致は以前の実測で、今回は再実行していない。
+
 直近の[rendering-lifetime](docs/candidates/rendering-lifetime/README.md)は未採用。描画待ちのDiscovery捕捉と旧配分の環境を切り離し、監査snapshot/IOの一致は一般証明したが、描画全体の関数等式は検査資源内で未証明。nativeの全6実hookは必要原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、7,349〜8,818ms、関連RSS最大2,859,696KiB。4並行は4/4・6,115msだったが、16並行は3,678,048KiBで保護停止し、最終client結果16件は未保存。全16のfocus/domain到達・7件の配送記録はclient成功件数にしない。80は開始していない。コンパイラIR上の捕捉を減らしても容量の合格にはならなかった。また、元はadvisory-onlyで省略する監査reportを先に作る処理を追加していたため、この形は引き継がない。終了owner・DBの重複receipt・試作実行体/複製library/source/buildは削除し、原典/current project cache/model、canonical-orderとその必要native入力、正確なpatchと検査記録を保持、archiveなし。
 
-次はcanonical-orderを比較元に戻し、fetchとmaterializeで二重に行う原文の検証・正規化を、snapshot/scopeに結び付く検証済みの参照で一度にする。固定5,702行で原文・origin・順序・不正入力の拒否を検査してから、全6実hookを題材1から再評価し、4/16を通ってから80へ進む。不要な監査準備、原因を変えない16/80負荷、受動heap調査、計算枠だけの追加は反復しない。予算・候補・認定domain・期限・資源上限は維持する。回答モデル0・有料比較0/18・本体未採用、80人8時間/成長する複数project/NAS/総token/品質は未達・未検証、goalはactive。
+single-canonicalの容量は4/4・5,970msだったが、16並行で関連RSS3,694,592KiBとなり保護停止した。publisher1,722,704KiB/model1,130,256KiB/frontend327,056KiB。全16のkeyed/domain・6件のsynaptic配送の記録はあったが、最終client結果16件は未保存であり成功件数や0/16という率にはしない。80は未開始。再正規化の削減だけでは並行容量を解消できなかった。停止ownerの消滅を確認し、生成session・重複receipt・stale endpointと不要な容量driverのsource/build/結果複製を削除、元project/seedのSHAは不変、archiveなし。
+
+次は、rendering-lifetimeで行った監査の先行計算を戻さず、描画待ちをまたいで保持されるDiscovery/抽出の参照を、その後に必要な値だけへ狭める。completed0/nonblockingで省略する監査は省略したままにする。不要な監査準備、原因を変えない16/80負荷、受動heap調査、計算枠だけの追加は反復しない。予算・候補・認定domain・期限・資源上限は維持する。回答モデル0・有料比較0/18・本体未採用、80人8時間/成長する複数project/NAS/総token/品質は未達・未検証、goalはactive。
 
 比較元の[canonical-order](docs/candidates/canonical-order/README.md)は、原文sortの各比較で同じOrigin/FileのJSONを作る処理を除いた。4つの一般定理と実宣言への接続を確認し、実5,702行のAB/BA/ABは全原文・origin・順序一致、割当て6,835,715→2,138,601、約130ms→45〜47msだった。正常/不正76ケースも一致。全6実hookは原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、7,115〜8,858ms、関連RSS最大2,865,056KiB。全製品core一致のclientを用いた4/16並行は4/4・6,632ms、16/16・16,056ms、関連RSS最大2,816,880KiBで残存0。続く80は3,675,664KiBで保護停止し、publisher2,143,728KiB/model814,832KiBだった。保存された21最終結果は未完了通知、59件は最終結果なしであり0/80という率にはしない。全80のkeyed到達・focus48/domain20の記録は成功件数ではない。同じ失敗80は繰り返さず、取得完了前から保持するquery表現と原文の再正規化を直す。RSSを生存graph量とは断定せず、文字配列も単体の実行時間だけで保持量を判断しない。モデル/compute/順位/認定domain/予算/期限/資源上限は不変。回答モデル0・有料比較0/18・本体未採用、80人8時間/成長/NAS/総token/品質は未達・未検証。
 

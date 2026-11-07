@@ -341,23 +341,27 @@ def canonicalSetup (tag : String) : IO Unit := do
   guard tag #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
     (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"canonical-order-settings.json").toString]
 
-def canonicalComponent (tag : String) : IO Unit := do
+def canonicalComponent (tag : String) (family : String := "canonical-order") : IO Unit := do
   drained
+  check (["canonical-order","single-canonical"].contains family) "unknown source component"
   let fixture := base/"real-source-search-read-trial-result/data/reply-witnesses/affacad8c38e209788a0eafb78d716bda6237f42a0b995594a4af87c9089a6f2.json"
-  guard tag #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/"canonical-order-build/StudyMain").toString,
-    "canonical-order-check",fixture.toString,(← hash fixture),(base/(tag++"-result.json")).toString]
+  guard tag #["/usr/bin/env","LEAN_NUM_THREADS=1",(base/(family++"-build/StudyMain")).toString,
+    family++"-check",fixture.toString,(← hash fixture),(base/(tag++"-result.json")).toString]
 
 def canonicalAudit (family : String := "canonical-order") : IO Unit := do
   drained
-  check (["canonical-order","rendering-lifetime"].contains family) "unknown native refinement"
+  check (["canonical-order","rendering-lifetime","single-canonical"].contains family) "unknown native refinement"
   let rendering := family == "rendering-lifetime"
-  let parent := if rendering then "canonical-order" else "resident-source"
+  let single := family == "single-canonical"
+  let parent := if rendering || single then "canonical-order" else "resident-source"
   let target := base/(family++"-build")
   let destination := workspace/"docs/candidates"/family
   let auditTool := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
   discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditTool,
     "inspect",target.toString,(destination/"native-closure.json").toString]
-  let changes := if rendering then #["Eggshell.Handoff","Eggshell.SelectionAudit","Eggshell.ContractAudit",
+  let changes := if single then #["Eggshell.CanonicalSourceDelivery","Eggshell.PublicationClient","Eggshell.Handoff",
+      "tools.research.RuntimeReadControls","+tools.research.SingleCanonicalChecks"]
+    else if rendering then #["Eggshell.Handoff","Eggshell.SelectionAudit","Eggshell.ContractAudit",
       "+tools.research.RenderingLifetimeChecks"]
     else #["Eggshell.CanonicalSourceDelivery","+tools.research.CanonicalOrderChecks"]
   discard <| command (compiler/"bin/lean").toString (#["-j1","-M768","--run",auditTool,
@@ -369,7 +373,13 @@ def canonicalAudit (family : String := "canonical-order") : IO Unit := do
   let nativeEntry ← IO.ofExcept ((← read (target/entryName)).getArr?)
   let parentEntry ← IO.ofExcept ((← read (base/(parent++"-build")/entryName)).getArr?)
   let before ← IO.ofExcept parentEntry[0]!.getStr?
-  let expected := if rendering then before.replace "import tools.research.CanonicalOrderChecks"
+  let expected := if single then before.replace "import tools.research.CanonicalOrderChecks"
+      "import tools.research.CanonicalOrderChecks\nimport tools.research.SingleCanonicalChecks" |>.replace
+      "  | [\"canonical-order-check\",fixture,sha,output] =>"
+      ("  | [\"single-canonical-check\",fixture,sha,output] =>\n"++
+       "    Eggshell.Research.SingleCanonicalChecks.run (.mk fixture) sha (.mk output); return 0\n"++
+       "  | [\"canonical-order-check\",fixture,sha,output] =>")
+    else if rendering then before.replace "import tools.research.CanonicalOrderChecks"
       "import tools.research.CanonicalOrderChecks\nimport tools.research.RenderingLifetimeChecks"
     else before.replace "import tools.research.ResidentSourceChecks"
       "import tools.research.ResidentSourceChecks\nimport tools.research.CanonicalOrderChecks" |>.replace
@@ -378,12 +388,14 @@ def canonicalAudit (family : String := "canonical-order") : IO Unit := do
      "    Eggshell.Research.CanonicalOrderChecks.run (.mk fixture) sha (.mk output); return 0\n"++
      "  | [\"resident-source-check\",fixture,sha,output] =>")
   check (nativeEntry[0]! == toJson expected) "entry changed beyond the comparison dispatch"
-  let checkName := if rendering then "RenderingLifetimeChecks" else "CanonicalOrderChecks"
+  let checkName := if single then "SingleCanonicalChecks" else if rendering then "RenderingLifetimeChecks" else "CanonicalOrderChecks"
   let checks ← IO.ofExcept ((← read (target/("tools_research_"++checkName++".source"))).getArr?)
   check (checks[0]! == toJson (← IO.FS.readFile (workspace/("tools/research/"++checkName++".lean"))))
     "native checks differ from recorded independent parent"
-  for name in (if rendering then ["Handoff","SelectionAudit","ContractAudit"] else ["CanonicalSourceDelivery"]) do
-    let relative := "Eggshell/"++name++".lean"
+  for moduleName in changes.toList.filter (!·.startsWith "+") do
+    let relative := moduleName.replace "." "/"++".lean"
+    let name := if moduleName.startsWith "Eggshell." then (moduleName.drop "Eggshell.".length).toString
+      else moduleName.replace "." "_"
     let difference ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/"++relative,"--label","b/"++relative,
       (base/(parent++"-source")/relative).toString,(base/(family++"-source")/relative).toString]}
     check (difference.exitCode == 1) "expected native refinement is absent"
@@ -392,15 +404,15 @@ def canonicalAudit (family : String := "canonical-order") : IO Unit := do
     (if rendering then "onlyCheckedImportAdded" else "onlyComparisonDispatchAdded",toJson true),
     ("independentParentAndNativeChecksExact",toJson true)])
 
-def canonicalCollectComponent (tag : String) : IO Unit := do
+def canonicalCollectComponent (tag : String) (family : String := "canonical-order") : IO Unit := do
   drained
-  let destination := workspace/"docs/candidates/canonical-order"
+  let destination := workspace/"docs/candidates"/family
   let g ← read (base/(tag++".guard.json"))
   check (g.getObjValD "state" == toJson "finished" && g.getObjValD "exitCode" == toJson (0 : Nat) &&
     g.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "component did not finish and release its owners"
   let report ← read (base/(tag++"-result.json"))
   write (destination/"component.json") (Json.mkObj [("report",report),("guard",g),
-    ("runtimeSha256",toJson (← hash (base/"canonical-order-build/StudyMain"))),
+    ("runtimeSha256",toJson (← hash (base/(family++"-build/StudyMain")))),
     ("adopted",toJson false),("answeringModelCalls",toJson (0 : Nat))])
 
 def canonicalPrepareAuditor (family : String := "canonical-order") : IO Unit := do
@@ -517,6 +529,10 @@ def collectRecord (family tag : String) : IO Unit := do
   let mut logs := #[]
   for extension in ["stdout","stderr"] do
     let path := base/(tag++"."++extension)
+    if !(← path.pathExists) then
+      logs := logs.push (Json.mkObj [("name",toJson extension),("present",toJson false),
+        ("reason",toJson "This invocation inherited its output; no separate log was captured.")])
+      continue
     let bytes ← IO.FS.readFile path
     let lines := bytes.splitOn "\n"
     logs := logs.push (Json.mkObj [("name",toJson extension),("bytes",toJson bytes.utf8ByteSize),
@@ -539,7 +555,7 @@ def inspectRendering (family tag : String) : IO Unit := do
 
 def sealInstalled (family : String) : IO Unit := do
   drained
-  check (["canonical-order","rendering-lifetime"].contains family) "unknown immutable product"
+  check (["canonical-order","rendering-lifetime","single-canonical"].contains family) "unknown immutable product"
   let target := base/(family++"-build/StudyMain")
   let path := base/(family++"-prefix/libexec/eggshell")
   let digest ← hash target
@@ -584,6 +600,256 @@ def packRecords (family : String) : IO Unit := do
       IO.FS.removeFile path
       IO.FS.removeFile (path.withExtension "json")
 
+def retireReadDrivers : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  IO.FS.createDirAll destination
+  let mut rows := #[]
+  for (name,file) in [("resident-source-auditor-build","auditor-sources.json"),
+      ("resident-source-capacity-build","capacity-sources.json")] do
+    let path := base/name/"StudyMain"
+    check (← path.pathExists) "ended read driver already retired"
+    let expected := (← read (workspace/"docs/candidates/resident-source"/file)).getObjValD "auditorSha256"
+    check (expected == toJson (← hash path)) "ended driver differs from its audited binary"
+    rows := rows.push (Json.mkObj [("path",toJson path.toString),("sha256",expected)])
+  write (destination/"retired-read-drivers.json") (Json.mkObj [("completed",toJson false),
+    ("executables",toJson rows),("nativeInputsOriginalDbProjectCacheAndModelsRetained",toJson true),("archiveCreated",toJson false)])
+  for row in rows do IO.FS.removeFile (.mk (← IO.ofExcept (row.getObjValAs? String "path")))
+  write (destination/"retired-read-drivers.json") (Json.mkObj [("completed",toJson true),
+    ("executables",toJson rows),("nativeInputsOriginalDbProjectCacheAndModelsRetained",toJson true),("archiveCreated",toJson false)])
+
+def retireOldReadProducts (families : List String := ["resident-source","delivery-key-sets"])
+    (recordName : String := "retired-old-products") : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  let mut rows := #[]
+  check (families.all (["resident-source","delivery-key-sets","delivery-ledger"].contains ·)) "current products cannot be retired here"
+  for family in families do
+    let evidence ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
+    check (evidence.getObjValD "actualDeliveryAllSixPassed" == toJson true) "retain completed source audits"
+    let cells ← IO.ofExcept (evidence.getObjValAs? (Array Json) "cells")
+    let expected := ((cells[0]!.getObjValD "outcome").getObjValD "runtime").getObjValD "sha256"
+    for path in [base/(family++"-build/StudyMain"),base/(family++"-prefix/libexec/eggshell")] do
+      check (expected == toJson (← hash path)) "obsolete product differs from its audited binary"
+      rows := rows.push (Json.mkObj [("path",toJson path.toString),("sha256",expected)])
+  let record := Json.mkObj [("executables",toJson rows),
+    ("currentCanonicalAndValidatedModelProductsOriginalDbCacheAndNativeInputsRetained",toJson true),("archiveCreated",toJson false)]
+  write (destination/(recordName++".json")) (record.setObjVal! "completed" (toJson false))
+  for row in rows do IO.FS.removeFile (.mk (← IO.ofExcept (row.getObjValAs? String "path")))
+  write (destination/(recordName++".json")) (record.setObjVal! "completed" (toJson true))
+
+def singlePreflight (tag : String) : IO Unit := do
+  drained
+  let root := base/"single-canonical-source"
+  let take := fun (text first last : String) => do
+    let parts := text.splitOn first
+    check (parts.length == 2) "preflight start is ambiguous"
+    let rest := parts[1]!.splitOn last
+    check (rest.length == 2) "preflight end is ambiguous"
+    pure (first++rest[0]!)
+  let merged ← take (← IO.FS.readFile (root/"Eggshell/CanonicalSourceDelivery.lean"))
+    "structure Merged where" "\nstructure Part where"
+  let materialize ← take (← IO.FS.readFile (root/"Eggshell/Handoff.lean"))
+    "def materializeFetched (" "\n/-- The serialized graph frame and all source-status rows are reserved once."
+  let path := base/"SingleCanonicalPreflight.lean"
+  IO.FS.writeFile path ("module\npublic import Eggshell.Handoff\nimport all Eggshell.Handoff\n"++
+    "@[expose] public section\nnamespace Eggshell.Synapses.CanonicalSource.Delivery\n"++merged++
+    "\nend Eggshell.Synapses.CanonicalSource.Delivery\nnamespace Eggshell.Plugin.SharedRangeAdapter\n"++materialize++
+    "\nend Eggshell.Plugin.SharedRangeAdapter\n"++
+    "#print axioms Eggshell.Synapses.CanonicalSource.Delivery.Merged.prepare_rows_exact\n"++
+    "#print axioms Eggshell.Plugin.SharedRangeAdapter.materializeFetched_with_additional\n"++
+    "#print axioms Eggshell.Plugin.SharedRangeAdapter.materializeFetched_empty\n")
+  guard tag #["/usr/bin/env","LEAN_PATH="++(base/"canonical-order-build/lib").toString,
+    (compiler/"bin/lean").toString,"-j1","-M1536",path.toString]
+
+def singleSetup (tag : String) : IO Unit := do
+  drained
+  let root := base/"single-canonical-source"
+  IO.FS.writeFile (root/"tools/research/SingleCanonicalChecks.lean")
+    (← IO.FS.readFile (workspace/"tools/research/SingleCanonicalChecks.lean"))
+  ensureAt root "tools.research.SingleCanonicalChecks" (← IO.mkRef {})
+  let entry := root/"tools/research/ReplayReadinessChecks.lean"
+  let text ← IO.FS.readFile entry
+  unless text.contains "import tools.research.SingleCanonicalChecks" do
+    IO.FS.writeFile entry (text.replace "import tools.research.CanonicalOrderChecks"
+      "import tools.research.CanonicalOrderChecks\nimport tools.research.SingleCanonicalChecks" |>.replace
+      "  | [\"canonical-order-check\",fixture,sha,output] =>"
+      ("  | [\"single-canonical-check\",fixture,sha,output] =>\n"++
+       "    Eggshell.Research.SingleCanonicalChecks.run (.mk fixture) sha (.mk output); return 0\n"++
+       "  | [\"canonical-order-check\",fixture,sha,output] =>"))
+  let actual ← linkedWitnesses (base/"canonical-order-build")
+  let some witness := actual["Eggshell.Handoff"]? | throw (IO.userError "parent renderer witness missing")
+  let encoded ← IO.ofExcept (Json.parse witness >>= Json.getArr?)
+  let original ← IO.ofExcept encoded[0]!.getStr?
+  let fragments := original.splitOn "def materialize ("
+  check (fragments.length == 2) "parent materializer is ambiguous"
+  let ending := fragments[1]!.splitOn "\n/-- The serialized graph frame and all source-status rows are reserved once."
+  check (ending.length == 2) "parent materializer ending is ambiguous"
+  let declaration := "def materialize ("++ending[0]!
+  check (((← IO.FS.readFile (root/"Eggshell/Handoff.lean")).splitOn declaration).length == 2)
+    "the original materializer was changed"
+  write (workspace/"docs/candidates/single-canonical/plan.json") (Json.mkObj [
+    ("parentRuntimeSha256",toJson (← hash (base/"canonical-order-build/StudyMain"))),
+    ("originalMaterializerEqualsLinkedParent",toJson true),("firstNormalizerValidationUnchanged",toJson true),
+    ("generalNormalizationIdempotenceProved",toJson false),("adopted",toJson false),
+    ("answeringModelCalls",toJson (0 : Nat))])
+  guard tag #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+    (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"single-canonical-settings.json").toString]
+
+def singleControls (tag : String) : IO Unit := do
+  drained
+  guard tag #["/usr/bin/env","LEAN_NUM_THREADS=1",
+    "EGGSHELL_DATA_ROOT="++(base/"single-canonical-controls-data").toString,
+    (base/"single-canonical-build/StudyMain").toString,"local-batch-check",
+    (base/"single-canonical-controls-result").toString]
+
+def singleCollectControls (tag : String) : IO Unit := do
+  drained
+  let status ← read (base/(tag++".guard.json"))
+  check (status.getObjValD "exitCode" == toJson (0 : Nat) &&
+    status.getObjValD "state" == toJson "finished" &&
+    status.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "controls did not finish and drain"
+  let root := base/"single-canonical-controls-result"
+  let report ← read (root/"report.json")
+  for name in ["fullScopeHeadRootCapabilityExpiryRejection","typedAndWireWindowRanksExact",
+      "originalHeadsUnchanged","allReservationsReleased"] do
+    check (report.getObjValD name == toJson true) ("control failed: "++name)
+  check (report.getObjValD "focusComparisons" == toJson (12 : Nat) &&
+    (report.getObjValD "final").getObjValD "active" == toJson (0 : Nat)) "focus or reservation controls incomplete"
+  let mut records := #[]
+  for name in ["report.json","held-lock-reads.json","read-boundary.json","shared-eighty.json"] do
+    records := records.push (Json.mkObj [("file",toJson name),("sha256",toJson (← hash (root/name))),
+      ("record",← read (root/name))])
+  let destination := workspace/"docs/candidates/single-canonical"
+  write (destination/"read-controls.json") (Json.mkObj [("runtimeSha256",toJson (← hash (base/"single-canonical-build/StudyMain"))),
+    ("guard",status),("records",toJson records),("fullEightyHookLoad",toJson false),("adopted",toJson false)])
+  let mut removed := #[]
+  for path in [root/"file-fixture",root/"focus-fixture",base/"single-canonical-controls-data"] do
+    if ← path.pathExists then
+      IO.FS.removeDirAll path
+      removed := removed.push path.toString
+  write (destination/"read-controls-cleanup.json") (Json.mkObj [("removed",toJson removed),
+    ("originalDbProjectCacheModelRetained",toJson true),("archived",toJson false)])
+
+def retireReferenceDriver : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  let current ← read (destination/"auditor-sources.json")
+  check (current.getObjValD "allProductCorePresent" == toJson true &&
+    current.getObjValD "commonSourcesUnchanged" == toJson true) "validate the current driver before retiring its predecessor"
+  let root := base/"canonical-order-auditor-build"
+  let expected := (← read (workspace/"docs/candidates/canonical-order/auditor-sources.json")).getObjValD "auditorSha256"
+  check (expected == toJson (← hash (root/"StudyMain"))) "reference helper differs from its audited binary"
+  for row in (← IO.FS.readFile (root/"runtime.rsp")).splitOn "\n" do
+    if row.trimAscii.isEmpty then continue
+    let path ← IO.ofExcept (Json.parse row >>= Json.getStr?)
+    if path.endsWith ".o" then check (← (System.FilePath.mk path).pathExists) "reference helper cannot be relinked"
+  let record := Json.mkObj [("path",toJson (root/"StudyMain").toString),("sha256",expected),
+    ("completeRelinkResponseAndObjectsRetained",toJson true),
+    ("currentCanonicalProductAndNewMatchingDriverRetained",toJson true),("archiveCreated",toJson false)]
+  write (destination/"retired-reference-driver.json") (record.setObjVal! "completed" (toJson false))
+  IO.FS.removeFile (root/"StudyMain")
+  write (destination/"retired-reference-driver.json") (record.setObjVal! "completed" (toJson true))
+
+def retireSingleAuditor : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  check ((← read (destination/"delivery-cells.json")).getObjValD "actualDeliveryAllSixPassed" == toJson true &&
+    (← (base/"single-canonical-capacity-settings.json").pathExists))
+    "finish actual delivery and prepare the capacity driver before retiring the ended helper"
+  let root := base/"single-canonical-auditor-build"
+  let expected := (← read (destination/"auditor-sources.json")).getObjValD "auditorSha256"
+  check (expected == toJson (← hash (root/"StudyMain"))) "ended helper differs from its audited binary"
+  for row in (← IO.FS.readFile (root/"runtime.rsp")).splitOn "\n" do
+    if row.trimAscii.isEmpty then continue
+    let path ← IO.ofExcept (Json.parse row >>= Json.getStr?)
+    if path.endsWith ".o" then check (← (System.FilePath.mk path).pathExists) "ended helper cannot be relinked"
+  let record := Json.mkObj [("path",toJson (root/"StudyMain").toString),("sha256",expected),
+    ("completeRelinkInputsRetained",toJson true),("productPrefixCapacitySourceOriginalDbCacheModelRetained",toJson true),
+    ("archived",toJson false)]
+  write (destination/"retired-delivery-helper.json") (record.setObjVal! "completed" (toJson false))
+  IO.FS.removeFile (root/"StudyMain")
+  write (destination/"retired-delivery-helper.json") (record.setObjVal! "completed" (toJson true))
+
+def singleRecords : IO Unit := do
+  drained
+  for tag in ["single-canonical-proof1","single-canonical-build1","single-canonical-build2",
+      "single-canonical-component1","single-canonical-auditor-build1","single-canonical-controls2",
+      "single-canonical-install1","single-canonical-cells1","single-canonical-capacity-build1",
+      "single-canonical-capacity-small1","single-canonical-capacity-801"] do
+    if ← (base/(tag++".guard.json")).pathExists then collectRecord "single-canonical" tag
+  let tag := "single-canonical-controls1"
+  let stderr := base/(tag++".stderr")
+  check (!(← (base/(tag++".guard.json")).pathExists) && (← stderr.pathExists))
+    "preserve the actual rejected-before-start invocation"
+  write (workspace/"docs/candidates/single-canonical/rejected-before-start.json") (Json.mkObj [
+    ("guardTag",toJson tag),("settings",← read (base/(tag++".guard-settings.json"))),
+    ("stderr",toJson (← IO.FS.readFile stderr)),("stderrSha256",toJson (← hash stderr)),
+    ("guardRecordPresent",toJson false),("testStarted",toJson false),("adopted",toJson false)])
+
+def retireSingleCapacity : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  check ((← read (destination/"capacity-small-cleanup.json")).getObjValD "completed" == toJson true &&
+    (← (destination/"single-canonical-capacity-small1.json").pathExists))
+    "preserve terminal evidence and clean owned sessions first"
+  let root := base/"single-canonical-capacity-build"
+  let digest ← hash (root/"StudyMain")
+  check ((← read (destination/"capacity-sources.json")).getObjValD "auditorSha256" == toJson digest)
+    "capacity helper changed after audit"
+  for entry in ← base.readDir do
+    if !entry.fileName.endsWith "-build" || entry.path == root then continue
+    let response := entry.path/"runtime.rsp"
+    if ← response.pathExists then
+      check (!(← IO.FS.readFile response).contains (root.toString++"/"))
+        "another native product still depends on the ended capacity helper"
+  let paths := #[root,base/"single-canonical-capacity-source",base/"single-canonical-capacity-small-result"]
+  let record := Json.mkObj [("runtimeSha256",toJson digest),("removed",toJson (paths.map (·.toString))),
+    ("nativeEntrySource",← read (root/"tools_research_MemoryCapacity.source")),
+    ("noOtherNativeResponseReferencesRemovedRoot",toJson true),
+    ("productParentOriginalDbProjectCacheModelRetained",toJson true),("archived",toJson false)]
+  write (destination/"retired-capacity-helper.json") (record.setObjVal! "completed" (toJson false))
+  for path in paths do if ← path.pathExists then IO.FS.removeDirAll path
+  write (destination/"retired-capacity-helper.json") (record.setObjVal! "completed" (toJson true))
+
+def singleRetireLogs : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  let attempts ← IO.ofExcept ((← read (destination/"attempts.json")).getArr?)
+  let mut paths : Array System.FilePath := #[]
+  for attempt in attempts do
+    let name ← IO.ofExcept (attempt.getObjValAs? String "name")
+    check (name.startsWith "single-canonical-" && name.endsWith ".json" &&
+      name.toList.all (fun c => c.isAlphanum || c == '-' || c == '.')) "log tag escaped the ended trial"
+    let tag := (name.dropEnd 5).toString
+    for log in ← IO.ofExcept ((attempt.getObjValD "record").getObjValAs? (Array Json) "logs") do
+      if log.getObjValD "present" == toJson false then continue
+      let extension ← IO.ofExcept (log.getObjValAs? String "name")
+      check (["stdout","stderr"].contains extension) "unexpected captured stream"
+      let path := base/(tag++"."++extension)
+      check (toJson (← hash path) == log.getObjValD "sha256") "captured log changed before cleanup"
+      paths := paths.push path
+  let record := Json.mkObj [("removed",toJson (paths.map (·.toString))),
+    ("boundedLogsErrorLinesAndDigestsRetained",toJson true),("archived",toJson false)]
+  write (destination/"ended-log-cleanup.json") (record.setObjVal! "completed" (toJson false))
+  for path in paths do IO.FS.removeFile path
+  write (destination/"ended-log-cleanup.json") (record.setObjVal! "completed" (toJson true))
+
+def singleCompactRetirements : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/single-canonical"
+  for name in ["retired-unreferenced-native-artifacts.json","retired-duplicate-native-artifacts.json",
+      "retired-unreferenced-native-witnesses.json","retired-old-frontend-caches.json"] do
+    let path := destination/name
+    let value ← read path
+    check (value.getObjValD "completed" == toJson true) "do not summarize an unfinished removal"
+    let removed ← IO.ofExcept (value.getObjValAs? (Array Json) "removed")
+    let fields ← IO.ofExcept value.getObj?
+    let retained := fields.toArray.filter (fun field => field.1 != "removed")
+    write path (Json.mkObj (retained.toList++[("removedFileCount",toJson removed.size),
+      ("originalRemovalManifestSha256",toJson (← hash path)),
+      ("obsoletePerFilePathsDiscarded",toJson true),("archiveCreated",toJson false)]))
+
 def main (args : List String) : IO Unit := do
   match args with
   | ["prepare"] => prepare
@@ -601,9 +867,11 @@ def main (args : List String) : IO Unit := do
   | ["cleanup-measurements"] => cleanupMeasurements
   | ["canonical-setup",tag] => canonicalSetup tag
   | ["canonical-component",tag] => canonicalComponent tag
+  | ["component",family,tag] => canonicalComponent tag family
   | ["canonical-audit"] => canonicalAudit
   | ["audit-family",family] => canonicalAudit family
   | ["canonical-collect-component",tag] => canonicalCollectComponent tag
+  | ["collect-component",family,tag] => canonicalCollectComponent tag family
   | ["canonical-prepare-auditor"] => canonicalPrepareAuditor
   | ["prepare-auditor",family] => canonicalPrepareAuditor family
   | ["canonical-prepare-cells"] => canonicalPrepareCells
@@ -614,6 +882,19 @@ def main (args : List String) : IO Unit := do
   | ["canonical-seal-installed"] => sealInstalled "canonical-order"
   | ["seal-installed-family",family] => sealInstalled family
   | ["pack-records",family] => packRecords family
+  | ["retire-read-drivers"] => retireReadDrivers
+  | ["retire-old-read-products"] => retireOldReadProducts
+  | ["retire-superseded-product",family] => retireOldReadProducts [family] ("retired-"++family++"-product")
+  | ["single-preflight",tag] => singlePreflight tag
+  | ["single-setup",tag] => singleSetup tag
+  | ["single-controls",tag] => singleControls tag
+  | ["single-collect-controls",tag] => singleCollectControls tag
+  | ["retire-reference-driver"] => retireReferenceDriver
+  | ["retire-single-auditor"] => retireSingleAuditor
+  | ["single-records"] => singleRecords
+  | ["retire-single-capacity"] => retireSingleCapacity
+  | ["single-retire-logs"] => singleRetireLogs
+  | ["single-compact-retirements"] => singleCompactRetirements
   | ["seal-installed"] =>
     drained
     let path := base/"allocation-probe-prefix/libexec/eggshell"

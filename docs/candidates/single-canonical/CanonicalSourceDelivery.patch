@@ -1,0 +1,24 @@
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -102,0 +103,21 @@
++/-- A process-local result of the original checked normalizer. The erased
++existential does not keep the unmerged input alive. There is no wire decoder
++or public constructor that can label arbitrary rows as a merged result. -/
++structure Merged where
++  private mk ::
++  rows : Array StoredRow
++  produced : ∃ input, merge input = .ok rows
++
++@[no_expose] def Merged.prepare (input : Array StoredRow) : Except String Merged :=
++  match checked : merge input with
++  | .error error => .error error
++  | .ok rows => .ok (Merged.mk rows ⟨input,checked⟩)
++
++theorem Merged.prepare_rows_exact (input : Array StoredRow) :
++    (Merged.prepare input).map (·.rows) = merge input := by
++  unfold Merged.prepare
++  split <;> simp_all only [Except.map]
++
++theorem Merged.produced_by_merge (result : Merged) :
++    ∃ input, merge input = .ok result.rows := result.produced
++
