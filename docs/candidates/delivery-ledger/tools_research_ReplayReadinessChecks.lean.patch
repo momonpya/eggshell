@@ -1,0 +1,6 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -6,0 +7 @@
++import tools.research.DeliveryLedgerChecks
+@@ -97,0 +99 @@
++  | ["delivery-ledger-check",root,fixture,sha] => Eggshell.Research.DeliveryLedgerChecks.run (.mk root) (.mk fixture) sha; return 0

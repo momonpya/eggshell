@@ -29,17 +29,19 @@
 
 ## 現在地と次の順序
 
-現在の隔離候補は [reply-ownership](docs/candidates/reply-ownership/README.md)（SHA `ec1064becb784cbc87d896b08565cd035941d5a8a95064273c5d9d5060843630`）。親`compact-reply`と`pinned-reads`から`search-read`/`read-runtime`までの所有・読取り改善を継承する。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+現在の隔離候補は [delivery-ledger](docs/candidates/delivery-ledger/README.md)（SHA `d4349b126ae979c3a48e407a5fc1e98d7ac97796f97eb50c81e9fe472960385d`）。親`reply-ownership`/`compact-reply`と`pinned-reads`から`search-read`/`read-runtime`までの所有・読取り改善を継承する。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
 
-**実LLVM原典のモデルなし配送検査は全6件で合格した。** 同じsnapshot・ソース・質問・凍結必要項目のまま、題材1/2/3でそれぞれ4/4、7/7、5/5を独立した新チャット2件ずつで実配送し、全32/32項目を10,760〜12,615msで届けた。意味検索・シナプス探索・packet検査は6/6完了、warm要求0、ACKは6/6受理、元の出版内容は不変だった。全6本文が親`compact-reply`の対応する実本文とbyte一致した。278 native objectと、検査器の全製品core・268共通moduleの原文一致を確認した。関連最大RSS3,031,440KiB、全終了後残存0。これは履歴を蓄積する回答モデルの1周目/2周目ではなく、80人負荷・増大DB・p99・品質・総token改善も未検証である。
+**実LLVM原典のモデルなし配送検査は全6件で合格した。** 同じsnapshot・ソース・質問・凍結必要項目のまま、題材1/2/3でそれぞれ4/4、7/7、5/5を独立した新チャット2件ずつで実配送し、全32/32項目を9,392〜10,958msで届けた。意味検索・シナプス探索・packet検査は6/6完了、warm要求0、ACKは6/6受理、元の出版内容は不変だった。全6本文が親`reply-ownership`の対応する実本文とbyte一致した。親の各題材2回は11,313/10,760、12,389/12,333、12,615/12,495ms、新候補は9,949/9,392、10,958/10,517、10,822/10,794msだった。280 native objectと、検査器の全製品core・269共通moduleの原文一致を確認した。関連最大RSS3,026,096KiB、全終了後残存0。これは履歴を蓄積する回答モデルの1周目/2周目ではなく、80人負荷・増大DB・p99・品質・総token改善も未検証である。
 
-新候補は読取セッションの組み立てを共有窓口から各要求のactorへ移し、不変の`CheckedFrame`から共有ページownerへの参照を削除した。毎回の診断だけのために共有ページMutexを取っていた`Pool.stats`もカタログ所有者の局所値だけで作るよう変更した。元のsource順序/head・prepared input・scopeを保持するLean lawと、非公開実装も含む517依存・96型の監査を接続した。共有ページMutexを保持したまま、カタログhit/統計取得と80要求×3原典の読取りが2msで完了し、原文一致・局所カウンター独立・共有cache不変を確認した。これは部品検査であり、検索全体の無同期性の主張ではない。
+状態lock内のACK処理は、1キーごとに全リストを重複除去する二次処理だった。通常キーをまとめる更新とclaimのハッシュ重複除去を、元の全順序・scope置換との一致をLeanで証明して`csimp`へ接続した。元の実ACK6,554キーの更新は初回1,657ms→6ms、既存キーへの再追加4,104〜4,139ms→6ms、倍の13,108キーで7,737〜7,835ms→15〜20ms（各3回）。5,329組・16条件のnative比較も全一致。ACKの更新結果を不変Planとしてsession lock外で準備し、並行変更があれば現在の状態へ同じ差分を適用する。どちらでも元の状態全体と受理/拒否条件に一致し、準備・適用の355依存に共有状態・待機がないことを監査した。新しい共有Ref/Mutex/Promise/CAS、検索の制限は加えていない。
+
+親[reply-ownership](docs/candidates/reply-ownership/README.md)は読取セッションの組み立てを共有窓口から各要求のactorへ移し、不変の`CheckedFrame`から共有ページownerへの参照を削除した。毎回の診断だけのために共有ページMutexを取っていた`Pool.stats`もカタログ所有者の局所値だけで作るよう変更した。元のsource順序/head・prepared input・scopeを保持するLean lawと、非公開実装も含む517依存・96型の監査を接続した。共有ページMutexを保持したまま、カタログhit/統計取得と80要求×3原典の読取りが2msで完了し、原文一致・局所カウンター独立・共有cache不変を確認した。これは部品検査であり、検索全体の無同期性の主張ではない。
 
 返信容量はJSON生成前に予約する。作成側と受信側の両方が終了してから返却し、終了順序に依存しない容量保存・一度だけの解放・閉鎖後の再取得拒否をLeanで証明した。取消/失敗を含む80独立要求の検査は全80完了・最終予約0で、既存24MiB内の同時エンコード最大3、252msだった。検索actorを3本に減らさず、返却0のときは共有容量Mutexを取らない。wire容量だけで全RSSを証明したとは扱わない。
 
 以前の [実原典での0/4失敗](docs/candidates/real-source-search-read/README.md) は、内部本文に必要原文4/4があっても、13,420,015bytesの応答が8,388,608bytesの返送枠を超えて捨てられていた。親[compact-reply](docs/candidates/compact-reply/README.md)は本文・原依存・順序・ACK/reconciliationを保つ共有表をLeanで往復証明し、同じ拒否応答を4,730,012bytesで返送できた。受信後の巨大JSONの再生成/再読取りも、元の分類との一致を証明して除いた。selector・順位・モデル・期限・配送枠は変更していない。275 native object、検査器の全製品coreと267共通module、80並行240交換/1,440方針比較が整合した。親の実配送試験の関連最大RSS3,027,600KiB、全guardで終了後残存0。部品やframe bytesの改善をtoken削減と扱わない。
 
-残る具体的な問題は、今回もセッション保守で観測した状態lockの待ち合わせ警告である。セッション状態は約1.02〜1.05MB（lastHandoff約520KB、deliveredGraphs約477KB）で、これを扱う範囲を調べる。今回の6実験sessionと部品検査DBは終了・記録後に削除し、次の汎用ACKキー処理のために6,554キーの小さな再現入力だけを保持した。元DBと現在の準備済みproject cacheは保持し、圧縮archiveは作らない。検索を固定3本へ戻さず、チャットの独立actorと共有不変構造を保つ。`unverifiedParts=[8]`を全観測の認定済みと扱わず、completedの自然な再利用・変更後の拒否も別に検証する。
+今回6回のstderrでは状態lock待ち・未完了session保守・保持queued workは各0件だった。既存MiniLMのpooling警告は6件残し、モデルは変更していない。これは全負荷での競合不在の証明ではない。約1.02〜1.05MBのsession状態の読取り/描画/保存や、ACK以外の更新境界は残る。終了済み6sessionとpreflightのinterface複製を削除し、元DB・現在の準備済みproject cache・6,554キーの再現入力は保持した。不要な旧実行体7件も稼働なしとSHAを確認して削除し、native object/interface/source witnessは保持した。圧縮archiveは作らない。検索を固定3本へ戻さず、チャットの独立actorと共有不変構造を保つ。`unverifiedParts=[8]`を全観測の認定済みと扱わず、completedの自然な再利用・変更後の拒否も別に検証する。
 
 不要な読み取り時の排他については [pinned-reads](docs/candidates/pinned-reads/README.md) を隔離実装した。保持済み原文の借用を工程ごとの取得から要求の入口・最終解放の2回へまとめ、その間は不変参照を使う。元のscope・完全head・manifest・期限、budget/descriptor不変をLeanで確認し、参照解決等の558依存に同期がないことを監査した。元Mutex保持中の80並行・10,240参照、途中失敗の無変更、解放/取消/closeと重複tokenの回収が通った。通常のtyped/wire原文・窓順位、80独立lease、271 native objectの整合も確認した。可変の受付・容量予約・palette寿命の同期は残り、検索全体の無ロック性や上の返送欠陥の修正とは扱わない。新しいRef/Promise/CAS、期限・容量の拡大は加えず、未採用・有料比較0/18を維持する。
 
@@ -54,7 +56,7 @@
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. セッション状態の参照/照合/描画とACKキー集合の純粋処理を、短い更新境界から分離する。6,554キーの逐次追加で全体の重複除去を反復する経路を先に切り分け、未計測の原因を断定しない。現在の実原典6件の配送・元の認定・ACKを保つことをLeanと実際の経路で確認し、変更時は題材1の最初から戻る。正解をselectorへ渡さず、同じ凍結snapshot・準備済みproject cacheを使う。待ち合わせ警告を成功の陰へ隠さない。
+1. 返信の生成前容量保証とACK二次処理の除去を含む新しい候補で、実際の検索・配送の容量試験を再開する。全製品coreが一致する検査器と元の入力・必須原文を固定し、少数同時の配送/ACK/資源の事前条件を確認してから80並行を一度測る。重い検査driverの保持量を80検索のlive量に混同せず、結果・失敗を全件回収する。変更なしの失敗負荷を反復せず、98%・30秒・既存RSS/disk guardを緩めない。状態の参照/照合/描画で不要な共有更新が残れば分離する。変更時は実原典の題材1の最初から戻り、正解をselectorへ渡さず、同じ凍結snapshot・準備済みproject cacheを使う。
 2. 実WorkGraph/返信の所有と、allocatorの保持を因果的に分ける。実配送guardのpeakには検査器1,146,320KiBと既存MiniLM数値process1,100,272KiBが含まれ、publication hostはその時点で286,608KiBだった。これらを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。

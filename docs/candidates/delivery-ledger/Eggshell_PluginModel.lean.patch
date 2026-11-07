@@ -1,0 +1,13 @@
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -11,0 +12 @@
++public import Eggshell.HashDistinct
+@@ -80,0 +82,8 @@
++def ThreadState.deliveryClaimsFast (state : ThreadState) (turn : String) (now : Nat) : List String :=
++  hashDistinct (state.deliveredGraphs ++ (state.offers.filter (fun offer =>
++    offer.stamp.accepts turn state.epoch now)).flatMap (·.graphs))
++
++@[csimp] theorem delivery_claims_compiled : ThreadState.deliveryClaims = ThreadState.deliveryClaimsFast := by
++  funext state turn now
++  exact (HashDistinct.reference _).symm
++

@@ -1,0 +1,53 @@
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:16:24: error(lean.unknownIdentifier): Unknown constant `Eggshell.Research.DeliveryKeys`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:94:28: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.step`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:97:33: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.batch`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:102:6: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.batch_exact`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:99:96: error: unsolved goals
+state : ThreadState
+keys : List String
+⊢ { profile := state.profile, enabled := state.enabled, nextProfile := state.nextProfile,
+      nextProjection := state.nextProjection,
+      deliveredGraphs := List.foldl replaceSourceStatus state.deliveredGraphs keys,
+      afterCompaction := state.afterCompaction, lastHandoff := state.lastHandoff, lastReason := state.lastReason,
+      lastSearch := state.lastSearch, searchStarted := state.searchStarted, epoch := state.epoch,
+      offers := state.offers, confirmedDelivery := state.confirmedDelivery } =
+    { profile := state.profile, enabled := state.enabled, nextProfile := state.nextProfile,
+      nextProjection := state.nextProjection, deliveredGraphs := sorry, afterCompaction := state.afterCompaction,
+      lastHandoff := state.lastHandoff, lastReason := state.lastReason, lastSearch := state.lastSearch,
+      searchStarted := state.searchStarted, epoch := state.epoch, offers := state.offers,
+      confirmedDelivery := state.confirmedDelivery }
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:424:8: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.Plan`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:425:8: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.prepare`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:430:68: error: unexpected identifier; expected '}'
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:428:12: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.Plan`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:435:12: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.Plan`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:438:6: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.Plan.apply_exact`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:436:88: error: unsolved goals
+state : ThreadState
+turn : String
+now : Nat
+offer : DeliveryOffer
+plan : sorry
+⊢ (if (state.enabled && offer.stamp.accepts turn state.epoch now) = true then
+      { profile := state.profile, enabled := state.enabled, nextProfile := state.nextProfile,
+        nextProjection := state.nextProjection, deliveredGraphs := sorry, afterCompaction := state.afterCompaction,
+        lastHandoff := state.lastHandoff, lastReason := state.lastReason, lastSearch := state.lastSearch,
+        searchStarted := state.searchStarted, epoch := state.epoch, offers := state.offers,
+        confirmedDelivery := state.confirmedDelivery }
+    else sorry) =
+    if (state.enabled && offer.stamp.accepts turn state.epoch now) = true then
+      have __src :=
+        { profile := state.profile, enabled := state.enabled, nextProfile := state.nextProfile,
+          nextProjection := state.nextProjection,
+          deliveredGraphs := List.foldl replaceSourceStatus state.deliveredGraphs offer.graphs,
+          afterCompaction := state.afterCompaction, lastHandoff := state.lastHandoff, lastReason := state.lastReason,
+          lastSearch := state.lastSearch, searchStarted := state.searchStarted, epoch := state.epoch,
+          offers := state.offers, confirmedDelivery := state.confirmedDelivery };
+      { profile := __src.profile, enabled := __src.enabled, nextProfile := __src.nextProfile,
+        nextProjection := __src.nextProjection, deliveredGraphs := __src.deliveredGraphs,
+        afterCompaction := __src.afterCompaction, lastHandoff := offer.text, lastReason := offer.reason,
+        lastSearch := offer.search, searchStarted := __src.searchStarted, epoch := __src.epoch, offers := __src.offers,
+        confirmedDelivery := __src.confirmedDelivery }
+    else state
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:482:12: error(lean.unknownIdentifier): Unknown identifier `DeliveryKeys.Plan`
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/delivery-ledger-source/Eggshell/PluginHooks.lean:495:4: warning: declaration uses `sorry`

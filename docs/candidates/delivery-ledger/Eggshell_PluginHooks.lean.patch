@@ -1,0 +1,55 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -8,0 +9 @@
++public import tools.research.DeliveryKeys
+@@ -14,0 +16 @@
++open Eggshell.Research
+@@ -91,0 +94,10 @@
++theorem delivery_key_step : DeliveryKeys.step SourceEvidence.deliveryScope? = replaceSourceStatus := rfl
++
++def addDeliveredGraphsFast (state : ThreadState) (keys : List String) : ThreadState :=
++  {state with deliveredGraphs := DeliveryKeys.batch SourceEvidence.deliveryScope? state.deliveredGraphs keys}
++
++@[csimp] theorem add_delivered_graphs_compiled : addDeliveredGraphs = addDeliveredGraphsFast := by
++  funext state keys
++  unfold addDeliveredGraphs addDeliveredGraphsFast
++  rw [DeliveryKeys.batch_exact,delivery_key_step]
++
+@@ -406,0 +419,7 @@
++  claims : List String
++
++/-- Force the immutable plan before entering the session compare-and-publish
++callback. It has no IO beyond returning the strict prepared value. -/
++@[noinline,nospecialize] def prepareAcknowledgment (basis : AcknowledgmentBasis) :
++    IO (DeliveryKeys.Plan SourceEvidence.deliveryScope? basis.offer.graphs) :=
++  pure (DeliveryKeys.prepare SourceEvidence.deliveryScope? basis.claims basis.offer.graphs)
+@@ -407,0 +427,14 @@
++def acceptPreparedOffer (state : ThreadState) (turn : String) (now : Nat) (offer : DeliveryOffer)
++    (plan : DeliveryKeys.Plan SourceEvidence.deliveryScope? offer.graphs) : ThreadState :=
++  if state.enabled && offer.stamp.accepts turn state.epoch now then
++    {state with
++      deliveredGraphs := plan.apply state.deliveredGraphs,
++      lastHandoff := offer.text,lastReason := offer.reason,lastSearch := offer.search}
++  else state
++
++theorem prepared_offer_exact (state : ThreadState) (turn : String) (now : Nat) (offer : DeliveryOffer)
++    (plan : DeliveryKeys.Plan SourceEvidence.deliveryScope? offer.graphs) :
++    acceptPreparedOffer state turn now offer plan = acceptOffer state turn now offer := by
++  unfold acceptPreparedOffer acceptOffer addDeliveredGraphs
++  rw [DeliveryKeys.Plan.apply_exact,delivery_key_step]
++
+@@ -443 +476 @@
+-  return some ⟨offer,state.confirmedDelivery,state.epoch⟩
++  return some ⟨offer,state.confirmedDelivery,state.epoch,state.deliveredGraphs⟩
+@@ -449 +482,2 @@
+-    (confirmed : Option Synapses.DeliveryLedger.Reference) : IO Bool :=
++    (confirmed : Option Synapses.DeliveryLedger.Reference)
++    (plan : DeliveryKeys.Plan SourceEvidence.deliveryScope? basis.offer.graphs) : IO Bool :=
+@@ -459 +493 @@
+-  writeJson files.state {(acceptOffer state pending.turnId now basis.offer) with confirmedDelivery := confirmed}
++  writeJson files.state {(acceptPreparedOffer state pending.turnId now basis.offer plan) with confirmedDelivery := confirmed}
+@@ -473,0 +508 @@
++    let plan ← prepareAcknowledgment basis
+@@ -480 +515 @@
+-    finishAcknowledgment session basis confirmed
++    finishAcknowledgment session basis confirmed plan
