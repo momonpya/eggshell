@@ -187,6 +187,12 @@ def sealRuntime (family : String := "runtime-key") (closureName : String := "nat
     write (study/"entry-source.json") (Json.mkObj [("exactAddedDispatchOnly",toJson true),
       ("nativeWitnessesMatchSource",toJson true),("includedLiteralsUnchanged",toJson true),
       ("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
+  if family == "keyed-discovery" then
+    let before ← IO.FS.readFile (base/(parent++"-build/tools_research_ReplayReadinessChecks.source"))
+    let actual ← IO.FS.readFile (base/(family++"-build/tools_research_ReplayReadinessChecks.source"))
+    check (before == actual) "single-source connection changed the native entry"
+    write (study/"entry-source.json") (Json.mkObj [("entryAndIncludedLiteralsUnchanged",toJson true),
+      ("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
   freezeSource family
 def prepareAuditor (family : String := "runtime-key") : IO Unit := do
   drained
@@ -212,6 +218,16 @@ def prepareAuditor (family : String := "runtime-key") : IO Unit := do
         ("topic",toJson topic),("destination",toJson (root/s!"topic-{topic}-chat-{repetition}").toString),
         ("captureReply",toJson false)])
   write (base/(family++"-cells.json")) (Json.mkObj [("output",toJson root.toString),("probes",toJson probes)])
+def configureDiscoveryGate : IO Unit := do
+  drained
+  check (!(← (base/"keyed-discovery-auditor-build/StudyMain").pathExists)) "configure the auditor before its first build"
+  let helper := "tools/research/RealDeliveryProbe.lean"
+  IO.FS.writeFile (base/"keyed-discovery-auditor-source"/helper) (← IO.FS.readFile (workspace/helper))
+  let path := base/"keyed-discovery-cells.json"
+  let input ← read path
+  let probes ← IO.ofExcept (input.getObjValAs? (Array Json) "probes")
+  check (probes.size == 6) "retain all six native cases"
+  write path (input.setObjVal! "probes" (toJson (probes.map fun probe => probe.setObjVal! "requireSharedKeyedImage" (toJson true))))
 def sealAuditor (family : String := "runtime-key") : IO Unit := do
   drained
   discard <| parentFor family
@@ -357,6 +373,7 @@ def main (args : List String) : IO Unit := match args with
   | ["discovery","prepare-auditor"] => prepareAuditor "keyed-discovery"
   | ["discovery","seal-auditor"] => sealAuditor "keyed-discovery"
   | ["discovery","setup",action,tag] => setup action tag "keyed-discovery"
+  | ["discovery","configure-gate"] => configureDiscoveryGate
   | _ => throw (IO.userError "prepare|freeze|seal|prepare-auditor|seal-auditor|setup")
 end Eggshell.Research.RuntimeIdentityStudy
 def main := Eggshell.Research.RuntimeIdentityStudy.main

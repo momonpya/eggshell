@@ -1,0 +1,21 @@
+--- a/tools/research/RealDeliveryProbe.lean
++++ b/tools/research/RealDeliveryProbe.lean
+@@ -235,0 +236 @@
++  requireSharedKeyedImage : Bool := false
+@@ -293 +294,6 @@
+-      save (cell/"receipt.json") (← receipt receiptRoot before hook.stdout)
++      let recorded ← receipt receiptRoot before hook.stdout
++      save (cell/"receipt.json") recorded
++      let stages := (recorded.getObjValD "stages").getArr?.toOption.getD #[]
++      let sharedKeyedImageUsed := stages.any fun row =>
++        row.getObjValD "name" == toJson "provider-keyed-inputs.json" &&
++        ((row.getObjValD "record").getObjValD "data").getObjValD "sharedImage" == toJson true
+@@ -309,0 +316 @@
++        ("sharedKeyedImageUsed",toJson sharedKeyedImageUsed),
+@@ -310,0 +318,2 @@
++      check (!probe.requireSharedKeyedImage || sharedKeyedImageUsed)
++        "ordinary hook did not exercise the required shared keyed input path"
+@@ -329 +338,2 @@
+-      probe.pluginRoot == first.pluginRoot && (System.FilePath.mk probe.destination).parent == some root) &&
++      probe.pluginRoot == first.pluginRoot && probe.requireSharedKeyedImage == first.requireSharedKeyedImage &&
++      (System.FilePath.mk probe.destination).parent == some root) &&

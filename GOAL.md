@@ -29,11 +29,11 @@
 
 ## 現在地と次の順序
 
-現在の隔離候補は [elastic-encoder](docs/candidates/elastic-encoder/README.md)（SHA `8bf8ab430d62bb6c6472d8829ea4c69418c682aeb1f62336985879ea68ccda73`）。[runtime-key](docs/candidates/runtime-key/README.md)の固定識別、[parallel-encoder](docs/candidates/parallel-encoder/README.md)の独立モデルと、[local-batch](docs/candidates/local-batch/README.md)/[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善を継承する。エンコーダ2基の実並行は確認したが、16同時は資源停止で未合格。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残す。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+現在の隔離候補は [keyed-discovery](docs/candidates/keyed-discovery/README.md)（SHA `f92cff7dcc05652db975bf0217dd95899d3531f4458204c2192c64556c6f6a02`）。[elastic-encoder](docs/candidates/elastic-encoder/README.md)の独立モデル、[runtime-key](docs/candidates/runtime-key/README.md)の固定識別と、[local-batch](docs/candidates/local-batch/README.md)/[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善を継承する。単一DBの通常検索でも共有readerを使い、実LLVM全6回で原文32/32・親本文byte一致を確認した。80人容量は未達。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残す。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
 
 後続の[keyed-inputs](docs/candidates/keyed-inputs/README.md)（SHA `bdaa25d2713d553e59f278cc163700722dd810bd46eee43850680365d6db175f`）は、windows/lexical/numericの検証済みmetadataを共有するimageを加えた。型と通常監査、1,345依存/108型、実DBの80 readerを管理ページMutex保持中に4msで借用する部品検査が通った。実フック全6回も原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、8,462〜10,061ms、関連RSS最大3,010,912KiB・残存0だったが、**全件sharedImage=falseで変更が使われておらず、candidatePathPassed=falseとして不合格**。4/16/80負荷は再実行していない。
 
-原因は単一DBで先に選ばれるindexedDiscoveryの呼び出し列へprepared readerが渡っていなかったこと。現在は[keyed-discovery](docs/candidates/keyed-discovery/README.md)を隔離し、その引数の受け渡しだけを修正してnativeビルド中。元snapshot/必要項目を変えず題材1から再実行し、本文/原文だけでなく全件で共有経路の実使用も必須にする。親の配送成功を性能改善や80人合格とは扱わない。終了済みの旧実行ファイルと重複した試験のsession/受領記録を削除し、現在のDB、原典、モデル、必要なnative object/interface/sourceは保持する。収集器の問題でモデルやフックを再実行していない。
+原因は単一DBで先に選ばれるindexedDiscoveryの呼び出し列へprepared readerが渡っていなかったこと。keyed-discoveryはその受け渡しだけを直し、Handoff以外の原文と入口/literalの不変、検査器の全製品core一致を確認した。元snapshot/必要項目を変えず題材1から実行し、全6回で原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、全件sharedImage=trueとなった。時間は9,034/8,580、9,954/9,970、10,258/10,115ms。関連RSS最大2,826,016KiB・残存0、前景warm0、元出版不変。これは回答モデルの両周や80人合格ではない。次は同じ実原典の4/16、合格した場合だけ80同時へ進む。終了済みの旧実行ファイルと重複した試験のsession/受領記録は削除し、現在のDB、原典、モデル、必要なnative object/interface/sourceは保持する。収集器の問題でモデルやフックを再実行していない。
 
 前の80同時の途中記録を新しい負荷なしで調べ、全80件がkeyed providerに到達し、12件だけが数値/字句/routerの段階記録を持つことを確認した。検索後の選択だけを原因としない。数値serviceの接続キーが、固定の実装本文73,215 bytesを接続/数値通信のたびにJSON化・再ハッシュしていた。固定本文のdigestを一度だけ計算する純粋な定数へ分離し、モデル・モデル配置・Python配置・実装digestを引き続き結ぶことをLeanと通常監査で検査した。共有Ref/Mutex/CAS、質問cache、数値/順位変更は加えていない。native80設定×3回でキー生成は親196〜198ms→候補0〜1ms、各キー列はその参照式と一致した。これは全hookや80容量の改善率ではない。
 

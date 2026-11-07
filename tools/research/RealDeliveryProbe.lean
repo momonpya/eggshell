@@ -233,6 +233,7 @@ structure Probe where
   topic : Nat
   destination : String
   captureReply : Bool := true
+  requireSharedKeyedImage : Bool := false
   deriving FromJson
 
 /-- Fresh chat, sharing only the already prepared project source. Explicit
@@ -290,7 +291,12 @@ private def diagnose (probe : Probe) : IO Unit := do
       let reply ← IO.ofExcept (Json.parse hook.stdout)
       let body := (reply.getObjVal? "hookSpecificOutput" >>= (·.getObjValAs? String "additionalContext")).toOption.getD ""
       IO.FS.writeFile (cell/"body.txt") body
-      save (cell/"receipt.json") (← receipt receiptRoot before hook.stdout)
+      let recorded ← receipt receiptRoot before hook.stdout
+      save (cell/"receipt.json") recorded
+      let stages := (recorded.getObjValD "stages").getArr?.toOption.getD #[]
+      let sharedKeyedImageUsed := stages.any fun row =>
+        row.getObjValD "name" == toJson "provider-keyed-inputs.json" &&
+        ((row.getObjValD "record").getObjValD "data").getObjValD "sharedImage" == toJson true
       save (cell/"audit-input.json") (Json.mkObj [("source",spec),("database",toJson (root/"work.egg").toString),
         ("request",toJson (cell/"hook/stdin").toString),("stdout",toJson (cell/"hook/stdout").toString),
         ("timing",toJson (cell/"hook/record.json").toString),("body",toJson (cell/"body.txt").toString)])
@@ -307,7 +313,10 @@ private def diagnose (probe : Probe) : IO Unit := do
       save (cell/"result.json") (Json.mkObj [("diagnosticOnly",toJson true),("topic",toJson topic.topic),
         ("runtime",toJson probe.runtime),("sourceFiles",toJson sourceFiles),("hookMs",toJson hook.elapsedMs),
         ("availableDelivery",audit.getObjValD "availableDelivery"),("witnesses",toJson witnesses),
+        ("sharedKeyedImageUsed",toJson sharedKeyedImageUsed),
         ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+      check (!probe.requireSharedKeyedImage || sharedKeyedImageUsed)
+        "ordinary hook did not exercise the required shared keyed input path"
     finally StudyRuntime.stopManaged managed (cell/"shutdown.json")
   finally StudyRuntime.stopManaged publisher (cell/"publisher-shutdown.json")
   check ((← StudyRuntime.files (root/"work.egg")) == sourceFiles) "diagnostic modified the original DB"
@@ -326,7 +335,8 @@ private def cells (input : Cells) : IO Unit := do
     "all six uninstrumented frozen delivery cells required"
   let some first := input.probes[0]? | throw (IO.userError "missing cell")
   check (input.probes.all (fun probe => toJson probe.runtime == toJson first.runtime && toJson probe.originalInput == toJson first.originalInput &&
-      probe.pluginRoot == first.pluginRoot && (System.FilePath.mk probe.destination).parent == some root) &&
+      probe.pluginRoot == first.pluginRoot && probe.requireSharedKeyedImage == first.requireSharedKeyedImage &&
+      (System.FilePath.mk probe.destination).parent == some root) &&
     (input.probes.map (·.destination)).toList.eraseDups.length == 6) "delivery cells changed treatment or duplicated a chat"
   IO.FS.createDirAll root
   let mut rows := #[]
