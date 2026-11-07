@@ -1,11 +1,12 @@
-import Eggshell.Numerical
+import Main
 import Eggshell.SearchProvider
 import Eggshell.GraphStore
 import Eggshell.ContractAudit
 open Lean Eggshell Eggshell.Plugin.Daemon
 namespace NumericalProtocolProbe
 def base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
-def source := base/"frontend-quiescence-fixture-small1/work.project"
+def source := base/"real-source-search-read-trial-result/work.egg"
+def fixedInput := base/"shared-model-capacity-80-input.json"
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def read (path : System.FilePath) : IO Json := do IO.ofExcept (Json.parse (← IO.FS.readFile path))
 def save (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.pretty
@@ -13,7 +14,19 @@ def hash (path : System.FilePath) : IO String := do
   let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",path.toString]}
   check (result.exitCode == 0) "cannot hash fixed input"
   return (result.stdout.splitOn " ").headD ""
-def question (index : Nat) := s!"Return the recorded head and tail facts for support case-{index}."
+def questions : IO (Array String) := do
+  let input ← read fixedInput
+  check (input.getObjValD "project" == toJson source.toString) "numerical probe left the fixed actual DB"
+  let topics ← IO.ofExcept (input.getObjValAs? (Array Json) "topics")
+  check (topics.map (·.getObjValD "topic") == #[toJson (1 : Nat),toJson (2 : Nat),toJson (3 : Nat)])
+    "retain all three actual questions"
+  topics.mapM fun topic => IO.ofExcept (topic.getObjValAs? String "prompt")
+
+def queryBody (question : String) : Json :=
+  Json.mkObj [("texts",toJson (SearchRank.windows question))]
+
+def encodedValue (result : Json) : Json :=
+  Json.mkObj [("vectors",result.getObjValD "vectors"),("coverage",result.getObjValD "coverage")]
 
 /-- Same authenticated framing and absolute RPC deadline as exchangeBefore.
 Only timestamps and byte counts differ; no replay or alternate source exists. -/
@@ -63,20 +76,22 @@ def exchangeObserved (endpoint : Endpoint) (kind body : String) (deadline : Nat)
 def projectQuery (result : Json) : IO (Array String) := do
   let vectors ← IO.ofExcept (result.getObjValAs? (Array Json) "vectors")
   let coverage ← IO.ofExcept (result.getObjValAs? (Array SearchProvider.EncodingCoverage) "coverage")
-  check (vectors.size == 1 && coverage.size == 1) "query source shape changed"
-  let some measured := coverage[0]? | throw (IO.userError "query coverage absent")
-  check measured.valid "query coverage invalid"
-  let group ← IO.ofExcept vectors[0]!.getArr?
-  let packed ← IO.ofExcept (group.mapM SearchProvider.packVector)
-  let projection ← IO.ofExcept (WindowCentroid.project packed measured.sourceTokens (measured.contextTokens-2) measured.overlapTokens)
-  return #[projection]
+  check (!vectors.isEmpty && vectors.size == coverage.size) "query source shape changed"
+  (vectors.zip coverage).mapM fun (vector,measured) => do
+    check measured.valid "query coverage invalid"
+    let group ← IO.ofExcept vector.getArr?
+    let packed ← IO.ofExcept (group.mapM SearchProvider.packVector)
+    IO.ofExcept (WindowCentroid.project packed measured.sourceTokens (measured.contextTokens-2) measured.overlapTokens)
 
 def inputs : IO (Array BlockScore.Input × Json) := do
+  let fixed ← read fixedInput
+  let expected ← IO.ofExcept (fixed.getObjValAs? (Array (String × String)) "sourceFiles")
+  let some expectedHead := expected.find? (·.1 == "head") | throw (IO.userError "fixed source lacks its head digest")
+  check (expectedHead.2 == (← hash (source/"head"))) "actual source no longer matches the frozen delivery DB"
   let mut rows : Array BlockScore.Input := #[]
   let mut originals := #[]
   let mut documents := 0
-  for index in [:16] do
-    let path := source/s!"owners/{index}/source.egg"
+  for path in [source] do
     let snapshot ← DB.PageMap.pin path
     let docs ← Persistence.Store.searchDocuments snapshot
     originals := originals.push (Json.mkObj [("path",toJson path.toString),("head",toJson snapshot.head),
@@ -85,7 +100,7 @@ def inputs : IO (Array BlockScore.Input × Json) := do
     for document in docs do
       let some owner := document.cache | throw (IO.userError "durable source lost its owner")
       for window in document.windows do rows := rows.push (.indexed owner window)
-  check (documents == 163 && rows.size == 1205) "fixed original scoring domain changed"
+  check (documents == 40 && rows.size == 1933) "fixed actual scoring domain changed"
   return (rows,Json.mkObj [("sources",toJson originals),("documents",toJson documents),("rows",toJson rows.size),
     ("rowOrderSha256",toJson (Sha256.hex (toJson rows).compress.toUTF8))])
 
@@ -110,7 +125,7 @@ def scorePass (endpoint : Endpoint) (queries : Array String) (rows : Array Block
     profiles.modify (·.push (profile.setObjVal! "rows" (toJson batch.size)))
   return scores
 
-def query (config : Numerical.Config) (rows : Array BlockScore.Input) (index : Nat) : IO Json := do
+def query (config : Numerical.Config) (rows : Array BlockScore.Input) (question : String) (index topic : Nat) : IO Json := do
   let started ← IO.monoMsNow
   let deadline := started+28800
   let profiles ← IO.mkRef (#[] : Array Json)
@@ -118,44 +133,60 @@ def query (config : Numerical.Config) (rows : Array BlockScore.Input) (index : N
     let client ← Numerical.openClient config
     try
       let endpoint ← Numerical.resolve config
-      let (encoded,profile) ← exchangeObserved endpoint "encode" (Json.mkObj [("texts",toJson #[question index])]).compress
+      let body := queryBody question
+      let (encoded,profile) ← exchangeObserved endpoint "encode" body.compress
         (min deadline ((← IO.monoMsNow)+24000))
       profiles.modify (·.push profile)
       let projections ← projectQuery encoded
       let first ← scorePass endpoint projections rows deadline profiles
-      let second ← scorePass endpoint projections rows deadline profiles
+      let (encodedAgain,profile) ← exchangeObserved endpoint "encode" body.compress
+        (min deadline ((← IO.monoMsNow)+24000))
+      profiles.modify (·.push profile)
+      check (encodedValue encoded == encodedValue encodedAgain) "second actual query encoding changed vectors or coverage"
+      let second ← scorePass endpoint (← projectQuery encodedAgain) rows deadline profiles
       check (first == second && first.size == rows.size) "same exact query and rows changed scores"
       check ((← IO.monoMsNow) < deadline) "standalone query expired after decoding"
-      return Json.mkObj [("case",toJson index),("completed",toJson true),("elapsedMs",toJson ((← IO.monoMsNow)-started)),
+      return Json.mkObj [("case",toJson index),("topic",toJson topic),("completed",toJson true),("elapsedMs",toJson ((← IO.monoMsNow)-started)),
         ("scores",toJson first.size),("scoreSha256",toJson (Sha256.hex (toJson first).compress.toUTF8)),
+        ("encodingSha256",toJson (Sha256.hex (encodedValue encoded).compress.toUTF8)),
+        ("queryWindows",toJson projections.size),("encodes",toJson (2 : Nat)),
         ("identicalRepeatedScores",toJson true),("profiles",toJson (← profiles.get))]
     finally client.close
   catch error =>
-    return Json.mkObj [("case",toJson index),("completed",toJson false),("elapsedMs",toJson ((← IO.monoMsNow)-started)),
+    return Json.mkObj [("case",toJson index),("topic",toJson topic),("completed",toJson false),("elapsedMs",toJson ((← IO.monoMsNow)-started)),
       ("error",toJson error.toString),("profiles",toJson (← profiles.get))]
 
 def cpu (endpoint : Endpoint) : IO Json := do
   let json ← IO.ofExcept (Json.parse (← exchange endpoint "stats"))
+  let models ← IO.ofExcept (json.getObjValAs? (Array Nat) "modelPids")
+  check (json.getObjValD "modelCapacity" == toJson (1 : Nat) &&
+    json.getObjValD "computeCapacity" == toJson (2 : Nat) && models.size == 1) "fixed shared numerical capacity changed"
   let pids := #[some (← IO.Process.getPID).toNat,some endpoint.pid,
-    (json.getObjValAs? Nat "modelPid").toOption,(json.getObjValAs? Nat "rawPid").toOption].filterMap id
+    (json.getObjValAs? Nat "rawPid").toOption].filterMap id ++ models
   let report ← IO.Process.output {cmd := "/bin/ps",args := #["-p",String.intercalate "," (pids.toList.map toString),
     "-o","pid=,ppid=,time=,utime=,stime=,rss="]}
   check (report.exitCode == 0) "cannot observe numerical processes"
-  return Json.mkObj [("stats",json),("ps",toJson report.stdout),("observedAt",toJson (← IO.monoMsNow))]
+  return Json.mkObj [("stats",json),("daemonPid",toJson endpoint.pid),
+    ("clientPid",toJson (← IO.Process.getPID).toNat),("ps",toJson report.stdout),("observedAt",toJson (← IO.monoMsNow))]
 
 def run (root : System.FilePath) (count : Nat) : IO Unit := do
   check (root.isAbsolute && !(← root.pathExists) && (count == 16 || count == 80)) "fresh numerical protocol root/count required"
   IO.FS.createDirAll root
-  check ((← Paths.dataRoot) == root/"private") "numerical protocol private root changed"
+  check ((← Paths.dataRoot) == base/"real-source-search-read-trial-result/data")
+    "numerical protocol must use the actual prepared project read-cache"
   let (rows,frozen) ← inputs
-  save (root/"frozen.json") frozen
+  let questions ← questions
+  save (root/"frozen.json") (frozen.setObjVal! "questions" (toJson questions)
+    |>.setObjVal! "inputSha256" (toJson (← hash fixedInput)))
   let some config ← Numerical.defaultConfig? | throw (IO.userError "MiniLM runtime unavailable")
   let keeper ← Numerical.keep config
+  let servicePid ← IO.mkRef (none : Option Nat)
   try
     let endpoint ← Numerical.resolve config
+    servicePid.set (some endpoint.pid)
     let control ← Numerical.openClient config
     try
-      let request := Json.mkObj [("texts",toJson #[question 0])]
+      let request := queryBody questions[0]!
       let ordinary ← IO.ofExcept (Json.parse (← control.request 69 request.compress))
       let (observed,_) ← exchangeObserved endpoint "encode" request.compress ((← IO.monoMsNow)+24000)
       check (ordinary.getObjValD "vectors" == observed.getObjValD "vectors" &&
@@ -167,28 +198,51 @@ def run (root : System.FilePath) (count : Nat) : IO Unit := do
       let (observed,_) ← exchangeObserved endpoint "blocks" scoreRequest.compress ((← IO.monoMsNow)+24000)
       check (ordinary.getObjValD "scores" == observed.getObjValD "scores" &&
         ordinary.getObjValD "coverage" == observed.getObjValD "coverage") "observer changed actual block scores"
-      let prime ← query config rows 0
-      save (root/"prime.json") prime
-      check (prime.getObjValD "completed" == toJson true) "standalone priming query failed"
+      let references ← questions.mapIdxM fun index question => do
+        let result ← query config rows question index (index+1)
+        check (result.getObjValD "completed" == toJson true) "actual numerical reference query failed"
+        return result
+      save (root/"references.json") (toJson references)
       let before ← cpu endpoint
-      let began ← IO.monoMsNow
-      let start ← IO.mkRef false
+      let entered ← Std.Mutex.new (0 : Nat)
+      let start ← IO.Promise.new
       let tasks ← (Array.range count).mapM fun index => IO.asTask (do
-        while !(← start.get) do IO.sleep 1
-        query config rows index) .dedicated
-      start.set true
-      let results ← tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
-      let elapsed := (← IO.monoMsNow)-began
+        entered.atomically (modify (·+1))
+        discard <| IO.wait start.result!
+        let topic := index % questions.size
+        let result ← query config rows questions[topic]! index (topic+1)
+        let matched := result.getObjValD "completed" == toJson true &&
+          result.getObjValD "encodingSha256" == references[topic]!.getObjValD "encodingSha256" &&
+          result.getObjValD "scoreSha256" == references[topic]!.getObjValD "scoreSha256"
+        return result.setObjVal! "referenceEqual" (toJson matched)) .dedicated
+      let (results,elapsed) ← try
+          let barrierDeadline := (← IO.monoMsNow)+5000
+          while (← entered.atomically get) < count do
+            check ((← IO.monoMsNow) < barrierDeadline) "numerical burst launch barrier expired"
+            IO.sleep 1
+          let began ← IO.monoMsNow
+          start.resolve ()
+          let results ← tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
+          pure (results,(← IO.monoMsNow)-began)
+        finally
+          start.resolve ()
+          for task in tasks do IO.cancel task
+          for task in tasks do discard <| IO.wait task
+      save (root/"results.json") (toJson results)
       let after ← cpu endpoint
       verifyHeads frozen
       save (root/"report.json") (Json.mkObj [("clients",toJson count),("wallMs",toJson elapsed),
         ("rows",toJson rows.size),("twoExactPassesPerQuery",toJson true),("results",toJson results),
+        ("twoActualEncodesPerQuery",toJson true),("allQueriesReferenceEqual",toJson (results.all (fun result => result.getObjValD "referenceEqual" == toJson true))),
         ("before",before),("after",after),("originalHeadsUnchanged",toJson true),
         ("ordinaryAndObservedControlEqual",toJson true),("noWorkGraphComputation",toJson true),
         ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
     finally control.close
   finally Numerical.release keeper 10000
-  save (root/"shutdown.json") (Json.mkObj [("releasedLastKeeper",toJson true)])
+  let some pid ← servicePid.get | throw (IO.userError "numerical service never became ready")
+  check (!(← Numerical.alive pid) && (← Numerical.endpoint? config).isNone) "standalone numerical service survived its last keeper"
+  save (root/"shutdown.json") (Json.mkObj [("releasedLastKeeper",toJson true),("daemonPid",toJson pid),
+    ("processExited",toJson true),("endpointRemoved",toJson true)])
 end NumericalProtocolProbe
 def main (args : List String) : IO UInt32 := do
   match args with

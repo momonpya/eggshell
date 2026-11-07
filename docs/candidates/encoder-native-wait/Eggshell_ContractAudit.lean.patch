@@ -1,0 +1,16 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2361,0 +2362,13 @@
++
++#check Eggshell.Research.EventScope.cancelled_refused
++#check Eggshell.Research.EventScope.expired_refused
++run_elab do
++  let environment ← Lean.getEnv
++  let some body := (environment.find? ``Eggshell.Research.EventScope.Scope.wait).bind (·.value?) |
++    throwError "Missing owned native event wait"
++  for forbidden in [``IO.sleep,``Std.Mutex.atomically,``Eggshell.TaskDeadline.awaitEvent] do
++    if body.getUsedConstants.contains forbidden then throwError "Native event wait polls or re-enters async dispatch"
++  let some admission := (environment.find? ``Eggshell.Research.EncoderPool.awaitWake).bind (·.value?) |
++    throwError "Missing encoder admission event wait"
++  unless admission.getUsedConstants.contains ``Eggshell.Research.EventScope.Scope.wait do
++    throwError "Encoder admission bypasses native event scope"

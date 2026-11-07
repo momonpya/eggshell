@@ -3,6 +3,7 @@ import Lean.Data.Json.FromToJson
 import Init.System.Promise
 import Lean
 open Lean Eggshell.Research.EncoderPool
+open Eggshell.Research.EventScope
 namespace Eggshell.Research.EncoderPoolControls
 run_elab do
   let environment ← Lean.getEnv
@@ -15,6 +16,13 @@ run_elab do
 #check WakeQueue.removed_absent
 #check State.notification_preserves_credits
 #check State.notification_preserves_generation
+#check Eggshell.Research.EventScope.cancelled_refused
+#check Eggshell.Research.EventScope.expired_refused
+run_elab do
+  let environment ← Lean.getEnv
+  let some body := (environment.find? ``Scope.wait).bind (·.value?) | throwError "Missing native scope wait"
+  for forbidden in [``Std.Mutex.atomically,``IO.sleep] do
+    if body.getUsedConstants.contains forbidden then throwError "Native event wait polls or holds management"
 def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
 def rejects (action : IO α) : IO Bool := try discard action; pure false catch _ => pure true
 def waitUntil (condition : IO Bool) : IO Unit := do
@@ -31,7 +39,7 @@ def overlap : IO Json := do
   let release ← IO.Promise.new
   let disposed ← Std.Mutex.new (0 : Nat)
   let dispose := fun (_ : Nat) => disposed.atomically (modify (·+1))
-  let tasks ← (Array.range 2).mapM fun _ => IO.asTask (pool.withResource (pure true)
+  let tasks ← (Array.range 2).mapM fun _ => IO.asTask (pool.withResource {}
     (fun ticket => pure ticket.index) dispose fun _ value _ => do
       entered.atomically (modify (·.push value))
       discard <| IO.wait release.result!
@@ -52,12 +60,12 @@ def overlap : IO Json := do
     check (snapshot.starts == 2 && snapshot.slots.size == 2) "pool grew past its resident credits"
     check (snapshot.waiting == 0 && (snapshot.slots.filter Slot.isIdle).size == 1 &&
       (← disposed.atomically get) == 1) "spare idle model was retained after all work returned"
-    let reused ← pool.withResource (pure true) (fun _ => throw (IO.userError "warm reuse spawned a third encoder"))
+    let reused ← pool.withResource {} (fun _ => throw (IO.userError "warm reuse spawned a third encoder"))
       dispose (fun _ resource _ => pure resource)
     check (values.contains reused) "warm reuse returned an unregistered encoder"
     pool.close dispose
     check ((← disposed.atomically get) == 2) "close lost or repeated an encoder retirement"
-    check (← rejects (pool.withResource (pure true) (fun _ => pure 9) dispose (fun _ value _ => pure value)))
+    check (← rejects (pool.withResource {} (fun _ => pure 9) dispose (fun _ value _ => pure value)))
       "closed pool accepted a new encoder"
     return Json.mkObj [("simultaneousOwners",toJson (2 : Nat)),("differentPipeSlots",toJson true),
       ("workFinishedWhileManagementLockHeld",toJson true),("warmReuseDidNotSpawn",toJson true),
@@ -76,7 +84,7 @@ def retiring : IO Json := do
     disposed.modify (·+1)
     entered.resolve ()
     discard <| IO.wait release.result!
-  let work ← IO.asTask (show IO Unit from pool.withResource (pure true) (fun _ => pure 7) dispose fun _ _ retire => do
+  let work ← IO.asTask (show IO Unit from pool.withResource {} (fun _ => pure 7) dispose fun _ _ retire => do
     retire
     throw (IO.userError "fixture inference failed")) .dedicated
   try
@@ -109,12 +117,12 @@ def failureAndClose : IO Json := do
   let pool ← Pool.make (α := Nat) 1
   let disposed ← IO.mkRef (0 : Nat)
   let dispose := fun (_ : Nat) => disposed.modify (·+1)
-  check (← rejects (pool.withResource (pure true) (fun _ => throw (IO.userError "fixture spawn failed"))
+  check (← rejects (pool.withResource {} (fun _ => throw (IO.userError "fixture spawn failed"))
     dispose (fun _ resource _ => pure resource))) "startup failure was accepted"
   check ((← disposed.get) == 0) "failed startup retired an unrelated resource"
   let entered ← IO.Promise.new
   let release ← IO.Promise.new
-  let work ← IO.asTask (pool.withResource (pure true) (fun _ => pure 11) dispose fun _ resource _ => do
+  let work ← IO.asTask (pool.withResource {} (fun _ => pure 11) dispose fun _ resource _ => do
     entered.resolve ()
     discard <| IO.wait release.result!
     return resource) .dedicated
@@ -142,7 +150,7 @@ def idlePreferred : IO Json := do
   let dispose := fun value => disposed.modify (value :: ·)
   pool.giveBack first false dispose
   pool.giveBack second true dispose
-  let reused ← pool.withResource (pure true) (fun _ => throw (IO.userError "spawned despite an idle model"))
+  let reused ← pool.withResource {} (fun _ => throw (IO.userError "spawned despite an idle model"))
     dispose (fun _ value _ => pure value)
   check (reused == 2) "empty slot was preferred to a warm encoder"
   pool.close dispose
@@ -197,13 +205,14 @@ def cancelledWaiter : IO Json := do
   let pool ← Pool.make (α := Nat) 1
   let some active ← pool.take? | throw (IO.userError "active slot missing")
   check (← pool.install active 7) "active resource rejected"
-  let live ← IO.mkRef true
+  let cancelled ← IO.Promise.new
+  let scope : Scope := {signals := #[cancelled.resultD ()]}
   let disposed ← IO.mkRef (0 : Nat)
   let dispose := fun (_ : Nat) => disposed.modify (·+1)
-  let waiter ← IO.asTask (pool.withResource live.get (fun _ => pure 9) dispose (fun _ value _ => pure value)) .dedicated
+  let waiter ← IO.asTask (pool.withResource scope (fun _ => pure 9) dispose (fun _ value _ => pure value)) .dedicated
   try
     waitUntil (do return (← pool.state.atomically get).waiting == 1)
-    live.set false
+    cancelled.resolve ()
     let result ← IO.wait waiter
     check (match result with | .error _ => true | _ => false) "expired waiter obtained a pipe"
     check ((← pool.state.atomically get).waiting == 0 && (← disposed.get) == 0)
@@ -213,7 +222,7 @@ def cancelledWaiter : IO Json := do
     check ((← disposed.get) == 1) "waiter cleanup lost the active model"
     return Json.mkObj [("expiredWaiterRemovedDemand",toJson true),("activeOwnerPreserved",toJson true)]
   finally
-    live.set false
+    cancelled.resolve ()
     IO.cancel waiter
     discard <| IO.wait waiter
 
@@ -223,12 +232,36 @@ def notificationBeforeWait : IO Json := do
   let .inr watch ← pool.takeOrWatch | throw (IO.userError "full pool did not register a notification")
   pool.giveBack active false (fun _ => pure ())
   check (← watch.ready.isResolved) "return lost its notification before the observer registered"
-  awaitWake watch (pure true)
+  awaitWake watch {}
   let some acquired ← pool.take? | throw (IO.userError "notification consumed a resource credit")
   pool.giveBack acquired false (fun _ => pure ())
   pool.close (fun _ => pure ())
   return Json.mkObj [("notificationBeforeObserverPreserved",toJson true),
     ("notificationDidNotConsumeOrCreateCredit",toJson true)]
+
+def absoluteDeadline : IO Json := do
+  let pool ← Pool.make (α := Nat) 1
+  let some active ← pool.take? | throw (IO.userError "deadline fixture owner missing")
+  let started ← IO.monoMsNow
+  let scope : Scope := {deadline := some (started+60)}
+  let result ← rejects (pool.withResource scope (fun _ => pure 1) (fun _ => pure ()) (fun _ _ _ => pure ()))
+  let elapsed := (← IO.monoMsNow)-started
+  let state ← pool.state.atomically get
+  check (result && elapsed ≥ 60 && elapsed < 2000 && state.waiting == 0 && state.wake.items.isEmpty)
+    "absolute deadline leaked admission or did not terminate"
+  pool.giveBack active false (fun _ => pure ())
+  pool.close (fun _ => pure ())
+  let stopped ← IO.Promise.new
+  stopped.resolve ()
+  let ready ← IO.Promise.new
+  ready.resolve (.ok (7 : Nat))
+  check (← rejects (({signals := #[stopped.resultD ()]} : Scope).wait ready.result!))
+    "already-completed readiness bypassed cancellation"
+  let failure ← IO.Promise.new
+  failure.resolve (.error (IO.userError "original completion failure") : Except IO.Error Nat)
+  check (← rejects (({} : Scope).wait failure.result!)) "completion failure was discarded"
+  return Json.mkObj [("absoluteDeadlineMs",toJson elapsed),("noWaitersAfterDeadline",toJson true),
+    ("cancelledReadinessRefused",toJson true),("sourceErrorPreserved",toJson true)]
 
 def eightyWaiters (closing : Bool) : IO Json := do
   let pool ← Pool.make (α := Nat) 2
@@ -236,14 +269,13 @@ def eightyWaiters (closing : Bool) : IO Json := do
   let some second ← pool.take? | throw (IO.userError "second admission owner missing")
   check (← pool.install first 1) "first admission resource rejected"
   check (← pool.install second 2) "second admission resource rejected"
-  let lives ← (Array.range 80).mapM fun _ => IO.mkRef true
-  let calls ← (Array.range 80).mapM fun _ => IO.mkRef (0 : Nat)
+  let cancellations ← (Array.range 80).mapM fun _ => IO.Promise.new (α := Unit)
   let active ← Std.Mutex.new (#[] : Array Nat)
   let maximum ← Std.Mutex.new (0 : Nat)
   let disposed ← Std.Mutex.new (0 : Nat)
   let dispose := fun (_ : Nat) => disposed.atomically (modify (·+1))
-  let tasks ← (lives.zip calls).mapIdxM fun index (live,call) => IO.asTask (pool.withResource
-    (do call.modify (·+1); live.get)
+  let tasks ← cancellations.mapIdxM fun index cancelled => IO.asTask (pool.withResource
+    {signals := #[cancelled.resultD ()]}
     (fun ticket => pure ticket.index) dispose fun ticket _ _ => do
       active.atomically do
         let slots ← get
@@ -261,12 +293,10 @@ def eightyWaiters (closing : Bool) : IO Json := do
     let registered ← pool.state.atomically get
     check (registered.wake.next == 80 && registered.wake.items.toArray.size == 80)
       "blocked requests repeatedly re-registered with the resource pool"
-    let liveChecks ← calls.mapM (·.get)
-    check (liveChecks.all (· < 20)) "event waiter still spins at millisecond frequency"
     if closing then pool.close dispose
     else
-      for (live,index) in lives.zipIdx do
-        if index % 3 == 0 then live.set false
+      for (cancelled,index) in cancellations.zipIdx do
+        if index % 3 == 0 then cancelled.resolve ()
       waitUntil (do return (← pool.state.atomically get).wake.items.toArray.size == 53)
     let stateBeforeReturn ← pool.state.atomically get
     check ((← disposed.atomically get) == 0 && stateBeforeReturn.slots.size == 2)
@@ -286,11 +316,11 @@ def eightyWaiters (closing : Bool) : IO Json := do
       ("rejectedRequests",toJson (80-expected)),("closedWhileQueued",toJson closing),
       ("maximumConcurrentCreditOwners",toJson (← maximum.atomically get)),
       ("oneSubscriptionDuringBlockedInterval",toJson true),
-      ("observedCooperativeLiveChecks",toJson liveChecks),
+      ("periodicLifetimeChecks",toJson false),
       ("wallMsAfterRegistration",toJson ((← IO.monoMsNow)-queuedAt)),
       ("noRemainingWaitersOrOwners",toJson true)]
   finally
-    for live in lives do live.set false
+    for cancelled in cancellations do cancelled.resolve ()
     pool.close dispose
     for task in tasks do IO.cancel task
     for task in tasks do discard <| IO.wait task
@@ -303,6 +333,7 @@ def run (output : System.FilePath) : IO Unit := do
     ("failureAndShutdown",← stage "failureAndShutdown" failureAndClose),("idlePreferred",← stage "idlePreferred" idlePreferred),
     ("demandAndStandby",← stage "demandAndStandby" demandAndStandby),("cancelledWaiter",← stage "cancelledWaiter" cancelledWaiter),
     ("notificationBeforeWait",← stage "notificationBeforeWait" notificationBeforeWait),
+    ("absoluteDeadline",← stage "absoluteDeadline" absoluteDeadline),
     ("eightyWithCancellation",← stage "eightyWithCancellation" (eightyWaiters false)),
     ("eightyWithShutdown",← stage "eightyWithShutdown" (eightyWaiters true)),("allPassed",toJson true),
     ("realModelOrFullHookCapacity",toJson false),("adopted",toJson false)]

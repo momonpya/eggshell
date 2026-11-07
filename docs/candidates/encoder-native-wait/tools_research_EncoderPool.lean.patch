@@ -1,0 +1,50 @@
+--- a/tools/research/EncoderPool.lean
++++ b/tools/research/EncoderPool.lean
+@@ -6 +6 @@
+-public import Eggshell.TaskDeadline
++public import tools.research.EventScope
+@@ -328,12 +328,4 @@
+-/-- The readiness observer is installed once. Timer wakes only check the
+-caller's cooperative lifetime; they never reacquire the pool mutex. -/
+-def awaitWake (watch : Watch) (live : IO Bool) : IO Unit := do
+-  let ready ← Eggshell.TaskDeadline.event watch.ready.result!
+-  repeat
+-    unless (← live) && !(← IO.checkCanceled) do
+-      throw (IO.userError "encoder request is no longer live")
+-    let finished ← Eggshell.TaskDeadline.awaitEvent (do
+-      let timer ← Std.Async.Selector.sleep (.ofNat 25)
+-      Eggshell.Research.OwnedSelect.one #[.case ready (fun _ => pure true),.case timer (fun _ => pure false)])
+-    if finished then return
+-  throw (IO.userError "unreachable encoder notification")
++/-- Admission observes readiness, cancellation and the absolute deadline in
++one native wait. No periodic async work competes with numerical completion. -/
++def awaitWake (watch : Watch) (scope : EventScope.Scope) : IO Unit :=
++  scope.wait (watch.ready.resultD (.error (IO.userError "encoder notification dropped")))
+@@ -382 +374 @@
+-def Pool.waitTicket (pool : Pool α) (live : IO Bool) : IO (Ticket α) := do
++def Pool.waitTicket (pool : Pool α) (scope : EventScope.Scope) : IO (Ticket α) := do
+@@ -384 +376 @@
+-    unless (← live) && !(← IO.checkCanceled) do throw (IO.userError "encoder request is no longer live")
++    scope.ensure
+@@ -388 +380 @@
+-        try awaitWake watch live
++        try awaitWake watch scope
+@@ -411 +403 @@
+-def Pool.borrow (pool : Pool α) (live : IO Bool) (dispose : α → IO Unit) : IO (Ticket α) := do
++def Pool.borrow (pool : Pool α) (scope : EventScope.Scope) (dispose : α → IO Unit) : IO (Ticket α) := do
+@@ -418 +410 @@
+-    let ticket ← pool.waitTicket live
++    let ticket ← pool.waitTicket scope
+@@ -430 +422 @@
+-def Pool.withResource (pool : Pool α) (live : IO Bool) (create : Ticket α → IO α)
++def Pool.withResource (pool : Pool α) (scope : EventScope.Scope) (create : Ticket α → IO α)
+@@ -432 +424 @@
+-  let ticket ← pool.borrow live dispose
++  let ticket ← pool.borrow scope dispose
+@@ -434,2 +426 @@
+-    unless (← live) && !(← IO.checkCanceled) do
+-      throw (IO.userError "encoder request expired before startup")
++    scope.ensure
+@@ -450 +441 @@
+-    unless ← live do throw (IO.userError "encoder request expired before execution")
++    scope.ensure

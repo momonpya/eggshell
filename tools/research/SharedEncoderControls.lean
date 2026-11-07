@@ -54,8 +54,8 @@ def run (root : System.FilePath) : IO Unit := do
       (assets/"models").toString,"4",(root/"model.guard").toString,"shared"],
     stdin := .piped,stdout := .piped,stderr := .inherit})
   let pool ← EncoderPool.Pool.make 2
-  let encode := fun index live => pool.withResource live (fun _ => pure ()) (fun _ => pure ()) fun _ _ _ => do
-    let reply ← server.request inputs[index]!.compress ((← IO.monoMsNow)+30000) live
+  let encode := fun index (scope : EventScope.Scope) => pool.withResource scope (fun _ => pure ()) (fun _ => pure ()) fun _ _ _ => do
+    let reply ← server.request inputs[index]!.compress ((← IO.monoMsNow)+30000) scope.live
     verify expected index reply
     return reply
   try
@@ -64,7 +64,7 @@ def run (root : System.FilePath) : IO Unit := do
       let began ← IO.monoMsNow
       let tasks ← (Array.range inputs.size).mapM fun index => IO.asTask (do
         let started ← IO.monoMsNow
-        let reply ← encode index (pure true)
+        let reply ← encode index {}
         let value ← IO.ofExcept (Json.parse reply)
         check (value.getObjValD "pid" == toJson server.core.child.pid.toNat) "shared encoder changed its process"
         return Json.mkObj [("request",toJson index),("identity",value.getObjValD "id"),
@@ -76,20 +76,20 @@ def run (root : System.FilePath) : IO Unit := do
         ("wallMs",toJson ((← IO.monoMsNow)-began))]
       write (root/s!"wave-{wave}.json") value
       waves := waves.push value
-    let live ← IO.mkRef true
-    let cancelled ← IO.asTask (encode (inputs.size-1) live.get) .dedicated
-    let survivor ← IO.asTask (encode 0 (pure true)) .dedicated
+    let cancellation ← IO.Promise.new
+    let cancelled ← IO.asTask (encode (inputs.size-1) {signals := #[cancellation.resultD ()]}) .dedicated
+    let survivor ← IO.asTask (encode 0 {}) .dedicated
     let activationDeadline := (← IO.monoMsNow)+5000
     while (← server.pending) < 2 do
       check ((← IO.monoMsNow) < activationDeadline) "two shared requests never became active"
       IO.sleep 1
-    live.set false
+    cancellation.resolve ()
     let cancelledResult ← IO.wait cancelled
     let .error cancelledError := cancelledResult | throw (IO.userError "expired shared request unexpectedly completed")
     check (cancelledError.toString.contains "expired or disconnected") "shared request failed for an unrelated reason"
     let survivorResult ← IO.ofExcept (← IO.wait survivor)
     verify expected 0 survivorResult
-    discard <| encode 0 (pure true)
+    discard <| encode 0 {}
     check ((← server.pending) == 0 && !(← server.closed)) "individual cancellation retired the shared model"
     write (root/"report.json") (Json.mkObj [("allPassed",toJson true),("waves",toJson waves),
       ("parallelRepliesExact",toJson (2*inputs.size)),("cancelledRequestRejected",toJson true),

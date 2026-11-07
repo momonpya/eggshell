@@ -1,0 +1,23 @@
+--- a/tools/research/SharedEncoderControls.lean
++++ b/tools/research/SharedEncoderControls.lean
+@@ -57,2 +57,2 @@
+-  let encode := fun index live => pool.withResource live (fun _ => pure ()) (fun _ => pure ()) fun _ _ _ => do
+-    let reply ← server.request inputs[index]!.compress ((← IO.monoMsNow)+30000) live
++  let encode := fun index (scope : EventScope.Scope) => pool.withResource scope (fun _ => pure ()) (fun _ => pure ()) fun _ _ _ => do
++    let reply ← server.request inputs[index]!.compress ((← IO.monoMsNow)+30000) scope.live
+@@ -67 +67 @@
+-        let reply ← encode index (pure true)
++        let reply ← encode index {}
+@@ -79,3 +79,3 @@
+-    let live ← IO.mkRef true
+-    let cancelled ← IO.asTask (encode (inputs.size-1) live.get) .dedicated
+-    let survivor ← IO.asTask (encode 0 (pure true)) .dedicated
++    let cancellation ← IO.Promise.new
++    let cancelled ← IO.asTask (encode (inputs.size-1) {signals := #[cancellation.resultD ()]}) .dedicated
++    let survivor ← IO.asTask (encode 0 {}) .dedicated
+@@ -86 +86 @@
+-    live.set false
++    cancellation.resolve ()
+@@ -92 +92 @@
+-    discard <| encode 0 (pure true)
++    discard <| encode 0 {}

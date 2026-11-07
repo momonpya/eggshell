@@ -29,7 +29,13 @@
 
 ## 現在地と次の順序
 
-現在の隔離候補は [encoder-events](docs/candidates/encoder-events/README.md)（SHA `5b9fdf5f43db3a1be7c074b5038e35e96e70faaf2641c2b00cac07f9db0d6e7c`）。[shared-model](docs/candidates/shared-model/README.md)の物理モデル1組・推論2枠を保ち、枠の1ms再照会を通知待機へ置き換えた。[keyed-discovery](docs/candidates/keyed-discovery/README.md)の共有reader、[runtime-key](docs/candidates/runtime-key/README.md)の固定識別と、[local-batch](docs/candidates/local-batch/README.md)/[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善も継承する。実LLVM全6回は原文32/32、親shared-modelの全本文とbyte一致、意味検索/ACK完了、全件sharedImage=trueだった。新候補の4/16/80同時は未実行で、80人容量は未達。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残す。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+最新の隔離した数値候補は[encoder-native-wait](docs/candidates/encoder-native-wait/README.md)（SHA `88de092f…`）。枠待ちを明示した取消/絶対期限と一度のnative待機へ変え、通常RPC48応答・直接transport34応答・取消/停止を検査した。同じ実LLVMの数値protocolは16/16・2,751ms、80/80・28,259ms、全vector/scoreが親基準一致・関連RSS最大2,168,480KiB・残存0だった。ただし親shared-modelの80/80・20,845msより遅く、実hook80や総token/品質の合格ではない。Lean 4.33.0のIO.waitAnyが共通mutex/全体通知を使うことを実装で確認した。次は要求ごとの完了/取消通知へ切り離し、無関係なtask完了で待機者を起こす経路を除く。全6実hookと全hook80はまだ再実行せず、元snapshot・必要項目・順位・認定domain・予算・期限・資源上限は維持する。本体未採用・回答モデル0・有料比較0/18、goalはactive。
+
+## 直近の経緯
+
+先行する[数値protocol単独の同一入力比較](docs/candidates/encoder-events/protocol/README.md)では、16並行は両版16/16だが、80並行は親shared-model 80/80・20,845msに対しencoder-events 3/80・28,908msへ回帰した。資源停止なし。pipe読取り中央値は両版2ms、読取り後の完了待合せが0→25msだった。これを受けたnative-waitの結果と次の作業は上記を現在地とする。以下の単独6hook成功を80人容量の成功にしない。
+
+先行[encoder-events](docs/candidates/encoder-events/README.md)（SHA `5b9fdf5f…`）の実LLVM全6回は原文32/32、親shared-modelの全本文とbyte一致、意味検索/ACK完了、全件sharedImage=trueだった。全hookの4/16/80は未実行で、数値80の回帰を受けて先へ進めなかった。旧製品/旧prefix実行体は置換後に削除し、source/object/interfaceと証拠は保持した。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
 
 後続の[keyed-inputs](docs/candidates/keyed-inputs/README.md)（SHA `bdaa25d2713d553e59f278cc163700722dd810bd46eee43850680365d6db175f`）は、windows/lexical/numericの検証済みmetadataを共有するimageを加えた。型と通常監査、1,345依存/108型、実DBの80 readerを管理ページMutex保持中に4msで借用する部品検査が通った。実フック全6回も原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、8,462〜10,061ms、関連RSS最大3,010,912KiB・残存0だったが、**全件sharedImage=falseで変更が使われておらず、candidatePathPassed=falseとして不合格**。4/16/80負荷は再実行していない。
 

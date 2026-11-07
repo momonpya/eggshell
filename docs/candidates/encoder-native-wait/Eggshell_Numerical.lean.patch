@@ -1,0 +1,45 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -32 +32,2 @@
+-  include_str "../tools/research/EncoderPool.lean",include_str "../tools/research/SharedEncoder.lean")).compress.toUTF8
++  include_str "../tools/research/EncoderPool.lean",include_str "../tools/research/SharedEncoder.lean",
++  include_str "../tools/research/EventScope.lean")).compress.toUTF8
+@@ -296 +297 @@
+-def withPeerWaiting (client : Socket.Client) (action : IO Bool → IO α) : IO α := do
++def withPeerWaiting (client : Socket.Client) (action : IO Bool → Task Unit → IO α) : IO α := do
+@@ -298 +299,2 @@
+-  try action (do return !(← peer.isResolved))
++  let disconnected := peer.result?.map (sync := true) (fun _ => ())
++  try action (do return !(← peer.isResolved)) disconnected
+@@ -324,0 +327 @@
++  stopSignal : IO.Promise Unit
+@@ -325,0 +329,4 @@
++def Backend.requestStop (backend : Backend) : IO Unit := do
++  backend.stopping.set true
++  backend.stopSignal.resolve ()
++
+@@ -360 +367 @@
+-  backend.models.withResource live (fun _ => do
++  backend.models.withResource {signals := #[backend.stopSignal.resultD ()]} (fun _ => do
+@@ -370 +377 @@
+-    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := withPeerWaiting client fun waiting => do
++    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := withPeerWaiting client fun waiting disconnected => do
+@@ -376 +383 @@
+-  backend.encoders.withResource live (fun _ => pure ()) (fun _ => pure ()) (fun ticket _ _ => do
++  backend.encoders.withResource {signals := #[backend.stopSignal.resultD (),disconnected],deadline := some deadline} (fun _ => pure ()) (fun _ => pure ()) (fun ticket _ _ => do
+@@ -435 +442 @@
+-    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := withPeerWaiting client fun waiting => do
++    (body : String) (deadline : Nat) (mark : String → IO Unit := fun _ => pure ()) : IO String := withPeerWaiting client fun waiting _disconnected => do
+@@ -542 +549 @@
+-      | "shutdown" => backend.stopping.set true; pure ""
++      | "shutdown" => backend.requestStop; pure ""
+@@ -576 +583,2 @@
+-    stopping := ← IO.mkRef false }
++    stopping := ← IO.mkRef false
++    stopSignal := ← IO.Promise.new }
+@@ -587 +595 @@
+-        backend.stopping.set true
++        backend.requestStop
+@@ -602 +610 @@
+-    backend.stopping.set true
++    backend.requestStop

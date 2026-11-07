@@ -46,4 +46,4 @@
 
 集計前の空き容量検査で2GiBの条件に届かず、[集計の起動を拒否](collect-preflight.json)した。実験は再実行せず、終了済みshared-modelのcapacity client・auditor・prefixの実行体3つ、論理353,255,440 bytesを元native SHAと稼働なしを照合して[削除](retired-shared-clients.json)した。親製品の正本、採用比較基準、現在のDB・project cache・モデル・必要なnative依存は保持した。集計を再開し、終了session/重複受領も[削除](delivery-cleanup.json)した。archiveは作らない。
 
-この候補の4/16/80同時はまだ実行していない。先に、実質問とDBの同じ入力を使う数値protocol単独の80要求で、受付・推論・送受信を分ける。全hookの80失敗を変更なしで反復しない。80人8時間・増大project・NAS・実98%・総token/品質は未検証。本体未採用、回答モデル0・有料比較0/18でgoalはactive。
+[同じ実DBでの数値protocol比較](protocol/README.md)では、16並行は両版16/16だが、80並行は親80/80に対し候補3/80へ悪化した。pipe読取り中央値は両版2msなのに、読取り後の完了待合せは親0ms→候補25msとなった。資源停止なし・全process回収済み。この候補の全hook4/16/80へは進めず、周期的なasync待機を一度の完了/取消/期限待機へ変える。全hookの80失敗を変更なしで反復しない。80人8時間・増大project・NAS・実98%・総token/品質は未検証。本体未採用、回答モデル0・有料比較0/18でgoalはactive。
