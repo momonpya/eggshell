@@ -1,0 +1,80 @@
+--- a/Eggshell/SelectionAudit.lean
++++ b/Eggshell/SelectionAudit.lean
+@@ -256,0 +257,46 @@
++
++/-- Typed selected branches can outlive a discovery without retaining its
++quotient or graph. Encoding remains deferred until a completed result needs
++an actual receipt. -/
++structure PreparedBranch where
++  owner : String
++  demand : Value
++  projectedOutcome : Value
++  premises : List Nat
++  decompositions : List Nat
++
++def PreparedBranch.encode (branch : PreparedBranch) : CompletedBranch := {
++  owner := branch.owner,demand := Persistence.valueToJson branch.demand
++  projectedOutcome := Persistence.valueToJson branch.projectedOutcome
++  premises := branch.premises,decompositions := branch.decompositions }
++
++structure Prepared where
++  current : Value
++  persistent : List UnionEdge
++  runLocal : List UnionEdge
++  premises : List SelectionDependency.Comparison
++  owners : List String
++  branches : List PreparedBranch
++  decompositions : List (Value × Bool)
++  finalPass : Option Nat
++
++def Prepared.ofReport (persistent runLocal : List UnionEdge)
++    {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
++    {current : Value} {selection : Selection}
++    (report : SelectionDependency.Report graph equality policy current selection)
++    (owners : List String) (bindings : List (Value × String))
++    (runAll : List AllEdge) (finalPass : Option Nat) : Prepared :=
++  let positions : Std.HashMap SelectionDependency.Comparison Nat :=
++    report.premises.zipIdx.foldl (fun positions (premise,index) => positions.insert premise index) {}
++  let decompositions := hashDistinct (selection.decompositionEdges.map (·.relation))
++  let allPositions : Std.HashMap Value Nat := decompositions.zipIdx.foldl
++    (fun positions (relation,index) => positions.insert relation index) {}
++  let branches := (SelectionDependency.completedBranches equality current selection).flatMap fun branch =>
++    (bindings.filterMap fun (projected,owner) =>
++      if projected == branch.edge.relation then some owner else none).eraseDups.map fun owner => ({
++        owner,demand := branch.demand,projectedOutcome := branch.edge.relation
++        premises := branch.premises.map (fun premise => positions.getD premise report.premises.length)
++        decompositions := branch.decompositions.map fun edge =>
++          allPositions.getD edge.relation decompositions.length } : PreparedBranch)
++  {current,persistent,runLocal,premises := report.premises,owners := owners.eraseDups,branches
++   decompositions := decompositions.map (fun relation => (relation,runAll.any (·.relation == relation))),finalPass}
+@@ -257,0 +304,30 @@
++def Prepared.snapshot (prepared : Prepared) (admissions : List (Admission × String))
++    (history : List Admission) (trail : DiscoveryAudit.Trail) : Snapshot :=
++  let completedBranches := prepared.branches.map PreparedBranch.encode
++  {current := Persistence.valueToJson prepared.current
++   persistent := prepared.persistent.map Generator.encode
++   runLocal := prepared.runLocal.map Generator.encode
++   premises := prepared.premises.map DiscoveryAudit.ComparisonRow.encode
++   owners := prepared.owners,completedBranches
++   admissions := admissions.filterMap fun (admission,owner) =>
++     admission.snapshot? prepared.runLocal completedBranches owner
++   localOrigins := unionOrigins prepared.runLocal history
++   schedules := trail.schedules.reverse.filterMap (·.snapshot? prepared.runLocal)
++   continuations := trail.continuations.reverse.filterMap (·.snapshot? prepared.runLocal)
++   decompositions := prepared.decompositions.map fun (relation,generated) =>
++     {relation := Persistence.valueToJson relation,generated}
++   finalPass := prepared.finalPass}
++
++theorem prepared_snapshot_exact (persistent runLocal : List UnionEdge)
++    {graph : WorkGraph} {equality : Equality} {policy : OutcomePolicy}
++    {current : Value} {selection : Selection}
++    (report : SelectionDependency.Report graph equality policy current selection)
++    (owners : List String) (bindings : List (Value × String))
++    (admissions : List (Admission × String)) (history : List Admission)
++    (trail : DiscoveryAudit.Trail) (runAll : List AllEdge) (finalPass : Option Nat) :
++    (Prepared.ofReport persistent runLocal report owners bindings runAll finalPass).snapshot admissions history trail =
++      Snapshot.ofReport persistent runLocal report owners bindings admissions history trail runAll finalPass := by
++  unfold Prepared.ofReport Prepared.snapshot Snapshot.ofReport
++  simp only [List.map_flatMap,List.map_map,Function.comp_def,PreparedBranch.encode]
++  rfl
++

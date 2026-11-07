@@ -1,0 +1,277 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -1599,0 +1600,39 @@
++    ((handoff.sourceUses.filter (·.completed)).map (·.owner))
++    (handoff.sourceCheckpoints.map (·.use.owner))
++  pure (some {handoff with equalitySelection := reference})
++
++/-- Only selected comparison data survives the rendering wait. The discovery
++graph and quotient are consumed while preparing this value, not captured in
++an IO continuation. Generator/Value encoding still waits for a receipt. -/
++structure PreparedSelectionAudit where
++  snapshot : SelectionAudit.Prepared
++  completed : List Selected
++
++@[noinline] def prepareRenderedSelectionAudit (receipt : Option String)
++    (discovery : Matcher.Discovery)
++    (prepared : {extraction : Extraction // extraction = Matcher.extraction discovery}) :
++    Option PreparedSelectionAudit :=
++  if receipt.isNone then none else
++    let valid : prepared.val.selection.validFor discovery.view.graph
++        discovery.view.quotient.toEquality discovery.policy discovery.current = true := by
++      simpa only [prepared.property] using Matcher.extraction_sound discovery
++    let report := SelectionDependency.Report.ofValid valid
++    let completed := (selectedMatches discovery prepared.val).filter
++      (fun selected => selected.applicability == .completed)
++    let owners := completed.map (fun selected => relationKey selected.matched.edge.relation)
++    let bindings := completed.map fun selected =>
++      (selected.matched.projectedEdge.relation,relationKey selected.matched.edge.relation)
++    some ⟨SelectionAudit.Prepared.ofReport discovery.persistentUnions discovery.view.localUnions report
++      owners bindings discovery.runAll (some discovery.passes),completed⟩
++
++def auditPreparedSelection (receipt : Option String) (prepared : Option PreparedSelectionAudit)
++    (result : Option Handoff) (observed : List SelectionAudit.Admission := [])
++    (trail : DiscoveryAudit.Trail := {}) : IO (Option Handoff) := do
++  if receipt.isNone then return result
++  let some handoff := result | return none
++  if handoff.completed == 0 && !handoff.blocksCurrent then return result
++  let some ready := prepared | throw (IO.userError "selected equality audit preparation is missing")
++  let admissions := ready.completed.filterMap fun selected =>
++    (observed.find? (fun admission => Matcher.sameMatch admission.matched selected.matched)).map
++      (fun admission => (admission,relationKey selected.matched.edge.relation))
++  let reference ← SelectionAudit.capture receipt (ready.snapshot.snapshot admissions observed trail)
+@@ -1602,0 +1642,9 @@
++
++theorem audit_preparation_exact (receipt : Option String) (discovery : Matcher.Discovery)
++    (prepared : {extraction : Extraction // extraction = Matcher.extraction discovery})
++    (result : Option Handoff) (observed : List SelectionAudit.Admission) (trail : DiscoveryAudit.Trail) :
++    auditPreparedSelection receipt (prepareRenderedSelectionAudit receipt discovery prepared) result observed trail =
++      auditRenderedSelection receipt discovery prepared result observed trail := by
++  cases receipt <;> cases result <;>
++    simp [auditPreparedSelection,prepareRenderedSelectionAudit,auditRenderedSelection,
++      SelectionAudit.prepared_snapshot_exact]
+@@ -7267,0 +7316 @@
++    let selectionTree := extraction.selection
+@@ -7272 +7321 @@
+-      let tree := renderSelectionTree extraction.selection relations true
++      let tree := renderSelectionTree selectionTree relations true
+@@ -7304 +7353 @@
+-    let maximalTree := renderSelectionTree extraction.selection allRelations true
++    let maximalTree := renderSelectionTree selectionTree allRelations true
+@@ -7322,4 +7371,104 @@
+-    let finish (selectionPlan : Option SharedRangeAdapter.RenderChoice) : Option Handoff :=
+-      let fittedSlices := if meaningSelected && !enforce then
+-        (selectionPlan.map (·.slices)).getD []
+-        else if meaningSelected then
++    let localUnionCount := discovery.view.localUnions.length
++    let saturationPasses := discovery.passes
++    let finish (selectionPlan : Option SharedRangeAdapter.RenderChoice) (fittedSlices : List TransportSlice) : Option Handoff :=
++      let fittedSlices := fittedSlices.map fun slice => match slice.context with
++        | none => match slice.shared with
++          | none => slice
++          | some original =>
++            let shared := {original with plan := sharedPlan}
++            {slice with shared := some shared,keys := shared.keys,text := shared.render}
++        | some context =>
++            let question := contextPlanQuestion (requestQuestion.getD current) current enforce
++              (slice.members.any (·.blocks))
++            let planKey := contextPlanKey context.owner context.outcome question
++            let context := {context with planKey}
++            {slice with keys := context.keys, context := some context}
++      let fittedKeys := Research.DeliveryKeys.distinct (fittedSlices.flatMap (·.keys))
++      let visible := visibleFor fittedSlices
++      let newlyCovered := checkpointed.filter (graphVisibleFor fittedSlices)
++      let visibleSupport := supportFor fittedSlices
++      let remainingLocations := SharedRangeAdapter.RangeLocators.render
++        (SharedRangeAdapter.RangeLocators.remaining locations fittedSlices) ++ sharedLocations
++      let frames := (framesFor fittedSlices).filter (·.key != locationKey)
++      let frames := frames ++ if remainingLocations.isEmpty then [] else
++        [{locationFrame with text := remainingLocations}]
++      let header := "".intercalate (frames.map (·.text))
++      let deliveredNow :=
++        Research.DeliveryKeys.distinct (fittedKeys ++ newlyCovered.map deliveryKey)
++      /-
++      `h:` records a complete owner already present in this session's native
++      history. `g:` records one transported projection from another session.
++      `d:` is added only when PreToolUse actually erases completed root-demand
++      Work. Prompt transport therefore does not silently consume later control,
++      while advisory graph progress can never cancel native Work.
++      -/
++      let blocksCurrent := !newlyCovered.isEmpty
++      if deliveredNow.isEmpty then none else
++        let coveredFragments := (newlyCovered.filterMap fun selected =>
++          Matcher.atomText? selected.matched.work.currentFragment).eraseDups
++        let completed := visible.countP fun selected =>
++          selected.applicability == .completed
++        let advisory := visible.countP fun selected =>
++          selected.applicability == .advisory
++        let advisory := advisory + visibleSupport.length
++        let fullText := if fittedSlices.isEmpty then "" else assemble header footer
++          (fittedSlices.map (·.text))
++        /-
++        A staged Outcome belongs to this native chat.  It can control a repeated
++        operation, but its graph is already visible to the model and must not be
++        serialized as a GRAPH DELTA.  Keep the delta only when the same operation
++        also transports a selected owner from another chat; that is the explicit
++        cross-chat exception to the no-self-resend rule.
++        -/
++        let deltaText := renderConnectionDelta
++          (controlDeltaSelection staged stagedVisible transportable newlyCovered)
++        let records := (sourceTable (visible ++ newlyCovered) ++ visibleSupport.flatMap (·.provenance)).eraseDups
++        let result : Handoff := {
++          selectionPlan := if captureSelection then selectionPlan.map
++            (fun plan =>
++              let record := plan.receipt
++              match plan.selectorInput with
++              | none => record
++              | some input => record.setObjVal! "selectorInput" input) else none
++          text := if fullText = "" then deltaText else if deltaText = "" then fullText
++            else fullText ++ "\n\n" ++ deltaText
++          reason := s!"selected={selectedAll.length} visible={visible.length} " ++
++            s!"new-roots={fittedSlices.length} " ++
++            s!"completed={completed} advisory={advisory} " ++
++            s!"local-unions={localUnionCount} " ++
++            s!"saturation-passes={saturationPasses} " ++
++            s!"covered-fragments={coveredFragments.length} blocks-current={blocksCurrent}"
++          deliveredGraphs := deliveredNow
++          completed
++          advisory
++          localUnions := localUnionCount
++          coveredFragments
++          blocksCurrent
++          packet := if fittedSlices.isEmpty then none else some {
++            header := "", footer, frames
++            parts := fittedSlices.map (fun slice => {
++              keys := slice.keys,text := slice.text,context := slice.context,shared := slice.shared})}
++          sourceRecords := records
++          sourceUses := visible.map (·.sourceUse records) ++ visibleSupport.map (fun item =>
++            {owner := relationKey item.owner.relation, references := sourceReferences records item.provenance,
++              completed := false})
++          sourceCheckpoints := newlyCovered.filterMap (·.sourceCheckpoint? records)
++          controlDeltaChars := if deltaText.isEmpty then 0 else deltaText.length + (if fullText.isEmpty then 0 else 2)
++        }
++        if meaningSelected then
++          (result.reconcileDelivery deliveredGraphs budget (byteBudget.getD (budget * 4))).map (·.handoff)
++        else some result
++
++
++    if meaningSelected && !enforce then
++      .plan {
++        families,mandatory,bundles := synapticBundles.map Synapses.AdvisoryBundles.ofProjected,
++        ceiling := (budget,byteBudget.getD (budget*4)),cost := packetFrameCharge frameCharge,captureRanges,captureInput,
++        finish := fun choice => finish choice ((choice.map (·.slices)).getD []),
++        localPlan := fun () => (SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) (packetFrameCharge frameCharge)
++          families mandatory (synapticBundles.map Synapses.AdvisoryBundles.ofProjected) captureRanges captureInput).map fun plan =>
++            {
++             slices := plan.result.val,receipt := if captureRanges then plan.rangeReceipt else plan.receipt,
++             selectorInput := plan.selectorInput}}
++    else
++      let fittedSlices := if meaningSelected then
+@@ -7430,88 +7579 @@
+-      let fittedSlices := fittedSlices.map fun slice => match slice.context with
+-        | none => match slice.shared with
+-          | none => slice
+-          | some original =>
+-            let shared := {original with plan := sharedPlan}
+-            {slice with shared := some shared,keys := shared.keys,text := shared.render}
+-        | some context =>
+-            let question := contextPlanQuestion (requestQuestion.getD current) current enforce
+-              (slice.members.any (·.blocks))
+-            let planKey := contextPlanKey context.owner context.outcome question
+-            let context := {context with planKey}
+-            {slice with keys := context.keys, context := some context}
+-      let fittedKeys := Research.DeliveryKeys.distinct (fittedSlices.flatMap (·.keys))
+-      let visible := visibleFor fittedSlices
+-      let newlyCovered := checkpointed.filter (graphVisibleFor fittedSlices)
+-      let visibleSupport := supportFor fittedSlices
+-      let remainingLocations := SharedRangeAdapter.RangeLocators.render
+-        (SharedRangeAdapter.RangeLocators.remaining locations fittedSlices) ++ sharedLocations
+-      let frames := (framesFor fittedSlices).filter (·.key != locationKey)
+-      let frames := frames ++ if remainingLocations.isEmpty then [] else
+-        [{locationFrame with text := remainingLocations}]
+-      let header := "".intercalate (frames.map (·.text))
+-      let deliveredNow :=
+-        Research.DeliveryKeys.distinct (fittedKeys ++ newlyCovered.map deliveryKey)
+-      /-
+-      `h:` records a complete owner already present in this session's native
+-      history. `g:` records one transported projection from another session.
+-      `d:` is added only when PreToolUse actually erases completed root-demand
+-      Work. Prompt transport therefore does not silently consume later control,
+-      while advisory graph progress can never cancel native Work.
+-      -/
+-      let blocksCurrent := !newlyCovered.isEmpty
+-      if deliveredNow.isEmpty then none else
+-        let coveredFragments := (newlyCovered.filterMap fun selected =>
+-          Matcher.atomText? selected.matched.work.currentFragment).eraseDups
+-        let completed := visible.countP fun selected =>
+-          selected.applicability == .completed
+-        let advisory := visible.countP fun selected =>
+-          selected.applicability == .advisory
+-        let advisory := advisory + visibleSupport.length
+-        let fullText := if fittedSlices.isEmpty then "" else assemble header footer
+-          (fittedSlices.map (·.text))
+-        /-
+-        A staged Outcome belongs to this native chat.  It can control a repeated
+-        operation, but its graph is already visible to the model and must not be
+-        serialized as a GRAPH DELTA.  Keep the delta only when the same operation
+-        also transports a selected owner from another chat; that is the explicit
+-        cross-chat exception to the no-self-resend rule.
+-        -/
+-        let deltaText := renderConnectionDelta
+-          (controlDeltaSelection staged stagedVisible transportable newlyCovered)
+-        let records := (sourceTable (visible ++ newlyCovered) ++ visibleSupport.flatMap (·.provenance)).eraseDups
+-        let result : Handoff := {
+-          selectionPlan := if captureSelection then selectionPlan.map
+-            (fun plan =>
+-              let record := plan.receipt
+-              match plan.selectorInput with
+-              | none => record
+-              | some input => record.setObjVal! "selectorInput" input) else none
+-          text := if fullText = "" then deltaText else if deltaText = "" then fullText
+-            else fullText ++ "\n\n" ++ deltaText
+-          reason := s!"selected={selectedAll.length} visible={visible.length} " ++
+-            s!"new-roots={fittedSlices.length} " ++
+-            s!"completed={completed} advisory={advisory} " ++
+-            s!"local-unions={discovery.view.localUnions.length} " ++
+-            s!"saturation-passes={discovery.passes} " ++
+-            s!"covered-fragments={coveredFragments.length} blocks-current={blocksCurrent}"
+-          deliveredGraphs := deliveredNow
+-          completed
+-          advisory
+-          localUnions := discovery.view.localUnions.length
+-          coveredFragments
+-          blocksCurrent
+-          packet := if fittedSlices.isEmpty then none else some {
+-            header := "", footer, frames
+-            parts := fittedSlices.map (fun slice => {
+-              keys := slice.keys,text := slice.text,context := slice.context,shared := slice.shared})}
+-          sourceRecords := records
+-          sourceUses := visible.map (·.sourceUse records) ++ visibleSupport.map (fun item =>
+-            {owner := relationKey item.owner.relation, references := sourceReferences records item.provenance,
+-              completed := false})
+-          sourceCheckpoints := newlyCovered.filterMap (·.sourceCheckpoint? records)
+-          controlDeltaChars := if deltaText.isEmpty then 0 else deltaText.length + (if fullText.isEmpty then 0 else 2)
+-        }
+-        if meaningSelected then
+-          (result.reconcileDelivery deliveredGraphs budget (byteBudget.getD (budget * 4))).map (·.handoff)
+-        else some result
+-
++      .done (finish none fittedSlices)
+@@ -7519,11 +7580,0 @@
+-    if meaningSelected && !enforce then
+-      .plan {
+-        families,mandatory,bundles := synapticBundles.map Synapses.AdvisoryBundles.ofProjected,
+-        ceiling := (budget,byteBudget.getD (budget*4)),cost := packetCost,captureRanges,captureInput,finish
+-        localPlan := fun () => (SharedRangeAdapter.plan (budget,byteBudget.getD (budget*4)) packetCost
+-          families mandatory (synapticBundles.map Synapses.AdvisoryBundles.ofProjected) captureRanges captureInput).map fun plan =>
+-            {
+-             slices := plan.result.val,receipt := if captureRanges then plan.rangeReceipt else plan.receipt,
+-             selectorInput := plan.selectorInput}}
+-    else .done (finish none)
+-
+@@ -8923,0 +8975 @@
++    let preparedAudit ← (← IO.mkRef (prepareRenderedSelectionAudit source.receipt discovery ⟨extraction,rfl⟩)).get
+@@ -8954,2 +9006 @@
+-    let audited ← auditRenderedSelection source.receipt discovery
+-      ⟨extraction, rfl⟩ rendered ((← admissionAudit.mapM (·.get)).getD [])
++    let audited ← auditPreparedSelection source.receipt preparedAudit rendered ((← admissionAudit.mapM (·.get)).getD [])

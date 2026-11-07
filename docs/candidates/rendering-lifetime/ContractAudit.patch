@@ -1,0 +1,22 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -488,0 +489,6 @@
++      (``Eggshell.Plugin.prepareRenderedSelectionAudit,
++        #[``Eggshell.SelectionDependency.Report.ofValid, ``Eggshell.SelectionAudit.Prepared.ofReport],
++        #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.SelectionAudit.analyze]),
++      (``Eggshell.Plugin.auditPreparedSelection,
++        #[``Eggshell.SelectionAudit.Prepared.snapshot, ``Eggshell.SelectionAudit.capture],
++        #[``Eggshell.EqualityDependency.DirectIndex.make, ``Eggshell.SelectionAudit.analyze]),
+@@ -509 +515,2 @@
+-        #[``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.SelectionAudit.Admission.observe,
++        #[``Eggshell.Plugin.prepareRenderedSelectionAudit, ``Eggshell.Plugin.auditPreparedSelection,
++          ``Eggshell.SelectionAudit.Admission.observe,
+@@ -2022,0 +2030 @@
++      (``Eggshell.Plugin.prepareRenderedSelectionAudit, ``Eggshell.Plugin.prepareRenderedSelectionAudit),
+@@ -2036 +2044 @@
+-  let some receipt := environment.find? ``Eggshell.Plugin.auditRenderedSelection |
++  let some receipt := environment.find? ``Eggshell.Plugin.prepareRenderedSelectionAudit |
+@@ -2079 +2087,2 @@
+-      ``Eggshell.Plugin.auditRenderedSelection, ``Eggshell.Synapses.Transport.build] do
++      ``Eggshell.Plugin.prepareRenderedSelectionAudit, ``Eggshell.Plugin.auditPreparedSelection,
++      ``Eggshell.Synapses.Transport.build] do
