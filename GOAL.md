@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-07更新。状態はactive。容量ブロックは解消したが、配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
+2026-11-07更新。状態はactive。共有モデル候補の80同時は資源上限内だったが、全80件が未完了となった。配送・速度・80人継続利用は未達である。目的と合格条件は変更していない。実用化を先にし、論文まで継続する。詳細な実行計画は [team-scale-plan.md](docs/team-scale-plan.md)。現在地と直近の順序は本書に一つだけ置く。過去の実装・成功・失敗は各docs/candidatesの記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -43,7 +43,9 @@
 
 共有モデルを通常Numericalへ接続した隔離runtimeは`ffb25590c28bc01b4f0baf46122ab26635763a125fa59dc0e1a8ace712ff9778`。285 native objectが整合し、4変更＋2追加・削除0と数値kernelの埋込みSHA、入口を照合した。新規literalを未申告とした初回失敗を保存し、明示ファイルとSHAだけを承認する検査を加え、誤SHAの拒否も通った。通常の数値RPC48応答がvector/被覆一致、並行16要求の各波1,072 / 1,095ms、同じモデルへの独立要求が重なり、model起動1・model容量1・compute容量2だった。関連RSS最大1,333,072KiB・残存0。直接transport34応答と個別取消も通り、初期化中の停止は8msで子を回収した。これはまだ実hookの配送・80人容量・総token/品質改善ではない。現在は全製品coreを揃えるauditorを構築し、その後に題材1から全6実hookへ進む。製品本体未採用・回答モデル0・有料比較0/18、目標と資源境界は維持する。
 
-その後、auditorの全製品core・271共通moduleとnative依存の一致を確認し、同じ元snapshotで題材1から全6実hookを実行した。原文32/32・親f92の全本文byte一致、意味検索/ACKの全件完了、全件sharedImage=true、前景warm0。時間は8,920 / 8,466、9,875 / 9,823、10,104 / 10,278ms、関連RSS最大3,020,272KiB・残存0、両serviceは全件exit0だった。独立したnative新チャットであり、回答モデルの両周ではない。終了session/重複receiptは削除し、次の同じ実原典4/16 gate用clientを構築中。合格した場合だけ80同時へ進む。元DB・現行project cache・原典・必要なnative依存を保持する。
+その後、auditorの全製品core・271共通moduleとnative依存の一致を確認し、同じ元snapshotで題材1から全6実hookを実行した。原文32/32・親f92の全本文byte一致、意味検索/ACKの全件完了、全件sharedImage=true、前景warm0。時間は8,920 / 8,466、9,875 / 9,823、10,104 / 10,278ms、関連RSS最大3,020,272KiB・残存0、両serviceは全件exit0だった。独立したnative新チャットであり、回答モデルの両周ではない。終了session/重複receiptは削除した。元DB・現行project cache・原典・必要なnative依存を保持する。
+
+同じshared-modelの4/16 gateは全4/4・16/16で本文byte一致・意味/シナプス/ACKが完了し、波8,091/26,751ms、関連RSS最大2,976,976KiBだった。このruntimeで初めて続けた80同時は、資源停止なし・RSS最大2,671,952KiB・残存0だが、全80件が未完了通知となった（波18,596ms、意味/シナプス/ACK 0/80）。全80受領でsharedImage=true、両serviceはexit0。新しい負荷なしの[Lean集計](docs/candidates/shared-model/capacity-numerical.json)では、返答を記録できたencode23件のmodel handle借用は全0ms、一方compute admissionは中央値2,927/最大11,264ms、output-readyから受領まで中央値2,325ms。blocks29件もkernel往復中央値7msに対してoutput-ready後3,299msだった。native推論時間と混同せず、未受領RPCは未測定のままにする。長いモデルmutexの除去と共有化だけで80人化が済んだとは扱わない。終了session/重複受領は削除し、同じ失敗80を繰り返さない。
 
 前の80同時の途中記録を新しい負荷なしで調べ、全80件がkeyed providerに到達し、12件だけが数値/字句/routerの段階記録を持つことを確認した。検索後の選択だけを原因としない。数値serviceの接続キーが、固定の実装本文73,215 bytesを接続/数値通信のたびにJSON化・再ハッシュしていた。固定本文のdigestを一度だけ計算する純粋な定数へ分離し、モデル・モデル配置・Python配置・実装digestを引き続き結ぶことをLeanと通常監査で検査した。共有Ref/Mutex/CAS、質問cache、数値/順位変更は加えていない。native80設定×3回でキー生成は親196〜198ms→候補0〜1ms、各キー列はその参照式と一致した。これは全hookや80容量の改善率ではない。
 
@@ -88,8 +90,8 @@ elastic-encoderは需要中の並行2基を維持し、待ち要求がなくな�
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 今回の80同時の資源停止記録から、共有モデルと各要求が保持する原文/候補のlive量を減らす。長いencoder mutexを戻したり固定3検索workerで直列化せず、独立した要求の所有と不変共有を維持する。容量の事前条件を部品で確認してから新候補の実原典題材1へ戻り、全6回と4/16 gateを通した場合だけ80を測る。重い検査driverの保持量を80検索のlive量に混同しない。正解をselectorへ渡さず、変更なしの失敗負荷を反復せず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
-2. 実WorkGraph/返信の所有と、allocatorの保持を因果的に分ける。実配送guardのpeakには検査器1,146,320KiBと既存MiniLM数値process1,100,272KiBが含まれ、publication hostはその時点で286,608KiBだった。これらを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
+1. 共有モデルの80同時で残った受付待機と数値応答の遅れを、数値protocol単独の固定負荷で分ける。`EncoderPool.waitTicket`の1ms再照会と反復timerを、取消・期限・停止・一度だけの枠返却を保つevent待機へ置き換える候補を検査する。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。部品を確認してから新候補の実原典題材1へ戻り、全6回と4/16 gateを通した場合だけ80を測る。正解をselectorへ渡さず、変更なしの失敗負荷を反復せず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
+2. output-ready以後の送受信と共有hostの待機負荷を分け、数値kernelの時間だけで全検索を説明しない。実WorkGraph/返信の所有とallocator保持も区別し、検査器やモデルのRSSを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。
 

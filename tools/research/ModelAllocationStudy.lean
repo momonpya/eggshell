@@ -779,6 +779,52 @@ def retireSuperseded : IO Unit := do
   write destination record
   for file in files do IO.FS.removeFile (.mk (← IO.ofExcept (file.getObjValAs? String "path")))
   write destination (record.setObjVal! "completed" (toJson true))
+
+def retireKeyedParent : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/shared-model/retired-keyed-executables.json"
+  check (!(← destination.pathExists)) "preserve previous executable retirement"
+  let current ← read (workspace/"docs/candidates/shared-model/auditor-sources.json")
+  check (current.getObjValD "allProductCorePresent" == toJson true &&
+    current.getObjValD "commonSourcesUnchanged" == toJson true &&
+    current.getObjValD "productSha256" == toJson (← hash (base/"shared-model-build/StudyMain")) &&
+    current.getObjValD "auditorSha256" == toJson (← hash (base/"shared-model-auditor-build/StudyMain")))
+    "retain the coherent current product and auditor"
+  let capacity ← read (workspace/"docs/candidates/shared-model/capacity-80.json")
+  let guard := capacity.getObjValD "guard"
+  check (guard.getObjValD "state" == toJson "finished" &&
+    guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+    (capacity.getObjValD "input").getObjValD "runtimeSha256" == current.getObjValD "productSha256")
+    "retain the current runtime's terminal capacity evidence"
+  for name in ["frontendShutdown","publisherShutdown"] do
+    let stopped := capacity.getObjValD name
+    check (stopped.getObjValD "processExited" == toJson true && stopped.getObjValD "daemonExitCode" == toJson (0 : Nat))
+      "capacity service has not exited"
+  let old ← read (workspace/"docs/candidates/keyed-discovery/auditor-sources.json")
+  let client ← read (workspace/"docs/candidates/keyed-discovery/capacity-sources.json")
+  for record in [old,client] do
+    check (record.getObjValD "allProductCorePresent" == toJson true &&
+      record.getObjValD "commonSourcesUnchanged" == toJson true) "old native provenance is incomplete"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  check (process.exitCode == 0) "cannot inspect executable ownership"
+  let mut files := #[]
+  for (relative,digest) in [("keyed-discovery-build/StudyMain",old.getObjValD "productSha256"),
+    ("keyed-discovery-prefix/libexec/eggshell",old.getObjValD "productSha256"),
+    ("keyed-discovery-auditor-build/StudyMain",old.getObjValD "auditorSha256"),
+    ("keyed-discovery-capacity-build/StudyMain",client.getObjValD "auditorSha256")] do
+    let path := base/relative
+    check ((← path.pathExists) && !process.stdout.contains path.toString && digest == toJson (← hash path))
+      "ended parent executable is active, absent or differs from native provenance"
+    files := files.push (Json.mkObj [("path",toJson path.toString),("sha256",digest),
+      ("bytes",toJson (← path.metadata).byteSize.toNat)])
+  let baseline := base/"delivery-ledger-build/StudyMain"
+  check ((← hash baseline) == "d4349b126ae979c3a48e407a5fc1e98d7ac97796f97eb50c81e9fe472960385d")
+    "retain the fixed adoption baseline"
+  let record := Json.mkObj [("removed",toJson files),("archived",toJson false),("completed",toJson false),
+    ("baselineCurrentRuntimeModelsOriginalsObjectsInterfacesAndSourceWitnessesRetained",toJson true)]
+  write destination record
+  for file in files do IO.FS.removeFile (.mk (← IO.ofExcept (file.getObjValAs? String "path")))
+  write destination (record.setObjVal! "completed" (toJson true))
 def main (args : List String) : IO Unit := match args with
   | ["setup",tag] => setup tag
   | ["run",root] => run (.mk root)
@@ -800,6 +846,7 @@ def main (args : List String) : IO Unit := match args with
   | ["setup-transport",action,tag] => setupTransport action tag
   | ["collect-transport"] => collectTransport
   | ["retire-superseded"] => retireSuperseded
+  | ["retire-keyed-parent"] => retireKeyedParent
   | _ => throw (IO.userError "setup TAG | run OUTPUT")
 end Eggshell.Research.ModelAllocationStudy
 def main := Eggshell.Research.ModelAllocationStudy.main

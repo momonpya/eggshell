@@ -447,6 +447,79 @@ def cleanupParallel (mode : String) (family : String := "parallel-encoder") : IO
         IO.FS.removeDirAll path
   write (destination/("capacity-"++mode++"-cleanup.json")) (Json.mkObj [
     ("removed",toJson removed),("archived",toJson false),("originalsProjectCacheAndEvidenceRetained",toJson true)])
+
+def traceEvent? (reply : Json) (name : String) : Option Nat := do
+  let events ← (reply.getObjValD "events").getArr?.toOption
+  let event ← events.find? fun event =>
+    ((event.getArr?.toOption.getD #[])[0]?).any (· == toJson name)
+  let values ← event.getArr?.toOption
+  (← values[1]?).getNat?.toOption
+
+def traceInterval? (start finish : Option Nat) : Option Nat := do
+  let start ← start
+  let finish ← finish
+  if finish < start then none else some (finish-start)
+
+def observedStats (values : Array Nat) : Json := Id.run do
+  if values.isEmpty then return Json.null
+  let ordered := values.qsort (· < ·)
+  let percentile := fun percentage => ordered[((values.size*percentage+99)/100)-1]!
+  return Json.mkObj [("n",toJson values.size),("min",toJson ordered[0]!),
+    ("p50",toJson (percentile 50)),("p95",toJson (percentile 95)),("max",toJson ordered[ordered.size-1]!)]
+
+/-- Reuse terminal receipts, including failed clients. Only RPCs with a received
+reply have stage timings; missing/cancelled RPCs are not zero-time successes.
+Kernel round trips include transport and callbacks, not just native inference. -/
+def summarizeNumerical (family : String) : IO Unit := do
+  drained
+  discard <| cohort family
+  let destination := workspace/"docs/candidates"/family
+  let output := destination/"capacity-numerical.json"
+  check (!(← output.pathExists)) "preserve the previous numerical audit"
+  let mut groups := #[]
+  let mut inputs := #[]
+  for mode in ["small","80"] do
+    let path := destination/("capacity-"++mode++".json")
+    let evidence ← read path
+    let guard := evidence.getObjValD "guard"
+    check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+      "numerical audit requires a terminal load"
+    inputs := inputs.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson (← hash path))])
+    let cells ← IO.ofExcept (evidence.getObjValAs? (Array Json) "cells")
+    for phase in (if mode == "small" then ["phase-4","phase-16"] else ["phase-80"]) do
+      let clients := cells.filter (fun row => row.getObjValD "phase" == toJson phase)
+      let mut rows := #[]
+      for cell in clients do
+        let mut seen : Array String := #[]
+        for sample in (cell.getObjValD "numerical").getArr?.toOption.getD #[] do
+          let counters := (sample.getObjValD "data").getObjValD "counters"
+          for reply in (counters.getObjValD "numericalReplies").getArr?.toOption.getD #[] do
+            if seen.contains reply.compress then continue
+            seen := seen.push reply.compress
+            let kind ← IO.ofExcept (reply.getObjValAs? String "kind")
+            check (["encode","blocks"].contains kind) "unknown completed numerical RPC kind"
+            let event := traceEvent? reply
+            let stem := if kind == "encode" then "encode" else "score"
+            rows := rows.push (Json.mkObj [("client",(cell.getObjValD "client").getObjValD "client"),
+              ("kind",toJson kind),("clientStartedAt",reply.getObjValD "clientStartedAt"),
+              ("rpcMs",toJson (traceInterval? (reply.getObjValAs? Nat "clientStartedAt").toOption
+                (reply.getObjValAs? Nat "clientReceivedAt").toOption)),
+              ("requestReadMs",toJson (traceInterval? (event "request-read:start") (event "request-read:end"))),
+              ("admissionMs",toJson (traceInterval? (event (stem++"-admission:start")) (event (stem++"-admission:end")))),
+              ("modelHandleMs",toJson (traceInterval? (event "encode-model-handle:start") (event "encode-model-handle:end"))),
+              ("kernelRoundTripMs",toJson (traceInterval? (event (stem++"-kernel:start")) (event (stem++"-kernel:end")))),
+              ("afterOutputMs",toJson (traceInterval? (event "output-ready") (reply.getObjValAs? Nat "clientReceivedAt").toOption))])
+      let mut summaries := #[]
+      for kind in ["encode","blocks"] do
+        let observed := rows.filter (fun row => row.getObjValD "kind" == toJson kind)
+        let metrics := ["rpcMs","requestReadMs","admissionMs","modelHandleMs","kernelRoundTripMs","afterOutputMs"].map fun name =>
+          (name,observedStats (observed.filterMap fun row => (row.getObjValAs? Nat name).toOption))
+        summaries := summaries.push (Json.mkObj ([("kind",toJson kind),("receivedRpcTraces",toJson observed.size)]++metrics))
+      groups := groups.push (Json.mkObj [("phase",toJson phase),("recordedClients",toJson clients.size),
+        ("successfulClients",toJson (clients.filter (fun row => (row.getObjValD "client").getObjValD "success" == toJson true)).size),
+        ("observedCompletedRpcOnly",toJson true),("summaries",toJson summaries),("rows",toJson rows)])
+  write output (Json.mkObj [("inputs",toJson inputs),("groups",toJson groups),
+    ("newLoadRuns",toJson (0 : Nat)),("nativeInferenceOnly",toJson false),("adopted",toJson false)])
 def retireDiagnosticClient : IO Unit := do
   drained
   let destination := workspace/"docs/candidates/parallel-encoder"
@@ -604,6 +677,7 @@ def main (args : List String) : IO Unit := do
   | ["setup-capacity",family,action,tag] => setupParallel action tag family
   | ["collect-capacity",family,mode] => collectParallel mode family
   | ["cleanup-capacity",family,mode] => cleanupParallel mode family
+  | ["summarize-numerical",family] => summarizeNumerical family
   | _ => throw (IO.userError "retire-logs|prepare|refresh|inputs|setup|seal-client")
 end Eggshell.Research.CapacityStudy
 def main := Eggshell.Research.CapacityStudy.main

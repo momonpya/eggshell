@@ -1,6 +1,6 @@
 # モデル1組を共有する非同期推論
 
-80同時でMiniLM2基の保持が計2,217,632KiBに達したため、コピーを増やす代わりに、同じモデルsessionへの独立した推論を並行実行した。ONNX Runtimeは[同じsessionへの並行Run](https://onnxruntime.ai/docs/reference/high-level-design.html)と、[ネイティブのthread poolを使うRunAsync](https://onnxruntime.ai/docs/api/c/struct_ort_api.html)を提供する。前半は数値部品の検査、後半は通常runtimeへの接続を記す。80人容量・実フック配送・採用の合格はまだである。
+80同時でMiniLM2基の保持が計2,217,632KiBに達したため、コピーを増やす代わりに、同じモデルsessionへの独立した推論を並行実行した。ONNX Runtimeは[同じsessionへの並行Run](https://onnxruntime.ai/docs/reference/high-level-design.html)と、[ネイティブのthread poolを使うRunAsync](https://onnxruntime.ai/docs/api/c/struct_ort_api.html)を提供する。前半は数値部品の検査、後半は通常runtimeと実フックの検査を記す。実フック6件と4/16同時は通ったが、80同時は全80件未完了となり、容量の合格でも製品への採用でもない。
 
 制御・入力・要求IDの照合・同時実行数・基準との比較・時刻/RSS・guard・収集・削除は[Lean](../../../tools/research/ModelAllocationStudy.lean)。既存数値境界の`encode_groups`から、同期ONNX呼出し1行だけを中断可能な数値generatorへ置き換える。tokenizer、全token小片、1要求内の32小片batch、入力feed、pooling、正規化は元の実装bytesを残す。別要求とのbatch混合はしない。Pythonのworker pool・scheduler・選択器・保存処理は追加していない。ORT自身が推論を実行し、callbackがその要求の数値計算だけを再開する。出力frameの書込みはBufferedWriterの同期を利用し、推論全体のMutexにはしない。
 
@@ -58,4 +58,22 @@
 
 関連RSS最大3,020,272KiB、guard停止なし・残存0。frontendは5〜8ms、publicationは55〜69msで終了し、全件exit0だった。これは回答モデルを動かす1周目/2周目や、80人・p99の証拠ではない。数値の一部や単独hookの微小差を、総トークン改善や容量改善へ換算しない。終了したsession/重複受領記録は[削除済み](delivery-cleanup.json)。
 
-現在は同じ実原典で4/16・80同時を測るcapacity clientをビルド中。4/16 gateを通した場合だけ80へ進む。プロジェクト別write DBと他DB read-onlyの境界、成長・保存/背景準備・80人8時間・NASも残る。採用には同一条件の総トークン/品質比較が必要であり、回答モデル0・有料比較0/18・本体未採用。goalはactive。
+## 同じ実原典の4/16・80同時
+
+[capacity clientの依存](capacity-closure.json)と[製品core・共通sourceの一致](capacity-sources.json)を確認した。同じsnapshot、質問、本文、500,000文字の既存予算、deadline、資源上限を保ち、4/16の全件合格後に、このruntimeで初めて80同時を実行した。
+
+| 同時数 | 本文byte一致・意味/シナプス/ACK完了 | 波全体 |
+| --- | ---: | ---: |
+| 4 | 4/4 | 8,091ms |
+| 16 | 16/16 | 26,751ms |
+| 80 | 0/80 | 18,596ms |
+
+[4/16](capacity-small.json)の関連RSS最大2,976,976KiB。[80](capacity-80.json)は2,671,952KiBで、資源guard停止ではない。全80件の結果一覧が揃い、各本文は356 bytesの未完了通知だった。80件の全sharedImage=trueを確認したが、意味検索・シナプスの完了は0件。frontend/publicationはexit0で終了し、残存0だった。正常終了だけで検索成功としない。同じ失敗80負荷を再実行していない。
+
+[既存受領のLean集計](capacity-numerical.json)は新しいモデル/フックを呼ばず、返答が記録されたRPCだけを集計した。80同時で記録されたencode23件のmodel handle借用は全0msだが、compute admissionは中央値2,927/最大11,264ms。kernelとの往復も中央値1,126msで、これはnative推論だけの時間ではない。さらにoutput-readyからclient受領まで中央値2,325msだった。blocks29件もkernel往復中央値7msに対し、output-ready後が中央値3,299ms。この23/29件から未受領RPCの分布や全80件の原因を推定しない。
+
+モデルhandleを推論中に保持する問題は除いた一方、compute枠の受付には`EncoderPool.waitTicket`の1msごとの再照会があり、応答待機にも反復timerが残る。次は数値protocol単独の固定負荷で、受付待機・推論との往復・送受信を分ける。枠数だけ増やして原因を隠したり、長いencoder mutexへ戻したりしない。行列用のscoreGateも残っており、数値経路全体のlock-freeは主張しない。
+
+終了した4/16と80のsession・重複受領は[小負荷](capacity-small-cleanup.json)・[80](capacity-80-cleanup.json)それぞれ削除した。原典・現在のproject cache・本文/digest/診断は保持し、archiveは作らない。プロジェクト別write DBと他DB read-onlyの境界、成長・保存/背景準備・80人8時間・NASも残る。採用には同一条件の総トークン/品質比較が必要であり、回答モデル0・有料比較0/18・本体未採用。goalはactive。
+
+後継runtimeと全capacity記録の保存後、終了済みkeyed-discoveryの製品・prefixコピー・auditor・capacity clientの4実行体、論理488,202,992 bytesを[削除](retired-keyed-executables.json)した。稼働なしと元native記録のSHAを照合し、現在のshared-modelと採用比較基準、必要なobject/interface/source witnessは保持した。保護対象の原典5ファイルも元SHAと一致した。
