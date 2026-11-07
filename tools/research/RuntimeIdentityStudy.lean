@@ -374,6 +374,7 @@ def main (args : List String) : IO Unit := match args with
   | ["discovery","seal-auditor"] => sealAuditor "keyed-discovery"
   | ["discovery","setup",action,tag] => setup action tag "keyed-discovery"
   | ["discovery","configure-gate"] => configureDiscoveryGate
+  | ["discovery","recover",tag] => recoverStoppedOwner tag "keyed-discovery" false
   | _ => throw (IO.userError "prepare|freeze|seal|prepare-auditor|seal-auditor|setup")
 end Eggshell.Research.RuntimeIdentityStudy
 def main := Eggshell.Research.RuntimeIdentityStudy.main
