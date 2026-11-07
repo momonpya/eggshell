@@ -1,0 +1,7 @@
+--- a/tools/research/ReplayReadinessChecks.lean
++++ b/tools/research/ReplayReadinessChecks.lean
+@@ -14,0 +15 @@
++import tools.research.TypedFetchChecks
+@@ -104,0 +106,2 @@
++  | ["typed-fetch-check",fixture,sha,output] =>
++    Eggshell.Research.TypedFetchChecks.run (.mk fixture) sha (.mk output); return 0

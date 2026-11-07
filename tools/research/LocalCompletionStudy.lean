@@ -346,20 +346,23 @@ def stage (receipt : Json) (name : String) : IO Json := do
   let some selected := stages.find? (fun item => item.getObjValD "name" == toJson name) |
     throw (IO.userError ("missing actual delivery stage "++name))
   return (selected.getObjValD "record").getObjValD "data"
-def collectCells (family : String := "local-completion") : IO Unit := do
+def collectCells (family : String := "local-completion") (attempt : Nat := 1) : IO Unit := do
   drained
-  check (["local-completion","selection-membership","delivery-key-sets"].contains family) "known completed delivery family required"
+  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch"].contains family) "known completed delivery family required"
   let folder := workspace/"docs/candidates"/family
-  let guard ← read (base/(family++"-cells1.guard.json"))
+  check (attempt > 0) "positive delivery attempt required"
+  let guardTag := family++"-cells"++toString attempt
+  let guard ← read (base/(guardTag++".guard.json"))
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
     "actual delivery still owns a process"
-  let root := base/(family++"-cells-result")
+  let root := base/(family++"-cells"++(if attempt == 1 then "" else toString attempt)++"-result")
   check ((← read (root/"result.json")).getObjValD "allSixPassed" == toJson true) "all six actual hooks required"
   let mut cells := #[]
   for topic in [1:4] do
     for repetition in [:2] do
       let cell := root/s!"topic-{topic}-chat-{repetition}"
-      let parent := if family == "delivery-key-sets" then "selection-membership-cells-result" else "encoder-events-cells-result"
+      let parent := if family == "typed-fetch" then "delivery-key-sets-cells-result"
+        else if family == "delivery-key-sets" then "selection-membership-cells-result" else "encoder-events-cells-result"
       let parentBody := base/parent/s!"topic-{topic}-chat-{repetition}"/"body.txt"
       check ((← IO.FS.readBinFile (cell/"body.txt")) == (← IO.FS.readBinFile parentBody)) "actual delivery body changed"
       let receipt ← read (cell/"receipt.json")
@@ -369,6 +372,11 @@ def collectCells (family : String := "local-completion") : IO Unit := do
       let ack ← stage receipt "ack.json"
       let synapse ← stage receipt "synaptic-delivery.json"
       let keyed ← stage receipt "provider-keyed-inputs.json"
+      let receiptBytes := (← (cell/"receipt.json").metadata).byteSize.toNat
+      if family == "typed-fetch" then
+        check (synapse.getObjValD "sharedRows" == Json.null &&
+          (synapse.getObjValAs? Nat "sharedWitnessesChecked").toOption.getD 0 > 0)
+          "unused diagnostic row array remains or source witness verification disappeared"
       check (trace.getObjValD "semantic" == toJson "completed" && trace.getObjValD "warmRequests" == toJson (0 : Nat) &&
         ack.getObjValD "rpcCompleted" == toJson true && ack.getObjValD "offerAccepted" == toJson true &&
         synapse.getObjValD "complete" == toJson true && synapse.getObjValD "packetVerified" == toJson true &&
@@ -382,9 +390,11 @@ def collectCells (family : String := "local-completion") : IO Unit := do
         return stopped
       cells := cells.push (Json.mkObj [("topic",toJson topic),("repetition",toJson repetition),("outcome",← read (cell/"result.json")),
         ("sourceAudit",audit),("bodySha256",toJson (← hash (cell/"body.txt"))),("parentBodyByteEqual",toJson true),
-        ("search",search),("ack",ack),("keyedInputImage",keyed),("shutdown",toJson stops)])
+        ("search",search),("ack",ack),("keyedInputImage",keyed),("shutdown",toJson stops),
+        ("receiptBytes",toJson receiptBytes),("sharedWitnessesChecked",synapse.getObjValD "sharedWitnessesChecked")])
   write (folder/"delivery-cells.json") (Json.mkObj [("actualDeliveryAllSixPassed",toJson true),
     ("allParentBodiesByteEqual",toJson true),("candidatePathPassed",toJson true),("cells",toJson cells),("guard",guard),
+    ("guardTag",toJson guardTag),("resultRoot",toJson root.toString),
     ("answeringModelCalls",toJson (0 : Nat)),("fullEightyOrAdoptionClaim",toJson false)])
 
 def postFocus (family : String := "local-completion") : IO Unit := do
@@ -497,6 +507,9 @@ def main (args : List String) : IO Unit := match args with
   | ["seal-auditor"] => sealAuditor
   | ["collect-cells"] => collectCells
   | ["collect-cells",family] => collectCells family
+  | ["collect-cells",family,attempt] => do
+      let some attempt := attempt.toNat? | throw (IO.userError "invalid delivery attempt")
+      collectCells family attempt
   | ["post-focus"] => postFocus
   | ["post-focus",family] => postFocus family
   | ["retire-ended"] => retireEnded

@@ -1,0 +1,29 @@
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -80,0 +81,26 @@
++/-- The legacy per-owner encoded-row quota belongs to the wire boundary.
++Local readers retain immutable row references and never construct this JSON. -/
++def Reply.wireBytes (reply : Reply) : Nat :=
++  reply.parts.foldl (fun total part => part.2.parts.foldl
++    (fun total owner => total+(toJson owner.rows).compress.utf8ByteSize) total) 0
++
++/-- Wire admission cannot change any row, owner, index, order or identity. -/
++def Reply.forWire (reply : Reply) (limit : Nat) :
++    Except String {kept : Reply // kept = reply ∧ reply.wireBytes ≤ limit} :=
++  if fits : reply.wireBytes ≤ limit then .ok ⟨reply,rfl,fits⟩
++  else .error "selected original batch exceeds its reply budget"
++
++theorem Reply.forWire_payload (reply : Reply) (limit : Nat)
++    (kept : {kept : Reply // kept = reply ∧ reply.wireBytes ≤ limit}) :
++    toJson kept.val = toJson reply := congrArg toJson kept.property.1
++
++theorem Reply.forWire_accept (reply : Reply) (limit : Nat) (fits : reply.wireBytes ≤ limit) :
++    (reply.forWire limit).isOk = true := by
++  unfold forWire
++  rw [dif_pos fits]
++  rfl
++
++theorem Reply.forWire_reject (reply : Reply) (limit : Nat) (large : limit < reply.wireBytes) :
++    reply.forWire limit = .error "selected original batch exceeds its reply budget" := by
++  simp [forWire,Nat.not_le.mpr large]
++

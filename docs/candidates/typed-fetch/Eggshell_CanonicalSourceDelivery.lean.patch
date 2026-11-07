@@ -1,0 +1,22 @@
+--- a/Eggshell/CanonicalSourceDelivery.lean
++++ b/Eggshell/CanonicalSourceDelivery.lean
+@@ -3,0 +4 @@
++public import tools.ExactMemo
+@@ -15,0 +17,17 @@
++/-- Retain the exact key encoding once per key, instead of rebuilding it at
++every comparison. Hashes only choose memo buckets; full keys decide identity. -/
++def storeCached (registry : Registry) : Array StoredRow :=
++  let rows := registry.atoms.toArray.map fun (key,atom) =>
++    ({key,code := atom.code,origins := atom.origins.toArray.qsort fun a b =>
++      (toJson a).compress < (toJson b).compress} : StoredRow)
++  let encode := fun key : Key => (toJson key).compress
++  let memo := rows.foldl (fun memo row => (ExactMemo.read encode memo row.key).2)
++    ({} : ExactMemo.Table encode)
++  rows.qsort fun a b => (ExactMemo.read encode memo a.key).1 < (ExactMemo.read encode memo b.key).1
++
++theorem storeCached_exact (registry : Registry) : storeCached registry = registry.store := by
++  unfold storeCached Registry.store
++  simp only [ExactMemo.read_exact]
++
++@[csimp] theorem store_compiled : Registry.store = storeCached := (funext storeCached_exact).symm
++

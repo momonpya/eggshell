@@ -1,0 +1,17 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -454 +453,0 @@
+-    let mut bytes := 0
+@@ -463,2 +461,0 @@
+-        bytes := bytes+(toJson original).compress.utf8ByteSize
+-        unless bytes ≤ Stream.maxBytes do throw (IO.userError "selected original batch exceeds its reply budget")
+@@ -473 +470,3 @@
+-  return toJson (← readSelectedRows server secret requests lease wanted deadline)
++  let reply ← readSelectedRows server secret requests lease wanted deadline
++  let kept ← IO.ofExcept (reply.forWire Stream.maxBytes)
++  return toJson kept.val
+@@ -480 +479,3 @@
+-      return toJson (← readSelectedRows server secret requests lease wanted deadline)) := rfl
++      let reply ← readSelectedRows server secret requests lease wanted deadline
++      let kept ← IO.ofExcept (reply.forWire Stream.maxBytes)
++      return toJson kept.val) := rfl

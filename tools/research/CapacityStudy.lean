@@ -275,7 +275,7 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
@@ -283,7 +283,7 @@ def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership"].contains family then
+  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch"].contains family then
     check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
@@ -308,9 +308,12 @@ def parallelInputs (mode : String) (family : String := "parallel-encoder") : IO 
     | "EGGSHELL_TRACE_SERVICE_PROFILE" | "EGGSHELL_HANDOFF_TRACE" => none
     | _ => value)
   let topics ← IO.ofExcept (input.getObjValAs? (Array Json) "topics")
+  let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
+  let cellRoot := System.FilePath.mk ((actual.getObjValAs? String "resultRoot").toOption.getD (base/(family++"-cells-result")).toString)
+  check (cellRoot.parent == some base && (cellRoot.fileName.getD "").startsWith (family++"-cells")) "delivery body directory escaped cohort"
   let topics ← topics.mapM fun row => do
     let topic ← IO.ofExcept (row.getObjValAs? Nat "topic")
-    let body := base/(family++"-cells-result")/s!"topic-{topic}-chat-0/body.txt"
+    let body := cellRoot/s!"topic-{topic}-chat-0/body.txt"
     check (row.getObjValD "sha256" == toJson (← hash body)) "candidate changed frozen actual body"
     return row.setObjVal! "body" (toJson body.toString)
   let runtimeSha ← hash (base/(family++"-build")/"StudyMain")
@@ -398,7 +401,7 @@ def collectParallel (mode : String) (family : String := "parallel-encoder") : IO
           let value := raw.getObjValD "data"
           stages := stages.push (Json.mkObj [("name",toJson entry.fileName),("record",keepFields value
             ["complete","bodyBytes","bodyChars","bodySha256","packetVerified","completed","advisory",
-             "localUnions","unverifiedParts","fullCandidateAudit"]),("diagnosticReadError",raw.getObjValD "diagnosticReadError")])
+             "localUnions","unverifiedParts","fullCandidateAudit","sharedWitnessesChecked"]),("diagnosticReadError",raw.getObjValD "diagnosticReadError")])
         else if ["search.json","ack.json","request-pages.json","operation-service.json","transport.json",
           "canonical-source-reuse.json","canonical-source-input.json","provider-keyed-profile.json",
           "provider-indexed-profile.json","provider-keyed-inputs.json","discovery-counters"].contains entry.fileName ||
@@ -414,10 +417,15 @@ def collectParallel (mode : String) (family : String := "parallel-encoder") : IO
   let reportValue ← if ← report.pathExists then read report else pure Json.null
   let frontendValue ← if ← frontend.pathExists then read frontend else pure Json.null
   let publisherValue ← if ← publisher.pathExists then read publisher else pure Json.null
+  let mut cacheStats : Array Json := #[]
+  for entry in ← root.readDir do
+    if entry.fileName.startsWith "cache-stats-" && entry.fileName.endsWith ".json" then
+      cacheStats := cacheStats.push (Json.mkObj [("name",toJson entry.fileName),
+        ("record",← readDiagnostic entry.path),("sha256",toJson (← hash entry.path))])
   let destination := workspace/"docs/candidates"/family
   write (destination/("capacity-"++mode++".json")) (Json.mkObj [
     ("guard",guard),("input",← read (base/(tag++"-input.json"))),
-    ("phases",toJson phases),("cells",toJson cells),("diagnosticFiles",toJson files),
+    ("phases",toJson phases),("cells",toJson cells),("diagnosticFiles",toJson files),("cacheStats",toJson cacheStats),
     ("report",reportValue),("frontendShutdown",frontendValue),("publisherShutdown",publisherValue),
     ("eightyStarted",toJson (mode == "80")),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   IO.FS.writeFile (destination/("capacity-"++mode++"-stderr.txt")) (← IO.FS.readFile (base/(tag++"1.stderr")))

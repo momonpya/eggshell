@@ -222,11 +222,21 @@ def run (path : System.FilePath) : IO Unit := do
         primes := primes.push row
         save (root/"prime.json") (toJson primes)
         check (row.getObjValD "success" == toJson true) "real-source warm prime failed"
+      let captureCaches := fun (label : String) => do
+        let record ← try
+          let some endpoint ← Publication.Client.endpoint? | throw (IO.userError "owned publisher endpoint is absent")
+          check (endpoint.pid == StudyRuntime.pid publisher && endpoint.session == "publisher")
+            "statistics endpoint belongs to another publisher"
+          IO.ofExcept (Json.parse (← Daemon.exchange endpoint "stats" (budget := 5000)))
+          catch error => pure (Json.mkObj [("error",toJson error.toString)])
+        save (root/("cache-stats-"++label++".json")) record
+      captureCaches "prime"
       let mut results := #[]
       for count in input.counts do
         let result ← phase input topics count
         results := results.push result
         save (root/"progress.json") (toJson results)
+        captureCaches ("phase-"++toString count)
         check (result.getObjValD "passed" == toJson true) "capacity phase failed; do not escalate unchanged load"
       check ((← StudyRuntime.files (.mk input.project)) == input.sourceFiles) "capacity changed the original DB"
       save (root/"report.json") (Json.mkObj [("runtimeSha256",toJson input.runtimeSha256),

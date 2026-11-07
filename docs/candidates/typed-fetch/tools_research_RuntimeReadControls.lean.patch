@@ -1,0 +1,15 @@
+--- a/tools/research/RuntimeReadControls.lean
++++ b/tools/research/RuntimeReadControls.lean
+@@ -93,0 +94 @@
++      (``sourceFetchMany,``SourceViewBatch.Reply.forWire),
+@@ -112,0 +114,4 @@
++  let localBody ← body ``readSelectedRows
++  for forbidden in [``Lean.Json.compress,``Lean.ToJson.toJson,``SourceViewBatch.Reply.forWire] do
++    if localBody.getUsedConstants.contains forbidden then
++      throwError "typed original-row fetch serializes an unsent payload {forbidden}"
+@@ -265,0 +271,5 @@
++    let bytes := localRows.wireBytes
++    let boundary ← IO.ofExcept (localRows.forWire bytes)
++    check (toJson boundary.val == toJson localRows) "wire admission changed the typed payload"
++    check (bytes > 0 && !(localRows.forWire (bytes-1)).isOk)
++      "wire admission lost the exact byte boundary"

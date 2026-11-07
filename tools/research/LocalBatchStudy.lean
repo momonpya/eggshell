@@ -281,13 +281,16 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
     "actual hooks did not use the direct selected-original path"
   check (!requiresKeyedImage || keyedImageUsed) "delivery passed but candidate shared keyed path was not exercised"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
-  completedStudyReady tag (tag++"-cells1")
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership","delivery-key-sets"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership","delivery-key-sets","typed-fetch"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
+  let guardTag := (result.getObjValAs? String "guardTag").toOption.getD (tag++"-cells1")
+  check (guardTag.startsWith (tag++"-cells") && guardTag.toList.all (fun c => c.isAlphanum || c == '-')) "invalid completed guard tag"
+  completedStudyReady tag guardTag
   check (result.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     result.getObjValD "allParentBodiesByteEqual" == toJson true) "preserve actual delivery evidence first"
-  let root := base/(tag++"-cells-result")
+  let root := System.FilePath.mk ((result.getObjValAs? String "resultRoot").toOption.getD (base/(tag++"-cells-result")).toString)
+  check (root.parent == some base && (root.fileName.getD "").startsWith (tag++"-cells")) "invalid completed result scope"
   let shared := base/"real-source-search-read-trial-result/data"
   let mut removed := #[]
   for topic in [1:4] do
@@ -311,7 +314,6 @@ def cleanupCells (tag : String := "local-batch") : IO Unit := do
     let path := shared/"receipts"/id
     if ← path.pathExists then IO.FS.removeDirAll path
     removed := removed.push path.toString
-  let guardTag := (result.getObjValAs? String "guardTag").toOption.getD (tag++"-cells1")
   let stderr ← IO.FS.readFile (base/(guardTag++".stderr"))
   IO.FS.writeFile (study/"delivery-stderr.txt") stderr
   write (study/"delivery-warnings.json") (Json.mkObj [

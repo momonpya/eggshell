@@ -1,0 +1,13 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -378 +378 @@
+-  let mut shared := #[]
++  let mut sharedWitnessesChecked : Nat := 0
+@@ -418,3 +418 @@
+-                shared := shared.push (Json.mkObj [("part",toJson partIndex),("source",toJson witness.read.source),
+-                  ("binding",toJson origin.binding),("occurrence",toJson origin.occurrence),
+-                  ("originalBytesChecked",toJson true)])
++                sharedWitnessesChecked := sharedWitnessesChecked+1
+@@ -445 +443 @@
+-    ("originalPieces",toJson originals),("sharedRows",toJson shared),
++    ("originalPieces",toJson originals),("sharedWitnessesChecked",toJson sharedWitnessesChecked),
