@@ -38,6 +38,8 @@ def overlap : IO Json := do
     for task in tasks do discard <| IO.ofExcept (← IO.wait task)
     let snapshot ← pool.state.atomically get
     check (snapshot.starts == 2 && snapshot.slots.size == 2) "pool grew past its resident credits"
+    check (snapshot.waiting == 0 && (snapshot.slots.filter Slot.isIdle).size == 1 &&
+      (← disposed.atomically get) == 1) "spare idle model was retained after all work returned"
     let reused ← pool.withResource (pure true) (fun _ => throw (IO.userError "warm reuse spawned a third encoder"))
       dispose (fun _ resource _ => pure resource)
     check (values.contains reused) "warm reuse returned an unregistered encoder"
@@ -47,7 +49,7 @@ def overlap : IO Json := do
       "closed pool accepted a new encoder"
     return Json.mkObj [("simultaneousOwners",toJson (2 : Nat)),("differentPipeSlots",toJson true),
       ("workFinishedWhileManagementLockHeld",toJson true),("warmReuseDidNotSpawn",toJson true),
-      ("boundedAndExactlyOnceClose",toJson true)]
+      ("boundedAndExactlyOnceClose",toJson true),("oneIdleAfterWork",toJson true)]
   finally
     release.resolve ()
     for task in tasks do IO.cancel task
@@ -135,9 +137,78 @@ def idlePreferred : IO Json := do
   check ((← disposed.get).length == 2) "idle preference lost a model"
   return Json.mkObj [("warmModelPreferredOverEmptySlot",toJson true)]
 
+def demandAndStandby : IO Json := do
+  let pool ← Pool.make (α := Nat) 2
+  let some first ← pool.take? | throw (IO.userError "first slot missing")
+  let some second ← pool.take? | throw (IO.userError "second slot missing")
+  check (← pool.install first 1) "first resource rejected"
+  check (← pool.install second 2) "second resource rejected"
+  let entered ← IO.Promise.new
+  let release ← IO.Promise.new
+  let stopped ← IO.Promise.new
+  let disposed ← IO.mkRef ([] : List Nat)
+  let dispose := fun value => do
+    disposed.modify (value :: ·)
+    if value == 2 then
+      entered.resolve ()
+      discard <| IO.wait release.result!
+      stopped.resolve ()
+  pool.state.atomically (modify fun state => {state with waiting := 1})
+  pool.giveBack first true dispose
+  pool.giveBack second true dispose
+  let demanded ← pool.state.atomically get
+  check ((demanded.slots.filter Slot.isIdle).size == 2 && (← disposed.get).isEmpty)
+    "queued demand prematurely retired a useful model"
+  let retiring ← IO.asTask (pool.finishWaiting dispose) .dedicated
+  try
+    discard <| IO.wait entered.result!
+    let some kept ← pool.take? | throw (IO.userError "standby was lost while another model stops")
+    check (kept.cached == some 1 && (← pool.take?).isNone) "retiring spare released its credit before stopping"
+    pool.giveBack kept true dispose
+    pool.state.atomically do
+      release.resolve ()
+      waitUntil stopped.isResolved
+    discard <| IO.ofExcept (← IO.wait retiring)
+    let quiet ← pool.state.atomically get
+    check (quiet.waiting == 0 && (quiet.slots.filter Slot.isIdle).size == 1)
+      "draining the last waiter did not trim the spare"
+    pool.close dispose
+    check ((← disposed.get).mergeSort (· ≤ ·) == [1,2]) "standby retirement lost or repeated a resource"
+    return Json.mkObj [("queuedDemandKeptBothModels",toJson true),("oneStandbyAfterQueueDrained",toJson true),
+      ("spareCreditHeldUntilStop",toJson true),("stoppingOutsideManagementLock",toJson true)]
+  finally
+    release.resolve ()
+    IO.cancel retiring
+    discard <| IO.wait retiring
+
+def cancelledWaiter : IO Json := do
+  let pool ← Pool.make (α := Nat) 1
+  let some active ← pool.take? | throw (IO.userError "active slot missing")
+  check (← pool.install active 7) "active resource rejected"
+  let live ← IO.mkRef true
+  let disposed ← IO.mkRef (0 : Nat)
+  let dispose := fun (_ : Nat) => disposed.modify (·+1)
+  let waiter ← IO.asTask (pool.withResource live.get (fun _ => pure 9) dispose (fun _ value _ => pure value)) .dedicated
+  try
+    waitUntil (do return (← pool.state.atomically get).waiting == 1)
+    live.set false
+    let result ← IO.wait waiter
+    check (match result with | .error _ => true | _ => false) "expired waiter obtained a pipe"
+    check ((← pool.state.atomically get).waiting == 0 && (← disposed.get) == 0)
+      "expired waiter leaked demand or stopped another owner"
+    pool.giveBack active true dispose
+    pool.close dispose
+    check ((← disposed.get) == 1) "waiter cleanup lost the active model"
+    return Json.mkObj [("expiredWaiterRemovedDemand",toJson true),("activeOwnerPreserved",toJson true)]
+  finally
+    live.set false
+    IO.cancel waiter
+    discard <| IO.wait waiter
+
 def run (output : System.FilePath) : IO Unit := do
   let report := Json.mkObj [("overlap",← overlap),("retirement",← retiring),
-    ("failureAndShutdown",← failureAndClose),("idlePreferred",← idlePreferred),("allPassed",toJson true),
+    ("failureAndShutdown",← failureAndClose),("idlePreferred",← idlePreferred),
+    ("demandAndStandby",← demandAndStandby),("cancelledWaiter",← cancelledWaiter),("allPassed",toJson true),
     ("realModelOrFullHookCapacity",toJson false),("adopted",toJson false)]
   IO.FS.writeFile output report.pretty
 end Eggshell.Research.EncoderPoolControls

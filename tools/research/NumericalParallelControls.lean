@@ -63,6 +63,11 @@ def wave (config : Numerical.Config) (expected : Array Json) (root : System.File
     let began ← IO.monoMsNow
     release.resolve ()
     let rows ← tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
+    let elapsed := (← IO.monoMsNow)-began
+    let endpoint ← Numerical.resolve config
+    let stats ← IO.ofExcept (Json.parse (← Plugin.Daemon.exchange endpoint "stats"))
+    check (stats.getObjValD "waitingEncodes" == toJson (0 : Nat) &&
+      stats.getObjValD "idleModels" == toJson (1 : Nat)) "burst retained surplus warm models"
     let mut overlapped := false
     for a in rows do
       for b in rows do
@@ -74,8 +79,8 @@ def wave (config : Numerical.Config) (expected : Array Json) (root : System.File
         let be := (b.getObjValAs? Nat "kernelEnd").toOption
         if let (some as_,some ae,some bs,some be) := (as_,ae,bs,be) then
           if am != Json.null && bm != Json.null && am != bm && as_ < be && bs < ae then overlapped := true
-    let result := Json.mkObj [("requests",toJson rows.size),("wallMs",toJson ((← IO.monoMsNow)-began)),
-      ("rows",toJson rows),("differentModelIntervalsOverlap",toJson overlapped)]
+    let result := Json.mkObj [("requests",toJson rows.size),("wallMs",toJson elapsed),
+      ("rows",toJson rows),("differentModelIntervalsOverlap",toJson overlapped),("endStats",stats)]
     IO.FS.writeFile (root/s!"wave-{ordinal}.json") result.compress
     return result
   finally
@@ -100,13 +105,16 @@ def run (root : System.FilePath) : IO Unit := do
     let capacity := (stats.getObjValAs? Nat "modelCapacity").toOption.getD 0
     let starts := (stats.getObjValAs? Nat "modelStarts").toOption.getD 0
     let pids ← IO.ofExcept (stats.getObjValAs? (Array Nat) "modelPids")
-    check (capacity == 2 && starts == 2 && pids.toList.eraseDups.length == 2)
-      "actual service did not start two independent encoders within its credits"
+    check (capacity == 2 && starts ≥ 3 && pids.size == 1 &&
+      stats.getObjValD "waitingEncodes" == toJson (0 : Nat) &&
+      stats.getObjValD "idleModels" == toJson (1 : Nat))
+      "actual service did not expand for demand and return to one warm standby"
     check (warm.getObjValD "differentModelIntervalsOverlap" == toJson true)
       "warm encoder intervals remained serialized"
     IO.FS.writeFile (root/"report.json") (Json.mkObj [("allPassed",toJson true),("stats",stats),
       ("coldWave",cold),("warmWave",warm),("referenceRequests",toJson (16 : Nat)),
       ("all48RepliesExactVectorsAndCoverage",toJson true),("pythonNumericalSourceUnchanged",toJson true),
+      ("oneWarmStandbyAfterEachBurst",toJson true),
       ("fullHookOrEightyUsers",toJson false),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).compress
   finally Numerical.release keeper 10000
 end Eggshell.Research.NumericalParallelControls

@@ -1,0 +1,8 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -529,0 +530,5 @@
++          ("waitingEncodes",toJson models.waiting),
++          ("idleModels",toJson ((models.slots.filter Research.EncoderPool.Slot.isIdle).size)),
++          ("modelSlots",toJson (models.slots.map fun slot => match slot with
++            | .empty => "empty" | .idle _ => "idle" | .running _ none => "starting"
++            | .running _ (some _) => "running" | .retiring _ _ => "retiring")),

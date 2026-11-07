@@ -185,8 +185,8 @@ def stage (receipt : Json) (name : String) : IO Json := do
 def collectCells (tag : String := "local-batch") (parentTag : String := "delivery-ledger")
     (profile : Bool := true) (guardTag : String := "") : IO Unit := do
   drained
-  check (["local-batch","parallel-encoder","runtime-key"].contains tag &&
-    ["delivery-ledger","local-batch","parallel-encoder"].contains parentTag) "unknown frozen delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder"].contains tag &&
+    ["delivery-ledger","local-batch","parallel-encoder","runtime-key"].contains parentTag) "unknown frozen delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let root := base/(tag++"-cells-result")
   check ((← read (root/"result.json")).getObjValD "allSixPassed" == toJson true)
@@ -246,7 +246,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
     "actual hooks did not use the direct selected-original path"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
   drained
-  check (["local-batch","parallel-encoder","runtime-key"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   check (result.getObjValD "actualDeliveryAllSixPassed" == toJson true &&

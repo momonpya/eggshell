@@ -26,4 +26,10 @@ nativeの全依存と、宣言したNumerical/ContractAudit・追加した検査
 
 初めの試験は前回の80強制停止で残ったendpointを検知して、検索の開始前に停止した。[復旧記録](preflight-recovery.json)では元guardの終了・全所有PIDの不在・各endpointのPIDがそのguardの所有者だったことを確認してから削除した。別の実行中serviceを停止せず、DBやproject cacheを消さず、開始前の失敗を保存して題材1から実行した。
 
-次は4/16 gate、合格時だけ80同時を測る。既存の98%・30秒・RSS/disk guardは維持する。親の80資源停止を解消したとは扱わない。新seedと履歴を蓄積する両周、総トークン・品質、80人8時間・複数project・増加量・NAS・保存の追随は未検証。回答モデル0・有料比較0/18、goalはactive。
+## 並行負荷
+
+[同じ実原典の容量試験](capacity-small.json)は4同時が4/4で本文・意味検索・シナプス・packet・ACKまで完了、波全体7,600msだった。16 sessionの初期化後、client結果の完成前にRSS3,692,400KiBで保護停止した。残存processは0。16件の配送率とclient時間は未測定、80は未実行。同じ失敗負荷は反復していない。
+
+ピークのモデル2基は計2,224,656KiB、出版service721,840KiB、frontend246,368KiB、検査器138,240KiB等だった。親の16成功とこの1回だけで、固定計算の変更がメモリ悪化の原因だとは断定しない。一方、接続キーの高速化だけで容量問題を解決したとも扱わない。
+
+次の[elastic-encoder](../elastic-encoder/README.md)は並行2基を維持し、使われない余剰idleの保持をやめる候補。既存の98%・30秒・RSS/disk guardを維持する。新seedと履歴を蓄積する両周、総トークン・品質、80人8時間・複数project・増加量・NAS・保存の追随も未検証。回答モデル0・有料比較0/18、goalはactive。

@@ -1,5 +1,6 @@
 module
 public import Std.Sync.Mutex
+public import Init.Data.Array.MapIdx
 @[expose] public section
 namespace Eggshell.Research.EncoderPool
 
@@ -21,6 +22,7 @@ structure State (α : Type) where
   next : Nat := 0
   starts : Nat := 0
   closed : Bool := false
+  waiting : Nat := 0
 
 def State.reserveAt (state : State α) (index : Nat) : Option (State α × Ticket α) := do
   if state.closed then none else do
@@ -99,20 +101,91 @@ def State.close (state : State α) : State α × Array α := Id.run do
       slots := slots.set! index .empty
   return ({state with slots,closed := true},idle)
 
-/-- CPU and model-resident credits set a ceiling, not a fixed search-worker
-count. Slots are created lazily only when an independent request needs one.
-The external numerical runtime's RSS still requires measurement. -/
-def residentBudget : Nat := 1024*1024*1024
-def residentPerSlot : Nat := 512*1024*1024
+def Slot.isIdle : Slot α → Bool | .idle _ => true | _ => false
+
+def Slot.trim (anchor token index : Nat) (slot : Slot α) : Slot α :=
+  if index == anchor then slot else match slot with
+    | .idle resource => .retiring (token+index) resource
+    | other => other
+
+theorem Slot.trim_idle_anchor (anchor token index : Nat) (slot : Slot α) (resource : α)
+    (found : slot.trim anchor token index = .idle resource) : index = anchor := by
+  by_cases same : index = anchor
+  · exact same
+  · cases slot <;> simp [Slot.trim,same] at found
+
+theorem Slot.trim_running (anchor token index owner : Nat) (resource : Option α) :
+    (Slot.running owner resource).trim anchor token index = .running owner resource := by
+  by_cases same : index = anchor <;> simp [Slot.trim,same]
+
+theorem Slot.trim_retiring (anchor token index owner : Nat) (resource : α) :
+    (Slot.retiring owner resource).trim anchor token index = .retiring owner resource := by
+  by_cases same : index = anchor <;> simp [Slot.trim,same]
+
+/-- Queued demand keeps both warm pipes available. At quiescence keep one
+hot standby; surplus resources retain their slots until stopping succeeds. -/
+def State.trimIdle (state : State α) : State α × Array (Ticket α × α) :=
+  if state.waiting ≠ 0 then (state,#[]) else
+    let anchor := (state.slots.findIdx? Slot.isIdle).getD 0
+    let spare := state.slots.zipIdx.filterMap fun (slot,index) => match slot with
+      | .idle resource => if index == anchor then none else
+          some (({index,token := state.next+index,cached := none} : Ticket α),resource)
+      | _ => none
+    let slots := state.slots.mapIdx (fun index slot => slot.trim anchor state.next index)
+    let nextToken := if spare.isEmpty then state.next else state.next+state.slots.size
+    ({state with slots,next := nextToken},spare)
+
+def State.standbyBound (state : State α) : Prop :=
+  ∃ anchor : Nat, ∀ (index : Nat) (resource : α), state.slots[index]? = some (Slot.idle resource) → index = anchor
+
+theorem State.trimIdle_demand (state : State α) (demand : state.waiting ≠ 0) :
+    state.trimIdle = (state,#[]) := by simp [State.trimIdle,demand]
+
+theorem State.trimIdle_standby (state : State α) (quiet : state.waiting = 0) :
+    state.trimIdle.1.standbyBound := by
+  refine ⟨(state.slots.findIdx? Slot.isIdle).getD 0,?_⟩
+  intro index resource found
+  simp only [State.trimIdle,quiet,ne_eq,not_true_eq_false,if_false,Array.getElem?_mapIdx] at found
+  cases original : state.slots[index]? with
+  | none => simp [original] at found
+  | some slot =>
+      exact Slot.trim_idle_anchor _ _ _ slot resource (by simpa [original] using found)
+
+theorem State.trimIdle_running (state : State α) (index token : Nat) (resource : Option α)
+    (found : state.slots[index]? = some (.running token resource)) :
+    state.trimIdle.1.slots[index]? = some (.running token resource) := by
+  by_cases demand : state.waiting ≠ 0
+  · simp [State.trimIdle,demand,found]
+  · simp [State.trimIdle,demand,Array.getElem?_mapIdx,found,Slot.trim_running]
+
+theorem State.trimIdle_retiring (state : State α) (index token : Nat) (resource : α)
+    (found : state.slots[index]? = some (.retiring token resource)) :
+    state.trimIdle.1.slots[index]? = some (.retiring token resource) := by
+  by_cases demand : state.waiting ≠ 0
+  · simp [State.trimIdle,demand,found]
+  · simp [State.trimIdle,demand,Array.getElem?_mapIdx,found,Slot.trim_retiring]
+
+theorem State.trimIdle_unique (state : State α) (quiet : state.waiting = 0)
+    (left right : Nat) (a b : α) (ha : state.trimIdle.1.slots[left]? = some (.idle a))
+    (hb : state.trimIdle.1.slots[right]? = some (.idle b)) : left = right := by
+  obtain ⟨anchor,unique⟩ := state.trimIdle_standby quiet
+  exact (unique left a ha).trans (unique right b hb).symm
+
+theorem State.trimIdle_size (state : State α) : state.trimIdle.1.slots.size = state.slots.size := by
+  by_cases demand : state.waiting ≠ 0 <;> simp [State.trimIdle,demand]
+
+/-- CPU and a two-replica deployment ceiling bound model processes, not search
+actors. This is not a byte bound; actual runtime RSS remains guarded. -/
+def maxReplicas : Nat := 2
 def capacity (hardwareThreads : Nat) : Nat :=
-  max 1 (min (max 1 (hardwareThreads/4)) (residentBudget/residentPerSlot))
+  max 1 (min (max 1 (hardwareThreads/4)) maxReplicas)
 
 theorem capacity_positive (hardwareThreads : Nat) : 0 < capacity hardwareThreads := by
   simp only [capacity]
   omega
 
 theorem capacity_bounded (hardwareThreads : Nat) : capacity hardwareThreads ≤ 2 := by
-  simp only [capacity,residentBudget,residentPerSlot]
+  simp only [capacity,maxReplicas]
   omega
 
 structure Pool (α : Type) where
@@ -133,15 +206,30 @@ def Pool.install (pool : Pool α) (ticket : Ticket α) (resource : α) : IO Bool
   set state
   return accepted
 
-def Pool.giveBack (pool : Pool α) (ticket : Ticket α) (keep : Bool) (dispose : α → IO Unit) : IO Unit := do
-  let retired ← pool.state.atomically do
+def Pool.disposeRetired (pool : Pool α) (retired : Array (Ticket α × α)) (dispose : α → IO Unit) : IO Unit := do
+  let mut failure := none
+  for (ticket,resource) in retired do
+    try
+      dispose resource
+      pool.state.atomically (modify (·.retired ticket))
+    catch error => if failure.isNone then failure := some error
+  if let some error := failure then throw error
+
+def Pool.returnPlan (pool : Pool α) (ticket : Ticket α) (keep : Bool) : IO (Array (Ticket α × α)) :=
+  pool.state.atomically do
     let (state,retired) := (← get).giveBack ticket keep
+    let (state,spare) := state.trimIdle
     set state
-    return retired
-  if let some resource := retired then
-    -- A failed stop does not free a slot for another live model.
-    dispose resource
-    pool.state.atomically (modify (·.retired ticket))
+    return (retired.map (fun resource => (ticket,resource))).toArray ++ spare
+
+def Pool.giveBack (pool : Pool α) (ticket : Ticket α) (keep : Bool) (dispose : α → IO Unit) : IO Unit := do
+  let retired ← pool.returnPlan ticket keep
+  pool.disposeRetired retired dispose
+
+theorem Pool.return_stops_after_plan (pool : Pool α) (ticket : Ticket α) (keep : Bool) (dispose : α → IO Unit) :
+    pool.giveBack ticket keep dispose = (do
+      let retired ← pool.returnPlan ticket keep
+      pool.disposeRetired retired dispose) := rfl
 
 def Pool.close (pool : Pool α) (dispose : α → IO Unit) : IO Unit := do
   let idle ← pool.state.atomically do
@@ -150,19 +238,51 @@ def Pool.close (pool : Pool α) (dispose : α → IO Unit) : IO Unit := do
     return idle
   for resource in idle do dispose resource
 
-def Pool.borrow (pool : Pool α) (live : IO Bool) : IO (Ticket α) := do
+def Pool.waitTicket (pool : Pool α) (live : IO Bool) : IO (Ticket α) := do
   repeat
     unless ← live do throw (IO.userError "encoder request is no longer live")
     if let some ticket ← pool.take? then return ticket
     IO.sleep 1
   throw (IO.userError "unreachable encoder admission")
 
+def Pool.queueLeavePlan (pool : Pool α) : IO (Array (Ticket α × α)) :=
+  pool.state.atomically do
+    let state ← get
+    let (state,spare) := {state with waiting := state.waiting-1}.trimIdle
+    set state
+    return spare
+
+def Pool.finishWaiting (pool : Pool α) (dispose : α → IO Unit) : IO Unit := do
+  let spare ← pool.queueLeavePlan
+  pool.disposeRetired spare dispose
+
+theorem Pool.queue_stops_after_plan (pool : Pool α) (dispose : α → IO Unit) :
+    pool.finishWaiting dispose = (do
+      let spare ← pool.queueLeavePlan
+      pool.disposeRetired spare dispose) := rfl
+
+def Pool.borrow (pool : Pool α) (live : IO Bool) (dispose : α → IO Unit) : IO (Ticket α) := do
+  let assigned ← IO.mkRef none
+  pool.state.atomically do
+    let state ← get
+    if state.closed then throw (IO.userError "encoder pool is closed")
+    set {state with waiting := state.waiting+1}
+  try
+    let ticket ← pool.waitTicket live
+    assigned.set (some ticket)
+    return ticket
+  finally
+    try pool.finishWaiting dispose
+    catch error =>
+      if let some ticket ← assigned.get then pool.giveBack ticket false dispose
+      throw error
+
 /-- No pool lock spans creation, pipe IO, inference, cancellation, stopping
 or joining. The callback has an exclusive pipe and a once-only retirement
 operation. Shutdown closes admission but leaves active owners in charge. -/
 def Pool.withResource (pool : Pool α) (live : IO Bool) (create : Ticket α → IO α)
     (dispose : α → IO Unit) (use : Ticket α → α → IO Unit → IO β) : IO β := do
-  let ticket ← pool.borrow live
+  let ticket ← pool.borrow live dispose
   let resource ← try
     match ticket.cached with
     | some value => pure value

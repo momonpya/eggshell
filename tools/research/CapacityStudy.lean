@@ -138,6 +138,13 @@ def sealClient (tag : String := "client") : IO Unit := do
     "common-sources",product.toString,target.toString,(study/(tag++"-sources.json")).toString]
 def keepFields (value : Json) (names : List String) : Json :=
   Json.mkObj (names.map fun name => (name,value.getObjValD name))
+/-- Interrupted diagnostic writes are evidence of a stopped trial, never a
+valid empty response. Source manifests, guards and admission gates stay strict. -/
+def readDiagnostic (path : System.FilePath) : IO Json := do
+  try read path
+  catch error => return Json.mkObj [("diagnosticReadError",toJson error.toString),
+    ("path",toJson path.toString),("sha256",toJson (← hash path)),
+    ("bytes",toJson (← path.metadata).byteSize.toNat)]
 def collectFailure : IO Unit := do
   drained
   let root := base/"memory-capacity-small-result"
@@ -268,7 +275,7 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
@@ -360,37 +367,41 @@ def collectParallel (mode : String) (family : String := "parallel-encoder") : IO
   let mut files := #[]
   for phase in (if mode == "small" then ["prime","phase-4","phase-16"] else ["prime","phase-80"]) do
     let path := if phase == "prime" then root/"prime.json" else root/phase/"clients.json"
-    let complete ← path.pathExists
+    let present ← path.pathExists
     let mut rows := #[]
-    if complete then rows ← IO.ofExcept ((← read path).getArr?)
+    let listed ← if present then readDiagnostic path else pure Json.null
+    let complete := listed.getArr?.isOk
+    if complete then rows ← IO.ofExcept listed.getArr?
     else if ← (root/phase).isDir then
       for entry in ← (root/phase).readDir do
         let result := entry.path/"result.json"
-        if entry.fileName.startsWith "client-" && (← result.pathExists) then rows := rows.push (← read result)
+        if entry.fileName.startsWith "client-" && (← result.pathExists) then rows := rows.push (← readDiagnostic result)
     let result := root/phase/"result.json"
-    let resultValue ← if ← result.pathExists then read result else pure Json.null
+    let resultValue ← if ← result.pathExists then readDiagnostic result else pure Json.null
     let initializations := root/phase/"initializations.json"
-    let initializationsValue ← if ← initializations.pathExists then read initializations else pure Json.null
+    let initializationsValue ← if ← initializations.pathExists then readDiagnostic initializations else pure Json.null
     phases := phases.push (Json.mkObj [("phase",toJson phase),("clients",toJson rows),("result",resultValue),
-      ("completeClientList",toJson complete),("initializations",initializationsValue)])
+      ("completeClientList",toJson complete),("initializations",initializationsValue),("clientListRecord",listed)])
     for row in rows do
+      if !(row.getObjValAs? String "receipt").isOk then continue
       let id ← IO.ofExcept (row.getObjValAs? String "receipt")
       check (id.length == 64 && id.toList.all Char.isAlphanum) "invalid receipt scope"
       let directory := shared/"data/receipts"/id
       let mut stages := #[]
       let mut numerical := #[]
       for entry in ← directory.readDir do
-        if entry.fileName.startsWith "numerical-" then numerical := numerical.push (← read entry.path)
+        if entry.fileName.startsWith "numerical-" then numerical := numerical.push (← readDiagnostic entry.path)
         else if entry.fileName == "synaptic-delivery.json" then
-          let value := (← read entry.path).getObjValD "data"
+          let raw ← readDiagnostic entry.path
+          let value := raw.getObjValD "data"
           stages := stages.push (Json.mkObj [("name",toJson entry.fileName),("record",keepFields value
             ["complete","bodyBytes","bodyChars","bodySha256","packetVerified","completed","advisory",
-             "localUnions","unverifiedParts","fullCandidateAudit"])])
+             "localUnions","unverifiedParts","fullCandidateAudit"]),("diagnosticReadError",raw.getObjValD "diagnosticReadError")])
         else if ["search.json","ack.json","request-pages.json","operation-service.json","transport.json",
           "canonical-source-reuse.json","canonical-source-input.json","provider-keyed-profile.json",
           "provider-indexed-profile.json","discovery-counters"].contains entry.fileName ||
           entry.fileName.startsWith "discovery-counters-" then
-          stages := stages.push (Json.mkObj [("name",toJson entry.fileName),("record",← read entry.path)])
+          stages := stages.push (Json.mkObj [("name",toJson entry.fileName),("record",← readDiagnostic entry.path)])
         files := files.push (Json.mkObj [("path",toJson entry.path.toString),
           ("sha256",toJson (← hash entry.path)),("bytes",toJson (← entry.path.metadata).byteSize.toNat)])
       cells := cells.push (Json.mkObj [("phase",toJson phase),("client",row),
@@ -450,22 +461,34 @@ def retireDiagnosticClient : IO Unit := do
     ("path",toJson path.toString),("sha256",toJson sha),("bytes",toJson (← path.metadata).byteSize.toNat),
     ("archived",toJson false),("currentParentOriginalsNativeSourcesAndInputsRetained",toJson true)])
   IO.FS.removeFile path
-def auditStoppedQueries : IO Unit := do
-  drained
-  let destination := workspace/"docs/candidates/parallel-encoder"
-  let evidence ← read (destination/"capacity-80.json")
-  let guard := evidence.getObjValD "guard"
+def stoppedOwnerAbsent (guard : Json) (owner : Nat) : IO Unit := do
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
-    guard.getObjValD "guardTriggered" == toJson true) "stopped owner evidence required"
-  let primes := (evidence.getObjValD "cells").getArr?.toOption.getD #[] |>.map (fun row =>
-    (row.getObjValD "client").getObjValD "receipt")
+    guard.getObjValD "guardTriggered" == toJson true &&
+    ((guard.getObjValD "peakProcesses").getArr?.toOption.getD #[]).any (fun row => row.getObjValD "pid" == toJson owner))
+    "stopped owner evidence required"
+  let process ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString owner,"-o","stat="]}
+  check (process.exitCode != 0 || process.stdout.trimAscii.toString.startsWith "Z" ||
+    process.stdout.trimAscii.toString.startsWith "X") "stopped owner still has a live process"
+def auditStoppedQueries (family : String := "parallel-encoder") (mode : String := "80")
+    (owner : Nat := 22340) : IO Unit := do
+  drained
+  discard <| cohort family
+  check (["small","80"].contains mode) "unknown stopped capacity stage"
+  let destination := workspace/"docs/candidates"/family
+  let evidence ← read (destination/("capacity-"++mode++".json"))
+  let guard := evidence.getObjValD "guard"
+  stoppedOwnerAbsent guard owner
+  let targetPhase := if mode == "small" then "phase-16" else "phase-80"
+  let earlier := (evidence.getObjValD "cells").getArr?.toOption.getD #[] |>.filter (fun row =>
+    row.getObjValD "phase" != toJson targetPhase)
+  let primes := earlier.map (fun row => (row.getObjValD "client").getObjValD "receipt")
   let mut rows := #[]
   let mut totals : Std.HashMap String Nat := {}
   for entry in ← (shared/"data/receipts").readDir do
     let marker := entry.path/"provider-keyed-profile.json"
     if !(← marker.pathExists) || primes.contains (toJson entry.fileName) then continue
-    let value ← read marker
-    if value.getObjValD "pid" != toJson (22340 : Nat) then continue
+    let value ← readDiagnostic marker
+    if value.getObjValD "pid" != toJson owner then continue
     let mut stages := #[]
     let mut bytes := 0
     for item in ← entry.path.readDir do
@@ -473,19 +496,56 @@ def auditStoppedQueries : IO Unit := do
       bytes := bytes+count
       totals := totals.insert item.fileName (totals[item.fileName]?.getD 0+1)
       if count > 262144 then
-        stages := stages.push (Json.mkObj [("file",toJson item.fileName),("bytes",toJson count),
+        stages := stages.push (Json.mkObj [("file",toJson item.fileName),("bytes",toJson count),("sha256",toJson (← hash item.path)),
           ("largePayloadOmitted",toJson true)])
       else
-        let value ← read item.path
+        let value ← readDiagnostic item.path
         let data := value.getObjValD "data"
         stages := stages.push (Json.mkObj [("file",toJson item.fileName),("bytes",toJson count),
           ("stage",value.getObjValD "stage"),("observedMs",value.getObjValD "observedMs"),("pid",value.getObjValD "pid"),
+          ("diagnosticReadError",value.getObjValD "diagnosticReadError"),
           ("data",keepFields data ["transport","sources","requestBytes","status","elapsedMs","queueMs",
             "workMs","startedAt","finishedAt","readyMs","phase","inputMs","restoreMs","matrixMs"])])
     rows := rows.push (Json.mkObj [("receipt",toJson entry.fileName),("bytes",toJson bytes),("stages",toJson stages)])
-  write (destination/"stopped-query-stages.json") (Json.mkObj [("ownerPid",toJson (22340 : Nat)),
+  write (destination/"stopped-query-stages.json") (Json.mkObj [("ownerPid",toJson owner),("mode",toJson mode),
     ("queries",toJson rows.size),("files",toJson (totals.toArray.qsort (fun a b => a.1 < b.1))),
     ("rows",toJson rows),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
+def cleanupStoppedCapacity (family mode : String) (owner : Nat) : IO Unit := do
+  drained
+  discard <| cohort family
+  check (["small","80"].contains mode) "unknown stopped capacity stage"
+  let destination := workspace/"docs/candidates"/family
+  let evidence ← read (destination/("capacity-"++mode++".json"))
+  stoppedOwnerAbsent (evidence.getObjValD "guard") owner
+  let audit ← read (destination/"stopped-query-stages.json")
+  check (audit.getObjValD "ownerPid" == toJson owner && audit.getObjValD "mode" == toJson mode &&
+    audit.getObjValD "actualNewLoadStarted" == toJson false) "preserve matching stopped stage audit first"
+  let mut sessions : Array String := #[]
+  let mut receipts : Array String := #[]
+  for phase in (evidence.getObjValD "phases").getArr?.toOption.getD #[] do
+    for row in (phase.getObjValD "initializations").getArr?.toOption.getD #[] do
+      sessions := sessions.push (← IO.ofExcept (row.getObjValAs? String "session"))
+    for row in (phase.getObjValD "clients").getArr?.toOption.getD #[] do
+      if let .ok session := row.getObjValAs? String "session" then sessions := sessions.push session
+      if let .ok id := row.getObjValAs? String "receipt" then receipts := receipts.push id
+  for row in (audit.getObjValD "rows").getArr?.toOption.getD #[] do
+    receipts := receipts.push (← IO.ofExcept (row.getObjValAs? String "receipt"))
+  let mut paths : Array System.FilePath := #[]
+  for session in sessions.toList.eraseDups do
+    check (session.startsWith "capacity-" && session.length == 73 &&
+      (session.drop 9).toString.toList.all Char.isAlphanum) "cleanup session escaped generated scope"
+    paths := paths.push (shared/"data/sessions"/session)
+  for id in receipts.toList.eraseDups do
+    check (id.length == 64 && id.toList.all Char.isAlphanum) "cleanup receipt escaped generated scope"
+    paths := paths.push (shared/"data/receipts"/id)
+  let removed ← paths.filterM (·.pathExists)
+  let record (completed : Bool) := Json.mkObj [("removed",toJson (removed.map (·.toString))),
+    ("completed",toJson completed),("ownerPid",toJson owner),("archived",toJson false),
+    ("sourceDbProjectCacheNativeInputsAndEvidenceRetained",toJson true)]
+  let output := destination/("capacity-"++mode++"-cleanup.json")
+  write output (record false)
+  for path in removed do IO.FS.removeDirAll path
+  write output (record true)
 def prepareIdentityProbe : IO Unit := do
   drained
   check (!(← (base/"runtime-identity-source").pathExists)) "fresh identity probe required"
@@ -528,6 +588,12 @@ def main (args : List String) : IO Unit := do
   | ["cleanup-parallel",mode] => cleanupParallel mode
   | ["retire-diagnostic-client"] => retireDiagnosticClient
   | ["audit-stopped-queries"] => auditStoppedQueries
+  | ["audit-stopped-capacity",family,mode,owner] =>
+    let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
+    auditStoppedQueries family mode owner
+  | ["cleanup-stopped-capacity",family,mode,owner] =>
+    let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
+    cleanupStoppedCapacity family mode owner
   | ["prepare-identity-probe"] => prepareIdentityProbe
   | ["setup-identity-probe",action,tag] => setupIdentityProbe action tag
   | ["prepare-capacity",family] => prepareParallel family

@@ -1,0 +1,21 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2292,0 +2293,7 @@
++#check Eggshell.Research.EncoderPool.State.trimIdle_unique
++#check Eggshell.Research.EncoderPool.State.trimIdle_size
++#check Eggshell.Research.EncoderPool.State.trimIdle_demand
++#check Eggshell.Research.EncoderPool.State.trimIdle_running
++#check Eggshell.Research.EncoderPool.State.trimIdle_retiring
++#check Eggshell.Research.EncoderPool.Pool.return_stops_after_plan
++#check Eggshell.Research.EncoderPool.Pool.queue_stops_after_plan
+@@ -2295,0 +2303,10 @@
++  for (caller,plan) in [( ``Eggshell.Research.EncoderPool.Pool.giveBack,
++      ``Eggshell.Research.EncoderPool.Pool.returnPlan),
++      (``Eggshell.Research.EncoderPool.Pool.finishWaiting,``Eggshell.Research.EncoderPool.Pool.queueLeavePlan)] do
++    let some body := (environment.find? caller).bind (·.value?) | throwError "Missing elastic model ownership"
++    unless body.getUsedConstants.contains plan &&
++      body.getUsedConstants.contains ``Eggshell.Research.EncoderPool.Pool.disposeRetired do
++      throwError "Model disposal bypasses the separate management plan"
++
++run_elab do
++  let environment ← Lean.getEnv

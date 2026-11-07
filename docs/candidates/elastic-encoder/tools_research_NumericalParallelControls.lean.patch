@@ -1,0 +1,22 @@
+--- a/tools/research/NumericalParallelControls.lean
++++ b/tools/research/NumericalParallelControls.lean
+@@ -65,0 +66,5 @@
++    let elapsed := (← IO.monoMsNow)-began
++    let endpoint ← Numerical.resolve config
++    let stats ← IO.ofExcept (Json.parse (← Plugin.Daemon.exchange endpoint "stats"))
++    check (stats.getObjValD "waitingEncodes" == toJson (0 : Nat) &&
++      stats.getObjValD "idleModels" == toJson (1 : Nat)) "burst retained surplus warm models"
+@@ -77,2 +82,2 @@
+-    let result := Json.mkObj [("requests",toJson rows.size),("wallMs",toJson ((← IO.monoMsNow)-began)),
+-      ("rows",toJson rows),("differentModelIntervalsOverlap",toJson overlapped)]
++    let result := Json.mkObj [("requests",toJson rows.size),("wallMs",toJson elapsed),
++      ("rows",toJson rows),("differentModelIntervalsOverlap",toJson overlapped),("endStats",stats)]
+@@ -103,2 +108,4 @@
+-    check (capacity == 2 && starts == 2 && pids.toList.eraseDups.length == 2)
+-      "actual service did not start two independent encoders within its credits"
++    check (capacity == 2 && starts ≥ 3 && pids.size == 1 &&
++      stats.getObjValD "waitingEncodes" == toJson (0 : Nat) &&
++      stats.getObjValD "idleModels" == toJson (1 : Nat))
++      "actual service did not expand for demand and return to one warm standby"
+@@ -109,0 +117 @@
++      ("oneWarmStandbyAfterEachBurst",toJson true),
