@@ -1,0 +1,104 @@
+--- a/tools/research/ActorReadsChecks.lean
++++ b/tools/research/ActorReadsChecks.lean
+@@ -14,0 +15,3 @@
++#print axioms KeyedImage.restore_source
++#print axioms KeyedImage.restore_manifest
++#print axioms KeyedImage.restore_population
+@@ -36 +39 @@
+-  let mut pending := [``CheckedFrame.fork,``localSession,``Pool.stats,``Pool.find]
++  let mut pending := [``CheckedFrame.fork,``localSession,``Pool.stats,``Pool.find,``Borrow.keyed]
+@@ -104,0 +108 @@
++        source.trace.set (some {})
+@@ -107 +111,2 @@
+-        check ((← source.reads.get) > 0) "actor did not record its own reads") .dedicated
++        check ((← source.trace.get).any (fun trace => !trace.operations.isEmpty))
++          "actor did not record its own read dependencies") .dedicated
+@@ -120,0 +126 @@
++  l.reads.modify (·+1)
+@@ -130,0 +137,86 @@
++def keyedIdentity (view : KeyedSource) : Json := toJson
++  (KeyedProtocol.Scope.ofSnapshot view.source,view.windows.snapshot.head,view.windows.manifest,
++    view.lexical.index.head,view.lexical.expected,view.numeric.map fun (numeric,storage) =>
++      (numeric.partition.snapshot.head,numeric.partition.header,numeric.matrix.snapshot.head,
++        numeric.matrix.metadata.rows,numeric.matrix.metadata.bytes,storage))
++
++def rejects (action : IO α) : IO Bool := do
++  try discard action; return false
++  catch _ => return true
++
++def runKeyed (root : System.FilePath) : IO Unit := do
++  check (!(← root.pathExists)) "fresh keyed image controls required"
++  IO.FS.createDirAll root
++  let source ← PageMap.pin "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/real-source-search-read-trial-result/work.egg"
++  let some input ← PreparedInputs.load? source MiniLM.model SearchProvider.encoderContract |
++    throw (IO.userError "fixed source has no captured inputs")
++  check (input.population > 0 && input.numeric.isSome) "positive source control needs prepared numeric input"
++  let owners ← OwnerViews.load? #[source]
++  let pool ← Pool.new
++  let frame ← Frame.capture #[source] #[input] owners
++  let checked ← pool.prepareFrame frame
++  let baseline : KeyedSource := ⟨source,← PreparedInputs.windows input source,
++    ← PreparedInputs.lexical input source,some (← PreparedInputs.numerical input source)⟩
++  let request : KeyedProtocol.Request := ⟨"no model invocation",#[KeyedProtocol.Scope.ofSnapshot source],
++    4096,8192,none,some #[input],owners⟩
++  let session ← checked.fork
++  let borrow ← session.pool.acquire session.sources #[input] owners
++  check (← rejects (borrow.keyed {request with sources := request.sources.modify 0 fun scope =>
++    {scope with head := {scope.head with revision := scope.head.revision+1}}} MiniLM.model SearchProvider.encoderContract true))
++    "foreign original head accepted"
++  check (← rejects (borrow.keyed {request with sources := request.sources.modify 0 fun scope =>
++    {scope with head := {scope.head with identity := "another-database"}}} MiniLM.model SearchProvider.encoderContract true))
++    "foreign original DB accepted"
++  check (← rejects (borrow.keyed {request with sources := request.sources.modify 0 fun scope =>
++    {scope with owner := {scope.owner with directory := scope.owner.directory++"-elsewhere"}}}
++    MiniLM.model SearchProvider.encoderContract true)) "foreign source path accepted"
++  check (← rejects (borrow.keyed {request with sources := request.sources.modify 0 fun scope =>
++    {scope with owner := {scope.owner with project := some "another-project"}}}
++    MiniLM.model SearchProvider.encoderContract true)) "foreign project scope accepted"
++  check (← rejects (borrow.keyed {request with prepared := some #[{input with population := input.population+1}]}
++    MiniLM.model SearchProvider.encoderContract true)) "foreign population accepted"
++  check (← rejects (borrow.keyed {request with prepared := some #[{input with producer := "another-producer"}]}
++    MiniLM.model SearchProvider.encoderContract true)) "foreign producer accepted"
++  check (← rejects (borrow.keyed {request with prepared := none}
++    MiniLM.model SearchProvider.encoderContract true)) "missing public inputs accepted"
++  check (← rejects (borrow.keyed request "another-model" SearchProvider.encoderContract true)) "foreign model accepted"
++  check (← rejects (borrow.keyed request MiniLM.model "another-encoder" true)) "foreign encoder accepted"
++  let before ← pool.pages.stats
++  let .owner owner := pool.pages | throw (IO.userError "positive control requires the catalogue page owner")
++  let began ← IO.monoMsNow
++  owner.atomically do
++    let actors ← (Array.range 80).mapM fun _ => IO.asTask (do
++      let session ← checked.fork
++      let borrow ← session.pool.acquire session.sources #[input] owners
++      let (sources,views) ← borrow.keyed request MiniLM.model SearchProvider.encoderContract true
++      check (sources.size == 1 && views.size == 1) "keyed image omitted original source"
++      let some view := views[0]! | throw (IO.userError "keyed image lost its positive source")
++      check (keyedIdentity view == keyedIdentity baseline) "shared keyed image changed exact metadata"
++      check ((← view.source.reads.get) == 0 && (← view.windows.snapshot.reads.get) == 0 &&
++        (← view.lexical.index.reads.get) == 0) "keyed hit performed original/derived DB reads"
++      let (_,again) ← borrow.keyed request MiniLM.model SearchProvider.encoderContract true
++      let some other := again[0]! | throw (IO.userError "second keyed image missing")
++      view.source.trace.set (some {})
++      discard <| view.source.get "candidates"
++      let trace ← view.source.trace.get
++      check (trace.any (fun trace => !trace.operations.isEmpty) && (← other.source.trace.get).isNone)
++        "separate keyed borrowers share read traces"
++      -- A seeded page is allowed to avoid a physical read. Mutating the
++      -- request-owned counter checks aliasing without assuming a cache miss.
++      view.source.reads.modify (·+1)
++      check ((← view.source.reads.get) > 0 && (← other.source.reads.get) == 0)
++        "separate keyed borrowers share mutable counters") .dedicated
++    try
++      for actor in actors do TaskDeadline.wait actor (began+28000)
++    finally
++      for actor in actors do IO.cancel actor
++      for actor in actors do discard <| IO.wait actor
++  check ((← pool.pages.stats) == before) "keyed readers mutated catalogue page bookkeeping"
++  IO.FS.writeFile (root/"report.json") (Json.mkObj [("allPassed",toJson true),
++    ("parallelReaders",toJson (80 : Nat)),("componentElapsedMs",toJson ((← IO.monoMsNow)-began)),
++    ("positivePopulation",toJson input.population),("originalHead",toJson source.head),
++    ("exactWindowLexicalRoutingMatrixMetadata",toJson true),("foreignInputsRejected",toJson true),
++    ("cataloguePageMutexHeldThroughout",toJson true),("zeroOriginalOrDerivedReadsOnBorrow",toJson true),
++    ("mutableCountersIndependent",toJson true),("fullHooksOrEightyUsers",toJson false),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).compress
++

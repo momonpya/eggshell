@@ -182,11 +182,67 @@ def stage (receipt : Json) (name : String) : IO Json := do
   let some row := rows.find? (fun row => row.getObjValD "name" == toJson name) |
     throw (IO.userError ("missing actual hook stage "++name))
   return (row.getObjValD "record").getObjValD "data"
+/-- Collection and scoped cleanup of a completed study may use their own
+resource guard. Live hooks and unrelated guards are always rejected. -/
+def completedStudyReady (family nativeTag : String) : IO Unit := do
+  match ← IO.getEnv "EGGSHELL_STUDY_COLLECTOR_GUARD" with
+  | none => drained
+  | some tag =>
+    check ((tag.startsWith (family++"-collect") || tag.startsWith (family++"-cleanup")) &&
+      (tag.toList.all fun c => c.isAlphanum || c == '-'))
+      "invalid collector guard scope"
+    let guard ← read (base/(tag++".guard.json"))
+    check (guard.getObjValD "state" == toJson "running" &&
+      guard.getObjValD "childPid" == toJson (← IO.Process.getPID).toNat)
+      "collector does not own the enclosing resource guard"
+    let args ← IO.ofExcept ((guard.getObjValD "settings").getObjValAs? (Array String) "command")
+    check (args.contains (workspace/"tools/research/LocalBatchStudy.lean").toString &&
+      (args.contains "collect-cells-for" || args.contains "cleanup-cells-for") && args.contains family)
+      "guard is not a completed-study collector or scoped cleanup"
+    let native ← read (base/(nativeTag++".guard.json"))
+    check (native.getObjValD "state" == toJson "finished" && native.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+      "retain live native delivery inputs"
+    let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+    let guardRows := (processes.stdout.splitOn "\n").filter (·.contains "controller/StudyMain guard ")
+    check (!guardRows.isEmpty && guardRows.all (·.contains (tag++".guard-settings.json")))
+      "unrelated resource guard is active"
+    check (!processes.stdout.contains (base/(family++"-prefix/libexec/eggshell")).toString &&
+      !processes.stdout.contains (base/(family++"-auditor-build/StudyMain")).toString)
+      "native delivery process is still active"
+@[noinline] def collectCell (tag parentTag : String) (topic repetition : Nat) : IO Json := do
+  let cell := base/(tag++"-cells-result")/s!"topic-{topic}-chat-{repetition}"
+  let before := base/(parentTag++"-cells-result")/s!"topic-{topic}-chat-{repetition}"
+  let digest ← hash (cell/"body.txt")
+  check (digest == (← hash (before/"body.txt"))) "actual original-evidence body changed"
+  let receipt ← read (cell/"receipt.json")
+  let audit ← read (cell/"audit.json")
+  let search ← stage receipt "search.json"
+  let trace := search.getObjValD "trace"
+  let ack ← stage receipt "ack.json"
+  let synapse ← stage receipt "synaptic-delivery.json"
+  let keyedImage ← if ["keyed-inputs","keyed-discovery"].contains tag then stage receipt "provider-keyed-inputs.json" else pure Json.null
+  check (trace.getObjValD "semantic" == toJson "completed" && trace.getObjValD "warmRequests" == toJson (0 : Nat) &&
+    ack.getObjValD "rpcCompleted" == toJson true && ack.getObjValD "offerAccepted" == toJson true &&
+    synapse.getObjValD "complete" == toJson true && synapse.getObjValD "packetVerified" == toJson true &&
+    audit.getObjValD "sameSourceFacts" == toJson true && audit.getObjValD "samePublishedPagePrefix" == toJson true &&
+    audit.getObjValD "stdoutSha256" == receipt.getObjValD "stdoutSha256")
+    "semantic/synapse/ACK/original boundary failed"
+  let stops ← #["shutdown.json","publisher-shutdown.json"].mapM fun file => do
+    let stopped ← read (cell/System.FilePath.mk file)
+    check (stopped.getObjValD "processExited" == toJson true &&
+      stopped.getObjValD "endpointRemoved" == toJson true && stopped.getObjValD "daemonExitCode" == toJson (0 : Nat))
+      "hook service not drained"
+    return stopped
+  return Json.mkObj [("topic",toJson topic),("repetition",toJson repetition),
+    ("outcome",← read (cell/"result.json")),("sourceAudit",audit),("bodySha256",toJson digest),
+    ("parentBodyByteEqual",toJson true),("search",search),("ack",ack),("shutdown",toJson stops),
+    ("keyedInputImage",keyedImage)]
+
 def collectCells (tag : String := "local-batch") (parentTag : String := "delivery-ledger")
     (profile : Bool := true) (guardTag : String := "") : IO Unit := do
-  drained
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder"].contains tag &&
-    ["delivery-ledger","local-batch","parallel-encoder","runtime-key"].contains parentTag) "unknown frozen delivery cohort"
+  completedStudyReady tag (if guardTag.isEmpty then tag++"-cells1" else guardTag)
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery"].contains tag &&
+    ["delivery-ledger","local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs"].contains parentTag) "unknown frozen delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let root := base/(tag++"-cells-result")
   check ((← read (root/"result.json")).getObjValD "allSixPassed" == toJson true)
@@ -194,31 +250,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
   let mut cells := #[]
   for topic in [1:4] do
     for repetition in [:2] do
-      let cell := root/s!"topic-{topic}-chat-{repetition}"
-      let before := base/(parentTag++"-cells-result")/s!"topic-{topic}-chat-{repetition}"
-      let digest ← hash (cell/"body.txt")
-      check (digest == (← hash (before/"body.txt"))) "actual original-evidence body changed"
-      let receipt ← read (cell/"receipt.json")
-      let audit ← read (cell/"audit.json")
-      let search ← stage receipt "search.json"
-      let trace := search.getObjValD "trace"
-      let ack ← stage receipt "ack.json"
-      let synapse ← stage receipt "synaptic-delivery.json"
-      check (trace.getObjValD "semantic" == toJson "completed" && trace.getObjValD "warmRequests" == toJson (0 : Nat) &&
-        ack.getObjValD "rpcCompleted" == toJson true && ack.getObjValD "offerAccepted" == toJson true &&
-        synapse.getObjValD "complete" == toJson true && synapse.getObjValD "packetVerified" == toJson true &&
-        audit.getObjValD "sameSourceFacts" == toJson true && audit.getObjValD "samePublishedPagePrefix" == toJson true &&
-        audit.getObjValD "stdoutSha256" == receipt.getObjValD "stdoutSha256")
-        "semantic/synapse/ACK/original boundary failed"
-      let stops ← #["shutdown.json","publisher-shutdown.json"].mapM fun file => do
-        let stopped ← read (cell/System.FilePath.mk file)
-        check (stopped.getObjValD "processExited" == toJson true &&
-          stopped.getObjValD "endpointRemoved" == toJson true && stopped.getObjValD "daemonExitCode" == toJson (0 : Nat))
-          "hook service not drained"
-        return stopped
-      cells := cells.push (Json.mkObj [("topic",toJson topic),("repetition",toJson repetition),
-        ("outcome",← read (cell/"result.json")),("sourceAudit",audit),("bodySha256",toJson digest),
-        ("parentBodyByteEqual",toJson true),("search",search),("ack",ack),("shutdown",toJson stops)])
+      cells := cells.push (← collectCell tag parentTag topic repetition)
   let before ← if profile then IO.ofExcept ((← read (base/(tag++"-cells1.profiles-before.json"))).getArr?) else pure #[]
   let directory := base/"real-source-search-read-trial-result/data/receipts"
   let mut profiles := #[]
@@ -234,8 +266,11 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
   let directFetches := profiles.filter (fun row => row.getObjValD "stage" == toJson "local-source-fetch")
   let wire := profiles.filter fun row => row.getObjValD "stage" == toJson "server-envelope-profile" &&
     [toJson "source-plan",toJson "source-fetch-many"].contains ((row.getObjValD "data").getObjValD "kind")
+  let requiresKeyedImage := ["keyed-inputs","keyed-discovery"].contains tag
+  let keyedImageUsed := cells.all fun cell => (cell.getObjValD "keyedInputImage").getObjValD "sharedImage" == toJson true
   write (study/"delivery-cells.json") (Json.mkObj [("cells",toJson cells),("profiles",toJson profiles),
     ("actualDeliveryAllSixPassed",toJson true),("allParentBodiesByteEqual",toJson true),
+    ("candidatePathPassed",toJson (!requiresKeyedImage || keyedImageUsed)),("allSharedKeyedImagesUsed",toJson keyedImageUsed),
     ("directPlans",toJson directPlans.size),("directFetches",toJson directFetches.size),
     ("internalPlanOrFetchWireCalls",toJson wire.size),("profileObservationsEnabled",toJson profile),
     ("pairedLatencyCausalClaim",toJson false),("answeringModelCalls",toJson (0 : Nat)),
@@ -244,9 +279,10 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
     ("guard",← read (base/((if guardTag.isEmpty then tag++"-cells1" else guardTag)++".guard.json")))])
   check (!profile || (directPlans.size == 6 && directFetches.size == 6 && wire.isEmpty))
     "actual hooks did not use the direct selected-original path"
+  check (!requiresKeyedImage || keyedImageUsed) "delivery passed but candidate shared keyed path was not exercised"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
-  drained
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder"].contains tag) "unknown ended delivery cohort"
+  completedStudyReady tag (tag++"-cells1")
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   check (result.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
@@ -257,6 +293,9 @@ def cleanupCells (tag : String := "local-batch") : IO Unit := do
   for topic in [1:4] do
     for repetition in [:2] do
       let cell := root/s!"topic-{topic}-chat-{repetition}"
+      -- A prior cleanup may have stopped after completing an earlier case.
+      -- The receipt is removed after its owned session/receipt directories.
+      if !(← (cell/"receipt.json").pathExists) then continue
       let id ← IO.ofExcept ((← read (cell/"receipt.json")).getObjValAs? String "id")
       let session ← IO.ofExcept ((← read (cell/"hook/stdin")).getObjValAs? String "session_id")
       check (id.length == 64 && id.toList.all Char.isAlphanum && session.startsWith "real-source-" && session.length == 76)

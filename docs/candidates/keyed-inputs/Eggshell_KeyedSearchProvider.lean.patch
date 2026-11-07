@@ -1,0 +1,56 @@
+--- a/Eggshell/KeyedSearchProvider.lean
++++ b/Eggshell/KeyedSearchProvider.lean
+@@ -6,0 +7 @@
++public import Eggshell.PreparedReaders
+@@ -18,5 +19 @@
+-structure SourceView where
+-  source : Snapshot
+-  windows : WindowOwners.Ready
+-  lexical : RetrievalResearch.Index.Reader source
+-  numeric : Option (PartitionBuild.ReadView source × Sidecar.Storage)
++abbrev SourceView := PreparedReaders.KeyedSource
+@@ -162 +159,2 @@
+-    (mark : String → IO Unit := fun _ => pure ()) : IO Json := do
++    (mark : String → IO Unit := fun _ => pure ())
++    (shared : Option PreparedReaders.Borrow := none) : IO Json := do
+@@ -167 +165,4 @@
+-  let sources ← request.sources.mapM KeyedProtocol.Scope.pin
++  let reused ← shared.mapM fun borrow => borrow.keyed request options.model encoderContract child.isSome
++  let sources ← match reused with
++    | some (sources,_) => pure sources
++    | none => request.sources.mapM KeyedProtocol.Scope.pin
+@@ -170,14 +171,16 @@
+-  let views ← match request.prepared with
+-    | none => sources.mapM fun source => capture source options child.isSome
+-    | some prepared =>
+-      unless prepared.size == sources.size do throw (IO.userError "prepared keyed input omitted a source")
+-      sources.zip prepared |>.mapM fun (source,reference) => do
+-        unless reference.accepts source options.model encoderContract do
+-          throw (IO.userError "prepared keyed input changed its source or encoder")
+-        unless reference.population == (← getNat source.get "candidates") do
+-          throw (IO.userError "prepared keyed input changed its original population")
+-        if reference.population == 0 then return none
+-        let windows ← PreparedInputs.windows reference source
+-        let lexical ← PreparedInputs.lexical reference source
+-        let numeric ← if child.isSome then some <$> PreparedInputs.numerical reference source else pure none
+-        return some (⟨source,windows,lexical,numeric⟩ : SourceView)
++  let views ← match reused with
++    | some (_,views) => pure views
++    | none => match request.prepared with
++      | none => sources.mapM fun source => capture source options child.isSome
++      | some prepared =>
++        unless prepared.size == sources.size do throw (IO.userError "prepared keyed input omitted a source")
++        sources.zip prepared |>.mapM fun (source,reference) => do
++          unless reference.accepts source options.model encoderContract do
++            throw (IO.userError "prepared keyed input changed its source or encoder")
++          unless reference.population == (← getNat source.get "candidates") do
++            throw (IO.userError "prepared keyed input changed its original population")
++          if reference.population == 0 then return none
++          let windows ← PreparedInputs.windows reference source
++          let lexical ← PreparedInputs.lexical reference source
++          let numeric ← if child.isSome then some <$> PreparedInputs.numerical reference source else pure none
++          return some (⟨source,windows,lexical,numeric⟩ : SourceView)
+@@ -184,0 +188,3 @@
++  Receipt.observe request.receipt "provider-keyed-inputs" (Json.mkObj [
++    ("sharedImage",toJson reused.isSome),("sources",toJson sources.size),
++    ("numeric",toJson child.isSome)])

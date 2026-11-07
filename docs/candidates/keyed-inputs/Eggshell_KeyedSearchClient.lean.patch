@@ -1,0 +1,9 @@
+--- a/Eggshell/KeyedSearchClient.lean
++++ b/Eggshell/KeyedSearchClient.lean
+@@ -21 +21,2 @@
+-    (mark : String → IO Unit := fun _ => pure ()) : IO (Option (KeyedProtocol.Checked sources)) := do
++    (mark : String → IO Unit := fun _ => pure ())
++    (shared : Option PreparedReaders.Borrow := none) : IO (Option (KeyedProtocol.Checked sources)) := do
+@@ -39 +40 @@
+-      let json ← BuiltinSearch.keyed command request mark
++      let json ← BuiltinSearch.keyed command request mark shared

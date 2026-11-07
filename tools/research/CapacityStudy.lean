@@ -275,7 +275,7 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
@@ -283,6 +283,8 @@ def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
+  if ["keyed-inputs","keyed-discovery"].contains family then
+    check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",
@@ -399,7 +401,7 @@ def collectParallel (mode : String) (family : String := "parallel-encoder") : IO
              "localUnions","unverifiedParts","fullCandidateAudit"]),("diagnosticReadError",raw.getObjValD "diagnosticReadError")])
         else if ["search.json","ack.json","request-pages.json","operation-service.json","transport.json",
           "canonical-source-reuse.json","canonical-source-input.json","provider-keyed-profile.json",
-          "provider-indexed-profile.json","discovery-counters"].contains entry.fileName ||
+          "provider-indexed-profile.json","provider-keyed-inputs.json","discovery-counters"].contains entry.fileName ||
           entry.fileName.startsWith "discovery-counters-" then
           stages := stages.push (Json.mkObj [("name",toJson entry.fileName),("record",← readDiagnostic entry.path)])
         files := files.push (Json.mkObj [("path",toJson entry.path.toString),

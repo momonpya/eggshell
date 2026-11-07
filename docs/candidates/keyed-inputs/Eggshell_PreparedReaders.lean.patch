@@ -1,0 +1,131 @@
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -3,0 +4 @@
++public import Eggshell.KeyedProtocol
+@@ -36,0 +38,67 @@
++
++/-- Decoded query-independent metadata only. No request counter, mutable
++page front, trace or query vector is retained in this image. -/
++structure KeyedNumeric where
++  partition : SnapshotImage
++  header : VectorPartition.Header
++  matrix : SnapshotImage
++  metadata : VectorMatrix.Manifest
++  storage : Sidecar.Storage
++  sameMatrix : header.basis.matrix = matrix.head
++
++structure KeyedSource where
++  source : Snapshot
++  windows : WindowOwners.Ready
++  lexical : RetrievalResearch.Index.Reader source
++  numeric : Option (PartitionBuild.ReadView source × Sidecar.Storage)
++
++structure KeyedImage where
++  windows : SnapshotImage
++  windowManifest : WindowOwners.Manifest
++  lexical : SnapshotImage
++  lexicalStamp : RetrievalResearch.Index.Stamp
++  numeric : Option KeyedNumeric
++
++def KeyedImage.restore (image : KeyedImage) (source windows lexical : Snapshot)
++    (numeric : Option (PartitionBuild.ReadView source × Sidecar.Storage)) : KeyedSource :=
++  ⟨source,⟨windows,image.windowManifest⟩,⟨lexical,image.lexicalStamp⟩,numeric⟩
++
++theorem KeyedImage.restore_source (image : KeyedImage) (source windows lexical numeric) :
++    (image.restore source windows lexical numeric).source = source := rfl
++
++theorem KeyedImage.restore_manifest (image : KeyedImage) (source windows lexical numeric) :
++    (image.restore source windows lexical numeric).windows.manifest = image.windowManifest := rfl
++
++theorem KeyedImage.restore_population (image : KeyedImage) (source windows lexical numeric) :
++    (image.restore source windows lexical numeric).lexical.expected = image.lexicalStamp := rfl
++
++def KeyedImage.capture (pages : PageMap.PagePool) (scope : String) (source : Snapshot)
++    (input : PreparedInputs.Reference) : IO (Option KeyedImage) := do
++  unless input.population == (← getNat source.get "candidates") do
++    throw (IO.userError "keyed image changed its original population")
++  if input.population == 0 then return none
++  let windows ← PreparedInputs.windows input source
++  let lexical ← PreparedInputs.lexical input source
++  let numeric ← input.numeric.mapM fun _ => do
++    let (numeric,storage) ← PreparedInputs.numerical input source
++    let partition ← SnapshotImage.capture pages scope numeric.partition.snapshot
++    let matrix ← SnapshotImage.capture pages scope numeric.matrix.snapshot
++    if bound : numeric.partition.header.basis.matrix = matrix.head then
++      pure (⟨partition,numeric.partition.header,matrix,numeric.matrix.metadata,storage,bound⟩ : KeyedNumeric)
++    else throw (IO.userError "captured keyed matrix changed its routing basis")
++  return some ⟨← SnapshotImage.capture pages scope windows.snapshot,windows.manifest,
++    ← SnapshotImage.capture pages scope lexical.index,lexical.expected,numeric⟩
++
++def KeyedImage.borrow (image : KeyedImage) (pages : PageMap.PagePool) (scope : String)
++    (source : Snapshot) (wantNumeric : Bool) : IO KeyedSource := do
++  let windows ← image.windows.borrow pages scope
++  let lexical ← image.lexical.borrow pages scope
++  let numeric : Option (PartitionBuild.ReadView source × Sidecar.Storage) ← if !wantNumeric then pure none else do
++    let some numeric := image.numeric | throw (IO.userError "keyed image has no captured numeric input")
++    let partition ← numeric.partition.borrow pages scope
++    let matrix ← numeric.matrix.borrow pages scope
++    if bound : numeric.header.basis.matrix = matrix.head then
++      let view : PartitionBuild.ReadView source := ⟨⟨partition,numeric.header⟩,⟨numeric.metadata,matrix⟩,bound⟩
++      pure (some (view,numeric.storage))
++    else throw (IO.userError "keyed image changed its exact numeric matrix")
++  return image.restore source windows lexical numeric
+@@ -37,0 +106,6 @@
++def KeyedImage.bytes (image : KeyedImage) : Nat :=
++  (toJson (image.windowManifest,image.lexicalStamp,image.numeric.map fun numeric =>
++    (numeric.header,numeric.metadata.rows,numeric.metadata.bytes,numeric.storage))).compress.utf8ByteSize
++
++def KeyedImage.handles (image : KeyedImage) : Nat := 2+2*image.numeric.toArray.size
++
+@@ -134,0 +209,2 @@
++  keyed : Array (Option KeyedImage)
++  keyedReads : Array Reads
+@@ -217,0 +294,3 @@
++  let keyed ← ((inputs.zip clones).zip scopes).mapM fun ((input,source),scope) =>
++    KeyedImage.capture pool.pages scope source input
++  let keyedReads ← clones.mapM Reads.capture
+@@ -234 +313,2 @@
+-  let traceBytes := (sharedReads++ownerReads).foldl (fun total reads => total+reads.bytes) 0
++  let traceBytes := (sharedReads++ownerReads++keyedReads).foldl (fun total reads => total+reads.bytes) 0
++  let keyedBytes := keyed.foldl (fun total image => total+(image.map KeyedImage.bytes).getD 0) 0
+@@ -237 +317,2 @@
+-    (owners.map (fun image => image.inputs.size+1) |>.getD 0)
++    (owners.map (fun image => image.inputs.size+1) |>.getD 0)+
++    keyed.foldl (fun total image => total+(image.map KeyedImage.handles).getD 0) 0
+@@ -240,2 +321,2 @@
+-  return ⟨key,scopes,publicInputs inputs,reference,originals,shared,sharedReads,owners,
+-    pageSeed,descriptorBytes+bitmapBytes+traceBytes+seedMetadata,count⟩
++  return ⟨key,scopes,publicInputs inputs,reference,originals,shared,sharedReads,owners,keyed,keyedReads,
++    pageSeed,descriptorBytes+bitmapBytes+traceBytes+seedMetadata+keyedBytes,count⟩
+@@ -248,0 +330,31 @@
++/-- The full authorized cut and captured producer/model/encoder are checked
++before using an image. All resulting mutable readers belong to this actor. -/
++@[no_expose] def Borrow.keyed (borrow : Borrow) (request : KeyedProtocol.Request)
++    (model encoder : String) (numeric : Bool) : IO (Array Snapshot × Array (Option KeyedSource)) := do
++  unless toJson request.sources == toJson (borrow.sources.map KeyedProtocol.Scope.ofSnapshot) do
++    throw (IO.userError "keyed reader changed its complete authorized source cut")
++  let some inputs := request.prepared | throw (IO.userError "keyed reader omitted captured inputs")
++  unless toJson (publicInputs inputs) == toJson borrow.image.inputs &&
++      inputs.size == borrow.sources.size && borrow.image.keyed.size == inputs.size &&
++      borrow.image.keyedReads.size == inputs.size do
++    throw (IO.userError "keyed reader changed its prepared public inputs")
++  let mut sources := #[]
++  let mut views := #[]
++  for index in [:inputs.size] do
++    let some input := inputs[index]? | throw (IO.userError "keyed image omitted an input")
++    let some original := borrow.sources[index]? | throw (IO.userError "keyed image omitted an original")
++    unless input.accepts original model encoder do
++      throw (IO.userError "keyed reader changed its source, producer, model or encoder")
++    let some scope := borrow.image.scopes[index]? | throw (IO.userError "keyed image omitted a scope")
++    let some originalImage := borrow.image.originals[index]? | throw (IO.userError "keyed image omitted a source frame")
++    let some reads := borrow.image.keyedReads[index]? | throw (IO.userError "keyed image omitted read dependencies")
++    let some image := borrow.image.keyed[index]? | throw (IO.userError "keyed image omitted a public input frame")
++    let source ← originalImage.borrow borrow.pages scope
++    reads.replay original
++    let view ← image.mapM fun image => image.borrow borrow.pages scope source numeric
++    unless view.isSome == decide (input.population > 0) do
++      throw (IO.userError "keyed reader changed the captured nonempty population")
++    sources := sources.push source
++    views := views.push view
++  return (sources,views)
++

@@ -20,8 +20,19 @@ def drained : IO Unit := do
   let result ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
   check (!result.stdout.contains "controller/StudyMain guard ") "native guard active"
 def parentFor (family : String) : IO String := do
-  check (["runtime-key","elastic-encoder"].contains family) "unknown isolated runtime"
-  return if family == "runtime-key" then "parallel-encoder" else "runtime-key"
+  check (["runtime-key","elastic-encoder","keyed-inputs","keyed-discovery"].contains family) "unknown isolated runtime"
+  return if family == "runtime-key" then "parallel-encoder" else if family == "elastic-encoder" then "runtime-key"
+    else if family == "keyed-inputs" then "elastic-encoder" else "keyed-inputs"
+def prepareKeyed (family : String := "keyed-inputs") : IO Unit := do
+  drained
+  check (["keyed-inputs","keyed-discovery"].contains family) "unknown shared keyed candidate"
+  let parent ← parentFor family
+  let source := base/(family++"-source")
+  check (!(← source.pathExists)) "fresh keyed input candidate required"
+  IO.FS.createDirAll (workspace/"docs/candidates"/family)
+  command #["-j1","-M1536","--run",(workspace/"tools/research/DiscoveryStagesStudy.lean").toString,
+    "materialize-native",(base/(parent++"-build")).toString,source.toString,(base/(family++"-build")).toString,
+    "tools.research.ReplayReadinessChecks",(base/(family++"-settings.json")).toString]
 def prepare : IO Unit := do
   drained
   let source := base/"runtime-key-source"
@@ -64,27 +75,118 @@ def collectElastic : IO Unit := do
     ("runtimeSha256",toJson (← hash (base/"elastic-encoder-build/StudyMain"))),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   IO.FS.writeFile (destination/"controls-stderr.txt") (← IO.FS.readFile (base/"elastic-encoder-controls1.stderr"))
+def retireOlderAuditors : IO Unit := do
+  drained
+  let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  let mut removed := #[]
+  for family in ["local-batch","parallel-encoder","runtime-key"] do
+    let path := base/(family++"-auditor-build/StudyMain")
+    if !(← path.pathExists) then continue
+    let evidence ← read (workspace/"docs/candidates"/family/"auditor-sources.json")
+    check (evidence.getObjValD "allProductCorePresent" == toJson true &&
+      evidence.getObjValD "commonSourcesUnchanged" == toJson true) "retain coherent prior auditor evidence"
+    let sha ← hash path
+    check (evidence.getObjValD "auditorSha256" == toJson sha && !processes.stdout.contains path.toString)
+      "auditor differs or remains active"
+    removed := removed.push (Json.mkObj [("path",toJson path.toString),("sha256",toJson sha),
+      ("bytes",toJson (← path.metadata).byteSize.toNat)])
+  let destination := workspace/"docs/candidates/keyed-inputs/retired-auditors.json"
+  check (!(← destination.pathExists)) "preserve earlier auditor retirement record"
+  write destination (Json.mkObj [("removed",toJson removed),("completed",toJson false),
+    ("productsOriginalsObjectsInterfacesAndSourcesRetained",toJson true),("archived",toJson false)])
+  for record in removed do
+    let path ← IO.ofExcept (record.getObjValAs? String "path")
+    IO.FS.removeFile (.mk path)
+  write destination (Json.mkObj [("removed",toJson removed),("completed",toJson true),
+    ("productsOriginalsObjectsInterfacesAndSourcesRetained",toJson true),("archived",toJson false)])
+def collectKeyed : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/keyed-inputs"
+  let guard ← read (base/"keyed-inputs-controls3.guard.json")
+  let report ← read (base/"keyed-inputs-controls3-result/report.json")
+  check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
+    guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) && report.getObjValD "allPassed" == toJson true)
+    "keyed public input control has not passed"
+  write (destination/"controls.json") (Json.mkObj [("guard",guard),("report",report),
+    ("firstControlGuard",← read (base/"keyed-inputs-controls1.guard.json")),
+    ("buildGuards",toJson (← #["keyed-inputs-build1","keyed-inputs-build2","keyed-inputs-build3","keyed-inputs-build4","keyed-inputs-build5"].mapM
+      fun tag => read (base/(tag++".guard.json")))),
+    ("actorGuard",← read (base/"keyed-inputs-actors1.guard.json")),
+    ("actorReport",← read (base/"keyed-inputs-actors1-result/report.json")),
+    ("runtimeSha256AtCollection",toJson (← hash (base/"keyed-inputs-build/StudyMain"))),
+    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+  IO.FS.writeFile (destination/"first-control-stderr.txt") (← IO.FS.readFile (base/"keyed-inputs-controls1.stderr"))
+  IO.FS.writeFile (destination/"controls-stderr.txt") (← IO.FS.readFile (base/"keyed-inputs-controls3.stderr"))
+def retirePriorProducts (identityOnly : Bool := false) : IO Unit := do
+  drained
+  let coherent ← read (workspace/"docs/candidates/keyed-inputs/auditor-sources.json")
+  check (coherent.getObjValD "allProductCorePresent" == toJson true &&
+    coherent.getObjValD "commonSourcesUnchanged" == toJson true) "retain the current coherent auditor first"
+  let processes ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
+  let mut removed := #[]
+  for family in (if identityOnly then ["runtime-key"] else ["local-batch","parallel-encoder"]) do
+    let evidence ← read (workspace/"docs/candidates"/family/"auditor-sources.json")
+    let expected := evidence.getObjValD "productSha256"
+    for path in [base/(family++"-build/StudyMain"),base/(family++"-prefix/libexec/eggshell")] do
+      check ((← path.pathExists) && toJson (← hash path) == expected && !processes.stdout.contains path.toString)
+        "old product differs or remains active"
+      removed := removed.push (Json.mkObj [("path",toJson path.toString),("sha256",expected),
+        ("bytes",toJson (← path.metadata).byteSize.toNat)])
+  let destination := workspace/"docs/candidates/keyed-inputs"/
+    (if identityOnly then "retired-identity-product.json" else "retired-products.json")
+  check (!(← destination.pathExists)) "preserve earlier product retirement evidence"
+  let record (done : Bool) := Json.mkObj [("removed",toJson removed),("completed",toJson done),
+    ("currentParentBaselineOriginalsModelsObjectsInterfacesAndSourcesRetained",toJson true),("archived",toJson false)]
+  write destination (record false)
+  for row in removed do IO.FS.removeFile (.mk (← IO.ofExcept (row.getObjValAs? String "path")))
+  write destination (record true)
 def freezeSource (family : String := "runtime-key") : IO Unit := do
   drained
   let parent ← parentFor family
   let study := workspace/"docs/candidates"/family
   let files := if family == "runtime-key" then ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/ReplayReadinessChecks.lean"]
-    else ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/EncoderPool.lean","tools/research/NumericalParallelControls.lean"]
+    else if family == "elastic-encoder" then ["Eggshell/Numerical.lean","Eggshell/ContractAudit.lean","tools/research/EncoderPool.lean","tools/research/NumericalParallelControls.lean"]
+    else if family == "keyed-discovery" then ["Eggshell/Handoff.lean"]
+    else ["Eggshell/PreparedReaders.lean","Eggshell/KeyedSearchProvider.lean","Eggshell/BuiltinSearch.lean",
+      "Eggshell/KeyedSearchClient.lean","Eggshell/Handoff.lean","Eggshell/ContractAudit.lean",
+      "tools/research/ActorReadsChecks.lean","tools/research/ReplayReadinessChecks.lean"]
   for relative in files do
     let result ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/"++relative,"--label","b/"++relative,
       (base/(parent++"-source")/relative).toString,(base/(family++"-source")/relative).toString]}
     check (result.exitCode == 1) "missing declared runtime patch"
     IO.FS.writeFile (study/(relative.replace "/" "_"++".patch")) result.stdout
-def sealRuntime (family : String := "runtime-key") : IO Unit := do
+def sealRuntime (family : String := "runtime-key") (closureName : String := "native-closure.json") : IO Unit := do
   drained
   let parent ← parentFor family
   let study := workspace/"docs/candidates"/family
   let audit := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
-  command #["-j1","-M1536","--run",audit,"inspect",(base/(family++"-build")).toString,(study/"native-closure.json").toString]
+  command #["-j1","-M1536","--run",audit,"inspect",(base/(family++"-build")).toString,(study/closureName).toString]
   let changes := if family == "runtime-key" then #["Eggshell.Numerical","Eggshell.ContractAudit","+tools.research.RuntimeIdentityChecks"]
-    else #["Eggshell.Numerical","Eggshell.ContractAudit","tools.research.EncoderPool","tools.research.NumericalParallelControls"]
+    else if family == "elastic-encoder" then #["Eggshell.Numerical","Eggshell.ContractAudit","tools.research.EncoderPool","tools.research.NumericalParallelControls"]
+    else if family == "keyed-discovery" then #["Eggshell.Handoff"]
+    else #["Eggshell.PreparedReaders","Eggshell.KeyedSearchProvider","Eggshell.BuiltinSearch",
+      "Eggshell.KeyedSearchClient","Eggshell.Handoff","Eggshell.ContractAudit",
+      "tools.research.ActorReadsChecks"]
   command (#["-j1","-M1536","--run",audit,"compare-sources",(base/(parent++"-build")).toString,
     (base/(family++"-build")).toString,(study/"native-sources.json").toString]++changes)
+  if family == "keyed-inputs" then
+    -- The generic comparison deliberately excludes executable entry modules.
+    -- Check the exact added test dispatch and its selected native witnesses.
+    let before ← IO.FS.readFile (base/(parent++"-source/tools/research/ReplayReadinessChecks.lean"))
+    let actual ← IO.FS.readFile (base/(family++"-source/tools/research/ReplayReadinessChecks.lean"))
+    let anchor := "  | [\"actor-reads-check\",root] => Eggshell.Research.ActorReadsChecks.run (.mk root); return 0\n"
+    let added := "  | [\"keyed-inputs-check\",root] => Eggshell.Research.ActorReadsChecks.runKeyed (.mk root); return 0\n"
+    check ((before.splitOn anchor).length == 2 && actual == before.replace anchor (anchor++added))
+      "entry changed beyond the declared component dispatch"
+    let parentWitness : String × Array (String × String) ← IO.ofExcept (fromJson? (← read
+      (base/(parent++"-build/tools_research_ReplayReadinessChecks.source"))))
+    let candidateWitness : String × Array (String × String) ← IO.ofExcept (fromJson? (← read
+      (base/(family++"-build/tools_research_ReplayReadinessChecks.source"))))
+    check (parentWitness.1 == before && candidateWitness.1 == actual && parentWitness.2 == candidateWitness.2)
+      "entry source does not match the selected native witnesses"
+    write (study/"entry-source.json") (Json.mkObj [("exactAddedDispatchOnly",toJson true),
+      ("nativeWitnessesMatchSource",toJson true),("includedLiteralsUnchanged",toJson true),
+      ("candidateRuntimeSha256",toJson (← hash (base/(family++"-build/StudyMain"))))])
   freezeSource family
 def prepareAuditor (family : String := "runtime-key") : IO Unit := do
   drained
@@ -197,6 +299,18 @@ def setup (action tag : String) (family : String := "runtime-key") : IO Unit := 
       "EGGSHELL_DATA_ROOT="++(base/(family++"-controls-data")).toString,
       "EGGSHELL_PREFIX="++(base/"runtime-key-prefix").toString,"EGGSHELL_TRACE_NUMERICAL_STAGES=1",
       (base/(family++"-build/StudyMain")).toString,"parallel-encoder-check",(base/(tag++"-result")).toString]
+    | "keyed-controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      "EGGSHELL_DATA_ROOT="++(base/"real-source-search-read-trial-result/data").toString,
+      "EGGSHELL_PREFIX="++(base/"elastic-encoder-prefix").toString,
+      (base/(family++"-build/StudyMain")).toString,"keyed-inputs-check",(base/(tag++"-result")).toString]
+    | "actor-controls" => pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+      (base/(family++"-build/StudyMain")).toString,"actor-reads-check",(base/(tag++"-result")).toString]
+    | "collect-cells" => pure #["/usr/bin/env","EGGSHELL_STUDY_COLLECTOR_GUARD="++tag,
+      (compiler/"bin/lean").toString,"-j1","-M1536","--run",
+      (workspace/"tools/research/LocalBatchStudy.lean").toString,"collect-cells-for",family,(← parentFor family)]
+    | "cleanup-cells" => pure #["/usr/bin/env","EGGSHELL_STUDY_COLLECTOR_GUARD="++tag,
+      (compiler/"bin/lean").toString,"-j1","-M1536","--run",
+      (workspace/"tools/research/LocalBatchStudy.lean").toString,"cleanup-cells-for",family]
     | "install" => pure #[(base/(family++"-auditor-build/StudyMain")).toString,"install-prefix",(base/(family++"-install.json")).toString]
     | "cells" => do
       let audit ← read (study/"auditor-sources.json")
@@ -227,6 +341,22 @@ def main (args : List String) : IO Unit := match args with
   | ["elastic","seal-auditor"] => sealAuditor "elastic-encoder"
   | ["elastic","recover",tag] => recoverStoppedOwner tag "elastic-encoder" false
   | ["elastic","setup",action,tag] => setup action tag "elastic-encoder"
+  | ["keyed","prepare"] => prepareKeyed
+  | ["keyed","freeze"] => freezeSource "keyed-inputs"
+  | ["keyed","seal"] => sealRuntime "keyed-inputs" "native-closure-current.json"
+  | ["keyed","setup",action,tag] => setup action tag "keyed-inputs"
+  | ["keyed","prepare-auditor"] => prepareAuditor "keyed-inputs"
+  | ["keyed","seal-auditor"] => sealAuditor "keyed-inputs"
+  | ["keyed","retire-older-auditors"] => retireOlderAuditors
+  | ["keyed","collect"] => collectKeyed
+  | ["keyed","retire-prior-products"] => retirePriorProducts
+  | ["keyed","retire-identity-product"] => retirePriorProducts true
+  | ["discovery","prepare"] => prepareKeyed "keyed-discovery"
+  | ["discovery","freeze"] => freezeSource "keyed-discovery"
+  | ["discovery","seal"] => sealRuntime "keyed-discovery"
+  | ["discovery","prepare-auditor"] => prepareAuditor "keyed-discovery"
+  | ["discovery","seal-auditor"] => sealAuditor "keyed-discovery"
+  | ["discovery","setup",action,tag] => setup action tag "keyed-discovery"
   | _ => throw (IO.userError "prepare|freeze|seal|prepare-auditor|seal-auditor|setup")
 end Eggshell.Research.RuntimeIdentityStudy
 def main := Eggshell.Research.RuntimeIdentityStudy.main

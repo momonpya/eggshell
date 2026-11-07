@@ -1,0 +1,22 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -8289 +8289,2 @@
+-    (receipt : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) : IO (Option IndexedSemanticNominations) := do
++    (receipt : Option String := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
++    (preparedReaders : Option PreparedReaders.Borrow := none) : IO (Option IndexedSemanticNominations) := do
+@@ -8291 +8292 @@
+-  let some nominated ← KeyedSearchClient.nominate command #[snapshot] current receipt prepared | return none
++  let some nominated ← KeyedSearchClient.nominate command #[snapshot] current receipt prepared (shared := preparedReaders) | return none
+@@ -9046 +9047,2 @@
+-    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none) :
++    (upstreamDeadline : Option Nat := none) (queryInputs : Option (Array PreparedInputs.Reference) := none)
++    (preparedReaders : Option PreparedReaders.Borrow := none) :
+@@ -9059 +9061 @@
+-      selection.semanticMatcher.mapM (fun command => keyedSemanticNominations snapshot command referenceQuery [] receipt queryInputs)
++      selection.semanticMatcher.mapM (fun command => keyedSemanticNominations snapshot command referenceQuery [] receipt queryInputs preparedReaders)
+@@ -9117 +9119 @@
+-      keyedSemanticNominations snapshot command query candidates receipt queryInputs
++      keyedSemanticNominations snapshot command query candidates receipt queryInputs preparedReaders
+@@ -9691 +9693 @@
+-        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs then return result
++        enforce evidenceText enableLocalUnion savedRanks staged stagedVisible savedSaturation rankReader refreshSources reuseSemantic meaningQuery receipt onSemanticReady synaptic upstreamDeadline queryInputs preparedReaders then return result

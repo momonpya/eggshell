@@ -1,0 +1,20 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -14,0 +15 @@
++import all Eggshell.PreparedReaders
+@@ -26,0 +28,3 @@
++#check Eggshell.PreparedReaders.KeyedImage.restore_source
++#check Eggshell.PreparedReaders.KeyedImage.restore_manifest
++#check Eggshell.PreparedReaders.KeyedImage.restore_population
+@@ -590 +594 @@
+-          ``Eggshell.LexicalAdvice.originals],
++          ``Eggshell.LexicalAdvice.originals, ``Eggshell.PreparedReaders.Borrow.keyed],
+@@ -591,0 +596,8 @@
++      (``Eggshell.PreparedReaders.Borrow.keyed,
++        #[``Eggshell.PreparedReaders.KeyedImage.borrow, ``Eggshell.PreparedReaders.publicInputs,
++          ``Eggshell.PreparedInputs.Reference.accepts, ``Eggshell.PreparedReaders.Reads.replay],
++        #[``Eggshell.KeyedProtocol.Scope.pin, ``Eggshell.PreparedInputs.windows,
++          ``Eggshell.PreparedInputs.lexical, ``Eggshell.PreparedInputs.numerical]),
++      (``Eggshell.PreparedReaders.KeyedImage.borrow,
++        #[``Eggshell.PreparedReaders.SnapshotImage.borrow, ``Eggshell.PreparedReaders.KeyedImage.restore],
++        #[``Eggshell.DB.PageMap.pin, ``Eggshell.PreparedInputs.restore]),

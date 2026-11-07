@@ -1,0 +1,9 @@
+--- a/Eggshell/BuiltinSearch.lean
++++ b/Eggshell/BuiltinSearch.lean
+@@ -48 +48,2 @@
+-    (mark : String → IO Unit := fun _ => pure ()) : IO Json := do
++    (mark : String → IO Unit := fun _ => pure ())
++    (shared : Option PreparedReaders.Borrow := none) : IO Json := do
+@@ -52 +53 @@
+-    return ← withRuntime arguments (fun options child => KeyedSearchProvider.handle options child request mark) mark
++    return ← withRuntime arguments (fun options child => KeyedSearchProvider.handle options child request mark shared) mark

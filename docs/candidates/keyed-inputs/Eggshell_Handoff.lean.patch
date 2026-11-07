@@ -1,0 +1,5 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9551 +9551 @@
+-      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) onStage | return none
++      let some nominated ← KeyedSearchClient.nominate command sources query receipt queryInputs (some reference) onStage preparedReaders | return none
