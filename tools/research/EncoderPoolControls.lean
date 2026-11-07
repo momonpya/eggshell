@@ -1,4 +1,5 @@
 import tools.research.EncoderPool
+import tools.research.LocalCompletionControls
 import Lean.Data.Json.FromToJson
 import Init.System.Promise
 import Lean
@@ -205,14 +206,14 @@ def cancelledWaiter : IO Json := do
   let pool ← Pool.make (α := Nat) 1
   let some active ← pool.take? | throw (IO.userError "active slot missing")
   check (← pool.install active 7) "active resource rejected"
-  let cancelled ← IO.Promise.new
-  let scope : Scope := {signals := #[cancelled.resultD ()]}
+  let cancelled ← Std.CancellationToken.new
+  let scope : Scope := {signals := #[cancelled]}
   let disposed ← IO.mkRef (0 : Nat)
   let dispose := fun (_ : Nat) => disposed.modify (·+1)
   let waiter ← IO.asTask (pool.withResource scope (fun _ => pure 9) dispose (fun _ value _ => pure value)) .dedicated
   try
     waitUntil (do return (← pool.state.atomically get).waiting == 1)
-    cancelled.resolve ()
+    cancelled.cancel
     let result ← IO.wait waiter
     check (match result with | .error _ => true | _ => false) "expired waiter obtained a pipe"
     check ((← pool.state.atomically get).waiting == 0 && (← disposed.get) == 0)
@@ -222,7 +223,7 @@ def cancelledWaiter : IO Json := do
     check ((← disposed.get) == 1) "waiter cleanup lost the active model"
     return Json.mkObj [("expiredWaiterRemovedDemand",toJson true),("activeOwnerPreserved",toJson true)]
   finally
-    cancelled.resolve ()
+    cancelled.cancel
     IO.cancel waiter
     discard <| IO.wait waiter
 
@@ -251,11 +252,11 @@ def absoluteDeadline : IO Json := do
     "absolute deadline leaked admission or did not terminate"
   pool.giveBack active false (fun _ => pure ())
   pool.close (fun _ => pure ())
-  let stopped ← IO.Promise.new
-  stopped.resolve ()
+  let stopped ← Std.CancellationToken.new
+  stopped.cancel
   let ready ← IO.Promise.new
   ready.resolve (.ok (7 : Nat))
-  check (← rejects (({signals := #[stopped.resultD ()]} : Scope).wait ready.result!))
+  check (← rejects (({signals := #[stopped]} : Scope).wait ready.result!))
     "already-completed readiness bypassed cancellation"
   let failure ← IO.Promise.new
   failure.resolve (.error (IO.userError "original completion failure") : Except IO.Error Nat)
@@ -269,13 +270,14 @@ def eightyWaiters (closing : Bool) : IO Json := do
   let some second ← pool.take? | throw (IO.userError "second admission owner missing")
   check (← pool.install first 1) "first admission resource rejected"
   check (← pool.install second 2) "second admission resource rejected"
-  let cancellations ← (Array.range 80).mapM fun _ => IO.Promise.new (α := Unit)
+  let cancellations ← (Array.range 80).mapM fun _ => Std.CancellationToken.new
+  let service ← Std.CancellationToken.new
   let active ← Std.Mutex.new (#[] : Array Nat)
   let maximum ← Std.Mutex.new (0 : Nat)
   let disposed ← Std.Mutex.new (0 : Nat)
   let dispose := fun (_ : Nat) => disposed.atomically (modify (·+1))
   let tasks ← cancellations.mapIdxM fun index cancelled => IO.asTask (pool.withResource
-    {signals := #[cancelled.resultD ()]}
+    {signals := #[service,cancelled]}
     (fun ticket => pure ticket.index) dispose fun ticket _ _ => do
       active.atomically do
         let slots ← get
@@ -293,10 +295,12 @@ def eightyWaiters (closing : Bool) : IO Json := do
     let registered ← pool.state.atomically get
     check (registered.wake.next == 80 && registered.wake.items.toArray.size == 80)
       "blocked requests repeatedly re-registered with the resource pool"
-    if closing then pool.close dispose
+    if closing then
+      service.cancel .shutdown
+      pool.close dispose
     else
       for (cancelled,index) in cancellations.zipIdx do
-        if index % 3 == 0 then cancelled.resolve ()
+        if index % 3 == 0 then cancelled.cancel
       waitUntil (do return (← pool.state.atomically get).wake.items.toArray.size == 53)
     let stateBeforeReturn ← pool.state.atomically get
     check ((← disposed.atomically get) == 0 && stateBeforeReturn.slots.size == 2)
@@ -310,6 +314,8 @@ def eightyWaiters (closing : Bool) : IO Json := do
     let state ← pool.state.atomically get
     check (state.waiting == 0 && state.wake.items.isEmpty && (← active.atomically get).isEmpty)
       "event admission leaked a subscriber, demand or resource owner"
+    for signal in #[service] ++ cancellations do
+      check ((← signal.state.atomically get).consumers.isEmpty) "completed admission retained a cancellation subscriber"
     pool.close dispose
     check ((← disposed.atomically get) ≥ 2) "event admission lost a resource during shutdown"
     return Json.mkObj [("blockedRequests",toJson (80 : Nat)),("completedRequests",toJson expected),
@@ -320,7 +326,7 @@ def eightyWaiters (closing : Bool) : IO Json := do
       ("wallMsAfterRegistration",toJson ((← IO.monoMsNow)-queuedAt)),
       ("noRemainingWaitersOrOwners",toJson true)]
   finally
-    for cancelled in cancellations do cancelled.resolve ()
+    for cancelled in cancellations do cancelled.cancel
     pool.close dispose
     for task in tasks do IO.cancel task
     for task in tasks do discard <| IO.wait task
@@ -329,7 +335,8 @@ def run (output : System.FilePath) : IO Unit := do
   let stage := fun name action => do
     IO.eprintln ("checking "++name)
     action
-  let report := Json.mkObj [("overlap",← stage "overlap" overlap),("retirement",← stage "retirement" retiring),
+  let report := Json.mkObj [("localCompletion",← stage "localCompletion" Eggshell.Research.LocalCompletionControls.run),
+    ("overlap",← stage "overlap" overlap),("retirement",← stage "retirement" retiring),
     ("failureAndShutdown",← stage "failureAndShutdown" failureAndClose),("idlePreferred",← stage "idlePreferred" idlePreferred),
     ("demandAndStandby",← stage "demandAndStandby" demandAndStandby),("cancelledWaiter",← stage "cancelledWaiter" cancelledWaiter),
     ("notificationBeforeWait",← stage "notificationBeforeWait" notificationBeforeWait),

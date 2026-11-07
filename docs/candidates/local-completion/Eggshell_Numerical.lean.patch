@@ -1,0 +1,28 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -33 +33,2 @@
+-  include_str "../tools/research/EventScope.lean")).compress.toUTF8
++  include_str "../tools/research/EventScope.lean",include_str "TaskDeadline.lean",
++  include_str "../tools/research/LocalCompletion.lean")).compress.toUTF8
+@@ -297 +298 @@
+-def withPeerWaiting (client : Socket.Client) (action : IO Bool → Task Unit → IO α) : IO α := do
++def withPeerWaiting (client : Socket.Client) (action : IO Bool → Std.CancellationToken → IO α) : IO α := do
+@@ -299 +300,2 @@
+-  let disconnected := peer.result?.map (sync := true) (fun _ => ())
++  let disconnected ← Std.CancellationToken.new
++  discard <| IO.mapTask (t := peer.result?) (sync := true) (fun _ => do disconnected.cancel)
+@@ -327 +329 @@
+-  stopSignal : IO.Promise Unit
++  stopSignal : Std.CancellationToken
+@@ -331 +333 @@
+-  backend.stopSignal.resolve ()
++  backend.stopSignal.cancel .shutdown
+@@ -367 +369 @@
+-  backend.models.withResource {signals := #[backend.stopSignal.resultD ()]} (fun _ => do
++  backend.models.withResource {signals := #[backend.stopSignal]} (fun _ => do
+@@ -383 +385 @@
+-  backend.encoders.withResource {signals := #[backend.stopSignal.resultD (),disconnected],deadline := some deadline} (fun _ => pure ()) (fun _ => pure ()) (fun ticket _ _ => do
++  backend.encoders.withResource {signals := #[backend.stopSignal,disconnected],deadline := some deadline} (fun _ => pure ()) (fun _ => pure ()) (fun ticket _ _ => do
+@@ -584 +586 @@
+-    stopSignal := ← IO.Promise.new }
++    stopSignal := ← Std.CancellationToken.new }

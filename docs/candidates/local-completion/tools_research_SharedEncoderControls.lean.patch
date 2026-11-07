@@ -1,0 +1,10 @@
+--- a/tools/research/SharedEncoderControls.lean
++++ b/tools/research/SharedEncoderControls.lean
+@@ -79,2 +79,2 @@
+-    let cancellation ← IO.Promise.new
+-    let cancelled ← IO.asTask (encode (inputs.size-1) {signals := #[cancellation.resultD ()]}) .dedicated
++    let cancellation ← Std.CancellationToken.new
++    let cancelled ← IO.asTask (encode (inputs.size-1) {signals := #[cancellation]}) .dedicated
+@@ -86 +86 @@
+-    cancellation.resolve ()
++    cancellation.cancel

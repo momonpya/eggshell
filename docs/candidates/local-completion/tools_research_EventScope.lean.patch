@@ -1,0 +1,60 @@
+--- a/tools/research/EventScope.lean
++++ b/tools/research/EventScope.lean
+@@ -2 +2,3 @@
+-public import Std.Internal.UV.Timer
++public import Eggshell.TaskDeadline
++public import Std.Sync.CancellationToken
++public import tools.research.LocalCompletion
+@@ -8,2 +10,2 @@
+-Signals may be shared by arbitrarily many waiters; waiting adds no listener
+-continuations to those long-lived signals. -/
++Cancellation subscriptions are removed when readiness, cancellation or the
++absolute deadline wins, including when a different source fails. -/
+@@ -11 +13 @@
+-  signals : Array (Task Unit) := #[]
++  signals : Array Std.CancellationToken := #[]
+@@ -25 +27 @@
+-  let cancelled ← scope.signals.anyM (fun signal => do return ← IO.hasFinished signal)
++  let cancelled ← scope.signals.anyM (fun signal => do return ← signal.isCancelled)
+@@ -32,4 +34,3 @@
+-/-- The dedicated IO owner parks on native task readiness once. There is no
+-async selector loop, periodic timer or pool worker continuation. Only the
+-short-lived result task is mapped; shared cancellation signals are borrowed
+-directly. A single optional deadline timer is cancelled on every exit. -/
++/-- Register a single event race, then park on this owner's private mailbox.
++Event continuations unregister every losing source before publishing the
++reply. No periodic timer, global task wait or polling is introduced. -/
+@@ -38,13 +39,8 @@
+-  let finish : IO α := do
+-    scope.ensure
+-    unless ← IO.hasFinished ready do
+-      throw (IO.userError "owned event wait interrupted before completion")
+-    IO.ofExcept (← IO.wait ready)
+-  if ← IO.hasFinished ready then return ← finish
+-  let completed := ready.map (sync := true) (fun _ => ())
+-  let waiters := completed :: scope.signals.toList
+-  match scope.deadline with
+-  | none =>
+-      discard <| IO.waitAny waiters
+-      finish
+-  | some deadline =>
++  let event ← Eggshell.TaskDeadline.event ready
++  let action : Std.Async.Async α := do
++    let cancelling : Array (Std.Async.Selectable α) := scope.signals.map fun signal =>
++      .case signal.selector (fun _ => throw (IO.userError "owned event scope cancelled"))
++    let sources := #[Std.Async.Selectable.case event pure] ++ cancelling
++    match scope.deadline with
++    | none => Eggshell.Research.OwnedSelect.one sources
++    | some deadline => do
+@@ -53,6 +49,5 @@
+-      let timer ← Std.Internal.UV.Timer.mk (deadline-now).toUInt64 false
+-      try
+-        let elapsed ← timer.next
+-        discard <| IO.waitAny (elapsed.resultD () :: waiters)
+-        finish
+-      finally timer.cancel
++      let timer ← Std.Async.Selector.sleep (.ofNat (deadline-now))
++      Eggshell.Research.OwnedSelect.one (sources.push (.case timer (fun _ => throw (IO.userError "owned event scope expired"))))
++  let reply ← LocalCompletion.awaitTask (← action.toIO)
++  scope.ensure
++  return reply

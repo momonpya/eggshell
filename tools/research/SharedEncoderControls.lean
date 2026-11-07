@@ -76,14 +76,14 @@ def run (root : System.FilePath) : IO Unit := do
         ("wallMs",toJson ((← IO.monoMsNow)-began))]
       write (root/s!"wave-{wave}.json") value
       waves := waves.push value
-    let cancellation ← IO.Promise.new
-    let cancelled ← IO.asTask (encode (inputs.size-1) {signals := #[cancellation.resultD ()]}) .dedicated
+    let cancellation ← Std.CancellationToken.new
+    let cancelled ← IO.asTask (encode (inputs.size-1) {signals := #[cancellation]}) .dedicated
     let survivor ← IO.asTask (encode 0 {}) .dedicated
     let activationDeadline := (← IO.monoMsNow)+5000
     while (← server.pending) < 2 do
       check ((← IO.monoMsNow) < activationDeadline) "two shared requests never became active"
       IO.sleep 1
-    cancellation.resolve ()
+    cancellation.cancel
     let cancelledResult ← IO.wait cancelled
     let .error cancelledError := cancelledResult | throw (IO.userError "expired shared request unexpectedly completed")
     check (cancelledError.toString.contains "expired or disconnected") "shared request failed for an unrelated reason"

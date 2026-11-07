@@ -29,7 +29,9 @@
 
 ## 現在地と次の順序
 
-最新の隔離した数値候補は[encoder-native-wait](docs/candidates/encoder-native-wait/README.md)（SHA `88de092f…`）。枠待ちを明示した取消/絶対期限と一度のnative待機へ変え、通常RPC48応答・直接transport34応答・取消/停止を検査した。同じ実LLVMの数値protocolは16/16・2,751ms、80/80・28,259ms、全vector/scoreが親基準一致・関連RSS最大2,168,480KiB・残存0だった。ただし親shared-modelの80/80・20,845msより遅く、実hook80や総token/品質の合格ではない。Lean 4.33.0のIO.waitAnyが共通mutex/全体通知を使うことを実装で確認した。次は要求ごとの完了/取消通知へ切り離し、無関係なtask完了で待機者を起こす経路を除く。全6実hookと全hook80はまだ再実行せず、元snapshot・必要項目・順位・認定domain・予算・期限・資源上限は維持する。本体未採用・回答モデル0・有料比較0/18、goalはactive。
+最新候補は[local-completion](docs/candidates/local-completion/README.md)（SHA `ba2d1d30…`）。要求ごとのmailboxへ待機を移し、共有の取消登録も退出時に解除する。80待機中に無関係な1000完了を起こしてwake0、指定1要求だけのwake、27件の取消/残り53完了、全件終了/登録0をnativeで確認した。通常の数値48応答と直接transport34応答も一致した。同じ実LLVMの数値protocolは16/16・2,648ms、80/80・11,076ms、全vector/scoreが親基準一致・関連RSS最大1,670,688KiB・残存0。親28,259msは保存記録で、反復速度比較ではない。実フック全6回も必要原文32/32・親本文byte一致・意味/シナプス/ACK完了・sharedImage=true・前景warm0、8,746〜10,675ms、関連RSS最大2,859,248KiB・残存0だった。独立したnative新チャットであり、回答モデルの両周ではない。続く同一容量harnessは4/4・8,099ms、16/16・20,992msを通ったが、80同時は0/80・29,388msの未完了通知だった。資源停止なし・関連RSS最大3,210,864KiB・両service正常終了・残存0。handoffChars=500000は従来の容量条件。終了記録の再集計で受付queue中央値2ms、focus数値完了52件でもその後の終了まで中央値15,904msが残った。次は数値後の準備・選択・描画を分離し、質問に依存しない再構築を除く。同じ失敗80負荷は繰り返さない。本体未採用・回答モデル0・有料比較0/18、80人8時間・成長・NAS・総token/品質は未達/未検証、goalはactive。
+
+先行[encoder-native-wait](docs/candidates/encoder-native-wait/README.md)（SHA `88de092f…`）は同じ数値80/80が28,259msとなった。Lean 4.33.0のIO.waitAnyが共通mutex/全体通知を使うことを確認し、上記local-completionへ進めた。元snapshot・必要項目・順位・認定domain・予算・期限・資源上限は維持している。
 
 ## 直近の経緯
 
@@ -100,8 +102,8 @@ elastic-encoderは需要中の並行2基を維持し、待ち要求がなくな�
 診断はbusy（未実行）とobserved/overlapped（実行済み）を型で分け、busyで観測しないことをLeanで証明した。後者を再試行しない。13個のzero gaugeに加え12個の累積仕事counterの不変を確認する。実cohortではshamの32回のbusyが観測を実行せず、その後sham/collectが各1回だけ実行された。collect前後のhost RSSは857616KiBで不変。frontendを閉じた後も872048KiBが残った。背景準備中だけが保持原因という説明は支持されない。一方、観測threadはOS mainではなく、全worker/全heapの回収や実WorkGraphの生存量を証明していない。強制GCを製品修正にしない。
 
 次の順序：
-1. 通知待機の部品・通常数値service・実LLVM全6フックまで完了した。次は、実質問3件をSearchRank.windowsで分け、同じ固定DBの全窓を256件ずつ使う数値protocol単独の負荷で受付・推論・送受信を分ける。実経路と同じ2回の質問埋込み・2回の全件採点を保持し、16要求を確認後に80要求へ進む。親と候補のprotocolと原入力を揃える。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。その後も4/16の実hook gateを通した場合だけ80を測る。正解をselectorへ渡さず、変更なしの失敗負荷を反復せず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
-2. output-ready以後の送受信と共有hostの待機負荷を分け、数値kernelの時間だけで全検索を説明しない。実WorkGraph/返信の所有とallocator保持も区別し、検査器やモデルのRSSを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
+1. 数値protocol80/80と実LLVM全6hookの原文32/32、容量4/16まで完了した。80全hookは失敗で、保存済み記録から数値完了後の経過時間が残ると確認した。次は原文transport・候補準備・選択・描画を段階ごとに追い、出版で済ませる構造の再構築を検出する。stage計測だけのために同じ80全hookを再実行せず、既存記録と固定入力の限定replayを先に使う。長いencoder mutexや固定3検索workerへ戻さず、単にcompute枠を増やして代用しない。正解をselectorへ渡さず、98%・30秒・RSS/disk guard・候補数・認定domainを緩めない。
+2. 数値のadmission・native kernel・完了通知と数値後の仕事を区別する。focus完了から終了までの経過時間を特定関数のCPU時間と断定しない。実WorkGraph/返信の所有とallocator保持も区別し、検査器やモデルのRSSを80倍の検索メモリと混同しない。共有cache論理bytesや少数thread heapを全RSSと同一視せず、変更なしの受動census・小fixture・失敗80検索を反復しない。
 3. 保持と配送の原因を直してから、80並行のread/write・増大project・準備債務・NAS障害・8時間の混在利用を検証する。認定の完全性、プロジェクト一つのwrite DB、他DBのread-only、project別cacheを維持する。
 4. 採用比較は同じsnapshot/source/question/model/reasoning/harnessで、題材1/2/3の初回と履歴ありを事前固定の複数回で実施する。cached inputと失敗を含む入力＋出力の総token・品質・期限が改善条件。別seedの差や単回の最良値を採用根拠にしない。
 

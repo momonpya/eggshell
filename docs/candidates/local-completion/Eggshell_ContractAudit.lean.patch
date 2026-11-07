@@ -1,0 +1,18 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2374,0 +2375,15 @@
++
++#check Eggshell.Research.LocalCompletion.State.first_reply
++#check Eggshell.Research.LocalCompletion.State.ready_unchanged
++#check Eggshell.Research.LocalCompletion.State.closed_unchanged
++run_elab do
++  let environment ← Lean.getEnv
++  for name in [``Eggshell.Research.LocalCompletion.awaitTask,``Eggshell.Research.LocalCompletion.Mailbox.read,
++      ``Eggshell.Research.EventScope.Scope.wait,``Eggshell.TaskDeadline.awaitEvent] do
++    let some body := (environment.find? name).bind (·.value?) | throwError "Missing local completion path"
++    for forbidden in [``IO.wait,``IO.waitAny,``IO.sleep] do
++      if body.getUsedConstants.contains forbidden then throwError "Local completion re-enters global task waiting"
++  let some bridge := (environment.find? ``Eggshell.TaskDeadline.awaitEvent).bind (·.value?) |
++    throwError "Missing async completion bridge"
++  unless bridge.getUsedConstants.contains ``Eggshell.Research.LocalCompletion.awaitTask do
++    throwError "Async completion bypasses owner-local waiting"

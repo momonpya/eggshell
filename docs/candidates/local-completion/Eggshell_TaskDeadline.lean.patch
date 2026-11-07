@@ -1,0 +1,7 @@
+--- a/Eggshell/TaskDeadline.lean
++++ b/Eggshell/TaskDeadline.lean
+@@ -4,0 +5 @@
++public import tools.research.LocalCompletion
+@@ -49 +50 @@
+-  IO.ofExcept (← IO.wait (← action.toIO))
++  Research.LocalCompletion.awaitTask (← action.toIO)
