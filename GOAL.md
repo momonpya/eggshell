@@ -29,7 +29,11 @@
 
 ## 現在地と次の順序
 
-現在の隔離候補は [parallel-encoder](docs/candidates/parallel-encoder/README.md)（SHA `fed891ffd63b082508c7d34bb110a2eda271f5011663dd5c2616205f3fcae8f4`）。[local-batch](docs/candidates/local-batch/README.md)と[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善を継承する。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+現在の隔離候補は [runtime-key](docs/candidates/runtime-key/README.md)（SHA `3d5124ec3b1dba4a53759baee0ca0a0eb72cc6bd69eb38e133c796590b55a390`）。[parallel-encoder](docs/candidates/parallel-encoder/README.md)の独立モデルと、[local-batch](docs/candidates/local-batch/README.md)/[delivery-ledger](docs/candidates/delivery-ledger/README.md)の直接原文取得・ACK改善を継承する。本体未採用・回答モデル0・有料比較0/18で、goalはactive。以前の候補の経過は各docs/candidatesとGitに残し、ここには現在地を一つだけ置く。目的・共有方式・98%・30秒・資源上限・下記の採用条件は変更していない。
+
+前の80同時の途中記録を新しい負荷なしで調べ、全80件がkeyed providerに到達し、12件だけが数値/字句/routerの段階記録を持つことを確認した。検索後の選択だけを原因としない。数値serviceの接続キーが、固定の実装本文73,215 bytesを接続/数値通信のたびにJSON化・再ハッシュしていた。固定本文のdigestを一度だけ計算する純粋な定数へ分離し、モデル・モデル配置・Python配置・実装digestを引き続き結ぶことをLeanと通常監査で検査した。共有Ref/Mutex/CAS、質問cache、数値/順位変更は加えていない。native80設定×3回でキー生成は親196〜198ms→候補0〜1ms、各キー列はその参照式と一致した。これは全hookや80容量の改善率ではない。
+
+新候補の実LLVM全6回は必要原文32/32、意味/シナプス/packet/ACKが全件完了し、本文は親とbyte一致した。題材1は8,612/8,267ms、2は9,634/9,686ms、3は9,848/9,709ms。関連RSS最大3,013,200KiB、guard停止なし・両service終了成功・残存0。初めの試験は前回の強制停止による旧endpointのため検索開始前に止まった。そのguardと旧所有PIDの不在・endpoint対応を照合して記録だけを除き、失敗記録を残して同じ候補で題材1から実行した。現在は新候補の4/16 gateの準備へ進む。旧候補の80資源停止は解消済みとしない。
 
 エンコーダーの`modelGate`を推論・応答待ち全体で保持する構造を除き、要求が独立したモデルとpipeを専有するLeanのpoolへ置き換えた。起動・推論・待機・停止・joinは管理Mutexの外で実行する。idleモデルを優先して再利用し、必要時だけCPU/起動枠まで増やす。このMacでは4-threadモデル最大2本。ticket世代による専有と停止確認までの枠保持をLeanで検査し、旧modelGateの不在・pipe処理がMutexを取らないこともContractAuditへ接続した。実MiniLMは2processがwarm時にも同時実行し、16要求×2波を含む48応答のvector/被覆が順次基準と一致、同時波1,387/1,001ms、関連RSS最大2,435,888KiBだった。これは80実hookの検査ではない。MiniLMのPython・重み・tokenizer・poolingは変更していない。モデル数の配分値だけで物理RSSを保証したとは扱わず、全processの既存guardを維持する。
 

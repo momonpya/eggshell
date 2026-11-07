@@ -267,25 +267,30 @@ def cleanupProfiles : IO Unit := do
   write (study/"retired-profile-duplicates.json") (Json.mkObj [("removed",toJson removed),
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
-def prepareParallel : IO Unit := do
+def cohort (family : String) : IO String := do
+  check (["parallel-encoder","runtime-key"].contains family) "unknown isolated capacity runtime"
+  return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
+def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
-  let cohort ← read (workspace/"docs/candidates/parallel-encoder/delivery-cells.json")
-  check (cohort.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
-    cohort.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  check (!(← (base/"parallel-capacity-source").pathExists) && !(← (base/"parallel-capacity-build").pathExists))
+  let name ← cohort family
+  let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
+  check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
+    actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
+  check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",
     (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",
-    (base/"parallel-encoder-auditor-build").toString,(base/"parallel-capacity-source").toString,
-    (base/"parallel-capacity-build").toString,"tools.research.MemoryCapacity",(base/"parallel-capacity-settings.json").toString]
-  IO.FS.writeFile (base/"parallel-capacity-source/tools/research/MemoryCapacity.lean")
+    (base/(family++"-auditor-build")).toString,(base/(name++"-source")).toString,
+    (base/(name++"-build")).toString,"tools.research.MemoryCapacity",(base/(name++"-settings.json")).toString]
+  IO.FS.writeFile (base/(name++"-source")/"tools/research/MemoryCapacity.lean")
     (← IO.FS.readFile (workspace/"tools/research/MemoryCapacity.lean"))
-def parallelInputs (mode : String) : IO Unit := do
+def parallelInputs (mode : String) (family : String := "parallel-encoder") : IO Unit := do
   drained
+  let name ← cohort family
   check (["small","80"].contains mode) "fixed capacity stage required"
   let input ← read (base/"memory-capacity-small-input.json")
-  let root := base/("parallel-capacity-"++mode++"-result")
-  let prefixRoot := base/"parallel-encoder-prefix"
+  let root := base/(name++"-"++mode++"-result")
+  let prefixRoot := base/(family++"-prefix")
   let old ← IO.ofExcept (input.getObjValAs? (Array (String × Option String)) "environment")
   let changed := old.map fun (name,value) => (name, match name with
     | "EGGSHELL_CONFIG" => some (root/"config.toml").toString
@@ -296,10 +301,10 @@ def parallelInputs (mode : String) : IO Unit := do
   let topics ← IO.ofExcept (input.getObjValAs? (Array Json) "topics")
   let topics ← topics.mapM fun row => do
     let topic ← IO.ofExcept (row.getObjValAs? Nat "topic")
-    let body := base/"parallel-encoder-cells-result"/s!"topic-{topic}-chat-0/body.txt"
+    let body := base/(family++"-cells-result")/s!"topic-{topic}-chat-0/body.txt"
     check (row.getObjValD "sha256" == toJson (← hash body)) "candidate changed frozen actual body"
     return row.setObjVal! "body" (toJson body.toString)
-  let runtimeSha ← hash (base/"parallel-encoder-build/StudyMain")
+  let runtimeSha ← hash (base/(family++"-build")/"StudyMain")
   let input := input.setObjVal! "output" (toJson root.toString)
     |>.setObjVal! "config" (toJson (root/"config.toml").toString)
     |>.setObjVal! "runtime" (toJson (prefixRoot/"libexec/eggshell").toString)
@@ -309,40 +314,43 @@ def parallelInputs (mode : String) : IO Unit := do
     |>.setObjVal! "topics" (toJson topics)
     |>.setObjVal! "counts" (toJson (if mode == "small" then #[(4 : Nat),16] else #[80]))
     |>.setObjVal! "diagnostic" (toJson false)
-    |>.setObjVal! "gate" (if mode == "80" then toJson (base/"parallel-capacity-small-result/report.json").toString else Json.null)
-  write (base/("parallel-capacity-"++mode++"-input.json")) input
-def sealParallel : IO Unit := do
+    |>.setObjVal! "gate" (if mode == "80" then toJson (base/(name++"-small-result/report.json")).toString else Json.null)
+  write (base/(name++"-"++mode++"-input.json")) input
+def sealParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
-  let folder := workspace/"docs/candidates/parallel-encoder"
+  let name ← cohort family
+  let folder := workspace/"docs/candidates"/family
   let audit := (workspace/"tools/research/StudyBuildClosureAudit.lean").toString
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit,"inspect",
-    (base/"parallel-capacity-build").toString,(folder/"capacity-closure.json").toString]
+    (base/(name++"-build")).toString,(folder/"capacity-closure.json").toString]
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit,"common-sources",
-    (base/"parallel-encoder-build").toString,(base/"parallel-capacity-build").toString,(folder/"capacity-sources.json").toString]
-def setupParallel (action tag : String) : IO Unit := do
+    (base/(family++"-build")).toString,(base/(name++"-build")).toString,(folder/"capacity-sources.json").toString]
+def setupParallel (action tag : String) (family : String := "parallel-encoder") : IO Unit := do
   drained
+  let name ← cohort family
   let path := base/(tag++".guard-settings.json")
   check (!(← path.pathExists)) "fresh capacity guard required"
   let args ← if action == "build" then pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
-      (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"parallel-capacity-settings.json").toString]
+      (workspace/"tools/research/StudyBuildMain.lean").toString,(base/(name++"-settings.json")).toString]
     else do
       check (["small","80"].contains action) "unknown capacity stage"
-      let source ← read (workspace/"docs/candidates/parallel-encoder/capacity-sources.json")
+      let source ← read (workspace/"docs/candidates"/family/"capacity-sources.json")
       check (source.getObjValD "commonSourcesUnchanged" == toJson true && source.getObjValD "allProductCorePresent" == toJson true &&
-        source.getObjValD "auditorSha256" == toJson (← hash (base/"parallel-capacity-build/StudyMain")))
+        source.getObjValD "auditorSha256" == toJson (← hash (base/(name++"-build/StudyMain"))))
         "capacity client differs from the actual numerical candidate"
-      let input ← read (base/("parallel-capacity-"++action++"-input.json"))
+      let input ← read (base/(name++"-"++action++"-input.json"))
       let env ← IO.ofExcept (input.getObjValAs? (Array (String × Option String)) "environment")
       let unset := env.toList.flatMap fun (name,value) => if value.isNone then ["-u",name] else []
       pure (#["/usr/bin/env"]++unset.toArray++#["LEAN_NUM_THREADS=1"]++env.filterMap (fun (name,value) => value.map (fun value => name++"="++value))++
-        #[(base/"parallel-capacity-build/StudyMain").toString,(base/("parallel-capacity-"++action++"-input.json")).toString])
+        #[(base/(name++"-build/StudyMain")).toString,(base/(name++"-"++action++"-input.json")).toString])
   write path (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
     ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
     ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
-def collectParallel (mode : String) : IO Unit := do
+def collectParallel (mode : String) (family : String := "parallel-encoder") : IO Unit := do
   drained
+  let name ← cohort family
   check (["small","80"].contains mode) "unknown completed capacity stage"
-  let tag := "parallel-capacity-"++mode
+  let tag := name++"-"++mode
   let root := base/(tag++"-result")
   let guard ← read (base/(tag++"1.guard.json"))
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
@@ -393,17 +401,18 @@ def collectParallel (mode : String) : IO Unit := do
   let reportValue ← if ← report.pathExists then read report else pure Json.null
   let frontendValue ← if ← frontend.pathExists then read frontend else pure Json.null
   let publisherValue ← if ← publisher.pathExists then read publisher else pure Json.null
-  let destination := workspace/"docs/candidates/parallel-encoder"
+  let destination := workspace/"docs/candidates"/family
   write (destination/("capacity-"++mode++".json")) (Json.mkObj [
     ("guard",guard),("input",← read (base/(tag++"-input.json"))),
     ("phases",toJson phases),("cells",toJson cells),("diagnosticFiles",toJson files),
     ("report",reportValue),("frontendShutdown",frontendValue),("publisherShutdown",publisherValue),
     ("eightyStarted",toJson (mode == "80")),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   IO.FS.writeFile (destination/("capacity-"++mode++"-stderr.txt")) (← IO.FS.readFile (base/(tag++"1.stderr")))
-def cleanupParallel (mode : String) : IO Unit := do
+def cleanupParallel (mode : String) (family : String := "parallel-encoder") : IO Unit := do
   drained
+  discard <| cohort family
   check (["small","80"].contains mode) "unknown completed capacity stage"
-  let destination := workspace/"docs/candidates/parallel-encoder"
+  let destination := workspace/"docs/candidates"/family
   let evidence ← read (destination/("capacity-"++mode++".json"))
   let guard := evidence.getObjValD "guard"
   check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
@@ -441,6 +450,62 @@ def retireDiagnosticClient : IO Unit := do
     ("path",toJson path.toString),("sha256",toJson sha),("bytes",toJson (← path.metadata).byteSize.toNat),
     ("archived",toJson false),("currentParentOriginalsNativeSourcesAndInputsRetained",toJson true)])
   IO.FS.removeFile path
+def auditStoppedQueries : IO Unit := do
+  drained
+  let destination := workspace/"docs/candidates/parallel-encoder"
+  let evidence ← read (destination/"capacity-80.json")
+  let guard := evidence.getObjValD "guard"
+  check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+    guard.getObjValD "guardTriggered" == toJson true) "stopped owner evidence required"
+  let primes := (evidence.getObjValD "cells").getArr?.toOption.getD #[] |>.map (fun row =>
+    (row.getObjValD "client").getObjValD "receipt")
+  let mut rows := #[]
+  let mut totals : Std.HashMap String Nat := {}
+  for entry in ← (shared/"data/receipts").readDir do
+    let marker := entry.path/"provider-keyed-profile.json"
+    if !(← marker.pathExists) || primes.contains (toJson entry.fileName) then continue
+    let value ← read marker
+    if value.getObjValD "pid" != toJson (22340 : Nat) then continue
+    let mut stages := #[]
+    let mut bytes := 0
+    for item in ← entry.path.readDir do
+      let count := (← item.path.metadata).byteSize.toNat
+      bytes := bytes+count
+      totals := totals.insert item.fileName (totals[item.fileName]?.getD 0+1)
+      if count > 262144 then
+        stages := stages.push (Json.mkObj [("file",toJson item.fileName),("bytes",toJson count),
+          ("largePayloadOmitted",toJson true)])
+      else
+        let value ← read item.path
+        let data := value.getObjValD "data"
+        stages := stages.push (Json.mkObj [("file",toJson item.fileName),("bytes",toJson count),
+          ("stage",value.getObjValD "stage"),("observedMs",value.getObjValD "observedMs"),("pid",value.getObjValD "pid"),
+          ("data",keepFields data ["transport","sources","requestBytes","status","elapsedMs","queueMs",
+            "workMs","startedAt","finishedAt","readyMs","phase","inputMs","restoreMs","matrixMs"])])
+    rows := rows.push (Json.mkObj [("receipt",toJson entry.fileName),("bytes",toJson bytes),("stages",toJson stages)])
+  write (destination/"stopped-query-stages.json") (Json.mkObj [("ownerPid",toJson (22340 : Nat)),
+    ("queries",toJson rows.size),("files",toJson (totals.toArray.qsort (fun a b => a.1 < b.1))),
+    ("rows",toJson rows),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
+def prepareIdentityProbe : IO Unit := do
+  drained
+  check (!(← (base/"runtime-identity-source").pathExists)) "fresh identity probe required"
+  discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",
+    (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",
+    (base/"parallel-encoder-build").toString,(base/"runtime-identity-source").toString,
+    (base/"runtime-identity-build").toString,"tools.research.RuntimeIdentityChecks",(base/"runtime-identity-settings.json").toString]
+  IO.FS.writeFile (base/"runtime-identity-source/tools/research/RuntimeIdentityChecks.lean")
+    ((← IO.FS.readFile (workspace/"tools/research/RuntimeIdentityChecks.lean"))++
+      "\ndef main := Eggshell.Research.RuntimeIdentityChecks.main\n")
+def setupIdentityProbe (action tag : String) : IO Unit := do
+  drained
+  let path := base/(tag++".guard-settings.json")
+  check (!(← path.pathExists)) "fresh identity guard required"
+  let args := if action == "build" then #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+    (workspace/"tools/research/StudyBuildMain.lean").toString,(base/"runtime-identity-settings.json").toString]
+    else #[(base/"runtime-identity-build/StudyMain").toString,"parent",(base/(tag++"-result")).toString]
+  write path (Json.mkObj [("command",toJson args),("cwd",toJson workspace.toString),
+    ("record",toJson (base/(tag++".guard.json")).toString),("ownedPrefixes",toJson #[base.toString]),
+    ("limitRssKiB",toJson (3670016 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
 def main (args : List String) : IO Unit := do
   match args with
   | ["retire-logs"] => retireLogs
@@ -462,6 +527,15 @@ def main (args : List String) : IO Unit := do
   | ["collect-parallel",mode] => collectParallel mode
   | ["cleanup-parallel",mode] => cleanupParallel mode
   | ["retire-diagnostic-client"] => retireDiagnosticClient
+  | ["audit-stopped-queries"] => auditStoppedQueries
+  | ["prepare-identity-probe"] => prepareIdentityProbe
+  | ["setup-identity-probe",action,tag] => setupIdentityProbe action tag
+  | ["prepare-capacity",family] => prepareParallel family
+  | ["capacity-inputs",family,mode] => parallelInputs mode family
+  | ["seal-capacity",family] => sealParallel family
+  | ["setup-capacity",family,action,tag] => setupParallel action tag family
+  | ["collect-capacity",family,mode] => collectParallel mode family
+  | ["cleanup-capacity",family,mode] => cleanupParallel mode family
   | _ => throw (IO.userError "retire-logs|prepare|refresh|inputs|setup|seal-client")
 end Eggshell.Research.CapacityStudy
 def main := Eggshell.Research.CapacityStudy.main

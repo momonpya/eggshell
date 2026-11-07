@@ -1,0 +1,31 @@
+--- a/Eggshell/Numerical.lean
++++ b/Eggshell/Numerical.lean
+@@ -27,4 +27,5 @@
+-def Config.key (config : Config) : String :=
+-  Sha256.hex ((toJson (config.model,config.models.normalize.toString,config.python.normalize.toString,
+-    MiniLM.embeddingSource,BlockScore.implementation,include_str "Numerical.lean",include_str "DaemonWire.lean",
+-    include_str "../tools/research/EncoderPool.lean")).compress.toUTF8)
++/-- Immutable implementation bytes are hashed once per process, independently
++of every client, model path and numerical exchange. No mutable memo is needed. -/
++def implementation : String := Sha256.hex (toJson (MiniLM.embeddingSource,
++  BlockScore.implementation,include_str "Numerical.lean",include_str "DaemonWire.lean",
++  include_str "../tools/research/EncoderPool.lean")).compress.toUTF8
+@@ -31,0 +33,18 @@
++def Config.binding (config : Config) : String × String × String × String :=
++  (config.model,config.models.normalize.toString,config.python.normalize.toString,implementation)
++
++theorem Config.binding_model (config : Config) : config.binding.1 = config.model := rfl
++theorem Config.binding_models (config : Config) : config.binding.2.1 = config.models.normalize.toString := rfl
++theorem Config.binding_python (config : Config) : config.binding.2.2.1 = config.python.normalize.toString := rfl
++theorem Config.binding_implementation (config : Config) : config.binding.2.2.2 = implementation := rfl
++
++theorem Config.foreign_model_binding (left right : Config) (different : left.model ≠ right.model) :
++    left.binding ≠ right.binding := by
++  intro same
++  exact different (congrArg Prod.fst same)
++
++def Config.key (config : Config) : String := Sha256.hex (toJson config.binding).compress.toUTF8
++
++theorem Config.key_uses_binding (config : Config) :
++    config.key = Sha256.hex (toJson config.binding).compress.toUTF8 := rfl
++

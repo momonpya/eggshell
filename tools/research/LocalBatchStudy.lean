@@ -183,10 +183,10 @@ def stage (receipt : Json) (name : String) : IO Json := do
     throw (IO.userError ("missing actual hook stage "++name))
   return (row.getObjValD "record").getObjValD "data"
 def collectCells (tag : String := "local-batch") (parentTag : String := "delivery-ledger")
-    (profile : Bool := true) : IO Unit := do
+    (profile : Bool := true) (guardTag : String := "") : IO Unit := do
   drained
-  check (["local-batch","parallel-encoder"].contains tag &&
-    ["delivery-ledger","local-batch"].contains parentTag) "unknown frozen delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key"].contains tag &&
+    ["delivery-ledger","local-batch","parallel-encoder"].contains parentTag) "unknown frozen delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let root := base/(tag++"-cells-result")
   check ((← read (root/"result.json")).getObjValD "allSixPassed" == toJson true)
@@ -240,12 +240,13 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
     ("internalPlanOrFetchWireCalls",toJson wire.size),("profileObservationsEnabled",toJson profile),
     ("pairedLatencyCausalClaim",toJson false),("answeringModelCalls",toJson (0 : Nat)),
     ("historyBearingModelCycles",toJson false),("adopted",toJson false),
-    ("guard",← read (base/(tag++"-cells1.guard.json")))])
+    ("guardTag",toJson (if guardTag.isEmpty then tag++"-cells1" else guardTag)),
+    ("guard",← read (base/((if guardTag.isEmpty then tag++"-cells1" else guardTag)++".guard.json")))])
   check (!profile || (directPlans.size == 6 && directFetches.size == 6 && wire.isEmpty))
     "actual hooks did not use the direct selected-original path"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
   drained
-  check (["local-batch","parallel-encoder"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   check (result.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
@@ -271,7 +272,8 @@ def cleanupCells (tag : String := "local-batch") : IO Unit := do
     let path := shared/"receipts"/id
     if ← path.pathExists then IO.FS.removeDirAll path
     removed := removed.push path.toString
-  let stderr ← IO.FS.readFile (base/(tag++"-cells1.stderr"))
+  let guardTag := (result.getObjValAs? String "guardTag").toOption.getD (tag++"-cells1")
+  let stderr ← IO.FS.readFile (base/(guardTag++".stderr"))
   IO.FS.writeFile (study/"delivery-stderr.txt") stderr
   write (study/"delivery-warnings.json") (Json.mkObj [
     ("unfinishedSessionMaintenance",toJson ((stderr.splitOn "\n").filter (·.contains "retained unfinished session maintenance")).length),
@@ -306,6 +308,7 @@ def main (args : List String) : IO Unit := do
   | ["collect"] => collect
   | ["collect-cells"] => collectCells
   | ["collect-cells-for",tag,parentTag] => collectCells tag parentTag false
+  | ["collect-cells-for",tag,parentTag,guardTag] => collectCells tag parentTag false guardTag
   | ["cleanup-cells"] => cleanupCells
   | ["cleanup-cells-for",tag] => cleanupCells tag
   | ["prepare-auditor"] => prepareAuditor

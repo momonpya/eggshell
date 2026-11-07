@@ -1,0 +1,19 @@
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -2269,0 +2270,16 @@
++
++#check Eggshell.Numerical.Config.binding_model
++#check Eggshell.Numerical.Config.binding_models
++#check Eggshell.Numerical.Config.binding_python
++#check Eggshell.Numerical.Config.binding_implementation
++#check Eggshell.Numerical.Config.foreign_model_binding
++#check Eggshell.Numerical.Config.key_uses_binding
++
++run_elab do
++  let environment ← Lean.getEnv
++  let some key := (environment.find? ``Eggshell.Numerical.Config.key).bind (·.value?) |
++    throwError "Missing numerical identity"
++  unless key.getUsedConstants.contains ``Eggshell.Numerical.Config.binding do
++    throwError "Numerical identity bypasses its checked configuration binding"
++  if key.getUsedConstants.contains ``Eggshell.MiniLM.embeddingSource then
++    throwError "Numerical identity rehashes complete implementation bytes per request"
