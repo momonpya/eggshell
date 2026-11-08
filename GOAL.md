@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-08更新。状態はactive。直近で全6実hookを確認したdeferred-auditは必要原文32/32・親本文一致、4並行も全件完了したが、16並行でメモリ保護停止した。新しいgroup-reuseは通常実行体のビルドと差分照合まで完了し、全6実hookはまだ実行していない。80人継続利用、成長する複数DB、NAS、総token・品質の採用条件は未達・未検証。目的と合格条件は変更しない。実行計画は[team-scale-plan.md](docs/team-scale-plan.md)。現在地と次の順序は本書の一か所に置き、過去の詳細は各候補の記録とGit履歴を参照する。
+2026-11-08更新。目標は未達。直近で全6実hookを確認したdeferred-auditは必要原文32/32・親本文一致、4並行も全件完了したが、16並行でメモリ保護停止した。新しいgroup-reuseは通常実行体のビルドと差分照合まで完了し、全6実hookはまだ実行していない。不要成果物の削除後、ディスク空きは保護下限を上回った。80人継続利用、成長する複数DB、NAS、総token・品質の採用条件は未達・未検証。目的と合格条件は変更しない。実行計画は[team-scale-plan.md](docs/team-scale-plan.md)。現在地と次の順序は本書の一か所に置き、過去の詳細は各候補の記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -39,7 +39,7 @@ runtime a2ed21ff…の全6実hookは必要原文32/32・親本文byte一致・�
 
 次の順序：
 
-1. [group-reuse](docs/candidates/group-reuse/README.md)は、同じ原文グループの行検索・record展開・範囲生成を、出力の重複除去より前に一度だけにした。任意producerの参照foldとの等式をLeanで証明し、保存済み3問い合わせ×31所有者の全93配列比較とfederation分岐93比較が一致した。部品中央値は題材2が91,682→24,962µs、題材3が42,798→10,103µs。題材1の1組は533→551µsとわずかに悪化した。割当てcounterは減ったが生存RSSの効果は未検証。通常runtime `9c2650cb…`の297 native objectが整合し、直接変更はPreparedSourceView一つ、追加はMemoGroupFold一つだけと照合した。matching auditorは空き容量の起動前検査で拒否され、child未起動。終了済み22出力と部品実行体の約266MBの論理bytesを削除したが、Mac全体の空きは約1.3GiBまで低下していた。2GiBの保護条件を変えず、空きが戻ったらmatching auditor→題材1から全6実hookを行う。この候補の実hookや新しい並行負荷を実行済みと扱わない。
+1. [group-reuse](docs/candidates/group-reuse/README.md)は、同じ原文グループの行検索・record展開・範囲生成を、出力の重複除去より前に一度だけにした。任意producerの参照foldとの等式をLeanで証明し、保存済み3問い合わせ×31所有者の全93配列比較とfederation分岐93比較が一致した。部品中央値は題材2が91,682→24,962µs、題材3が42,798→10,103µs。題材1の1組は533→551µsとわずかに悪化した。割当てcounterは減ったが生存RSSの効果は未検証。通常runtime `9c2650cb…`の297 native objectが整合し、直接変更はPreparedSourceView一つ、追加はMemoGroupFold一つだけと照合した。matching auditorは先の空き容量検査で拒否され、child未起動。今回の削除後は2GiBの保護下限を上回り、297 objectの整合性も再確認した。次は新しいguard記録でmatching auditor→題材1から全6実hookを行う。この候補の実hookや新しい並行負荷を実行済みと扱わない。
 2. [CPU採取](docs/candidates/search-cpu/README.md)に対し、record逆引きは以前の同じ28 owner/1,792 groupで約7.32倍遅かったため再接続していない。BLAKE3の[インライン化部品](docs/candidates/inline-mix/README.md)は約13〜15%短縮したが割当てcounterは同じであり、group-reuseへ組み込んでいない。`basePieceAccept`の区間判定は一つの原区間への包含で、区間の和集合による被覆へ変えない。元DAG量だけを理由に大きな新cacheを足さず、既存の型付き取得・出版済みextentを再実装しない。
 3. 同じ予算/順位/domain/期限/モデル/資源上限で4/16を通してから80へ進む。失敗した同じ負荷、重み調整、受動heap census、worker/compute枠だけの追加は繰り返さない。過去のallocator/単純graph移譲試験は増大を再現できておらず、類似の試験を反復しない。
 4. 安定したruntime SHAで空DB/new chatからseedを作り、題材1/2/3と2周目、事前固定した現行/候補の同数複数反復を実施する。キャッシュ生成/保存完了・必要原文・総token・品質を揃える。以下A〜Fの80人持続利用・増大project・NASの契約まで達成して初めて完了とする。
@@ -47,6 +47,8 @@ runtime a2ed21ff…の全6実hookは必要原文32/32・親本文byte一致・�
 回答モデル0、有料比較0/18。本体・README実績・releaseには未採用。proof/部品/単独配送の成功を、総token改善や80人8時間の合格に代用しない。
 
 整理で旧sourceコピー198個（約1.08GBの論理bytes）等を削除した。パス包含の誤りで保持予定の旧比較元source二つも一旦削除し、native witnessで確認できる部分を復元したが、旧Mainを含む全sourceの復旧は未確認。現在の製品/部品source・551 native object・製品/比較元binary・元DBのSHAを確認した。[誤りと確認範囲](docs/candidates/search-cpu/source-cleanup-repair.json)を参照し、旧比較元の完全なsource再ビルドが可能という前提を置かない。
+
+今回さらに旧コンパイル生成物2,627件、終了済みbuild・過去ログ・重複DB等363件を削除した。合計873,880,828論理bytesで、archiveは作らず、削除用の一時controllerと詳細一覧も破棄した。現在のruntime・比較元a2・guardと必要入力3,051件、保持する3DBのSHAは削除前後で一致し、現在のruntimeの297 native objectも整合した。旧prefixのa109実行体は意図的に退役した。現在のDB別cache・MiniLM・原典を保持したが、旧版の不要なコンパイルcacheは再構築が必要になる。[削除集計と保持SHA](docs/cleanup/retired-builds.json)、[残存runtimeの整合性](docs/cleanup/retained-runtime.json)。Mac全体の空きの増加には他の変更も含まれるため、論理削除量と物理的な空き増加を同一視しない。
 
 ## 過去の切り分け（再試行の前に参照）
 
@@ -108,4 +110,4 @@ UserPromptSubmitは固定したhardware/負荷profileごとにp99 <30秒。意�
 
 保護停止は関連RSS 3,670,016KiB、ディスク空き下限は2,097,152KiB。緩和・迂回しない。guardの終了状態とownedPids=[]、実processの消滅を確認してから次のguardやnative入力の変更へ進む。起動しただけのtool応答を完了と取り違えない。終了済み生成物は実行記録とSHAを整理して削除し、圧縮archiveを作らない。
 
-全体goalはactive。全要求の実証が揃うまでcompleteにしない。
+全体の完了条件は未達。全要求の実証が揃うまでcompleteにしない。
