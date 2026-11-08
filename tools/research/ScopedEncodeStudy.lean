@@ -410,10 +410,10 @@ def main (args : List String) : IO Unit := do
   | ["seal-installed"] => ScopedEncodeStudy.sealInstalled
   | ["summarize-stopped"] => ScopedEncodeStudy.summarizeStopped
   | ["summarize-stopped",family] =>
-      ScopedEncodeStudy.check (["scoped-encode","score-prepare","score-prepare-budget"].contains family) "unknown captured numerical family"
+      ScopedEncodeStudy.check (["scoped-encode","score-prepare","score-prepare-budget","remaining-source"].contains family) "unknown captured numerical family"
       ScopedEncodeStudy.summarizeStopped (ScopedEncodeStudy.project/"docs/candidates"/family)
   | ["summarize-finished",family] =>
-      ScopedEncodeStudy.check (family == "score-prepare-budget") "unknown finished numerical family"
+      ScopedEncodeStudy.check (["score-prepare-budget","remaining-source"].contains family) "unknown finished numerical family"
       ScopedEncodeStudy.summarizeStopped (ScopedEncodeStudy.project/"docs/candidates"/family) true
   | ["cleanup-ended"] => ScopedEncodeStudy.cleanupEnded
   | _ => throw (IO.userError "prepare/setup required")
