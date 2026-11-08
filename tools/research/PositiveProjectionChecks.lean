@@ -77,17 +77,17 @@ def run (root : System.FilePath) : IO Unit := do
   check (!checkedShared.projected && !checkedShared.projectionComplete && checkedShared.evidence.size == 2)
     "fixture must retain two checked witnesses beside the unsupported origin"
   let projected := prepared.val.acknowledgmentProjection
-  check (projected.complete && projected.rows.size == 3 && projected.bindings.size == 1)
+  check (projected.verified && !projected.complete && projected.rows.size == 3 && projected.bindings.size == 1)
     "unrelated incomplete parts still veto positive original evidence"
   check (projected.rows.all fun entry => entry.database == "project" &&
     (entry.source == firstRead.source || entry.source == secondRead.source)) "foreign projection escaped"
   let some remaining := checkedShared.remaining [CanonicalSource.Delivery.rowKey ⟨file,2⟩] |
     throw (IO.userError "reconciliation removed all rows")
   let remainder := (handoff [remaining]).acknowledgmentProjection
-  check (remainder.complete && remainder.rows.size == 1 && (remainder.rows[0]?.map (·.source)) == some firstRead.source)
+  check (remainder.verified && !remainder.complete && remainder.rows.size == 1 && (remainder.rows[0]?.map (·.source)) == some firstRead.source)
     "subtracted original evidence survived reconciliation"
   let noWitness := (handoff [{checkedShared with evidence := #[]}]).acknowledgmentProjection
-  check (noWitness.complete && noWitness.rows.isEmpty && noWitness.bindings.isEmpty)
+  check (noWitness.verified && !noWitness.complete && noWitness.rows.isEmpty && noWitness.bindings.isEmpty)
     "packet metadata manufactured a source witness"
   let changed := {prepared.val with text := prepared.val.text++"changed"}
   check (!changed.acknowledgmentProjection.complete && changed.acknowledgmentProjection.rows.isEmpty)
@@ -102,7 +102,7 @@ def run (root : System.FilePath) : IO Unit := do
   let foreign ← sharedPart #[row 1 "alpha" #[{firstRead with binding := {firstRead.binding with work := "other"}}]]
   let foreign := ((handoff [foreign]).prepareDelivery plan).1.val
   check (foreign.acknowledgmentProjection.rows.isEmpty) "foreign Work acquired a source-byte witness"
-  check (!(PositiveProjection.checked #[⟨"",firstRead.source⟩] #[]).complete) "invalid projected project accepted"
+  check (!(PositiveProjection.checked #[⟨"",firstRead.source⟩] #[] true).verified) "invalid projected project accepted"
   let some reference ← DeliveryLedger.confirm "positive-original" 0 none projected |
     throw (IO.userError "positive projection did not produce an ACK ledger")
   let saved ← DeliveryLedger.lookup reference "project"

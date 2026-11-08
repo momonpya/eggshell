@@ -7,7 +7,7 @@ private def check (value : Bool) (message : String) : IO Unit :=
   unless value do throw (IO.userError message)
 
 private def metadata (line : Nat) : Synapses.DeliveryLedger.Projection := {
-  complete := true, rows := #[{database := "project",source := {
+  verified := true, complete := true, rows := #[{database := "project",source := {
     subject := .file {relative := "input",fingerprint := String.ofList (List.replicate 64 'a'),bytes := 100},
     first := line,last := line }}] }
 

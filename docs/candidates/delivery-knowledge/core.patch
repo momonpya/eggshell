@@ -1,0 +1,94 @@
+--- a/Eggshell/DeliveryLedger.lean
++++ b/Eggshell/DeliveryLedger.lean
+@@ -14 +14,2 @@
+-  (include_str "PacketReceipt.lean").toUTF8,(include_str "PluginHooks.lean").toUTF8])
++  (include_str "PacketReceipt.lean").toUTF8,(include_str "PluginHooks.lean").toUTF8,
++  (include_str "../tools/research/PositiveProjection.lean").toUTF8])
+@@ -27,0 +29,3 @@
++  /-- The positive ranges have been validated; advisory gaps may remain. -/
++  verified : Bool := false
++  /-- Every displayed part has a verified original projection. -/
+@@ -30,0 +35,13 @@
++def Projection.confirmable (projection : Projection) : Bool :=
++  projection.verified && projection.rows.all Row.valid && projection.bindings.all Binding.valid
++
++def Projection.fullyVerified (projection : Projection) : Bool := projection.verified && projection.complete
++
++theorem incomplete_projection_not_fully_verified (projection : Projection)
++    (incomplete : projection.complete = false) : projection.fullyVerified = false := by
++  simp [Projection.fullyVerified,incomplete]
++
++theorem confirmable_requires_verified (projection : Projection) (accepted : projection.confirmable = true) :
++    projection.verified = true := by
++  exact (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp accepted).1).1
++
+@@ -82 +99 @@
+-  unless projection.complete && projection.rows.all Row.valid && projection.bindings.all Binding.valid do
++  unless projection.confirmable do
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -354 +354 @@
+-  | none => {complete := handoff.text.isEmpty}
++  | none => {verified := handoff.text.isEmpty,complete := handoff.text.isEmpty}
+@@ -363,0 +364 @@
++        (captured.packet.parts.all (·.projectionComplete))
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -491 +491 @@
+-  if !basis.offer.projection.complete then Synapses.Live.unconfirmed files
++  if !basis.offer.projection.fullyVerified then Synapses.Live.unconfirmed files
+@@ -509 +509 @@
+-    let confirmed ← if basis.offer.projection.complete then do
++    let confirmed ← if basis.offer.projection.verified then do
+--- a/Eggshell/SynapseJournal.lean
++++ b/Eggshell/SynapseJournal.lean
+@@ -39 +39,2 @@
+-offers make missing-delivery labels unknown, never positive evidence. -/
++or partly projected offers make omission labels unknown. Previously confirmed
++positive ranges remain usable without asserting complete presentation. -/
+@@ -209,0 +211,4 @@
++
++theorem uncertain_knowledge_cannot_label_omission (known : Knowledge) (checked : Bool)
++    (unknown : known.uncertain = true) : completeKnowledge known checked = false := by
++  simp [completeKnowledge,unknown]
+@@ -1070 +1074,0 @@
+-  if known.uncertain then return {}
+@@ -1076,0 +1081,6 @@
++
++/-- Uncertainty can prohibit negative labels, never revoke a prior ACK. -/
++theorem presentation_preserves_confirmed_positives (source : PageMap.Snapshot) (known : Knowledge)
++    (subjects : Option (Std.HashSet Subject)) (reads : Array Read) :
++    presentation source {known with uncertain := true} subjects reads =
++      presentation source {known with uncertain := false} subjects reads := rfl
+@@ -1427 +1437 @@
+-      if known.uncertain || !projectedKnowledge known then result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
++      if !projectedKnowledge known then result := {result with unknown := result.unknown+1}; cursor.state.set {position := ⟨ordinal.val+1,by change ordinal.val+1 < values.size+1; have := ordinal.isLt; omega⟩,result,trace,domain,starts,locations,observed,observedLocations,usage}; continue
+--- a/tools/research/PositiveProjection.lean
++++ b/tools/research/PositiveProjection.lean
+@@ -87,2 +87,3 @@
+-def checked (rows : Array DeliveryLedger.Row) (bindings : Array Binding) : DeliveryLedger.Projection :=
+-  {rows,bindings,complete := rows.all DeliveryLedger.Row.valid && bindings.all Binding.valid}
++def checked (rows : Array DeliveryLedger.Row) (bindings : Array Binding) (coverageComplete : Bool) : DeliveryLedger.Projection :=
++  let verified := rows.all DeliveryLedger.Row.valid && bindings.all Binding.valid
++  {rows,bindings,verified,complete := coverageComplete && verified}
+@@ -90,4 +91,3 @@
+-/-- `complete` describes validation of the projected positive evidence,
+-never coverage of every advisory part in the surrounding message. -/
+-theorem checked_is_valid (rows : Array DeliveryLedger.Row) (bindings : Array Binding)
+-    (accepted : (checked rows bindings).complete = true) :
++/-- Positive validation is independent of complete presentation knowledge. -/
++theorem checked_is_valid (rows : Array DeliveryLedger.Row) (bindings : Array Binding) (coverageComplete : Bool)
++    (accepted : (checked rows bindings coverageComplete).verified = true) :
+@@ -96,0 +97,9 @@
++theorem incomplete_keeps_verified_ranges (rows : Array DeliveryLedger.Row) (bindings : Array Binding) :
++    (checked rows bindings false).verified = (checked rows bindings true).verified ∧
++      (checked rows bindings false).rows = rows ∧ (checked rows bindings false).complete = false := by
++  exact ⟨rfl,rfl,rfl⟩
++
++theorem complete_requires_verified (rows : Array DeliveryLedger.Row) (bindings : Array Binding) (coverageComplete : Bool)
++    (complete : (checked rows bindings coverageComplete).complete = true) :
++    (checked rows bindings coverageComplete).verified = true := (Bool.and_eq_true_iff.mp complete).2
++
+@@ -102,0 +112,2 @@
++#print axioms incomplete_keeps_verified_ranges
++#print axioms complete_requires_verified

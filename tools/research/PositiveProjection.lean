@@ -84,15 +84,24 @@ theorem selected_preserves_witness (rows : Array CanonicalSource.StoredRow) (evi
     (read : Read) (selected : read ∈ sharedReads rows evidence) : verified read :=
   prepared read (selected_was_verified rows evidence read selected).1
 
-def checked (rows : Array DeliveryLedger.Row) (bindings : Array Binding) : DeliveryLedger.Projection :=
-  {rows,bindings,complete := rows.all DeliveryLedger.Row.valid && bindings.all Binding.valid}
+def checked (rows : Array DeliveryLedger.Row) (bindings : Array Binding) (coverageComplete : Bool) : DeliveryLedger.Projection :=
+  let verified := rows.all DeliveryLedger.Row.valid && bindings.all Binding.valid
+  {rows,bindings,verified,complete := coverageComplete && verified}
 
-/-- `complete` describes validation of the projected positive evidence,
-never coverage of every advisory part in the surrounding message. -/
-theorem checked_is_valid (rows : Array DeliveryLedger.Row) (bindings : Array Binding)
-    (accepted : (checked rows bindings).complete = true) :
+/-- Positive validation is independent of complete presentation knowledge. -/
+theorem checked_is_valid (rows : Array DeliveryLedger.Row) (bindings : Array Binding) (coverageComplete : Bool)
+    (accepted : (checked rows bindings coverageComplete).verified = true) :
     rows.all DeliveryLedger.Row.valid = true ∧ bindings.all Binding.valid = true := by
   exact Bool.and_eq_true_iff.mp accepted
+
+theorem incomplete_keeps_verified_ranges (rows : Array DeliveryLedger.Row) (bindings : Array Binding) :
+    (checked rows bindings false).verified = (checked rows bindings true).verified ∧
+      (checked rows bindings false).rows = rows ∧ (checked rows bindings false).complete = false := by
+  exact ⟨rfl,rfl,rfl⟩
+
+theorem complete_requires_verified (rows : Array DeliveryLedger.Row) (bindings : Array Binding) (coverageComplete : Bool)
+    (complete : (checked rows bindings coverageComplete).complete = true) :
+    (checked rows bindings coverageComplete).verified = true := (Bool.and_eq_true_iff.mp complete).2
 
 #print axioms shared_policy_exact
 #print axioms selected_has_native_origin
@@ -100,4 +109,6 @@ theorem checked_is_valid (rows : Array DeliveryLedger.Row) (bindings : Array Bin
 #print axioms checked_is_valid
 #print axioms prepared_shared_exact
 #print axioms selected_was_prepared
+#print axioms incomplete_keeps_verified_ranges
+#print axioms complete_requires_verified
 end Eggshell.Research.PositiveProjection

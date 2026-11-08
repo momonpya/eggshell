@@ -12,6 +12,8 @@ def cell (root data : System.FilePath) (database : String) : IO Json := do
   let session ← IO.ofExcept (input.getObjValAs? String "session_id")
   check (session.startsWith "real-source-" && session.length == 76) "audit session escaped generated scope"
   let state ← read (data/"sessions"/session/"state.json")
+  let uncertain ← (data/"sessions"/session/"unconfirmed-delivery").pathExists
+  check uncertain "partial original coverage was incorrectly declared fully known"
   let reference ← IO.ofExcept (fromJson? (state.getObjValD "confirmedDelivery") : Except String DeliveryLedger.Reference)
   check (reference.session == session && reference.producer == DeliveryLedger.implementation)
     "session ACK has a foreign producer"
@@ -32,6 +34,7 @@ def cell (root data : System.FilePath) (database : String) : IO Json := do
   let stats ← (data/"sessions"/session/"state.json").metadata
   return Json.mkObj [("session",toJson session),("ackHead",toJson reference.head),("ledgerContext",toJson reference.context),
     ("confirmedReferencePresent",toJson true),("nativeRanges",toJson ranges.size),
+    ("uncertaintyMarkerPresent",toJson uncertain),
     ("nativeBindings",toJson bindings.size),("foreignProjectEmpty",toJson true),
     ("unconfirmedOffers",toJson ((state.getObjValD "offers").getArr?.toOption.getD #[]).size),
     ("stateBytes",toJson stats.byteSize.toNat)]
@@ -47,6 +50,7 @@ def run (root data project output : System.FilePath) : IO Unit := do
       cells := cells.push (item.setObjVal! "topic" (toJson topic)|>.setObjVal! "repetition" (toJson repetition))
   check ((← DB.PageMap.pin project).head == before) "ACK audit changed original project"
   IO.FS.writeFile output (Json.mkObj [("cells",toJson cells),("allSixConfirmed",toJson true),
+    ("allSixUnknownCoverageMarked",toJson true),
     ("readOnlyExactAcceptedHeads",toJson true),("projectHeadUnchanged",toJson true),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).compress
 end ConfirmedLedgerAudit
