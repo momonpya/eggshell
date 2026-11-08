@@ -155,6 +155,25 @@ def main (args : List String) : IO Unit := do
       ("allProductCorePresent",toJson failures.isEmpty),("commonSourcesUnchanged",toJson valid)]).pretty
     unless valid do throw (IO.userError "auditor and runtime use different native product sources")
     return
+  if let "component-sources"::product::component::output::required := args then
+    let path : System.FilePath := .mk output
+    unless !(← path.pathExists) do throw (IO.userError "preserve component source comparison")
+    let (_,original) ← sourceWitnesses (.mk product)
+    let (_,checking) ← sourceWitnesses (.mk component)
+    let mut common := 0
+    let mut changed := #[]
+    for (name,bytes) in original do
+      if let some actual := checking[name]? then
+        common := common+1
+        if actual != bytes then changed := changed.push name
+    let missing := required.filter fun name => (original[name]?).isNone || (checking[name]?).isNone
+    let valid := common > 0 && changed.isEmpty && missing.isEmpty && !required.isEmpty
+    IO.FS.writeFile path (Json.mkObj [("commonModules",toJson common),("changedCommonModules",toJson changed),
+      ("required",toJson required),("missingRequiredModules",toJson missing),
+      ("requiredModulesPresent",toJson missing.isEmpty),("commonSourcesUnchanged",toJson valid),
+      ("componentOnlyNotFullProductClosure",toJson true)]).pretty
+    unless valid do throw (IO.userError "component has changed or missing required native sources")
+    return
   if let "compare-sources"::parent::candidate::output::allowed := args then
     let path : System.FilePath := .mk output
     unless !(← path.pathExists) do throw (IO.userError "preserve native source comparison")
