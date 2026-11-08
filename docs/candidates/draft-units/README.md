@@ -28,4 +28,6 @@
 
 終了したcapacity client・DB/receipt/session・出力を[削除](retired-capacity-helper.json)した。必要な集計と、repository内の実際のclient sourceのSHAを保持し、sourceの複製archiveも作らない。通常runtime・親・元DB・project cache・モデル・比較本文は保持する。
 
+さらに終了済みの6チャットの重複receipt/sessionと生ログ618 file・14,636,827論理bytesを[削除](ended-log-state-cleanup.json)した。比較本文と実行体のSHAは不変。失敗した古いbuildの記録を使って検証済みのsourceを上書きできないようにし、`refresh-runtime`の拒否とソース/実行体SHAの不変を確認した。
+
 開発中に失敗したLean試行も集計へ含めた。終了済みの生ログは集計後に削除し、圧縮archiveは作らない。既に削除した初期試行の要約は[整理記録](../../cleanup/ended-artifacts-pruned.json)にある。

@@ -131,6 +131,8 @@ def prepareRuntime (refresh : Bool := false) : IO Unit := do
   let output := base/"draft-units-runtime-build"
   let settings := base/"draft-units-runtime.json"
   if refresh then
+    check (!(← (output/"StudyMain").pathExists) && !(← (folder/"runtime.json").pathExists))
+      "never mutate a validated runtime"
     let guard ← read (base/"draft-units-build1.guard.json")
     check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" != toJson (0 : Nat) &&
       guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "only repair a stopped failed build"
@@ -178,6 +180,8 @@ def prepareRuntime (refresh : Bool := false) : IO Unit := do
 
 def setupBuild (tag : String) (auditor : Bool := false) : IO Unit := do
   drained
+  check (!(← (folder/(if auditor then "auditor-sources.json" else "runtime.json")).pathExists))
+    "never rebuild a validated runtime in place"
   check (tag.startsWith "draft-units-build") "known build owner required"
   let settings := base/(tag++".guard-settings.json")
   check (!(← settings.pathExists)) "preserve the build attempt"
@@ -240,6 +244,7 @@ def auditRuntime (tag : String := "draft-units-build3") : IO Unit := do
 
 def prepareAuditor : IO Unit := do
   drained
+  check (!(← (base/"draft-units-auditor.json").pathExists)) "preserve the supplied auditor source/settings"
   check ((← read (folder/"native-sources.json")).getObjValD "exactExpectedChangeSet" == toJson true)
     "verify actual normal product sources first"
   let selected := base/"deferred-assembly-auditor-build"
