@@ -1,3 +1,2 @@
 import tools.research.ResourceGuard
-
-def main := Eggshell.Research.ResourceGuard.cliMain
+def main (args : List String) : IO UInt32 := Eggshell.Research.ResourceGuard.cliMain args

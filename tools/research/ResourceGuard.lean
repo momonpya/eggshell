@@ -97,16 +97,21 @@ structure Settings where
   minFreeKiB : Nat := 524288
   deriving FromJson, ToJson
 
-/-- Keep half a GiB below the user's four-GiB ceiling for sampling and
-shutdown. Three GiB remains the default, rather than the maximum allowed. -/
-def maximumStopRssKiB : Nat := 3670016
+/-- Interpret the user's 5 GB ceiling conservatively as decimal bytes.
+Reserve half a GiB for sampling and shutdown; the default remains 3 GiB. -/
+def userCeilingRssKiB : Nat := 5000000000 / 1024
+def maximumStopRssKiB : Nat := userCeilingRssKiB - 524288
 
 def validStopRss (limit : Nat) : Bool := decide (0 < limit ∧ limit ≤ maximumStopRssKiB)
 
 theorem valid_stop_reserves_headroom {limit : Nat} (valid : validStopRss limit = true) :
-    limit + 524288 ≤ 4194304 := by
+    limit + 524288 ≤ userCeilingRssKiB := by
   have bound := (of_decide_eq_true valid).2
   exact Nat.add_le_add_right bound 524288
+
+theorem valid_stop_below_user_bytes {limit : Nat} (valid : validStopRss limit = true) :
+    (limit + 524288) * 1024 ≤ 5000000000 :=
+  Nat.le_trans (Nat.mul_le_mul_right 1024 (valid_stop_reserves_headroom valid)) (by decide)
 
 def diskFreeKiB (directory : System.FilePath) : IO Nat := do
   let output ← IO.Process.output {cmd := "/bin/df", args := #["-Pk",directory.toString]}
@@ -144,7 +149,7 @@ private def snapshot (path : System.FilePath) (json : Json) : IO Unit := do
 
 def run (settings : Settings) : IO UInt32 := do
   unless !settings.command.isEmpty && validStopRss settings.limitRssKiB do
-    throw (IO.userError "guard needs a command and an RSS stop threshold at most 3.5 GiB")
+    throw (IO.userError "guard needs a command and an RSS stop threshold within the user budget with shutdown headroom")
   let path := System.FilePath.mk settings.record
   unless path.isAbsolute && !(← path.pathExists) do
     throw (IO.userError "keep the existing guard record; use a new absolute path")
@@ -176,7 +181,8 @@ def run (settings : Settings) : IO UInt32 := do
       (peakProcesses : Array Json) => Json.mkObj [
     ("state",toJson state),("guardPid",toJson monitor),("childPid",toJson child.pid.toNat),
     ("guardSha256",toJson binarySha),("limitRssKiB",toJson settings.limitRssKiB),
-    ("userCeilingRssKiB",toJson (4194304 : Nat)),("sampledPeakRssKiB",toJson peak),
+    ("userCeilingRssKiB",toJson userCeilingRssKiB),("userCeilingBytes",toJson (5000000000 : Nat)),
+    ("sampledPeakRssKiB",toJson peak),
     ("samples",toJson samples),("reason",toJson reason),("error",toJson failure),
     ("guardTriggered",toJson reason.isSome),("exitCode",toJson code),
     ("ownedPids",toJson activeIds),("peakProcesses",toJson peakProcesses),

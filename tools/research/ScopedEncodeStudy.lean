@@ -19,7 +19,8 @@ def hash (p : System.FilePath) : IO String :=
   return ((← command "/usr/bin/shasum" #["-a","256",p.toString]).splitOn " ").headD ""
 def idle : IO Unit := do
   let rows := (← command "/bin/ps" #["-axo","command="]).splitOn "\n"
-  check (!(rows.any (fun row => row.trimAscii.toString.startsWith ((base/"controller/StudyMain").toString++" guard "))))
+  check (!(rows.any (fun row => row.trimAscii.toString.startsWith ((base/"controller/StudyMain").toString++" guard ") ||
+    row.trimAscii.toString.startsWith ((base/"resource-budget-guard-build/StudyMain").toString++" "))))
     "a resource guard is live"
 def replaceOne (text before after : String) : IO String := do
   check ((text.splitOn before).length == 2) ("scoped encoder source anchor changed: "++before.take 100)
@@ -274,9 +275,9 @@ def sealInstalled : IO Unit := do
   discard <| command "/bin/ln" #[(build/"StudyMain").toString,temporary.toString]
   IO.FS.rename temporary binary
   write (folder/"installed-runtime.json") (Json.mkObj [("sha256",toJson digest),("sameImmutableInode",toJson true)])
-def summarizeStopped (destination : System.FilePath := folder) : IO Unit := do
+def summarizeStopped (destination : System.FilePath := folder) (finished : Bool := false) : IO Unit := do
   idle
-  let input := destination/"stopped-query-stages.json"
+  let input := destination/(if finished then "finished-query-stages.json" else "stopped-query-stages.json")
   let evidence ← read input
   let rows ← IO.ofExcept (evidence.getObjValAs? (Array Json) "rows")
   let mut encodes := 0
@@ -324,8 +325,9 @@ def summarizeStopped (destination : System.FilePath := folder) : IO Unit := do
   let counts := ["keyed-nominations.json","delivery-domain.json","synaptic-delivery.json","search.json"].map fun name =>
     (name,(files.find? (·.1 == name)).map (·.2) |>.getD 0)
   let saved ← IO.ofExcept (evidence.getObjValAs? (Array Json) "savedPartialClientResults")
-  write (destination/"stopped-numerical-complete.json") (Json.mkObj [("inputSha256",toJson (← hash input)),
-    ("stoppedReceipts",toJson rows.size),("completedNumericalStages",toJson completedNumericalStages),
+  write (destination/(if finished then "finished-numerical.json" else "stopped-numerical-complete.json")) (Json.mkObj [
+    ("inputSha256",toJson (← hash input)),(if finished then "receipts" else "stoppedReceipts",toJson rows.size),
+    ("completedNumericalStages",toJson completedNumericalStages),
     ("receivedEncodeReplies",toJson encodes),("memoBeforeAdmission",toJson beforeHits),
     ("memoAfterAdmission",toJson afterHits),("nativeEncodeStartsInReceivedReplies",toJson nativeStarts),
     ("receivedBlockReplies",toJson blocks),("stageCounts",toJson counts),
@@ -333,7 +335,7 @@ def summarizeStopped (destination : System.FilePath := folder) : IO Unit := do
     ("maxScoreAdmissionMs",toJson maxScoreAdmissionMs),
     ("savedClientResults",toJson saved.size),("savedSuccesses",toJson (saved.filter (fun row => row.getObjValD "success" == toJson true)).size),
     ("clientsWithoutSavedResult",evidence.getObjValD "clientsWithoutSavedResult"),
-    ("partialResultsNotFullPhaseRate",toJson true),("newLoadRuns",toJson (0 : Nat))])
+    ("partialResultsNotFullPhaseRate",toJson (!finished)),("newLoadRuns",toJson (0 : Nat))])
 partial def eraseEnded (path : System.FilePath) : IO (Nat × Nat) := do
   let metadata ← path.symlinkMetadata
   if metadata.type == .dir then
@@ -408,7 +410,10 @@ def main (args : List String) : IO Unit := do
   | ["seal-installed"] => ScopedEncodeStudy.sealInstalled
   | ["summarize-stopped"] => ScopedEncodeStudy.summarizeStopped
   | ["summarize-stopped",family] =>
-      ScopedEncodeStudy.check (["scoped-encode","score-prepare"].contains family) "unknown captured numerical family"
+      ScopedEncodeStudy.check (["scoped-encode","score-prepare","score-prepare-budget"].contains family) "unknown captured numerical family"
       ScopedEncodeStudy.summarizeStopped (ScopedEncodeStudy.project/"docs/candidates"/family)
+  | ["summarize-finished",family] =>
+      ScopedEncodeStudy.check (family == "score-prepare-budget") "unknown finished numerical family"
+      ScopedEncodeStudy.summarizeStopped (ScopedEncodeStudy.project/"docs/candidates"/family) true
   | ["cleanup-ended"] => ScopedEncodeStudy.cleanupEnded
   | _ => throw (IO.userError "prepare/setup required")

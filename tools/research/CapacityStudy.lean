@@ -24,7 +24,8 @@ def hash (path : System.FilePath) : IO String :=
 def drained : IO Unit := do
   let all ← command "/bin/ps" #["-axo","command="]
   let guardCommand := (base/"controller/StudyMain").toString++" guard "
-  check (!(all.splitOn "\n").any (fun row => row.trimAscii.toString.startsWith guardCommand)) "native resource guard active"
+  check (!(all.splitOn "\n").any (fun row => row.trimAscii.toString.startsWith guardCommand ||
+    row.trimAscii.toString.startsWith ((base/"resource-budget-guard-build/StudyMain").toString++" "))) "native resource guard active"
   for entry in ← base.readDir do
     if entry.fileName.startsWith "memory-capacity-" && entry.fileName.endsWith ".guard.json" then
       let value ← read entry.path
@@ -275,10 +276,13 @@ def cleanupProfiles : IO Unit := do
   write (study/"retired-profile-duplicates.json") (Json.mkObj [("removed",toJson removed),
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
+def productFamily (family : String) : String :=
+  if family == "score-prepare-budget" then "score-prepare" else family
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare"].contains (productFamily family)) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def productBuild (family : String) : System.FilePath :=
+  let family := productFamily family
   base/(if ["group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare"].contains family then family++"-runtime-build" else family++"-build")
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
@@ -286,13 +290,13 @@ def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare"].contains family then
+  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare"].contains (productFamily family) then
     check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",
     (workspace/"tools/research/DiscoveryStagesStudy.lean").toString,"materialize-native",
-    (base/(family++"-auditor-build")).toString,(base/(name++"-source")).toString,
+    (base/(productFamily family++"-auditor-build")).toString,(base/(name++"-source")).toString,
     (base/(name++"-build")).toString,"tools.research.MemoryCapacity",(base/(name++"-settings.json")).toString]
   IO.FS.writeFile (base/(name++"-source")/"tools/research/MemoryCapacity.lean")
     (← IO.FS.readFile (workspace/"tools/research/MemoryCapacity.lean"))
@@ -302,7 +306,7 @@ def parallelInputs (mode : String) (family : String := "parallel-encoder") : IO 
   check (["small","80"].contains mode) "fixed capacity stage required"
   let input ← read (base/"memory-capacity-small-input.json")
   let root := base/(name++"-"++mode++"-result")
-  let prefixRoot := base/(family++"-prefix")
+  let prefixRoot := base/(productFamily family++"-prefix")
   let old ← IO.ofExcept (input.getObjValAs? (Array (String × Option String)) "environment")
   let changed := old.map fun (name,value) => (name, match name with
     | "EGGSHELL_CONFIG" => some (root/"config.toml").toString
@@ -313,7 +317,7 @@ def parallelInputs (mode : String) (family : String := "parallel-encoder") : IO 
   let topics ← IO.ofExcept (input.getObjValAs? (Array Json) "topics")
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   let cellRoot := System.FilePath.mk ((actual.getObjValAs? String "resultRoot").toOption.getD (base/(family++"-cells-result")).toString)
-  check (cellRoot.parent == some base && (cellRoot.fileName.getD "").startsWith (family++"-cells")) "delivery body directory escaped cohort"
+  check (cellRoot.parent == some base && (cellRoot.fileName.getD "").startsWith (productFamily family++"-cells")) "delivery body directory escaped cohort"
   let topics ← topics.mapM fun row => do
     let topic ← IO.ofExcept (row.getObjValAs? Nat "topic")
     let body := cellRoot/s!"topic-{topic}-chat-0/body.txt"
@@ -560,14 +564,25 @@ def stoppedOwnerAbsent (guard : Json) (owner : Nat) : IO Unit := do
   check (process.exitCode != 0 || process.stdout.trimAscii.toString.startsWith "Z" ||
     process.stdout.trimAscii.toString.startsWith "X") "stopped owner still has a live process"
 def auditStoppedQueries (family : String := "parallel-encoder") (mode : String := "80")
-    (owner : Nat := 22340) : IO Unit := do
+    (owner : Nat := 22340) (afterShutdown : Bool := false) : IO Unit := do
   drained
   discard <| cohort family
   check (["small","80"].contains mode) "unknown stopped capacity stage"
   let destination := workspace/"docs/candidates"/family
   let evidence ← read (destination/("capacity-"++mode++".json"))
   let guard := evidence.getObjValD "guard"
-  stoppedOwnerAbsent guard owner
+  if afterShutdown then
+    check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "reason" == Json.null &&
+      guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "normal drained execution required"
+    for name in ["frontendShutdown","publisherShutdown"] do
+      let stopped := evidence.getObjValD name
+      check (stopped.getObjValD "processExited" == toJson true && stopped.getObjValD "endpointRemoved" == toJson true &&
+        stopped.getObjValD "daemonExitCode" == toJson (0 : Nat)) "normal service shutdown evidence missing"
+      if name == "publisherShutdown" then check (stopped.getObjValD "pid" == toJson owner) "different publisher owner"
+    let process ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString owner,"-o","stat="]}
+    check (process.exitCode != 0 || process.stdout.trimAscii.toString.startsWith "Z" ||
+      process.stdout.trimAscii.toString.startsWith "X") "normal publisher still has a live process"
+  else stoppedOwnerAbsent guard owner
   let targetPhase := if mode == "small" then "phase-16" else "phase-80"
   let earlier := (evidence.getObjValD "cells").getArr?.toOption.getD #[] |>.filter (fun row =>
     row.getObjValD "phase" != toJson targetPhase)
@@ -622,11 +637,13 @@ def auditStoppedQueries (family : String := "parallel-encoder") (mode : String :
   let identities ← partialClients.mapM fun row => IO.ofExcept (row.getObjValAs? Nat "client")
   check (identities.all (· < count) && identities.toList.eraseDups.length == identities.size)
     "stopped client domain is invalid"
-  write (destination/"stopped-query-stages.json") (Json.mkObj [("ownerPid",toJson owner),("mode",toJson mode),
+  if afterShutdown then check (partialClients.size == count) "all final clients required for completed-run audit"
+  write (destination/(if afterShutdown then "finished-query-stages.json" else "stopped-query-stages.json")) (Json.mkObj [
+    ("ownerPid",toJson owner),("mode",toJson mode),("normalShutdown",toJson afterShutdown),
     ("queries",toJson rows.size),("files",toJson (totals.toArray.qsort (fun a b => a.1 < b.1))),
     ("rows",toJson rows),("publisherObservedAfter",toJson firstObserved),("publisherObservedBefore",toJson lastObserved),
     ("savedPartialClientResults",toJson partialClients),("clientsWithoutSavedResult",toJson (count-partialClients.size)),
-    ("partialResultsNotFullPhaseRate",toJson true),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
+    ("partialResultsNotFullPhaseRate",toJson (!afterShutdown)),("actualNewLoadStarted",toJson false),("largeBodiesNotDecoded",toJson true)])
 def cleanupStoppedEndpoints (family mode : String) (owner : Nat) : IO Unit := do
   drained
   discard <| cohort family
@@ -738,6 +755,9 @@ def main (args : List String) : IO Unit := do
   | ["audit-stopped-capacity",family,mode,owner] =>
     let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
     auditStoppedQueries family mode owner
+  | ["audit-finished-capacity",family,mode,owner] =>
+    let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
+    auditStoppedQueries family mode owner true
   | ["cleanup-stopped-capacity",family,mode,owner] =>
     let some owner := owner.toNat? | throw (IO.userError "invalid owner PID")
     cleanupStoppedCapacity family mode owner

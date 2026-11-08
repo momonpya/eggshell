@@ -19,7 +19,8 @@ def hash (p : System.FilePath) : IO String :=
   return ((← command "/usr/bin/shasum" #["-a","256",p.toString]).splitOn " ").headD ""
 def idle : IO Unit := do
   let rows := (← command "/bin/ps" #["-axo","command="]).splitOn "\n"
-  check (!(rows.any (fun row => row.trimAscii.toString.startsWith ((base/"controller/StudyMain").toString++" guard "))))
+  check (!(rows.any (fun row => row.trimAscii.toString.startsWith ((base/"controller/StudyMain").toString++" guard ") ||
+    row.trimAscii.toString.startsWith ((base/"resource-budget-guard-build/StudyMain").toString++" "))))
     "a resource guard is live"
 def replaceOne (text before after : String) : IO String := do
   check ((text.splitOn before).length == 2) ("score preparation source anchor changed: "++before.take 100)

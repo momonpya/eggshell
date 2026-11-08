@@ -843,7 +843,7 @@ def singleRecords : IO Unit := do
 
 def retireSingleCapacity (family : String := "single-canonical") : IO Unit := do
   drained
-  check (["single-canonical","deferred-audit","deferred-assembly","draft-units","scoped-encode","score-prepare"].contains family) "unknown ended capacity helper"
+  check (["single-canonical","deferred-audit","deferred-assembly","draft-units","scoped-encode","score-prepare","score-prepare-budget"].contains family) "unknown ended capacity helper"
   let destination := workspace/"docs/candidates"/family
   let cleanup ← read (destination/"capacity-small-cleanup.json")
   let small ← read (destination/"capacity-small.json")

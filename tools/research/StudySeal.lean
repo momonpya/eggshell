@@ -93,7 +93,8 @@ private def amendResources (args : List String) : IO Unit := do
     ("interruptedSeed2Guard",toJson (← StudyPrepare.artifact (previous / "seed-2.guard.json"))),
     ("seedPlans",toJson plans),("seedGenerationAllowed",toJson false),
     ("downstreamGenerationAllowed",toJson false),("noAutomaticResubmission",toJson true),
-    ("stopRssKiB",toJson ResourceGuard.maximumStopRssKiB),("maxUserRssKiB",toJson (4194304 : Nat)),
+    ("stopRssKiB",toJson ResourceGuard.maximumStopRssKiB),("maxUserRssKiB",toJson ResourceGuard.userCeilingRssKiB),
+    ("maxUserRssBytes",toJson (5000000000 : Nat)),
     ("sameProductRuntime",toJson true),("allDownstreamArmsUseAmendedRunner",toJson true),
     ("state",toJson "resource amendment sealed; seed1 retained with stricter monitor; interrupted seed2 retained separately"),
     ("answeringModelCalls",toJson (0 : Nat)),("productionAdoption",toJson false)])
