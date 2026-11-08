@@ -1,0 +1,80 @@
+--- a/tools/research/PreparedSourceView.lean
++++ b/tools/research/PreparedSourceView.lean
+@@ -6,0 +7 @@
++public import tools.research.MemoGroupFold
+@@ -124,0 +126,13 @@
++
++def groupUnit? (owner : String) (ready : OwnerReady)
++    (spans : List (Nat × Nat)) : Except String (Option UnitRef) := do
++  let requested := (Array.range ready.rows.size).toList.filter fun index =>
++    (ready.rows[index]?).any fun row => row.origins.any fun origin =>
++      origin.binding.owner == owner && spans.any fun (first,limit) =>
++        first < origin.binding.limit && origin.binding.first < limit
++  let selected := hashDistinct (requested ++ (ready.stored.records.filter fun record =>
++    record.any requested.contains).flatten)
++  if selected.isEmpty then return none
++  let rows ← selected.toArray.mapM fun index => requireSome (ready.rows[index]?) "source group escaped its row domain"
++  return some {keys := rows.map (·.key),ranges := bindings owner rows}
++
+@@ -127,16 +141,3 @@
+-  let mut units := ready.units
+-  let mut seen := Std.HashSet.ofArray (ready.units.map (·.ranges))
+-  for spans in groups do
+-    let requested := (Array.range ready.rows.size).toList.filter fun index =>
+-      (ready.rows[index]?).any fun row => row.origins.any fun origin =>
+-        origin.binding.owner == owner && spans.any fun (first,limit) =>
+-          first < origin.binding.limit && origin.binding.first < limit
+-    let selected := hashDistinct (requested ++ (ready.stored.records.filter fun record =>
+-      record.any requested.contains).flatten)
+-    if selected.isEmpty then continue
+-    let rows ← selected.toArray.mapM fun index => requireSome (ready.rows[index]?) "source group escaped its row domain"
+-    let ranges := bindings owner rows
+-    if seen.contains ranges then continue
+-    seen := seen.insert ranges
+-    units := units.push {keys := rows.map (·.key),ranges}
+-  return units
++  let result ← Eggshell.Research.MemoGroupFold.run (groupUnit? owner ready) (·.ranges)
++    ⟨ready.units,Std.HashSet.ofArray (ready.units.map (·.ranges))⟩ groups
++  return result.values
+@@ -143,0 +145,9 @@
++theorem grouped_units_memo_exact (owner : String) (ready : OwnerReady)
++    (groups : List (List (Nat × Nat))) :
++    groupedUnits owner ready groups = (do
++      let result ← Eggshell.Research.MemoGroupFold.reference (groupUnit? owner ready) (·.ranges)
++        ⟨ready.units,Std.HashSet.ofArray (ready.units.map (·.ranges))⟩ groups
++      return result.values) := by
++  unfold groupedUnits
++  rw [Eggshell.Research.MemoGroupFold.run_exact]
++
+@@ -146,0 +157,7 @@
++
++def federatedUnit? (owner : String) (rows : Array RowRef)
++    (indices : List Nat) : Except String (Option UnitRef) := do
++  if indices.isEmpty then return none
++  let selected ← indices.toArray.mapM fun index => requireSome (rows[index]?) "federated unit escaped its rows"
++  return some {keys := selected.map (·.key),ranges := bindings owner selected}
++
+@@ -164,2 +181,4 @@
+-  let requested := groups.map fun spans =>
+-    (Array.range rows.size).toList.filter fun index => (rows[index]?).any fun row =>
++  let initialOut ← Eggshell.Research.MemoGroupFold.reference (federatedUnit? owner rows) (·.ranges)
++    ⟨#[],{}⟩ catalogue
++  let make := fun (spans : List (Nat × Nat)) =>
++    let indices := (Array.range rows.size).toList.filter fun index => (rows[index]?).any fun row =>
+@@ -168,12 +187,4 @@
+-  let candidates := catalogue ++ requested.map (fun indices =>
+-    hashDistinct (indices ++ (records.filter (fun record => record.any indices.contains)).flatten))
+-  let mut seen : Std.HashSet (List (Nat × Nat)) := {}
+-  let mut units := #[]
+-  for indices in candidates do
+-    if indices.isEmpty then continue
+-    let selected ← indices.toArray.mapM fun index => requireSome (rows[index]?) "federated unit escaped its rows"
+-    let ranges := bindings owner selected
+-    if seen.contains ranges then continue
+-    seen := seen.insert ranges
+-    units := units.push {keys := selected.map (·.key),ranges}
+-  return units
++    federatedUnit? owner rows (hashDistinct (indices ++
++      (records.filter (fun record => record.any indices.contains)).flatten))
++  let result ← Eggshell.Research.MemoGroupFold.run make (·.ranges) initialOut groups
++  return result.values
