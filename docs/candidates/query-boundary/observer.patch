@@ -1,0 +1,25 @@
+--- /Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SearchCpuThin.lean	2026-11-08 21:43:13
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/query-boundary-observer.lean	2026-11-09 02:00:58
+@@ -185,15 +185,13 @@
+         discard <| hook context session "SessionStart" "" s!"query-{index}-start"
+         sessions := sessions.push session
+       let observer ← IO.asTask (do
+-        if rssOnly || traceOnly then return
+-        IO.sleep 500
+-        for round in [:3] do
+-          let result ← IO.Process.output {
+-            cmd := "/usr/bin/sample"
+-            args := #[toString publisher.pid.toNat,"1","10","-mayDie","-file",(root/s!"cpu-{round}.txt").toString] }
+-          write (root/s!"cpu-{round}.json") (Json.mkObj [("exitCode",toJson result.exitCode.toNat),
+-            ("stdout",toJson result.stdout),("stderr",toJson result.stderr),
+-            ("publisherPid",endpoint.getObjValD "pid")])) .dedicated
++        IO.sleep 2500
++        for round in [:2] do
++          let tasks ← #[("publisher",publisher.pid.toNat),("frontend",frontend.pid.toNat)].mapM fun (role,pid) => IO.asTask (do
++            let started ← IO.monoMsNow
++            let result ← IO.Process.output {cmd := "/usr/bin/sample",args := #[toString pid,"1","10","-mayDie","-file",(root/s!"cpu-{role}-{round}.txt").toString]}
++            write (root/s!"cpu-{role}-{round}.json") (Json.mkObj [("pid",toJson pid),("role",toJson role),("startedMs",toJson started),("finishedMs",toJson (← IO.monoMsNow)),("exitCode",toJson result.exitCode.toNat),("stderr",toJson result.stderr)])) .dedicated
++          for task in tasks do IO.ofExcept (← IO.wait task)) .dedicated
+       let tasks ← (Array.range 4).mapM fun index => IO.asTask (do
+         let topic := topics[index%3]!
+         hook context sessions[index]! "UserPromptSubmit" (← field topic "prompt") s!"query-{index}" (some topic)) .dedicated
