@@ -1,0 +1,26 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-assembly-source/tools/research/SingleCanonicalChecks.lean	2026-11-08 12:36:30
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/draft-units-source/tools/research/SingleCanonicalChecks.lean	2026-11-08 14:07:56
+@@ -74,8 +74,22 @@
+     let some declaration := env.find? target | throwError "missing actual producer or consumer"
+     let some body := declaration.value? | throwError "missing producer or consumer implementation"
+     let required := if target == ``Publication.Client.SourceBatch.fetch then ``Delivery.Merged.prepare
+-      else ``PendingRendering.materializeReport
++      else ``PendingRendering.materializeDraftReport
+     unless body.getUsedConstants.contains required do throwError "actual producer/consumer bypasses merged rows"
++  for (target,dependency) in [
++      (``PreparedRendering.usingService,``PendingRendering.queryDraft?),
++      (``PendingRendering.queryDraft?,``PendingRendering.queryDraftWith),
++      (``PendingRendering.queryDraft?,``DraftUnit.pricing),
++      (``PendingRendering.materializeDraftReport,``materializeDraftFetched),
++      (``materializeDraftFetched,``materializeDraft),
++      (``materializeDraft,``advanceDraft),(``materializeDraft,``finishMaterialized),
++      (``advanceDraft,``insertDraft)] do
++    let some body := (env.find? target).bind (·.value?) | throwError "missing draft consumer"
++    unless body.getUsedConstants.contains dependency do throwError "actual draft path is disconnected"
++  for target in [``SliceDraft.pricing,``emitDraft,``advanceDraft,``PendingRendering.queryDraftWith] do
++    let some body := (env.find? target).bind (·.value?) | throwError "missing nonrendering draft stage"
++    for forbidden in [``SliceDraft.realize,``DraftUnit.realize,``ContextDelivery.keys,``ContextDelivery.render] do
++      if body.getUsedConstants.contains forbidden then throwError "draft stage renders an unselected whole unit"
+   let some (.inductInfo info) := env.find? ``Delivery.Merged | throwError "merged row type missing"
+   for ctor in info.ctors do
+     let some declaration := env.find? ctor | throwError "merged row constructor missing"

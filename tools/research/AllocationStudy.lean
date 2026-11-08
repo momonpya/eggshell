@@ -843,7 +843,7 @@ def singleRecords : IO Unit := do
 
 def retireSingleCapacity (family : String := "single-canonical") : IO Unit := do
   drained
-  check (["single-canonical","deferred-audit","deferred-assembly"].contains family) "unknown ended capacity helper"
+  check (["single-canonical","deferred-audit","deferred-assembly","draft-units"].contains family) "unknown ended capacity helper"
   let destination := workspace/"docs/candidates"/family
   let cleanup ← read (destination/"capacity-small-cleanup.json")
   let small ← read (destination/"capacity-small.json")
@@ -868,8 +868,14 @@ def retireSingleCapacity (family : String := "single-canonical") : IO Unit := do
         "another native product still depends on the ended capacity helper"
   let paths := #[root,base/(family++"-capacity-source"),base/(family++"-capacity-small-result"),
     base/(family++"-capacity-80-result")]
+  let witness := root/"tools_research_MemoryCapacity.source"
+  let entry := workspace/"tools/research/MemoryCapacity.lean"
+  let native : String × Array (String × String) ← IO.ofExcept (fromJson? (← read witness))
+  check (native.1 == (← IO.FS.readFile entry)) "keep the actual thin client source in the repository"
   let record := Json.mkObj [("runtimeSha256",toJson digest),("removed",toJson (paths.map (·.toString))),
-    ("nativeEntrySource",← read (root/"tools_research_MemoryCapacity.source")),
+    ("nativeEntryWitnessSha256",toJson (← hash witness)),("nativeEntryLeanSha256",toJson (← hash entry)),
+    ("nativeEntrySourceInRepository",toJson "tools/research/MemoryCapacity.lean"),
+    ("nativeEntrySourceMatchesRepository",toJson true),
     ("noOtherNativeResponseReferencesRemovedRoot",toJson true),
     ("productParentOriginalDbProjectCacheModelRetained",toJson true),("archived",toJson false)]
   write (destination/"retired-capacity-helper.json") (record.setObjVal! "completed" (toJson false))

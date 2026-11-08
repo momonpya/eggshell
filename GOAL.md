@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-2026-11-08更新。目標は未達。直近のdeferred-assemblyは配送関数全体の等式を証明し、全6実hookで必要原文32/32・親本文一致・意味/シナプス/packet/ACK完了、7,281〜8,687ms・残存0。新候補の4並行は全件完了・6,121msだが、16並行は関連RSS3,678,320KiBで保護停止した。文脈の再描画だけを除けば容量が解消するという仮説は支持されず、80は開始しない。80人継続利用、成長する複数DB、NAS、総token・品質の採用条件は未達・未検証。目的と合格条件は変更しない。実行計画は[team-scale-plan.md](docs/team-scale-plan.md)。現在地と次の順序は本書の一か所に置き、過去の詳細は各候補の記録とGit履歴を参照する。
+2026-11-08更新。目標は未達。直近のdraft-unitsは全producer/query/materializerの等式、299 native object・source差分・実呼び出し先を確認し、全6実hookで必要原文32/32・親本文一致、7,175〜8,663msだった。薄い4/16並行は全件配送・6,013/14,704ms、最大3,455,024KiBで通った。しかし80並行は最大3,596,992KiB・保護停止なしでも29,444msで期待本文/ACK 0/80、72件が意味経路の期限切れ、8件失敗。終了済みloadは再試行せず、保存済み数値RPCからencode受付待ちp50 6,097msに対しkernel往復p50 206msと確認した。共有モデルとは別に残る2件の受付制限とquery cacheの寿命を次に調べる。背景保存のstate.guard警告も未解決。80人継続利用、成長する複数DB、NAS、総token・品質は未達・未検証。目的と合格条件は変更しない。実行計画は[team-scale-plan.md](docs/team-scale-plan.md)。現在地と次の順序は本書の一か所に置き、過去の詳細は各候補の記録とGit履歴を参照する。
 
 ## 目的と固定する境界
 
@@ -41,8 +41,9 @@ runtime a2ed21ff…の全6実hookは必要原文32/32・親本文byte一致・�
 
 1. [group-reuse](docs/candidates/group-reuse/README.md)の全6実hookは必要原文32/32・親本文byte一致・意味/シナプス/packet/ACK完了、8,229〜9,445ms。4並行は4/4・6,711msだが、16並行は3,677,664KiBで保護停止し、最終成功が保存されたのは2件、14件は結果なし。後続の同じbinary・保存済み3問の別process診断では、準備のみ211,680KiB、実際の選択あり225,696KiBで、3問とも全選択が一致した。選択器だけを容量増大の主因とする根拠はない。通常runtimeで3問primeと4並行のRSSを採ると、本文とACKは全件一致し、publisherはprime後307,344KiBから最大608,944KiBになった。選択と返送にまたがる観測で、リークや生存heapの証明ではない。7問い合わせに対するsource-planも7件で、反復solveは観測していない。
 2. [deferred-assembly](docs/candidates/deferred-assembly/README.md)は、`materialize`の本文・keys生成を最終familyごとの一回へ移し、関数全体の等式とcompiler rewriteを証明した。親9cのnative witnessから作ったruntime `77aa68da…`の298 object、source差分、matching auditorの全coreが整合し、全6実hookは必要原文32/32・親本文byte一致だった。しかし同じ薄い負荷clientの4並行は4/4・6,121ms、16並行は3,678,320KiBで保護停止した。publisher1,718,384/model1,131,040/frontend319,568KiB。全16がdelivery-domainへ到達し7件にsynaptic記録があるが、保存された最終成功は1件、15件は結果なし。容量解消の仮説は支持されず未採用。80と同じ16再試行は行わない。終了済みcapacity実行体・sourceコピー・出力・所有session/receipt/endpointはarchiveせず削除した。
-3. 次は現行`PendingRendering.query?`と`LinearNodes.step`で、選択前に全genericの本文と文字列キーを作る経路を、既存の出版済みmetadata/cacheと照合する。コード上の重複計算の確認であり、RSSの主因と確定してはいない。選択前に必要な情報と、選択後だけ必要な本文の境界を見直す。既存の型付きquery、原文取得、出版済みextentを再実装せず、重いDAG cache、allocator fixture、失敗済みrecord逆引き、重み調整、寿命だけの変更を再試行しない。
-4. 次候補もnative閉包・source差分・compiler rewrite、全6実hook、同じ予算/順位/domain/期限/モデル/資源上限の4/16を順に検査し、通してから80へ進む。安定したruntime SHAで空DB/new chatからseedを作り、題材1/2/3と2周目、事前固定した現行/候補の同数複数反復を実施する。キャッシュ生成/保存完了・必要原文・総token・品質を揃える。以下A〜Fの80人持続利用・増大project・NASの契約まで達成して初めて完了とする。BLAKE3のインライン化は未接続で、worker/compute枠だけの追加や`basePieceAccept`の区間意味の変更でゲートを緩めない。
+3. [draft-units](docs/candidates/draft-units/README.md)では、選択前に全genericの完成本文とキーを作る経路を、断片と描画属性を保持するdraftへ分けた。全producerの候補・順序・無効範囲、価格/payload同一性/被覆、完全なquery、最終materializerとエラー報告の等式がLeanで通り、完成本文は最終familyごとに一回だけ作る。a42fの299 object、source差分、実呼び出し先、監査driverの全core、全6実hookの必要原文32/32・親77の全文byte一致を確認した。4/16並行も全件完了したが、80は保護停止なしで期待本文/ACK 0/80、最終結果は全件保存された。数値の初段は80/80完了、focusは72/80完了であり、vector採点の全滅とはしない。通常終了したloadに保護停止専用の監査を使った呼び出しは拒否され、その後は通常の保存済みRPC集計を使った。終了したclient/sourceコピー/出力/所有session/receiptはarchiveせず削除した。
+4. 次は`Numerical.Backend.encode`の受付待ちと、その後の期限消費を扱う。共有モデルの所有は1つ、計算受付は`EncoderPool.capacity ≤ 2`、`SharedEncoder.Core.register`もpending 2件という別の制限がある。80時に受付待ちp50 6,097ms、kernel往復p50 206msだった。ORTの非同期呼び出しと既存query cacheの寿命・同一入力の共有を確認し、モデル所有と計算受付を分ける。無用な待ち/重複処理をLeanで除く方向とし、単なる枠数変更・モデル複製・期限延長で同じ80を再実行しない。背景保存は新tool receiptの有無の前にstate guardを読む経路があるが、`readState?`は破損時に書くのでguardの単純削除はしない。既存の型付きquery/原文取得/出版済みextent、DAG cache、失敗済みrecord逆引き、重み調整を作り直さない。
+5. 次候補もnative閉包・source差分・実呼び出し先、全6実hook、同じ予算/順位/domain/期限/資源上限の4/16を順に検査し、通してから80へ進む。安定したruntime SHAで空DB/new chatからseedを作り、題材1/2/3と2周目、事前固定した現行/候補の同数複数反復を実施する。保存と索引完了・必要原文・総token・品質を揃える。以下A〜Fの80人持続利用・増大project・NASの契約まで達成して初めて完了とする。
 
 回答モデル0、有料比較0/18。本体・README実績・releaseには未採用。proof/部品/単独配送の成功を、総token改善や80人8時間の合格に代用しない。
 
