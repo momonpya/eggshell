@@ -127,7 +127,11 @@ def run (inputPath : System.FilePath) : IO Unit := do
     (toJson #[runtime,"search-provider"]).compress++"\n[eggs]\nwork = "++
     (input.getObjValD "project").compress++"\n[profiles.work]\nread = [\"work\"]\nhandoff_chars = 500000\n")
   let topics ← IO.ofExcept (input.getObjValAs? (Array Json) "topics")
-  check (topics.size == 3 && input.getObjValD "counts" == toJson (#[(4 : Nat)])) "fixed three-topic diagnostic required"
+  let captureOne := input.getObjValD "captureOne" == toJson true
+  check (topics.size == 3 && input.getObjValD "counts" == toJson (if captureOne then #[(1 : Nat)] else #[4]))
+    "fixed three-topic diagnostic or one captured packet required"
+  if captureOne then
+    check (environment.contains ("EGGSHELL_PACKET_INSPECTION",some "1")) "single packet inspection requires a verified observer runtime"
   for topic in topics do
     let path ← field topic "body"
     check (topic.getObjValD "sha256" == toJson (← hash (.mk path))) "frozen body changed"
@@ -154,6 +158,22 @@ def run (inputPath : System.FilePath) : IO Unit := do
     let frontend ← spawn context #["codex-daemon","search-cpu-host"]
     try
       discard <| ready frontend (data/"daemon.json")
+      if captureOne then
+        let session := "cpu-capture-"++(← digest root.toString)
+        discard <| hook context session "SessionStart" "" "capture-start"
+        let result ← hook context session "UserPromptSubmit" (← field topics[0]! "prompt") "capture" (some topics[0]!)
+        let receipt ← field result "receipt"
+        let observation ← read (data/"receipts"/receipt/"packet-inspection.json")
+        check ((observation.getObjValD "data").getObjValD "packetCaptured" == toJson true)
+          "the actual runtime did not produce packet metadata"
+        let expected ← IO.ofExcept (input.getObjValAs? (Array (String × String)) "sourceFiles")
+        let project : System.FilePath := .mk (← field input "project")
+        for (name,sha) in expected do check ((← hash (project/name)) == sha) "packet capture changed original bytes"
+        write (root/"report.json") (Json.mkObj [("runtimeSha256",input.getObjValD "runtimeSha256"),
+          ("query",result),("packetObservation",observation),("singleCapturedPacketMetadata",toJson true),("originalSourceFilesUnchanged",toJson true),
+          ("frozenBodyByteEqual",toJson true),("rawReplyObservationAffectsTiming",toJson true),
+          ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+        return
       for index in [:topics.size] do
         let session := "cpu-prime-"++(← digest (root.toString++toString index))
         discard <| hook context session "SessionStart" "" s!"prime-{index}-start"

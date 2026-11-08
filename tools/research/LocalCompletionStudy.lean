@@ -349,9 +349,26 @@ def stage (receipt : Json) (name : String) : IO Json := do
   let some selected := stages.find? (fun item => item.getObjValD "name" == toJson name) |
     throw (IO.userError ("missing actual delivery stage "++name))
   return (selected.getObjValD "record").getObjValD "data"
+def deliveryParent : String → String
+  | "support-presence" => "typed-bindings-cells-result"
+  | "typed-bindings" => "remaining-source-cells-result"
+  | "remaining-source" => "score-prepare-cells-result"
+  | "score-prepare" => "scoped-encode-cells-result"
+  | "scoped-encode" => "draft-units-cells-result"
+  | "draft-units" => "deferred-assembly-cells-result"
+  | "deferred-assembly" => "group-reuse-cells-result"
+  | "group-reuse" => "deferred-audit-cells2-result"
+  | "deferred-audit" => "single-canonical-cells-result"
+  | "rendering-lifetime" | "single-canonical" => "canonical-order-cells-result"
+  | "allocation-probe" | "canonical-order" => "resident-source-cells2-result"
+  | "resident-source" => "typed-plan-cells-result"
+  | "typed-plan" => "typed-fetch-cells2-result"
+  | "typed-fetch" => "delivery-key-sets-cells-result"
+  | "delivery-key-sets" => "selection-membership-cells-result"
+  | _ => "encoder-events-cells-result"
 def collectCells (family : String := "local-completion") (attempt : Nat := 1) : IO Unit := do
   drained
-  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings"].contains family) "known completed delivery family required"
+  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings","support-presence"].contains family) "known completed delivery family required"
   let folder := workspace/"docs/candidates"/family
   check (attempt > 0) "positive delivery attempt required"
   let guardTag := family++"-cells"++toString attempt
@@ -364,8 +381,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
   for topic in [1:4] do
     for repetition in [:2] do
       let cell := root/s!"topic-{topic}-chat-{repetition}"
-      let parent := if family == "typed-bindings" then "remaining-source-cells-result" else if family == "remaining-source" then "score-prepare-cells-result" else if family == "score-prepare" then "scoped-encode-cells-result" else if family == "scoped-encode" then "draft-units-cells-result" else if family == "draft-units" then "deferred-assembly-cells-result" else if family == "deferred-assembly" then "group-reuse-cells-result" else if family == "group-reuse" then "deferred-audit-cells2-result" else if family == "deferred-audit" then "single-canonical-cells-result" else if ["rendering-lifetime","single-canonical"].contains family then "canonical-order-cells-result" else if ["allocation-probe","canonical-order"].contains family then "resident-source-cells2-result" else if family == "resident-source" then "typed-plan-cells-result" else if family == "typed-plan" then "typed-fetch-cells2-result" else if family == "typed-fetch" then "delivery-key-sets-cells-result"
-        else if family == "delivery-key-sets" then "selection-membership-cells-result" else "encoder-events-cells-result"
+      let parent := deliveryParent family
       let parentBody := base/parent/s!"topic-{topic}-chat-{repetition}"/"body.txt"
       check ((← IO.FS.readBinFile (cell/"body.txt")) == (← IO.FS.readBinFile parentBody)) "actual delivery body changed"
       let receipt ← read (cell/"receipt.json")
@@ -376,7 +392,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
       let synapse ← stage receipt "synaptic-delivery.json"
       let keyed ← stage receipt "provider-keyed-inputs.json"
       let receiptBytes := (← (cell/"receipt.json").metadata).byteSize.toNat
-      if ["typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings"].contains family then
+      if ["typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings","support-presence"].contains family then
         check (synapse.getObjValD "sharedRows" == Json.null &&
           (synapse.getObjValAs? Nat "sharedWitnessesChecked").toOption.getD 0 > 0)
           "unused diagnostic row array remains or source witness verification disappeared"

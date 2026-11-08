@@ -1,0 +1,14 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -18,0 +19 @@
++public import tools.research.SupportProjection
+@@ -8075,5 +8076,4 @@
+-      let keys := fitted.flatMap (·.keys) |>.eraseDups
+-      let shared := fitted.flatMap fun slice => slice.sourceOwners
+-      sourceKeys.filterMap fun (source,whole,prefixKey) =>
+-        if keys.contains whole || keys.any (·.startsWith prefixKey) ||
+-            shared.contains (relationKey source.owner.relation) then some source else none
++      Research.SupportPresence.referenceProject (fitted.flatMap (·.keys))
++        (fitted.flatMap fun slice => slice.sourceOwners) sourceKeys
++        (fun (source,whole,prefixKey) => (whole,prefixKey,relationKey source.owner.relation))
++        (fun (source,_,_) => source)

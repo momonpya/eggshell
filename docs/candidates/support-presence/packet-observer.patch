@@ -1,0 +1,6 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -9,0 +10 @@
++public import tools.research.PacketInspection
+@@ -632,0 +634 @@
++  try PacketInspection.record (optionalString input "_eggshell_receipt") handoff catch _ => pure ()
