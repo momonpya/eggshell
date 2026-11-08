@@ -276,17 +276,17 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
 def productBuild (family : String) : System.FilePath :=
-  base/(if ["group-reuse","deferred-assembly","draft-units"].contains family then family++"-runtime-build" else family++"-build")
+  base/(if ["group-reuse","deferred-assembly","draft-units","scoped-encode"].contains family then family++"-runtime-build" else family++"-build")
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
   let name ← cohort family
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units"].contains family then
+  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode"].contains family then
     check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
@@ -426,12 +426,16 @@ def collectParallel (mode : String) (family : String := "parallel-encoder") : IO
       cacheStats := cacheStats.push (Json.mkObj [("name",toJson entry.fileName),
         ("record",← readDiagnostic entry.path),("sha256",toJson (← hash entry.path))])
   let destination := workspace/"docs/candidates"/family
+  let stderrPath := base/(tag++"1.stderr")
+  let stderrCaptured ← stderrPath.pathExists
   write (destination/("capacity-"++mode++".json")) (Json.mkObj [
     ("guard",guard),("input",← read (base/(tag++"-input.json"))),
     ("phases",toJson phases),("cells",toJson cells),("diagnosticFiles",toJson files),("cacheStats",toJson cacheStats),
     ("report",reportValue),("frontendShutdown",frontendValue),("publisherShutdown",publisherValue),
+    ("stderrFileCaptured",toJson stderrCaptured),
     ("eightyStarted",toJson (mode == "80")),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
-  IO.FS.writeFile (destination/("capacity-"++mode++"-stderr.txt")) (← IO.FS.readFile (base/(tag++"1.stderr")))
+  if stderrCaptured then
+    IO.FS.writeFile (destination/("capacity-"++mode++"-stderr.txt")) (← IO.FS.readFile stderrPath)
 def cleanupParallel (mode : String) (family : String := "parallel-encoder") : IO Unit := do
   drained
   discard <| cohort family

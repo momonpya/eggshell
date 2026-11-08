@@ -843,13 +843,14 @@ def singleRecords : IO Unit := do
 
 def retireSingleCapacity (family : String := "single-canonical") : IO Unit := do
   drained
-  check (["single-canonical","deferred-audit","deferred-assembly","draft-units"].contains family) "unknown ended capacity helper"
+  check (["single-canonical","deferred-audit","deferred-assembly","draft-units","scoped-encode"].contains family) "unknown ended capacity helper"
   let destination := workspace/"docs/candidates"/family
   let cleanup ← read (destination/"capacity-small-cleanup.json")
   let small ← read (destination/"capacity-small.json")
   let successful := (small.getObjValD "report").getObjValD "allPhasesPassed" == toJson true
+  let guard := small.getObjValD "guard"
   check ((cleanup.getObjValD "completed" == toJson true || successful) &&
-    (← (destination/(family++"-capacity-small1.json")).pathExists))
+    guard.getObjValD "state" == toJson "finished" && guard.getObjValD "ownedPids" == toJson (#[] : Array Nat))
     "preserve terminal evidence and clean owned sessions first"
   if successful then
     let large ← read (destination/"capacity-80.json")
