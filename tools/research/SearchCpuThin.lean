@@ -15,6 +15,13 @@ def digest (text : String) : IO String := do
   let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256"]} (some text)
   check (result.exitCode == 0) "cannot bind diagnostic request"
   return (result.stdout.splitOn " ").headD ""
+def rssSample (pid : Nat) : IO Json := do
+  let began ← IO.monoMsNow
+  let result ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","rss="]}
+  let finished ← IO.monoMsNow
+  return Json.mkObj [("beganMs",toJson began),("finishedMs",toJson finished),("pid",toJson pid),
+    ("rssKiB",toJson (if result.exitCode == 0 then result.stdout.trimAscii.toString.toNat? else none)),
+    ("exitCode",toJson result.exitCode.toNat)]
 structure Context where
   input : Json
   runtime : String
@@ -92,6 +99,7 @@ def hook (context : Context) (session event prompt label : String) (expected : O
     check (acknowledgement.getObjValD "rpcCompleted" == toJson true &&
       acknowledgement.getObjValD "offerAccepted" == toJson true) "sampled original handoff ACK was rejected"
   let value := Json.mkObj [("session",toJson session),("receipt",toJson receipt),("event",toJson event),
+    ("startedMs",toJson began),("finishedMs",toJson (← IO.monoMsNow)),
     ("elapsedMs",toJson ((← IO.monoMsNow)-began)),("bodyBytes",toJson body.utf8ByteSize),
     ("frozenBodyByteEqual",toJson expected.isSome),("ackCommandExitCode",toJson ack.exitCode.toNat)]
   write (context.root/(label++".json")) value
@@ -117,6 +125,19 @@ def run (inputPath : System.FilePath) : IO Unit := do
     let path ← field topic "body"
     check (topic.getObjValD "sha256" == toJson (← hash (.mk path))) "frozen body changed"
   let publisher ← spawn context #["codex-publication-daemon"]
+  let rssOnly := input.getObjValD "rssOnly" == toJson true
+  let samplingStopped ← IO.mkRef false
+  let rssRows ← IO.mkRef (#[] : Array Json)
+  let rssTask ← if rssOnly then do
+      let task ← IO.asTask (do
+        while !(← samplingStopped.get) do
+          let rows ← rssRows.get
+          check (rows.size < 4096) "bounded RSS observation exceeded its sample count"
+          let row ← rssSample publisher.pid.toNat
+          rssRows.modify (·.push row)
+          IO.sleep 50) .dedicated
+      pure (some task)
+    else pure none
   try
     let endpoint ← ready publisher (data/"publisher/endpoint.json")
     let warm ← runCommand context #["egg","warm","work"]
@@ -136,6 +157,7 @@ def run (inputPath : System.FilePath) : IO Unit := do
         discard <| hook context session "SessionStart" "" s!"query-{index}-start"
         sessions := sessions.push session
       let observer ← IO.asTask (do
+        if rssOnly then return
         IO.sleep 500
         for round in [:3] do
           let result ← IO.Process.output {
@@ -155,10 +177,19 @@ def run (inputPath : System.FilePath) : IO Unit := do
       write (root/"report.json") (Json.mkObj [("runtimeSha256",input.getObjValD "runtimeSha256"),
         ("queries",toJson results),("allFourFrozenBodiesByteEqual",toJson true),("originalSourceFilesUnchanged",toJson true),
         ("usesActualUnmodifiedProduct",toJson true),("cliDiagnosticNotNativeCapacityHarness",toJson true),
-        ("cpuSamplingPerturbsTiming",toJson true),("performanceImprovementEstablished",toJson false),
+        ("rssOnly",toJson rssOnly),("cpuSamplingPerturbsTiming",toJson (!rssOnly)),
+        ("rssSamplingPerturbsTiming",toJson rssOnly),("performanceImprovementEstablished",toJson false),
         ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
     finally stop context frontend #["codex-daemon","shutdown"] (root/"frontend-shutdown.json")
-  finally stop context publisher #["publication-control","shutdown"] (root/"publisher-shutdown.json")
+  finally
+    samplingStopped.set true
+    if let some task := rssTask then
+      let result ← IO.wait task
+      write (root/"rss-timeline.json") (Json.mkObj [("samples",toJson (← rssRows.get)),
+        ("publisherPid",toJson publisher.pid.toNat),
+        ("samplingError",toJson (match result with | .ok _ => none | .error error => some error.toString)),
+        ("sampledRssNotLiveHeap",toJson true)])
+    stop context publisher #["publication-control","shutdown"] (root/"publisher-shutdown.json")
 end SearchCpuThin
 def main (args : List String) : IO Unit := do
   let [input] := args | throw (IO.userError "CPU observation INPUT")

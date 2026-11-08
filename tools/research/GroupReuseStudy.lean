@@ -139,13 +139,41 @@ def setup (mode tag : String) : IO Unit := do
       (base/(if mode == "build" then "group-reuse-settings.json" else if mode == "structure-build" then
         "group-reuse-structure-settings.json" else s!"group-reuse-{mode.dropEnd 6}.json")).toString]
     else do
-      if mode == "structure" then
+      if mode == "assembly-proof" then
+        pure #[(compiler/"bin/lean").toString,"-j1","-M768",
+          (workspace/"tools/research/DeferredAssembly.lean").toString]
+      else if mode == "rss" then
+        let input ← read (base/"group-reuse-rss-input.json")
+        let environment ← IO.ofExcept (input.getObjValAs? (Array (String × Option String)) "environment")
+        let unset := environment.toList.flatMap fun (name,value) => if value.isNone then ["-u",name] else []
+        pure (#["/usr/bin/env"]++unset.toArray++#["LEAN_NUM_THREADS=1"]++
+          environment.filterMap (fun (name,value) => value.map (fun value => name++"="++value))++
+          #[(compiler/"bin/lean").toString,"-j1","-M768","--run",
+            (workspace/"tools/research/SearchCpuThin.lean").toString,(base/"group-reuse-rss-input.json").toString])
+      else if ["select-prepare","select-choose"].contains mode then
+        let plan ← read (folder/"selection-diagnostic-plan.json")
+        check (plan.getObjValD "fixtureSha256" == toJson (← hash (base/"selection-profile-inputs/selector-fixture.json")))
+          "saved selector fixture changed after declaring the diagnostic pair"
+        let proof ← read (folder/"selection-subset-sources.json")
+        check ((← read (folder/"selection-closure.json")).getObjValD "consistent" == toJson true &&
+          proof.getObjValD "nativeSubsetSourcesExact" == toJson true &&
+          proof.getObjValD "observerSha256" == toJson (← hash (base/"group-reuse-structure-build/StudyMain")) &&
+          proof.getObjValD "productSha256" == toJson (← hash (base/"group-reuse-runtime-build/StudyMain")))
+          "selection observer must bind the actual product and observer binaries"
+        let condition := if mode == "select-choose" then "choose" else "prepare"
+        pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+          "EGGSHELL_DATA_ROOT="++(base/"real-source-search-read-trial-result/data").toString,
+          (base/"group-reuse-structure-build/StudyMain").toString,condition,
+          (base/"real-source-search-read-trial-result/work.egg").toString,
+          (base/"selection-profile-inputs/selector-fixture.json").toString,
+          (base/("group-reuse-select-"++condition++".json")).toString]
+      else if mode == "structure" then
         check ((← read (folder/"structure-closure.json")).getObjValD "consistent" == toJson true &&
           (← read (folder/"structure-subset-sources.json")).getObjValD "nativeSubsetSourcesExact" == toJson true)
           "diagnostic subset must match the actual selector source"
         pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
           "EGGSHELL_DATA_ROOT="++(base/"real-source-search-read-trial-result/data").toString,
-          (base/"group-reuse-structure-build/StudyMain").toString,
+          (base/"group-reuse-structure-build/StudyMain").toString,"prepare",
           (base/"real-source-search-read-trial-result/work.egg").toString,
           (base/"selection-profile-inputs/selector-fixture.json").toString,
           (base/"group-reuse-structure.json").toString]
@@ -475,6 +503,245 @@ def repairStructureMap : IO Unit := do
     ("productCodeChanged",toJson false),("actualNewHookCalls",toJson (0 : Nat))])
   write path (previous.setObjVal! "objectModules" (toJson selected.toString))
 
+def prepareSelection : IO Unit := do
+  drained
+  let plan := folder/"selection-diagnostic-plan.json"
+  check (!(← plan.pathExists)) "preserve the predeclared diagnostic pair"
+  let previous ← read (folder/"structure-subset-sources.json")
+  check (previous.getObjValD "observerSha256" == toJson (← hash (base/"group-reuse-structure-build/StudyMain")))
+    "the preceding diagnostic binary changed before retirement"
+  let expected := (← read (folder/"selector-structure.json")).getObjValD "result"
+  let files ← IO.ofExcept (expected.getObjValAs? (Array (String × String)) "sourceFiles")
+  for (name,sha) in files do
+    check ((← hash (base/"real-source-search-read-trial-result/work.egg"/name)) == sha)
+      "original input changed before the diagnostic pair"
+  write plan (Json.mkObj [("previousGoalTurn",toJson "progress: six actual deliveries, stopped capacity gate and selector cardinalities"),
+    ("order",toJson #["prepare","choose"]),("freshProcessesPerCondition",toJson (1 : Nat)),
+    ("allThreeQueriesInEachCondition",toJson true),
+    ("fixtureSha256",toJson (← hash (base/"selection-profile-inputs/selector-fixture.json"))),
+    ("productSha256",previous.getObjValD "productSha256"),
+    ("retiredObserverSha256",previous.getObjValD "observerSha256"),("sourceFiles",toJson files),
+    ("difference",toJson "execute the same current choose kernel and original expansion, or stop after preparation"),
+    ("sameBinaryForBothConditions",toJson true),("answeringModelCalls",toJson (0 : Nat)),
+    ("notAFullHookCapacityOrAdoptionComparison",toJson true)])
+  IO.FS.writeFile (source/"tools/research/SelectorStructure.lean")
+    (← IO.FS.readFile (workspace/"tools/research/SelectorStructure.lean"))
+
+def collectSelection : IO Unit := do
+  drained
+  let plan ← read (folder/"selection-diagnostic-plan.json")
+  check (plan.getObjValD "fixtureSha256" == toJson (← hash (base/"selection-profile-inputs/selector-fixture.json")))
+    "selector fixture changed during the diagnostic pair"
+  let proof ← read (folder/"selection-subset-sources.json")
+  check (proof.getObjValD "nativeSubsetSourcesExact" == toJson true &&
+    proof.getObjValD "observerSha256" == toJson (← hash (base/"group-reuse-structure-build/StudyMain")))
+    "diagnostic binary changed between conditions"
+  let prepared ← read (base/"group-reuse-select-prepare.json")
+  let chosen ← read (base/"group-reuse-select-choose.json")
+  check (prepared.getObjValD "selectionExecuted" == toJson false &&
+    chosen.getObjValD "selectionExecuted" == toJson true &&
+    prepared.getObjValD "sourceFiles" == plan.getObjValD "sourceFiles" &&
+    chosen.getObjValD "sourceFiles" == plan.getObjValD "sourceFiles" &&
+    chosen.getObjValD "originalSourceUnchanged" == toJson true) "diagnostic conditions changed source or execution"
+  let first ← IO.ofExcept (prepared.getObjValAs? (Array Json) "queries")
+  let second ← IO.ofExcept (chosen.getObjValAs? (Array Json) "queries")
+  check (first.size == 3 && second.size == 3) "preserve all three diagnostic queries"
+  for (before,after) in first.zip second do
+    check ((before.getObjValD "structure").setObjVal! "selection" Json.null ==
+      (after.getObjValD "structure").setObjVal! "selection" Json.null &&
+      ((after.getObjValD "structure").getObjValD "selection").getObjValD "matchesSavedChoice" == toJson true)
+      "diagnostic preparation or original selected result changed"
+  let mut attempts := #[]
+  for tag in ["group-reuse-selection-build1","group-reuse-select-prepare1","group-reuse-select-choose1"] do
+    let status ← read (base/(tag++".guard.json"))
+    check (status.getObjValD "state" == toJson "finished" &&
+      status.getObjValD "exitCode" == toJson (0 : Nat) &&
+      status.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "diagnostic process has not drained successfully"
+    attempts := attempts.push (Json.mkObj [("tag",toJson tag),("guard",status),
+      ("stdout",toJson (← IO.FS.readFile (base/(tag++".stdout")))),
+      ("stderr",toJson (← IO.FS.readFile (base/(tag++".stderr"))))])
+  write (folder/"selection-diagnostic.json") (Json.mkObj [("plan",plan),("prepare",prepared),("choose",chosen),
+    ("attempts",toJson attempts),("sameBinaryAndFrozenInput",toJson true),
+    ("allThreeCompleteChoicesExact",toJson true),("answeringModelCalls",toJson (0 : Nat)),
+    ("fullHookCapacityOrProductAdoption",toJson false)])
+  for tag in ["group-reuse-selection-build1","group-reuse-select-prepare1","group-reuse-select-choose1"] do
+    for extension in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++extension))
+
+def prepareRss : IO Unit := do
+  drained
+  let observed ← read (folder/"selection-diagnostic.json")
+  check (observed.getObjValD "allThreeCompleteChoicesExact" == toJson true) "complete the causal selector control first"
+  let root := base/"group-reuse-rss-result"
+  let path := base/"group-reuse-rss-input.json"
+  check (!(← path.pathExists) && !(← root.pathExists)) "preserve the bounded RSS observation"
+  let input := (← read (folder/"capacity-small.json")).getObjValD "input"
+  check (input.getObjValD "runtimeSha256" == toJson (← hash (base/"group-reuse-prefix/libexec/eggshell")))
+    "RSS observation must use the same unchanged actual product"
+  let old ← IO.ofExcept (input.getObjValAs? (Array (String × Option String)) "environment")
+  let changed := old.filter (fun item => !["EGGSHELL_CONFIG","EGGSHELL_TRACE_SERVICE_PROFILE",
+    "EGGSHELL_HANDOFF_TRACE","EGGSHELL_TRACE_ACTOR_HEAP","EGGSHELL_TRACE_ALLOCATOR"].contains item.1) ++ #[
+      ("EGGSHELL_CONFIG",some (root/"config.toml").toString),
+      ("EGGSHELL_TRACE_SERVICE_PROFILE",some "1"),("EGGSHELL_HANDOFF_TRACE",some (root/"handoff.trace").toString),
+      ("EGGSHELL_TRACE_ACTOR_HEAP",none),("EGGSHELL_TRACE_ALLOCATOR",none)]
+  write path (input.setObjVal! "output" (toJson root.toString)
+    |>.setObjVal! "config" (toJson (root/"config.toml").toString)
+    |>.setObjVal! "counts" (toJson (#[(4 : Nat)]))
+    |>.setObjVal! "diagnostic" (toJson true)
+    |>.setObjVal! "gate" Json.null
+    |>.setObjVal! "rssOnly" (toJson true)
+    |>.setObjVal! "environment" (toJson changed))
+  write (folder/"rss-plan.json") (Json.mkObj [("runtimeSha256",input.getObjValD "runtimeSha256"),
+    ("driverSha256",toJson (← hash (workspace/"tools/research/SearchCpuThin.lean"))),
+    ("inputSha256",toJson (← hash path)),("primeQueries",toJson (3 : Nat)),("parallelQueries",toJson (4 : Nat)),
+    ("sameSixFrozenBodiesAndOriginalSnapshot",toJson true),("sampleIntervalMs",toJson (50 : Nat)),
+    ("cpuSamplingDisabled",toJson true),("noSixteenOrEightyRetry",toJson true),
+    ("purpose",toJson "correlate whole-publisher RSS with actual hook and handoff phases; not an owner-heap census"),
+    ("sampledRssNotLiveHeapOrCausalAttribution",toJson true),("answeringModelCalls",toJson (0 : Nat))])
+
+def repairRssDriver : IO Unit := do
+  drained
+  check (!(← (base/"group-reuse-rss-result").pathExists)) "the failed observer already entered its product workload"
+  let path := folder/"rss-plan.json"
+  let plan ← read path
+  write path (plan
+    |>.setObjVal! "initialDriverSha256" (plan.getObjValD "driverSha256")
+    |>.setObjVal! "driverSha256" (toJson (← hash (workspace/"tools/research/SearchCpuThin.lean")))
+    |>.setObjVal! "preWorkloadRepair" (toJson "make the optional RSS task branch an explicit do block; product and workload never started in attempt1"))
+
+def collectRss : IO Unit := do
+  drained
+  let plan ← read (folder/"rss-plan.json")
+  check (plan.getObjValD "driverSha256" == toJson (← hash (workspace/"tools/research/SearchCpuThin.lean")))
+    "RSS driver changed after workload start"
+  let root := base/"group-reuse-rss-result"
+  check (plan.getObjValD "inputSha256" == toJson (← hash (base/"group-reuse-rss-input.json")))
+    "RSS workload changed"
+  let report ← read (root/"report.json")
+  check (report.getObjValD "runtimeSha256" == plan.getObjValD "runtimeSha256" &&
+    report.getObjValD "allFourFrozenBodiesByteEqual" == toJson true &&
+    report.getObjValD "originalSourceFilesUnchanged" == toJson true) "actual RSS controls did not preserve original delivery"
+  let timeline ← read (root/"rss-timeline.json")
+  let publisher ← read (root/"publisher-shutdown.json")
+  let frontend ← read (root/"frontend-shutdown.json")
+  check (publisher.getObjValD "exitCode" == toJson (0 : Nat) &&
+    frontend.getObjValD "exitCode" == toJson (0 : Nat) &&
+    timeline.getObjValD "samplingError" == Json.null &&
+    timeline.getObjValD "publisherPid" == publisher.getObjValD "pid") "RSS observation did not sample and stop its actual publisher"
+  let samples ← IO.ofExcept (timeline.getObjValAs? (Array Json) "samples")
+  let time := fun row : Json => (row.getObjValAs? Nat "finishedMs").toOption.getD 0
+  check (!samples.isEmpty && samples.all (fun row => row.getObjValD "exitCode" == toJson (0 : Nat) &&
+    (row.getObjValAs? Nat "rssKiB").isOk && row.getObjValD "pid" == timeline.getObjValD "publisherPid"))
+    "RSS sampling has gaps or selected another process"
+  let window := fun first last => Id.run do
+    let before := (samples.filter (fun row => time row ≤ first)).back?
+    let after := samples.find? (fun row => last ≤ time row)
+    let inside := samples.filter (fun row => first ≤ time row && time row ≤ last)
+    let values := inside.map fun row => (row.getObjValAs? Nat "rssKiB").toOption.getD 0
+    return Json.mkObj [("firstMs",toJson first),("lastMs",toJson last),
+      ("before",toJson before),("after",toJson after),("samplesWithin",toJson inside.size),
+      ("sampledMaxRssKiB",if values.isEmpty then Json.null else toJson (values.foldl max 0))]
+  let data := base/"real-source-search-read-trial-result/data"
+  let mut hooks := #[]
+  let mut ownedReceipts : Array String := #[]
+  let mut ownedSessions : Array String := #[]
+  for kind in ["prime","query"] do
+    for index in [:if kind == "prime" then 3 else 4] do
+      for suffix in ["-start",""] do
+        let value ← read (root/s!"{kind}-{index}{suffix}.json")
+        let receipt ← IO.ofExcept (value.getObjValAs? String "receipt")
+        let session ← IO.ofExcept (value.getObjValAs? String "session")
+        ownedReceipts := ownedReceipts.push receipt
+        ownedSessions := ownedSessions.push session
+        if suffix == "-start" then continue
+        let first ← IO.ofExcept (value.getObjValAs? Nat "startedMs")
+        let last ← IO.ofExcept (value.getObjValAs? Nat "finishedMs")
+        let mut stages := #[]
+        for name in ["provider-keyed-profile.json","provider-indexed-profile.json","prepared-window-focus.json",
+          "delivery-domain.json","synaptic-delivery.json","request-pages.json","ack.json"] do
+          let path := data/"receipts"/receipt/name
+          if !(← path.pathExists) then continue
+          let record ← read path
+          let stamp ← IO.ofExcept (record.getObjValAs? Nat "observedMs")
+          stages := stages.push (Json.mkObj [("stage",record.getObjValD "stage"),
+            ("observedMs",toJson stamp),("rss",window stamp stamp),
+            ("queryStages",(record.getObjValD "data").getObjValD "queryStages")])
+        hooks := hooks.push (Json.mkObj [("kind",toJson kind),("index",toJson index),
+          ("hook",value),("rss",window first last),("stages",toJson stages),
+          ("stdoutSha256",toJson (← hash (root/s!"{kind}-{index}.stdout")))])
+  let mut profiles := #[]
+  for entry in ← (data/"receipts").readDir do
+    let path := entry.path/"source-plan-profile.json"
+    if !(← path.pathExists) then continue
+    let value ← read path
+    let stamp := (value.getObjValAs? Nat "observedMs").toOption.getD 0
+    if value.getObjValD "pid" != publisher.getObjValD "pid" ||
+      stamp < time samples[0]! || time samples[samples.size-1]! < stamp then continue
+    let fields := value.getObjValD "data"
+    let elapsed := (["validationMs","viewMs","unitsMs","domainMs","selectionMs"].map fun key =>
+      (fields.getObjValAs? Nat key).toOption.getD 0).foldl (·+·) 0
+    profiles := profiles.push (Json.mkObj [("receipt",toJson entry.fileName),("record",value),
+      ("rss",window (stamp-elapsed) stamp)])
+    ownedReceipts := ownedReceipts.push entry.fileName
+  let mut attempts := #[]
+  for tag in ["group-reuse-rss1","group-reuse-rss2"] do
+    let status ← read (base/(tag++".guard.json"))
+    check (status.getObjValD "state" == toJson "finished" &&
+      status.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "RSS owner has not drained"
+    attempts := attempts.push (Json.mkObj [("tag",toJson tag),("guard",status),
+      ("stdout",toJson (← IO.FS.readFile (base/(tag++".stdout")))),
+      ("stderr",toJson (← IO.FS.readFile (base/(tag++".stderr"))))])
+  write (folder/"rss-observation.json") (Json.mkObj [("plan",plan),("report",report),("timeline",timeline),
+    ("hooks",toJson hooks),("selectorProfiles",toJson profiles),("frontendShutdown",frontend),("publisherShutdown",publisher),
+    ("attempts",toJson attempts),("ownedReceipts",toJson ownedReceipts),("ownedSessions",toJson ownedSessions),
+    ("handoffTrace",toJson (← IO.FS.readFile (root/"handoff.trace"))),
+    ("sampleWindowsOverlapForParallelHooks",toJson true),("adopted",toJson false)])
+
+def cleanupRss : IO Unit := do
+  drained
+  let observed ← read (folder/"rss-observation.json")
+  check ((observed.getObjValD "report").getObjValD "allFourFrozenBodiesByteEqual" == toJson true &&
+    (observed.getObjValD "publisherShutdown").getObjValD "exitCode" == toJson (0 : Nat) &&
+    (observed.getObjValD "frontendShutdown").getObjValD "exitCode" == toJson (0 : Nat))
+    "collect the complete actual RSS observation first"
+  let timeline := observed.getObjValD "timeline"
+  let samples ← IO.ofExcept (timeline.getObjValAs? (Array Json) "samples")
+  let first ← IO.ofExcept (samples[0]!.getObjValAs? Nat "beganMs")
+  let last ← IO.ofExcept (samples[samples.size-1]!.getObjValAs? Nat "finishedMs")
+  let pids := #[timeline.getObjValD "publisherPid",(observed.getObjValD "frontendShutdown").getObjValD "pid"]
+  let input ← read (base/"group-reuse-rss-input.json")
+  let project : System.FilePath := .mk (← IO.ofExcept (input.getObjValAs? String "project"))
+  let files ← IO.ofExcept (input.getObjValAs? (Array (String × String)) "sourceFiles")
+  for (name,sha) in files do check ((← hash (project/name)) == sha) "original changed before RSS cleanup"
+  let data := base/"real-source-search-read-trial-result/data"
+  let mut receipts ← IO.ofExcept (observed.getObjValAs? (Array String) "ownedReceipts")
+  for entry in ← (data/"receipts").readDir do
+    let mut ours := false
+    for item in ← entry.path.readDir do
+      if !item.fileName.endsWith ".json" then continue
+      let value ← read item.path
+      let stamp := (value.getObjValAs? Nat "observedMs").toOption.getD 0
+      if first ≤ stamp && stamp ≤ last && pids.contains (value.getObjValD "pid") then ours := true
+    if ours then receipts := receipts.push entry.fileName
+  let sessions ← IO.ofExcept (observed.getObjValAs? (Array String) "ownedSessions")
+  let mut bytes := 0
+  for session in sessions.toList.eraseDups do
+    check (session.startsWith "cpu-prime-" || session.startsWith "cpu-query-") "RSS cleanup session escaped its generated scope"
+    let path := data/"sessions"/session
+    if ← path.pathExists then bytes := bytes+(← removeTree path)
+  for receipt in receipts.toList.eraseDups do
+    check (receipt.length == 64 && receipt.toList.all Char.isAlphanum) "RSS cleanup receipt escaped its generated scope"
+    let path := data/"receipts"/receipt
+    if ← path.pathExists then bytes := bytes+(← removeTree path)
+  let root := base/"group-reuse-rss-result"
+  check ((← IO.FS.realPath root) == (← IO.FS.realPath base)/"group-reuse-rss-result") "RSS output escaped its exact root"
+  bytes := bytes+(← removeTree root)
+  for tag in ["group-reuse-rss1","group-reuse-rss2"] do
+    for extension in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++extension))
+  for (name,sha) in files do check ((← hash (project/name)) == sha) "RSS cleanup changed original"
+  write (folder/"rss-cleanup.json") (Json.mkObj [("removedLogicalBytes",toJson bytes),
+    ("sessions",toJson sessions.toList.eraseDups.length),("receipts",toJson receipts.toList.eraseDups.length),
+    ("originalProjectCachesModelCurrentRuntimeAndComparisonBodiesRetained",toJson true),("archived",toJson false)])
+
 def retireStoppedCapacity : IO Unit := do
   drained
   let cleanup ← read (folder/"capacity-small-cleanup.json")
@@ -536,6 +803,12 @@ def main (args : List String) : IO Unit := match args with
   | ["collect-structure"] => collectStructure
   | ["prepare-structure"] => prepareStructure
   | ["repair-structure-map"] => repairStructureMap
+  | ["prepare-selection"] => prepareSelection
+  | ["collect-selection"] => collectSelection
+  | ["prepare-rss"] => prepareRss
+  | ["repair-rss-driver"] => repairRssDriver
+  | ["collect-rss"] => collectRss
+  | ["cleanup-rss"] => cleanupRss
   | ["retire-stopped-capacity"] => retireStoppedCapacity
   | _ => throw (IO.userError "group reuse: prepare|setup MODE TAG|refresh")
 end GroupReuseStudy

@@ -52,7 +52,17 @@ matching auditorは最初に空き容量の起動前検査で拒否された。�
 | 2 | 8,285 | 11,160 | 92,128 | 81,316 |
 | 3 | 7,433 | 8,507 | 70,331 | 57,162 |
 
-[結果と試行](selector-structure.json)では、準備を含む3問全体の関連RSS最大は210,976KiB、guardはexit0・残存0・元DB不変だった。件数からheap量を計算せず、nativeの速度改善や実サービス容量の証拠にもしない。bundle展開で巨大な表ができるという仮説を支持する結果ではない。次は同じbinary/入力の別processで、選択を実行する条件と実行しない条件を分け、準備以降の反復計算を切り分ける。現時点でその比較は未実行。
+[結果と試行](selector-structure.json)では、準備を含む3問全体の関連RSS最大は210,976KiB、guardはexit0・残存0・元DB不変だった。件数からheap量を計算せず、nativeの速度改善や実サービス容量の証拠にもしない。bundle展開で巨大な表ができるという仮説を支持する結果ではない。
+
+後続の[同じbinary・固定入力の比較](selection-diagnostic.json)では、別processで準備だけの条件と実際に`choose?`を実行する条件を一組ずつ実行した。準備だけの関連RSS最大は211,680KiB、選択ありは225,696KiBで、3問とも全generic indexとsource keyが保存済み選択と一致した。差は約14MiBであり、単独選択器を16並行でのpublisher増大の主因と断定する根拠はない。一組の診断で、遅延分布や採用比較ではない。実際に使用した235 objectと234 imported moduleを[閉包](selection-closure.json)と[subset照合](selection-subset-sources.json)で確認した。終了済みの診断binaryは利用者の指示で削除した。
+
+## 実フックのRSSと次の対象
+
+[RSS採取](rss-observation.json)は、通常runtimeを変更せず、3問のprimeと4並行の実フックを実行した。4件の本文は凍結済み本文とbyte一致し、配送ACKも完了した。関連RSS最大2,784,464KiB、publisher最大608,944KiB、終了後の残存0。publisherはprime後307,344KiB、並行処理後608,928KiBで、応答後も終了まで高い値を維持した。選択・描画・返送にまたがるRSSの観測であり、生存heapやリークの証明ではない。並行の段階窓は重なる。
+
+source-planは7呼び出しに対し7件で、選択器を繰り返し呼ぶループは観測していない。各選択は504〜873msだった。重い元DAG、巨大な候補表、選択の反復を原因と決めて新cacheを足さない。採取後のsession・receipt・重複本文等は[削除](rss-cleanup.json)した。
+
+現在の`materialize`は、同じfamilyの文脈を結合するたびに、累積した本文とkeysを生成している。次の[deferred-assembly](../deferred-assembly/README.md)では、元のチェックと結合順を維持したまま、構造を保持して最後だけ派生本文を生成する。これが容量を解消するかは未検証。順位・選択・モデル・資源上限を変えず、関数全体の等式、実フック、4/16の順で確認する。
 
 最初の診断は予約語を変数に使った記述ミスで拒否され、修正後のinterpreter実行は保存層のnative宣言を結合できず停止した。native切替時には古いobject mapが選択済みの継承objectを列挙せず、重複symbolでlinkが拒否された。[実際の親mapへ直した](structure-link-input-repair.json)後は成功し、閉包とsourceを検証した。これらを製品フックの失敗や成功に数えない。
 

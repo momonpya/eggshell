@@ -24,7 +24,10 @@ def hash (path : System.FilePath) : IO String :=
   return ((← command "/usr/bin/shasum" #["-a","256",path.toString]).splitOn " ").headD ""
 def drained : IO Unit := do
   let processes ← command "/bin/ps" #["-axo","command="]
-  check (!processes.contains "controller/StudyMain guard ") "a native resource guard is still live"
+  let active := (processes.splitOn "\n").any fun row =>
+    let words := row.trimAscii.toString.splitOn " " |>.filter (! ·.isEmpty)
+    words[0]?.any (·.endsWith "/controller/StudyMain") && words[1]? == some "guard"
+  check (!active) "a native resource guard is still live"
 def replaceOne (text before after : String) : IO String := do
   check ((text.splitOn before).length == 2) ("local completion source anchor changed: "++before.take 80)
   return text.replace before after
@@ -348,7 +351,7 @@ def stage (receipt : Json) (name : String) : IO Json := do
   return (selected.getObjValD "record").getObjValD "data"
 def collectCells (family : String := "local-completion") (attempt : Nat := 1) : IO Unit := do
   drained
-  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse"].contains family) "known completed delivery family required"
+  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly"].contains family) "known completed delivery family required"
   let folder := workspace/"docs/candidates"/family
   check (attempt > 0) "positive delivery attempt required"
   let guardTag := family++"-cells"++toString attempt
@@ -361,7 +364,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
   for topic in [1:4] do
     for repetition in [:2] do
       let cell := root/s!"topic-{topic}-chat-{repetition}"
-      let parent := if family == "group-reuse" then "deferred-audit-cells2-result" else if family == "deferred-audit" then "single-canonical-cells-result" else if ["rendering-lifetime","single-canonical"].contains family then "canonical-order-cells-result" else if ["allocation-probe","canonical-order"].contains family then "resident-source-cells2-result" else if family == "resident-source" then "typed-plan-cells-result" else if family == "typed-plan" then "typed-fetch-cells2-result" else if family == "typed-fetch" then "delivery-key-sets-cells-result"
+      let parent := if family == "deferred-assembly" then "group-reuse-cells-result" else if family == "group-reuse" then "deferred-audit-cells2-result" else if family == "deferred-audit" then "single-canonical-cells-result" else if ["rendering-lifetime","single-canonical"].contains family then "canonical-order-cells-result" else if ["allocation-probe","canonical-order"].contains family then "resident-source-cells2-result" else if family == "resident-source" then "typed-plan-cells-result" else if family == "typed-plan" then "typed-fetch-cells2-result" else if family == "typed-fetch" then "delivery-key-sets-cells-result"
         else if family == "delivery-key-sets" then "selection-membership-cells-result" else "encoder-events-cells-result"
       let parentBody := base/parent/s!"topic-{topic}-chat-{repetition}"/"body.txt"
       check ((← IO.FS.readBinFile (cell/"body.txt")) == (← IO.FS.readBinFile parentBody)) "actual delivery body changed"
@@ -373,7 +376,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
       let synapse ← stage receipt "synaptic-delivery.json"
       let keyed ← stage receipt "provider-keyed-inputs.json"
       let receiptBytes := (← (cell/"receipt.json").metadata).byteSize.toNat
-      if ["typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse"].contains family then
+      if ["typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly"].contains family then
         check (synapse.getObjValD "sharedRows" == Json.null &&
           (synapse.getObjValAs? Nat "sharedWitnessesChecked").toOption.getD 0 > 0)
           "unused diagnostic row array remains or source witness verification disappeared"

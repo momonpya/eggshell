@@ -30,7 +30,8 @@ def counts (p : SharedCoverage.Problem) : Json :=
     ("maxClosure",toJson (p.offers.foldl (fun n offer => max n offer.closure.length) 0)),
     ("maxCovers",toJson (p.offers.foldl (fun n offer => max n offer.covers.length) 0))]
 
-def inspect (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
+@[noinline, nospecialize] def inspect (choose : Bool) (expected : ServiceChoice)
+    (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
     (source : PreparedSourceView.Domain) : Option Json := do
   let p ← problemFromView query source units pieces
   let shapes := units.map (·.shape)
@@ -50,15 +51,34 @@ def inspect (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List Cu
   let bound ← PreparedSourceView.bind source p
   let scopes ← PreparedSourceView.prepareScopes source compiled query.owners.size
     ⟨bound.sourceRows,bound.frames⟩
+  let selection ← if choose then do
+      let chosen ← SharedCoverage.choose? scopes.problem
+      let selectedRecipes := chosen.selected.filterMap fun index =>
+        if h : index.val < compiled.offers.size then some (⟨index.val,h⟩ : Fin compiled.offers.size) else none
+      let expanded := (ClosedCoverage.expand p recipes selectedRecipes).map (·.val) |>.eraseDups
+      let requiredRows := bound.selectedRows ((SharedCoverage.nodes scopes.problem chosen.selected).map (·.val))
+      let mut selectedKeys := Std.HashSet.ofArray (requiredRows.map (·.key))
+      let mut generic := #[]
+      for index in expanded do
+        let unit ← units[index]?
+        if let some id := unit.generic then generic := generic.push id
+        else for key in unit.sourceKeys do selectedKeys := selectedKeys.insert key
+      let sourceKeys := source.rows.filterMap fun row => if selectedKeys.contains row.key then some row.key else none
+      pure (Json.mkObj [("selectedOffers",toJson chosen.selected.length),
+        ("expandedOffers",toJson expanded.length),("genericUnits",toJson generic.size),
+        ("sourceKeys",toJson sourceKeys.size),
+        ("matchesSavedChoice",toJson (generic == expected.generic && sourceKeys == expected.sourceKeys))])
+    else pure Json.null
   return Json.mkObj [("units",toJson units.size),("pieces",toJson pieces.length),
     ("unitRangeEntries",toJson (units.foldl (fun n unit => n+unit.shape.ranges.length) 0)),
     ("unitSourceKeys",toJson (units.foldl (fun n unit => n+unit.sourceKeys.size) 0)),
     ("sourceRows",toJson source.rows.size),("files",toJson source.files.size),
-    ("base",counts p),("compiled",counts compiled),("conditioned",counts scopes.problem)]
+    ("base",counts p),("compiled",counts compiled),("conditioned",counts scopes.problem),
+    ("selection",selection)]
 
 /-- Reconstruct the same single-source, immutable coordinate domain consumed
 by selectSourcePlan. No model, ranking, authority or product hook is invoked. -/
-def run (project fixture output : System.FilePath) : IO Unit := do
+def run (choose : Bool) (project fixture output : System.FilePath) : IO Unit := do
   check (!(← output.pathExists)) "preserve the structure observation"
   let before ← sourceFiles project
   let original ← DB.PageMap.pin project
@@ -75,6 +95,7 @@ def run (project fixture output : System.FilePath) : IO Unit := do
     let heads ← IO.ofExcept (sampleRow.getObjValAs? (Array DB.PageMap.Head) "heads")
     check (heads.size == 1 && heads[0]? == some original.head) "diagnostic supports this exact single-source fixture"
     let query ← IO.ofExcept (fromJson? (sampleRow.getObjValD "query") : Except String ServiceQuery)
+    let expected ← IO.ofExcept (fromJson? (sampleRow.getObjValD "choice") : Except String ServiceChoice)
     check (query.valid && !query.captureInput) "preserve the saved selector input"
     let families := Std.HashMap.ofArray (query.files.map fun file => (file.family,file))
     let generic := KeyPostings.prepare (fun entry : GenericUnit × Nat => entry.1.family) query.generic.zipIdx
@@ -105,17 +126,27 @@ def run (project fixture output : System.FilePath) : IO Unit := do
         units := units.push {shape := {family,ranges := unit.ranges},generic := some index,contextual := unit.contextual}
     let joined ← IO.ofExcept (PreparedSourceView.join rows headers)
     let source ← IO.ofExcept (PreparedSourceView.domain joined headers query.frameCosts)
-    let some observation := inspect query units pieces source |
+    let allocated ← IO.getNumHeartbeats
+    let began ← IO.monoNanosNow
+    let some observation := inspect choose expected query units pieces source |
       throw (IO.userError "saved query did not produce its problem domains")
-    observations := observations.push (Json.mkObj [("query",toJson (ordinal+1)),("structure",observation)])
+    let elapsed := (← IO.monoNanosNow)-began
+    let allocationDelta := (← IO.getNumHeartbeats)-allocated
+    if choose then
+      check ((observation.getObjValD "selection").getObjValD "matchesSavedChoice" == toJson true)
+        "the current selector differs from the saved complete choice"
+    observations := observations.push (Json.mkObj [("query",toJson (ordinal+1)),("structure",observation),
+      ("inspectNanos",toJson elapsed),("inspectHeartbeatDeltaNotBytes",toJson allocationDelta)])
   check ((← sourceFiles project) == before) "structure inspection changed the frozen project"
   IO.FS.writeFile output (Json.mkObj [("queries",toJson observations),("sourceFiles",toJson before),
     ("originalSourceUnchanged",toJson true),("execution",toJson "matching native core; logical counts only"),
     ("actualNewHookCalls",toJson (0 : Nat)),("answeringModelCalls",toJson (0 : Nat)),
-    ("nativePerformanceOrHeapClaim",toJson false),("adopted",toJson false)]).compress
+    ("selectionExecuted",toJson choose),("fullHookOrAdoptionClaim",toJson false),
+    ("singleDiagnosticPairNotLatencyDistribution",toJson true),("adopted",toJson false)]).compress
 
 end SelectorStructure
 
 def main (args : List String) : IO Unit := do
-  let [project,fixture,output] := args | throw (IO.userError "SelectorStructure PROJECT FIXTURE OUTPUT")
-  SelectorStructure.run (.mk project) (.mk fixture) (.mk output)
+  let [mode,project,fixture,output] := args | throw (IO.userError "SelectorStructure prepare|choose PROJECT FIXTURE OUTPUT")
+  SelectorStructure.check (["prepare","choose"].contains mode) "unknown structure diagnostic condition"
+  SelectorStructure.run (mode == "choose") (.mk project) (.mk fixture) (.mk output)
