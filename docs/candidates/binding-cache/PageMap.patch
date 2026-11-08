@@ -1,0 +1,97 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/packed-ledger-runtime-source/Eggshell/DB/PageMap.lean	2026-11-09 06:34:56
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/DB/PageMap.lean	2026-11-09 07:33:10
+@@ -7,0 +8 @@
++public import tools.research.WeighedCache
+@@ -203,4 +203,0 @@
+-/-- Reserve bounded immutable seeds,including a builder,inside the same128MiB
+-allowance. Actor fronts retain their existing separate2MiB bound. -/
+-def sharedGenerationSlots : Nat :=
+-  (sharedPageCapacity-(AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes)/(2*65536)
+@@ -208,5 +205,4 @@
+-structure SharedPageCache where
+-  recent : Std.HashMap SharedPageKey CachedPage := {}
+-  previous : Std.HashMap SharedPageKey CachedPage := {}
+-  recentBounded : recent.size ≤ sharedGenerationSlots := by simp
+-  previousBounded : previous.size ≤ sharedGenerationSlots := by simp
++/-- Keep reader seeds in the same global allowance. The owner budget counts
++the actual page extent, key bytes and a fixed per-entry charge. -/
++def sharedGenerationBytes : Nat :=
++  (sharedPageCapacity-(AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes)/2
+@@ -213,0 +210,10 @@
++def sharedPageCharge (key : SharedPageKey) (page : CachedPage) : Nat :=
++  page.ref.bytes+512+key.1.utf8ByteSize+key.2.1.utf8ByteSize+
++    key.2.2.1.utf8ByteSize+key.2.2.2.1.utf8ByteSize
++
++theorem shared_page_charge_covers (key : SharedPageKey) (page : CachedPage) :
++    page.ref.bytes ≤ sharedPageCharge key page := by unfold sharedPageCharge; omega
++
++abbrev SharedPageCache := Eggshell.Research.WeighedCache.Cache
++  SharedPageKey CachedPage sharedGenerationBytes sharedPageCharge
++
+@@ -217 +223 @@
+-  cache.recent[key]?.orElse fun _ => cache.previous[key]?
++  Eggshell.Research.WeighedCache.Cache.find? cache key
+@@ -224,10 +230,5 @@
+-  if fits : cache.recent.size < sharedGenerationSlots ∨ key ∈ cache.recent then
+-    ⟨cache.recent.insert key page,cache.previous,by
+-      by_cases present : key ∈ cache.recent
+-      · simpa only [Std.HashMap.size_insert,if_pos present] using cache.recentBounded
+-      · have room := fits.resolve_right present
+-        simp only [Std.HashMap.size_insert,if_neg present]
+-        omega,cache.previousBounded⟩
+-  else
+-    ⟨({} : Std.HashMap SharedPageKey CachedPage).insert key page,cache.recent,
+-      by simpa [Std.HashMap.size_insert] using (show 1 ≤ sharedGenerationSlots from by decide),cache.recentBounded⟩
++  cache.insert key page
++
++def SharedPageCache.retainedCharge (cache : SharedPageCache) : Nat :=
++  Eggshell.Research.WeighedCache.weightOf sharedPageCharge cache.state.recent.slots+
++    Eggshell.Research.WeighedCache.weightOf sharedPageCharge cache.state.previous.slots
+@@ -236,5 +237,3 @@
+-    ((cache.touch key page).recent.size+(cache.touch key page).previous.size)*65536 ≤ capacity := by
+-  have recent := (cache.touch key page).recentBounded
+-  have previous := (cache.touch key page).previousBounded
+-  change (cache.touch key page).recent.size ≤ 496 at recent
+-  change (cache.touch key page).previous.size ≤ 496 at previous
++    (cache.touch key page).retainedCharge ≤ capacity := by
++  have bounded := (cache.touch key page).retained_bounded
++  change (cache.touch key page).retainedCharge ≤ 2*32505856 at bounded
+@@ -245,6 +244,3 @@
+-    (cache.recent.size+cache.previous.size)*65536+
+-      (AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes ≤ capacity := by
+-  have recent := cache.recentBounded
+-  have previous := cache.previousBounded
+-  change cache.recent.size ≤ 496 at recent
+-  change cache.previous.size ≤ 496 at previous
++    cache.retainedCharge+(AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes ≤ capacity := by
++  have bounded := cache.retained_bounded
++  change cache.retainedCharge ≤ 2*32505856 at bounded
+@@ -254,4 +250,4 @@
+-theorem SharedPageCache.touch_recent (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage) :
+-    (cache.touch key page).lookup key = some page := by
+-  by_cases fits : cache.recent.size < sharedGenerationSlots ∨ key ∈ cache.recent
+-  <;> simp [touch,fits,lookup]
++theorem SharedPageCache.touch_recent (cache : SharedPageCache) (key : SharedPageKey) (page : CachedPage)
++    (fits : sharedPageCharge key page ≤ sharedGenerationBytes) :
++    (cache.touch key page).lookup key = some page :=
++  Eggshell.Research.WeighedCache.Cache.insert_find cache key page fits
+@@ -262,0 +259,9 @@
++
++def SharedPageCache.generationEntries
++    (generation : Eggshell.ByteBudgetCache.Generation SharedPageKey CachedPage sharedGenerationBytes) :
++    Array (SharedPageKey × CachedPage) :=
++  generation.index.toArray.filterMap fun (key,_) => (generation.find? key).map (key,·)
++
++def SharedPageCache.entries (cache : SharedPageCache) : Array (SharedPageKey × CachedPage) :=
++  (generationEntries cache.state.previous).filter
++    (fun (key,_) => (cache.state.recent.find? key).isNone)++generationEntries cache.state.recent
+@@ -319,2 +324 @@
+-  let older := cache.previous.toArray.filter fun entry => !cache.recent.contains entry.1
+-  (older++cache.recent.toArray).foldl (fun state (key,page) => state.insert key page) State.empty
++  cache.entries.foldl (fun state (key,page) => state.insert key page) State.empty
+@@ -355 +359 @@
+-      set {state with cache := state.cache.touch key ⟨ref,loaded⟩,hits := state.hits+1}
++      set {state with hits := state.hits+1}
+@@ -389 +393 @@
+-    return Json.mkObj [("pages",toJson (state.cache.recent.size+state.cache.previous.size)),
++    return Json.mkObj [("pages",toJson state.cache.entries.size),
