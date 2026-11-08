@@ -350,6 +350,7 @@ def stage (receipt : Json) (name : String) : IO Json := do
     throw (IO.userError ("missing actual delivery stage "++name))
   return (selected.getObjValD "record").getObjValD "data"
 def deliveryParent : String → String
+  | "positive-projection" => "support-presence-cells-result"
   | "support-presence" => "typed-bindings-cells-result"
   | "typed-bindings" => "remaining-source-cells-result"
   | "remaining-source" => "score-prepare-cells-result"
@@ -368,7 +369,7 @@ def deliveryParent : String → String
   | _ => "encoder-events-cells-result"
 def collectCells (family : String := "local-completion") (attempt : Nat := 1) : IO Unit := do
   drained
-  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings","support-presence"].contains family) "known completed delivery family required"
+  check (["local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings","support-presence","positive-projection"].contains family) "known completed delivery family required"
   let folder := workspace/"docs/candidates"/family
   check (attempt > 0) "positive delivery attempt required"
   let guardTag := family++"-cells"++toString attempt
@@ -392,7 +393,7 @@ def collectCells (family : String := "local-completion") (attempt : Nat := 1) : 
       let synapse ← stage receipt "synaptic-delivery.json"
       let keyed ← stage receipt "provider-keyed-inputs.json"
       let receiptBytes := (← (cell/"receipt.json").metadata).byteSize.toNat
-      if ["typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings","support-presence"].contains family then
+      if ["typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse","deferred-assembly","draft-units","scoped-encode","score-prepare","remaining-source","typed-bindings","support-presence","positive-projection"].contains family then
         check (synapse.getObjValD "sharedRows" == Json.null &&
           (synapse.getObjValAs? Nat "sharedWitnessesChecked").toOption.getD 0 > 0)
           "unused diagnostic row array remains or source witness verification disappeared"

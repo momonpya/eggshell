@@ -1,0 +1,40 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -61,0 +62 @@
++public import tools.research.PositiveProjection
+@@ -332 +332,0 @@
+-  if !part.projectionComplete then fun _ => false else
+@@ -334,3 +334,5 @@
+-  | some context => fun read => read.binding.owner == context.owner &&
+-    context.fragments.any (fun fragment =>
+-      fragment.first ≤ read.binding.first && read.binding.limit ≤ fragment.first+fragment.original.length)
++  | some context =>
++    if !part.projectionComplete then fun _ => false else
++    fun read => read.binding.owner == context.owner &&
++      context.fragments.any (fun fragment =>
++        fragment.first ≤ read.binding.first && read.binding.limit ≤ fragment.first+fragment.original.length)
+@@ -338,5 +340,5 @@
+-    let keys := part.shared.toArray.foldl (fun keys shared => shared.rows.foldl (fun keys row =>
+-      row.origins.foldl (fun keys origin => keys.insert (origin.binding,origin.occurrence,
+-        (⟨row.key.file,row.key.line,row.key.line⟩ : Synapses.Range))) keys) keys)
+-      ({} : Std.HashSet (Synapses.Binding × Synapses.Occurrence × Synapses.Range))
+-    fun read => keys.contains (read.binding,read.occurrence,read.source)
++    match part.shared with
++    | some shared =>
++      if part.text == shared.render && part.keys == shared.keys then
++        Research.PositiveProjection.sharedPolicy shared.rows else fun _ => false
++    | none => fun _ => false
+@@ -356,4 +358,4 @@
+-  | some captured => {
+-      rows := captured.packet.parts.toArray.flatMap fun part =>
+-        part.acknowledgedReads.map fun read => ⟨read.binding.database,read.source⟩
+-      bindings := captured.packet.parts.toArray.flatMap fun part =>
++  | some captured =>
++      let rows := captured.packet.parts.toArray.flatMap fun part =>
++        part.acknowledgedReads.map fun read => (⟨read.binding.database,read.source⟩ : Synapses.DeliveryLedger.Row)
++      let bindings := captured.packet.parts.toArray.flatMap fun part =>
+@@ -363,2 +365,2 @@
+-            ⟨owner.database,owner.owner,owner.work,fragment.first,fragment.first+fragment.original.length⟩
+-      complete := captured.packet.parts.all (·.projectionComplete)}
++            (⟨owner.database,owner.owner,owner.work,fragment.first,fragment.first+fragment.original.length⟩ : Synapses.Binding)
++      Research.PositiveProjection.checked rows bindings

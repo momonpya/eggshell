@@ -1,0 +1,34 @@
+--- a/tools/research/PositiveProjection.lean
++++ b/tools/research/PositiveProjection.lean
+@@ -27,0 +28,28 @@
++/-- Materialized data, rather than a curried predicate whose preparation
++can be moved into the per-read filter by arity expansion. -/
++inductive Policy where
++  | reject
++  | shared (keys : Std.HashSet Identity)
++  | context (owner : String) (ranges : Array (Nat × Nat))
++
++def Policy.accepts (policy : Policy) (read : Read) : Bool :=
++  match policy with
++  | .reject => false
++  | .shared keys => keys.contains (identity read)
++  | .context owner ranges => read.binding.owner == owner &&
++    ranges.any (fun (first,limit) => first ≤ read.binding.first && read.binding.limit ≤ limit)
++
++def prepareShared (rows : Array CanonicalSource.StoredRow) : Policy :=
++  .shared (Std.HashSet.ofList (identities rows))
++
++@[noinline,nospecialize] def select (policy : Policy) (evidence : Array Read) : Array Read :=
++  evidence.filter fun read => read.valid && policy.accepts read
++
++theorem prepared_shared_exact (rows : Array CanonicalSource.StoredRow) (evidence : Array Read) :
++    select (prepareShared rows) evidence = sharedReads rows evidence := rfl
++
++theorem selected_was_prepared (policy : Policy) (evidence : Array Read) (read : Read)
++    (selected : read ∈ select policy evidence) : read ∈ evidence ∧ read.valid = true := by
++  have kept := Array.mem_filter.mp selected
++  exact ⟨kept.1,(Bool.and_eq_true_iff.mp kept.2).1⟩
++
+@@ -72,0 +101,2 @@
++#print axioms prepared_shared_exact
++#print axioms selected_was_prepared

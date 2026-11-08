@@ -67,7 +67,7 @@ private def interleaving (kind : String) : IO Json := do
       let current ← state session
       writeJson files.state {current with offers := second :: current.offers}
     check (← acknowledge session second.id) "competing genuine ACK failed"
-  check (!(← finishAcknowledgment session basis staged)) s!"accepted stale {kind} ACK"
+  check (!(← finishAcknowledgment session basis staged (← prepareAcknowledgment basis))) s!"accepted stale {kind} ACK"
   check ((← savedLines session) != #[1]) s!"stale {kind} head escaped into context"
   -- Resume from the actual accepted head, not the newest abandoned ledger
   -- root. This also tests recovery without any in-memory transaction state.
@@ -121,7 +121,7 @@ private def abandonedTail : IO Json := do
   withSession session fun files => do
     let current ← state session
     writeJson files.state {current with epoch := 4,offers := []}
-  check (!(← finishAcknowledgment session basis staged)) "abandoned tail escaped after a turn change"
+  check (!(← finishAcknowledgment session basis staged (← prepareAcknowledgment basis))) "abandoned tail escaped after a turn change"
   let nextBase := offer "next" 3 (← IO.monoMsNow)
   let next := {nextBase with stamp := {nextBase.stamp with epoch := 4}}
   withSession session fun files => do
