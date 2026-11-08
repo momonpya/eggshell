@@ -274,9 +274,9 @@ def sealInstalled : IO Unit := do
   discard <| command "/bin/ln" #[(build/"StudyMain").toString,temporary.toString]
   IO.FS.rename temporary binary
   write (folder/"installed-runtime.json") (Json.mkObj [("sha256",toJson digest),("sameImmutableInode",toJson true)])
-def summarizeStopped : IO Unit := do
+def summarizeStopped (destination : System.FilePath := folder) : IO Unit := do
   idle
-  let input := folder/"stopped-query-stages.json"
+  let input := destination/"stopped-query-stages.json"
   let evidence ← read input
   let rows ← IO.ofExcept (evidence.getObjValAs? (Array Json) "rows")
   let mut encodes := 0
@@ -324,7 +324,7 @@ def summarizeStopped : IO Unit := do
   let counts := ["keyed-nominations.json","delivery-domain.json","synaptic-delivery.json","search.json"].map fun name =>
     (name,(files.find? (·.1 == name)).map (·.2) |>.getD 0)
   let saved ← IO.ofExcept (evidence.getObjValAs? (Array Json) "savedPartialClientResults")
-  write (folder/"stopped-numerical-complete.json") (Json.mkObj [("inputSha256",toJson (← hash input)),
+  write (destination/"stopped-numerical-complete.json") (Json.mkObj [("inputSha256",toJson (← hash input)),
     ("stoppedReceipts",toJson rows.size),("completedNumericalStages",toJson completedNumericalStages),
     ("receivedEncodeReplies",toJson encodes),("memoBeforeAdmission",toJson beforeHits),
     ("memoAfterAdmission",toJson afterHits),("nativeEncodeStartsInReceivedReplies",toJson nativeStarts),
@@ -407,5 +407,8 @@ def main (args : List String) : IO Unit := do
   | ["setup-delivery",mode] => ScopedEncodeStudy.setupDelivery mode
   | ["seal-installed"] => ScopedEncodeStudy.sealInstalled
   | ["summarize-stopped"] => ScopedEncodeStudy.summarizeStopped
+  | ["summarize-stopped",family] =>
+      ScopedEncodeStudy.check (["scoped-encode","score-prepare"].contains family) "unknown captured numerical family"
+      ScopedEncodeStudy.summarizeStopped (ScopedEncodeStudy.project/"docs/candidates"/family)
   | ["cleanup-ended"] => ScopedEncodeStudy.cleanupEnded
   | _ => throw (IO.userError "prepare/setup required")
