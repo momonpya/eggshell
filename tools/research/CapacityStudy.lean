@@ -276,15 +276,17 @@ def cleanupProfiles : IO Unit := do
     ("scalarsAndTimingsRetained",toJson true),("archived",toJson false)])
   for path in removed do if ← (System.FilePath.mk path).pathExists then IO.FS.removeDirAll (.mk path)
 def cohort (family : String) : IO String := do
-  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit"].contains family) "unknown isolated capacity runtime"
+  check (["parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse"].contains family) "unknown isolated capacity runtime"
   return if family == "parallel-encoder" then "parallel-capacity" else family++"-capacity"
+def productBuild (family : String) : System.FilePath :=
+  base/(if family == "group-reuse" then "group-reuse-runtime-build" else family++"-build")
 def prepareParallel (family : String := "parallel-encoder") : IO Unit := do
   drained
   let name ← cohort family
   let actual ← read (workspace/"docs/candidates"/family/"delivery-cells.json")
   check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
     actual.getObjValD "allParentBodiesByteEqual" == toJson true) "actual six-cell delivery gate required"
-  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit"].contains family then
+  if ["keyed-inputs","keyed-discovery","shared-model","local-completion","selection-membership","typed-fetch","typed-plan","resident-source","canonical-order","rendering-lifetime","single-canonical","deferred-audit","group-reuse"].contains family then
     check (actual.getObjValD "candidatePathPassed" == toJson true) "shared keyed path was not exercised by all actual hooks"
   check (!(← (base/(name++"-source")).pathExists) && !(← (base/(name++"-build")).pathExists))
     "fresh capacity client required"
@@ -317,7 +319,7 @@ def parallelInputs (mode : String) (family : String := "parallel-encoder") : IO 
     let body := cellRoot/s!"topic-{topic}-chat-0/body.txt"
     check (row.getObjValD "sha256" == toJson (← hash body)) "candidate changed frozen actual body"
     return row.setObjVal! "body" (toJson body.toString)
-  let runtimeSha ← hash (base/(family++"-build")/"StudyMain")
+  let runtimeSha ← hash (productBuild family/"StudyMain")
   let input := input.setObjVal! "output" (toJson root.toString)
     |>.setObjVal! "config" (toJson (root/"config.toml").toString)
     |>.setObjVal! "runtime" (toJson (prefixRoot/"libexec/eggshell").toString)
@@ -337,7 +339,7 @@ def sealParallel (family : String := "parallel-encoder") : IO Unit := do
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit,"inspect",
     (base/(name++"-build")).toString,(folder/"capacity-closure.json").toString]
   discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",audit,"common-sources",
-    (base/(family++"-build")).toString,(base/(name++"-build")).toString,(folder/"capacity-sources.json").toString]
+    (productBuild family).toString,(base/(name++"-build")).toString,(folder/"capacity-sources.json").toString]
 def setupParallel (action tag : String) (family : String := "parallel-encoder") : IO Unit := do
   drained
   let name ← cohort family

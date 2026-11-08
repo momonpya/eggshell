@@ -28,6 +28,10 @@
 
 通常runtimeは`9c2650cb1701234385a9f075c7a41e82f1b36024cc5607325e6a2ec78d2b82c2`。[297 objectのnative閉包](native-closure.json)が整合し、[ソースの照合](native-sources.json)は直接変更PreparedSourceView一つ、追加MemoGroupFold一つ、削除0で一致した。起動入口・モデル・数値境界は変更していない。最初の通常ビルドは部品用のsource準備が親の起動入口を省いていたため失敗し、親と同じ入口を戻して成功した。失敗と成功のguardを[実行体の記録](runtime.json)へ残す。
 
-matching auditorは空き容量の起動前検査で拒否され、childは起動していない。したがって全6フックの実際の本文・ACK・期限、その後の並行容量は未検証。Mac全体の空きは整理後も約1.3GiBまで低下していた。2GiBの起動条件・4GiBの上限を変えて進めない。部品の短縮をフック全体や80人容量の効果として扱わない。
+matching auditorは最初に空き容量の起動前検査で拒否された。不要成果物の削除後、同じ2GiBの起動条件・4GiBの上限で構築を完了した。[291 objectの閉包](auditor-closure.json)は整合し、[本体とのソース照合](auditor-sources.json)は全product coreを含んで一致した。新しいprefixは通常runtimeとSHAが一致し、[同じ不変inodeを共有する](installed-runtime.json)。
+
+[全6実フック](delivery-cells.json)では、題材1/2/3のDBにある必要原文4/7/5件がそれぞれ2独立チャットとも配送され、合計32/32だった。親deferred-auditと本文がbyte一致し、意味検索・シナプス・packet検証・ACKが完了、原DBのfactsとページprefixも不変、終了後のprocessは0。各フックは題材1が8,938/8,229ms、題材2が9,445/8,760ms、題材3が9,077/9,004ms。関連RSS最大2,170,656KiBだった。
+
+これは同じ固定snapshotによる回答モデルなしの配送検査であり、履歴が増える回答モデルの1周目/2周目ではない。フック全体が親より速いという比較、並行容量、総トークン改善、80人8時間の合格を示すものでもない。次は同じ条件の4/16並行を通してから80へ進む。負荷検査器は通常runtimeとの全core照合を通し、上限・モデル1基/compute2枠・本文・予算・質問を保つ。
 
 [終了済み出力の削除](retired-ended-outputs.json)では、全段階終了を記録した旧22出力と部品実行体、約266MBの論理bytesを削除した。圧縮archiveは作らない。現在の6つの比較本文、元DBの4ファイル、project cache、モデル、両実行体、必要なnative入力は保持した。過去のraw本文はこれらの退役directoryからは再生できない。論理bytesとMacの実空き増加量を同一視しない。

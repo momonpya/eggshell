@@ -366,6 +366,35 @@ def collectRuntime : IO Unit := do
       let path := base/(tag++"."++extension)
       if ← path.pathExists then IO.FS.removeFile path
 
+def collectActual : IO Unit := do
+  drained
+  let actual ← read (folder/"delivery-cells.json")
+  check (actual.getObjValD "actualDeliveryAllSixPassed" == toJson true &&
+    actual.getObjValD "allParentBodiesByteEqual" == toJson true &&
+    actual.getObjValD "candidatePathPassed" == toJson true) "verify all actual delivery gates first"
+  let previous ← read (folder/"runtime.json")
+  check (previous.getObjValD "runtimeSha256" == toJson (← hash (base/"group-reuse-runtime-build/StudyMain")))
+    "actual delivery used a different runtime"
+  let mut stages := #[]
+  for tag in ["group-reuse-auditor2","group-reuse-install1","group-reuse-cells1"] do
+    let status ← read (base/(tag++".guard.json"))
+    check (status.getObjValD "state" == toJson "finished" &&
+      status.getObjValD "exitCode" == toJson (0 : Nat) &&
+      status.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "actual stage has not drained successfully"
+    let stdout ← IO.FS.readFile (base/(tag++".stdout"))
+    let stderr ← IO.FS.readFile (base/(tag++".stderr"))
+    check (stdout.utf8ByteSize+stderr.utf8ByteSize ≤ 65536) "actual stage logs need bounded collection"
+    stages := stages.push (Json.mkObj [("tag",toJson tag),("guard",status),
+      ("stdout",toJson stdout),("stderr",toJson stderr)])
+  write (folder/"runtime.json") (previous
+    |>.setObjVal! "actualStages" (toJson stages)
+    |>.setObjVal! "actualSixHookRuns" (toJson (6 : Nat))
+    |>.setObjVal! "allActualBodiesEqualToDeferredAudit" (toJson true)
+    |>.setObjVal! "historyBearingModelCycles" (toJson false)
+    |>.setObjVal! "next" (toJson "unchanged 4/16 to 80 capacity gates; no token or product adoption claim"))
+  for tag in ["group-reuse-auditor2","group-reuse-install1","group-reuse-cells1"] do
+    for extension in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++extension))
+
 def refresh : IO Unit := do
   drained
   for name in ["MemoGroupFold","GroupReuseChecks"] do
@@ -396,6 +425,7 @@ def main (args : List String) : IO Unit := match args with
   | ["seal-installed"] => sealInstalled
   | ["retire-ended-outputs"] => retireEndedOutputs
   | ["collect-runtime"] => collectRuntime
+  | ["collect-actual"] => collectActual
   | _ => throw (IO.userError "group reuse: prepare|setup MODE TAG|refresh")
 end GroupReuseStudy
 def main := GroupReuseStudy.main
