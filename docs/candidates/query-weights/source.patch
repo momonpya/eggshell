@@ -1,0 +1,171 @@
+--- a/tools/research/PreparedQueryWeights.lean
++++ b/tools/research/PreparedQueryWeights.lean
+@@ -0,0 +1,50 @@
++module
++public import tools.RetrievalGrams
++@[expose] public section
++namespace Eggshell.Research.PreparedQueryWeights
++open RetrievalResearch
++
++/-- Strict query-local data. Frequency and log1p are absent from the row loop. -/
++def prepare (wanted : List String) (frequency : String → Nat) (population : Nat) : List (String × Float) :=
++  wanted.map fun term => (term,log1p (population.toFloat / (frequency term).toFloat))
++
++@[noinline, nospecialize] def score (wanted : List (String × Float)) (contains : α → String → Bool)
++    (row : α) : Float × Float :=
++  wanted.foldl (fun scores (term,value) =>
++    if contains row term then
++      if term.startsWith "P" then (scores.1+value,scores.2) else (scores.1,scores.2+value)
++    else scores) (0.0,0.0)
++
++theorem score_exact (wanted : List String) (frequency : String → Nat) (population : Nat)
++    (contains : α → String → Bool) (row : α) :
++    score (prepare wanted frequency population) contains row =
++      wanted.foldl (fun scores term =>
++        if contains row term then
++          let value := log1p (population.toFloat / (frequency term).toFloat)
++          if term.startsWith "P" then (scores.1+value,scores.2) else (scores.1,scores.2+value)
++        else scores) (0.0,0.0) := by
++  simp only [score,prepare,List.foldl_map]
++
++@[noinline, nospecialize] def rankPrepared (wanted : List (String × Float))
++    (rows : List α) (contains : α → String → Bool) : List Nat :=
++  let scored := rows.zipIdx.filterMap fun (row,index) =>
++    let scores := score wanted contains row
++    if scores.1 > 0 || scores.2 > 0 then some (scores.1,scores.2,index) else none
++  ((scored.mergeSort fun a b => a.1 > b.1 ||
++    (a.1 == b.1 && (a.2.1 > b.2.1 || (a.2.1 == b.2.1 && a.2.2 ≤ b.2.2)))).map (·.2.2))
++
++def rankRows (query : String) (rows : List α) (contains : α → String → Bool)
++    (frequency : String → Nat) (anchors : Bool) (population : Nat := rows.length) : List Nat :=
++  let wanted := (tokens query).filter fun term => !anchors || anchor term
++  let weights := prepare wanted frequency population
++  rankPrepared weights rows contains
++
++theorem rankRows_exact (query : String) (rows : List α) (contains : α → String → Bool)
++    (frequency : String → Nat) (anchors : Bool) (population : Nat) :
++    rankRows query rows contains frequency anchors population =
++      RetrievalResearch.rankRows query rows contains frequency anchors population := by
++  simp only [rankRows,rankPrepared,RetrievalResearch.rankRows,score_exact]
++
++#print axioms score_exact
++#print axioms rankRows_exact
++end Eggshell.Research.PreparedQueryWeights
+--- a/tools/research/QueryWeightChecks.lean
++++ b/tools/research/QueryWeightChecks.lean
+@@ -0,0 +1,115 @@
++module
++public import Eggshell.CanonicalSourceCache
++public import tools.research.PreparedQueryWeights
++@[expose] public section
++namespace Eggshell.Research.QueryWeightChecks
++open Lean Synapses
++
++def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
++def base : System.FilePath := "/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study"
++
++/-- Literal independent oracle; importing a future compiler rewrite must not
++silently optimize the comparison arm. Float folds and ties are unchanged. -/
++@[noinline, nospecialize] def reference (query : String) (rows : List (List String))
++    (frequency : String → Nat) (anchors : Bool) (population : Nat) : List Nat :=
++  let wanted := (RetrievalResearch.tokens query).filter fun term => !anchors || RetrievalResearch.anchor term
++  let scored := rows.zipIdx.filterMap fun (row,index) =>
++    let scores := wanted.foldl (fun (scores : Float × Float) term =>
++      if row.contains term then
++        let value := RetrievalResearch.log1p (population.toFloat / (frequency term).toFloat)
++        if term.startsWith "P" then (scores.1+value,scores.2) else (scores.1,scores.2+value)
++      else scores) (0.0,0.0)
++    if scores.1 > 0 || scores.2 > 0 then some (scores.1,scores.2,index) else none
++  ((scored.mergeSort fun a b => a.1 > b.1 ||
++    (a.1 == b.1 && (a.2.1 > b.2.1 || (a.2.1 == b.2.1 && a.2.2 ≤ b.2.2)))).map (·.2.2))
++
++theorem reference_exact (query : String) (rows : List (List String)) (frequency : String → Nat)
++    (anchors : Bool) (population : Nat) :
++    reference query rows frequency anchors population =
++      RetrievalResearch.rankRows query rows List.contains frequency anchors population := rfl
++
++#print axioms reference_exact
++#print axioms PreparedQueryWeights.score_exact
++#print axioms PreparedQueryWeights.rankRows_exact
++
++structure Sample where
++  owner : String
++  rows : List (List String)
++
++def runRanks (fast : Bool) (samples : Array Sample) (question : String) : Array (List Nat) :=
++  samples.map fun sample =>
++    let frequency := fun term => (sample.rows.filter (·.contains term)).length
++    if fast then PreparedQueryWeights.rankRows question sample.rows List.contains frequency false sample.rows.length
++    else reference question sample.rows frequency false sample.rows.length
++
++def timed (input : IO.Ref (Array Sample × String)) (fast : Bool) : IO (Array (List Nat) × Nat) := do
++  let began ← IO.monoMsNow
++  let (samples,question) ← input.get
++  let result ← (← IO.mkRef (runRanks fast samples question)).get
++  let finished ← IO.monoMsNow
++  return (result,finished-began)
++
++def run (output : System.FilePath) : IO Unit := do
++  check (!(← output.pathExists)) "fresh native query-weight result required"
++  let source ← DB.PageMap.pin (base/"real-source-search-read-trial-result/work.egg")
++  let before := source.head
++  let locate (storage : DB.Sidecar.Storage) : IO (Option DB.PageMap.Snapshot) := do
++    if let some ready ← CanonicalSource.Cache.open? source storage then
++      let path ← CanonicalSource.Cache.directory source storage
++      return ← CanonicalSource.Cache.preparedAt? source path ready.metadata
++    return none
++  let prepared ← locate .database
++  let prepared ← if prepared.isSome then pure prepared else locate .user
++  let some index := prepared | throw (IO.userError "actual frozen original metadata is not prepared")
++  let samples ← index.foldRange ⟨"view-document:","view-document;"⟩ (fun samples row => do
++    -- Use the same typed owner directory as canonical preparation. Payload
++    -- chunks share a prefix but are not independent owner descriptors.
++    let some id := (row.1.drop "view-document:".length).toString.toNat? | return samples
++    let state ← index.readPayload (CanonicalSource.Cache.stateName id) >>=
++      CanonicalSource.Cache.decode (α := CanonicalSource.Cache.OwnerState)
++    let owner := state.owner
++    let ready ← PreparedSourceView.readOwner index source.head.identity owner
++    let some focus := ready.focus | throw (IO.userError "published owner lacks its actual focus facts")
++    return samples.push (⟨owner,focus.rows⟩ : Sample)) (#[] : Array Sample)
++  check (!samples.isEmpty) "real focus sample is empty"
++  let specification ← IO.ofExcept (Json.parse (← IO.FS.readFile (base/"real-source-search-read-input.json")))
++  let topics ← IO.ofExcept (specification.getObjValAs? (Array Json) "topics")
++  check (topics.size == 3) "all three frozen questions required"
++  let mut results := #[]
++  for topic in topics do
++    let artifact := topic.getObjValD "prompt"
++    let question ← IO.FS.readFile (.mk (← IO.ofExcept (artifact.getObjValAs? String "path")))
++    check (artifact.getObjValD "sha256" == toJson (Sha256.hex question.toUTF8)) "frozen question changed"
++    let input ← IO.mkRef (samples,question)
++    let mut pairs := #[]
++    for pair in [:3] do
++      let firstFast := pair == 1
++      let first ← timed input firstFast
++      let second ← timed input (!firstFast)
++      check (first.1 == second.1) "complete per-owner lexical rank changed"
++      let (oldMs,newMs) := if firstFast then (second.2,first.2) else (first.2,second.2)
++      pairs := pairs.push (Json.mkObj [("pair",toJson pair),("candidateFirst",toJson firstFast),
++        ("referenceMs",toJson oldMs),("candidateMs",toJson newMs),("allRanksExact",toJson true)])
++    results := results.push (Json.mkObj [("topic",topic.getObjValD "topic"),
++      ("questionSha256",artifact.getObjValD "sha256"),("pairs",toJson pairs)])
++  let edgeRows := [[],["Px","Px","A木"],["Px","A木"],["Pfile.c","P커널","Pязык"]]
++  let mut controls := 0
++  for question in ["","x","木","file.c 커널 язык"] do
++    for anchors in [false,true] do
++      for population in [0,edgeRows.length] do
++        for zero in [false,true] do
++          let frequency := fun term => if zero then 0 else (edgeRows.filter (·.contains term)).length
++          check (reference question edgeRows frequency anchors population ==
++            PreparedQueryWeights.rankRows question edgeRows List.contains frequency anchors population)
++            "empty/duplicate/zero-frequency/tie control changed"
++          controls := controls+1
++  check ((← DB.PageMap.pin source.directory).head == before) "component changed the original source"
++  IO.FS.writeFile output (Json.mkObj [("allRanksExact",toJson true),("results",toJson results),
++    ("owners",toJson samples.size),("windows",toJson (samples.foldl (fun total sample => total+sample.rows.length) 0)),
++    ("controls",toJson controls),("source",toJson before),("originalHeadUnchanged",toJson true),
++    ("actualHooks",toJson (0 : Nat)),("newEightyLoadRuns",toJson (0 : Nat)),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]).compress
++end Eggshell.Research.QueryWeightChecks
++def main (args : List String) : IO Unit := do
++  let [output] := args | throw (IO.userError "new query-weight result required")
++  Eggshell.Research.QueryWeightChecks.run (.mk output)

@@ -1,0 +1,74 @@
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -6,0 +7 @@
++public import tools.research.ReplyShape
+@@ -338 +339 @@
+-    pool.withReplyEncoding job reply (fun reply => pure (toJson reply))
++    pool.withReplyEncoding job reply Research.ReplyShape.encode
+--- a/tools/research/ReplyShape.lean
++++ b/tools/research/ReplyShape.lean
+@@ -0,0 +1,64 @@
++module
++public import tools.research.CompactSearchWire
++@[expose] public section
++namespace Eggshell.Research.ReplyShape
++open Lean Plugin
++
++def check (ok : Bool) (message : String) : IO Unit := unless ok do throw (IO.userError message)
++def size (value : Json) : Nat := value.compress.utf8ByteSize
++def fields (value : Json) (names : List String) : Json :=
++  Json.mkObj (names.map fun name => (name,toJson (size (value.getObjValD name))))
++
++/-- Isolated one-reply observer. The existing encoding reservation still
++encloses JSON allocation; the returned JSON is exactly the ordinary value. -/
++def encode (reply : Worker.SearchReply) : IO Json := do
++  let started ← IO.monoMsNow
++  let value ← (← IO.mkRef (toJson reply)).get
++  let encodedAt ← IO.monoMsNow
++  let some root ← IO.getEnv "EGGSHELL_REPLY_SHAPE_ROOT" | return value
++  let some handoff := reply.handoff | return value
++  if handoff.text.isEmpty then return value
++  let root := System.FilePath.mk root
++  check (root.isAbsolute && !(← root.pathExists)) "fresh absolute reply observation root required"
++  FileSystem.privateDirectory root
++  let packed := value.getObjValD "handoff"
++  let shell := packed.getObjValD "shell"
++  let packet := packed.getObjValD "packet"
++  let parts := (packet.getObjValD "parts").getArr?.toOption.getD #[]
++  let input ← IO.mkRef value
++  let mut trials := #[]
++  let mut captured := ""
++  for _ in [:3] do
++    let began ← IO.monoMsNow
++    let encoded ← input.get
++    let text ← (← IO.mkRef encoded.compress).get
++    let rendered ← IO.monoMsNow
++    let decoded ← IO.ofExcept (Json.parse text >>= fromJson? (α := Worker.SearchReply))
++    let decoded ← (← IO.mkRef decoded).get
++    let restored ← IO.monoMsNow
++    check (toJson decoded.handoff == toJson reply.handoff && toJson decoded.trace == toJson reply.trace)
++      "ordinary JSON roundtrip changed a handoff field"
++    trials := trials.push (Json.mkObj [("serializeMs",toJson (rendered-began)),
++      ("parseAndRestoreMs",toJson (restored-rendered)),("bytes",toJson text.utf8ByteSize)])
++    captured := text
++  check (captured.utf8ByteSize+1024 ≤ Daemon.maxFrameBytes) "observed reply exceeded the original reservation"
++  IO.FS.writeFile (root/"reply.json") captured
++  let report := Json.mkObj [
++    ("bodySha256",toJson (Sha256.hex handoff.text.toUTF8)),("bodyBytes",toJson handoff.text.utf8ByteSize),
++    ("encodedBytes",toJson captured.utf8ByteSize),("encodeToJsonMs",toJson (encodedAt-started)),
++    ("trials",toJson trials),("allHandoffFieldsAndTraceExact",toJson true),
++    ("shell",fields shell ["text","reason","deliveredGraphs","completed","advisory","localUnions","coveredFragments",
++      "sourceRecords","sourceUses","sourceCheckpoints","packet","search","equalitySelection","selectionPlan"]),
++    ("packet",fields packet ["tables","header","footer","frames","parts"]),
++    ("tables",fields (packet.getObjValD "tables") ["subjects","occurrences","scopes"]),
++    ("parts",toJson (parts.mapIdx fun index part => Json.mkObj [
++      ("index",toJson index),("bytes",toJson (size part)),
++      ("fields",fields part ["shell","shared","evidence"]),
++      ("shell",fields (part.getObjValD "shell") ["keys","text","context","shared","evidence","nativeOwners","projected"]),
++      ("rows",toJson (((part.getObjValD "shared").getObjValD "rows").getArr?.toOption.getD #[]).size),
++      ("evidence",toJson ((part.getObjValD "evidence").getArr?.toOption.getD #[]).size)])),
++    ("observerChangesTiming",toJson true),("actualSearchReplies",toJson (1 : Nat)),
++    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)]
++  IO.FS.writeFile (root/"report.json") report.compress
++  return value
++end Eggshell.Research.ReplyShape
