@@ -1,0 +1,6 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/prepared-literals-runtime-source/Eggshell/Handoff.lean	2026-11-09 02:24:56
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/empty-citations-runtime-source/Eggshell/Handoff.lean	2026-11-09 04:34:39
+@@ -9707 +9707,2 @@
+-      (rankedCitedObservationCoordinates admitted item.owner item.provenance).map
++      (if admitted.isEmpty then none else
++        rankedCitedObservationCoordinates admitted item.owner item.provenance).map
