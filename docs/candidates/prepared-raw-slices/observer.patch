@@ -1,0 +1,22 @@
+--- /Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/SearchCpuThin.lean	2026-11-08 21:43:13
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/current-path-observer.lean	2026-11-09 05:38:35
+@@ -188 +187,0 @@
+-        if rssOnly || traceOnly then return
+@@ -190,7 +189,10 @@
+-        for round in [:3] do
+-          let result ← IO.Process.output {
+-            cmd := "/usr/bin/sample"
+-            args := #[toString publisher.pid.toNat,"1","10","-mayDie","-file",(root/s!"cpu-{round}.txt").toString] }
+-          write (root/s!"cpu-{round}.json") (Json.mkObj [("exitCode",toJson result.exitCode.toNat),
+-            ("stdout",toJson result.stdout),("stderr",toJson result.stderr),
+-            ("publisherPid",endpoint.getObjValD "pid")])) .dedicated
++        for round in [:6] do
++          let samples ← #[("publisher",publisher.pid.toNat),("frontend",frontend.pid.toNat)].mapM fun (role,pid) => IO.asTask (do
++            let started ← IO.monoMsNow
++            let result ← IO.Process.output {
++              cmd := "/usr/bin/sample"
++              args := #[toString pid,"1","10","-mayDie","-file",(root/s!"cpu-{role}-{round}.txt").toString] }
++            write (root/s!"cpu-{role}-{round}.json") (Json.mkObj [("pid",toJson pid),("role",toJson role),
++              ("startedMs",toJson started),("finishedMs",toJson (← IO.monoMsNow)),
++              ("exitCode",toJson result.exitCode.toNat),("stderr",toJson result.stderr)])) .dedicated
++          for sample in samples do IO.ofExcept (← IO.wait sample)) .dedicated
