@@ -1,0 +1,126 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/OperationPool.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/actor-reply-runtime-source/Eggshell/OperationPool.lean
+index cdbaf5c4..29075099 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/OperationPool.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/actor-reply-runtime-source/Eggshell/OperationPool.lean
+@@ -4,6 +4,7 @@ public import Eggshell.Worker
+ public import tools.research.AllocatorDiagnostics
+ public import Eggshell.SearchReaders
+ public import tools.research.ReplyHold
++public import tools.research.ActorReply
+ 
+ @[expose] public section
+ namespace Eggshell.Plugin.OperationPool
+@@ -21,7 +22,7 @@ structure Job where
+   cancelled : IO.Ref Bool
+   ready : IO.Ref (Option Nat)
+   expires : IO.Ref Nat
+-  reply : IO.Promise (Option Json)
++  reply : IO.Promise (Option String)
+   reservation : Std.Mutex ReplyHold.Cell
+ 
+ structure State where
+@@ -203,13 +204,12 @@ def Pool.finishReplyProducer (pool : Pool) (job : Job) : IO Unit := do
+ independent; this bound applies to materializing and retaining wire replies.
+ Cancellation cannot return their charge before the enclosing producer ends. -/
+ @[noinline, nospecialize] def Pool.withReplyEncoding (pool : Pool) (job : Job) (input : α)
+-    (encode : α → IO Json) : IO (Option Json) := do
++    (encode : α → IO Json) : IO (Option String) := do
+   unless ← pool.reserveReply job do return none
+   unless !(← job.cancelled.get) && (← IO.monoMsNow) < (← job.expires.get) do return none
+   let value ← encode input
+-  let amount := value.compress.utf8ByteSize+1024
+-  if amount ≤ replyBytes job.request.role && !(← job.cancelled.get) &&
+-      (← IO.monoMsNow) < (← job.expires.get) then return some value
++  let encoded := ActorReply.checked job.request.id value (replyBytes job.request.role)
++  if !(← job.cancelled.get) && (← IO.monoMsNow) < (← job.expires.get) then return encoded
+   return none
+ 
+ /-- Cancel/join only this request's computation. Readiness can use the rest of
+@@ -325,8 +325,9 @@ def Pool.runSearchBody (pool : Pool) (active : OperationPlan.Active) (job : Job)
+       throw (IO.userError "search actor changed its requesting chat")
+     let task ← IO.asTask (do
+       let request ← IO.ofExcept (fromJson? job.request.payload : Except String Worker.Search)
+-      pool.searchActor request job.cancelled (fun now => job.ready.set (some now)) originalReads) .dedicated
+-    let reply ← try
++      let reply ← pool.searchActor request job.cancelled (fun now => job.ready.set (some now)) originalReads
++      pool.withReplyEncoding job reply (fun reply => pure (toJson reply))) .dedicated
++    try
+       repeat
+         if ← IO.hasFinished task then break
+         if (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get) then IO.cancel task
+@@ -335,7 +336,6 @@ def Pool.runSearchBody (pool : Pool) (active : OperationPlan.Active) (job : Job)
+       finally
+         if !(← IO.hasFinished task) then IO.cancel task
+         discard <| IO.wait task
+-    pool.withReplyEncoding job reply (fun reply => pure (toJson reply))
+     catch error =>
+       observeJob job "actor-failed" [("error",toJson error.toString)]
+       pure none
+@@ -369,7 +369,7 @@ def Pool.runBody (pool : Pool) (lane : OperationPlan.Lane) (active : OperationPl
+         IO.sleep 5
+       IO.ofExcept (← IO.wait task)
+     catch _ => pure none
+-  let result := result.filter (fun value => value.compress.utf8ByteSize+1024 ≤ replyBytes job.request.role)
++  let result := result.bind (fun value => ActorReply.checked job.request.id value (replyBytes job.request.role))
+   let wasCancelled := (← job.cancelled.get) || (← IO.monoMsNow) ≥ (← job.expires.get)
+   let finished ← IO.monoMsNow
+   unless ← job.reply.isResolved do job.reply.resolve result
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/PublicationService.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/actor-reply-runtime-source/Eggshell/PublicationService.lean
+index 81fe4658..ca19d851 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/PublicationService.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/actor-reply-runtime-source/Eggshell/PublicationService.lean
+@@ -811,10 +811,10 @@ def peerWaiting (client : Socket.Client) : IO Bool := TaskDeadline.awaitEvent (d
+ This is not a remotely delegated project capability or a storage authority. -/
+ def executeOperation (server : Server) (client : Socket.Client) (payload : Json)
+     (cancelled : IO.Ref Bool) (deadline : IO.Ref Nat) (reserved : IO.Ref Nat)
+-    (owned : IO.Ref (Option OperationPool.Job)) : IO Json := do
++    (owned : IO.Ref (Option OperationPool.Job)) : IO String := do
+   let request ← IO.ofExcept (fromJson? payload : Except String OperationWire.Request)
+   let some job ← server.operations.submit request cancelled |
+-    return toJson ({id := request.id,completed := false,payload := Json.null,busy := true} : OperationWire.Reply)
++    return Research.ActorReply.empty request.id true
+   owned.set (some job)
+   -- One native read watches this peer for the whole wait. Re-registering two
+   -- selectors and a timer every five milliseconds per queued client floods the
+@@ -831,7 +831,7 @@ def executeOperation (server : Server) (client : Socket.Client) (payload : Json)
+       deadline.set (← job.expires.get)
+       if ← job.reply.isResolved then
+         let some result := job.reply.result?.get | throw (IO.userError "operation lost its response")
+-        return toJson ({id := request.id,completed := result.isSome,payload := result.getD Json.null} : OperationWire.Reply)
++        return result.getD (Research.ActorReply.empty request.id)
+       unless !(← server.stopping.get) && (← IO.monoMsNow) < (← job.expires.get) &&
+           !(← peer.isResolved) do
+         cancelled.set true
+@@ -904,7 +904,12 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client)
+       reserveReply server replyCharge deadline
+       reservedReply.set replyCharge
+     let profileDispatch ← IO.monoMsNow
+-    let value ← if kind == "refresh-source" then refreshSource server secret payload deadline
++    let operationText ← if kind == "worker-exchange" then do
++        unless secret == admin do throw (IO.userError "unauthorized publisher administration")
++        some <$> executeOperation server client payload cancelled replyDeadline reservedReply operation
++      else pure none
++    let value ← if operationText.isSome then pure Json.null
++      else if kind == "refresh-source" then refreshSource server secret payload deadline
+       else if kind == "source-rows" then sourceRows server secret payload deadline
+       else if kind == "source-palettes" then sourcePalettes server secret payload deadline
+       else if kind == "source-fetch-many" then sourceFetchMany server secret payload deadline
+@@ -931,7 +936,6 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client)
+       else do
+         unless secret == admin do throw (IO.userError "unauthorized publisher administration")
+         match kind with
+-        | "worker-exchange" => executeOperation server client payload cancelled replyDeadline reservedReply operation
+         | "prepare-target" => do
+           let kind ← IO.ofExcept (payload.getObjValAs? String "registryKind")
+           let key ← IO.ofExcept (payload.getObjValAs? String "key")
+@@ -970,7 +974,9 @@ def serveClient (server : Server) (admin : String) (client : Socket.Client)
+     if ["source-palette","source-palettes"].contains kind then
+       reserveReply server replyCharge deadline
+       reservedReply.set replyCharge
+-    let encoded ← (← IO.mkRef value.compress).get
++    let encoded ← match operationText with
++      | some encoded => pure encoded
++      | none => (← IO.mkRef value.compress).get
+     if kind == "worker-exchange" then
+       let charge ← reservedReply.get
+       let needed := min Stream.chunkBytes encoded.utf8ByteSize
