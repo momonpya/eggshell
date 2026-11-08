@@ -39,12 +39,14 @@ runtime a2ed21ff…の全6実hookは必要原文32/32・親本文byte一致・�
 
 次の順序：
 
-1. 実リンク済みの取得・候補・来歴・選択・描画の経路で、大きな要求別の展開と重複生成を具体的に特定する。古いJSON witnessを現local経路の割当てと取り違えない。型付き原文取得と出版済みextentは既に使われており、旧wire変換やlexerの除去を再実装しない。元DAGの量だけで大きな新cacheを追加しない。
-2. 特定した重複だけを一般的に除き、不変の準備はproject/scope/完全snapshotに結び付ける。要求ごとの可変状態・依存記録・鮮度/Exact検査は保つ。同じ元DBで原文・来歴・順序・不正入力拒否と実割当ての減少を部品で確認してから、全6実hookを題材1から再評価する。
+1. [現在のCPU採取](docs/candidates/search-cpu/README.md)ではBLAKE3のmix条件判定と、groupedUnitsのrecord/requestedリスト照合が具体的に現れた。前者の[インライン化部品](docs/candidates/inline-mix/README.md)は全hash一致で約13〜15%短縮したが割当てcounterは同じであり、容量修復とは扱わない。この一変更だけで16/80の失敗負荷を再実行しない。
+2. record逆引きは以前の同じ28 owner/1,792 groupで約7.32倍遅かった履歴を差分確認で発見し、今回形式化した順序付きkernelも実フックへ接続せず破棄した。同名の既存helperは元に戻した。証明だけで再投入しない。CPU採取に現れた`basePieceAccept`の区間判定・配列コピーについて、既存準備を使えているかと一時構造の複製を、過去の失敗案と照合して特定する。一つの原区間への包含と、区間の和集合による被覆を混同して結果を変えない。元DAG量だけを理由に大きな新cacheを足さず、既存の型付き取得・出版済みextentを再実装しない。根拠のある変更の後に全6実hookを題材1から再評価する。
 3. 同じ予算/順位/domain/期限/モデル/資源上限で4/16を通してから80へ進む。失敗した同じ負荷、重み調整、受動heap census、worker/compute枠だけの追加は繰り返さない。過去のallocator/単純graph移譲試験は増大を再現できておらず、類似の試験を反復しない。
 4. 安定したruntime SHAで空DB/new chatからseedを作り、題材1/2/3と2周目、事前固定した現行/候補の同数複数反復を実施する。キャッシュ生成/保存完了・必要原文・総token・品質を揃える。以下A〜Fの80人持続利用・増大project・NASの契約まで達成して初めて完了とする。
 
 回答モデル0、有料比較0/18。本体・README実績・releaseには未採用。proof/部品/単独配送の成功を、総token改善や80人8時間の合格に代用しない。
+
+整理で旧sourceコピー198個（約1.08GBの論理bytes）等を削除した。パス包含の誤りで保持予定の旧比較元source二つも一旦削除し、native witnessで確認できる部分を復元したが、旧Mainを含む全sourceの復旧は未確認。現在の製品/部品source・551 native object・製品/比較元binary・元DBのSHAを確認した。[誤りと確認範囲](docs/candidates/search-cpu/source-cleanup-repair.json)を参照し、旧比較元の完全なsource再ビルドが可能という前提を置かない。
 
 ## 過去の切り分け（再試行の前に参照）
 
