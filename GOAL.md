@@ -50,6 +50,8 @@ runtime a2ed21ff…の全6実hookは必要原文32/32・親本文byte一致・�
 
 今回さらに旧コンパイル生成物2,627件、終了済みbuild・過去ログ・重複DB等363件を削除した。合計873,880,828論理bytesで、archiveは作らず、削除用の一時controllerと詳細一覧も破棄した。現在のruntime・比較元a2・guardと必要入力3,051件、保持する3DBのSHAは削除前後で一致し、現在のruntimeの297 native objectも整合した。旧prefixのa109実行体は意図的に退役した。現在のDB別cache・MiniLM・原典を保持したが、旧版の不要なコンパイルcacheは再構築が必要になる。[削除集計と保持SHA](docs/cleanup/retired-builds.json)、[残存runtimeの整合性](docs/cleanup/retained-runtime.json)。Mac全体の空きの増加には他の変更も含まれるため、論理削除量と物理的な空き増加を同一視しない。
 
+利用者の追加整理指示で、終了済み診断build・旧実験DB/セッションcache・古いログ・未参照compiler生成物19,414件、354,065,833論理bytesを削除した。現在の3DB、製品/比較元/監査/guardの実行体と必要な依存13,056件は保持し、SHAとサイズを削除前後で照合した。通常runtimeの298 objectと監査runtimeの292 objectも整合する。archiveを作らず、削除用一時プログラムも削除した。[削除集計](docs/cleanup/ended-artifacts-pruned.json)、[通常runtime](docs/cleanup/ended-artifacts-runtime-closure.json)、[監査runtime](docs/cleanup/ended-artifacts-auditor-closure.json)。
+
 ## 過去の切り分け（再試行の前に参照）
 
 利用者の指示で、終了済み実験のDB・cache・出力、旧prefix、未参照compiler生成物、終了済み診断実行体をさらに削除した。78 directory、14,825 file、195,775,216論理bytesで、archiveは作らない。現在の3DBと4実行体のSHA、必要なsourceとnative入力3,475件を削除前後で確認し、通常runtimeの297 objectも整合した。現在の6比較本文・project cache・MiniLMは保持した。[削除結果](docs/cleanup/unused-experiment-artifacts.json)、[削除後の実行体検査](docs/cleanup/unused-artifacts-runtime-closure.json)。旧出力を使った再生や、退役した診断binaryの再利用はできない。
