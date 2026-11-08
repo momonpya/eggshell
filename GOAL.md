@@ -4,6 +4,8 @@
 
 現在の性能fixtureは、元の取得がトークン上限で中断した未受理seedと同じsnapshotである。[元DAGの再確認](docs/candidates/prepared-citation/original-inventory.json)でOutcome40/All41、全Workが文字列、親回答Outcome0を確認した。このsnapshotで構造化Workが検索から落ちたという仮説は支持されない。原観測の性能・配送の再現資料に限り、完成したseedからの回答/引用再利用やモデル両周の実証に数えない。元の中断は既存記録どおりであり、新しい保存破損の発見とは扱わない。
 
+[無関係な出版のnative診断](docs/candidates/geometry-publication/README.md)では、原文構造cacheの全Headキーにより、変更のない16所有者を別所有者の8出版後に計128回再解析し、同じgeometryのentryが16から144へ増えることを確認した。ただし、この小試験の投影は各6〜8msであり、秒単位のフック遅延の主因とは結論しない。Head検査を外したり、新しい永続cacheを追加したりせず、既存の16並行profileと共有view・並行保存/差分準備の境界を追う。本体変更0、80追加0、回答モデル0。補助DB/source/buildは削除し、原典と現在の実行体/cacheを保持した。
+
 ## 目的と固定する境界
 
 複数版のAndroid、hypervisor、Linuxのソース調査、ラムダンプ・コアダンプ調査、バイナリ解析、メール、プロジェクト管理、FR/CR管理、ログ、MCP、SMB/NFSの探索が混在する現場で、80人が1日8時間AIを使い続け、プロジェクトごとに一つのDBで並行対応できることを必須とする。1人向けの段階は置かない。100万窓を最終規模とせず、実測した日次増加量と数年分の保持を対象にする。
