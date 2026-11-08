@@ -24,4 +24,14 @@ matching auditorの[292 object](auditor-closure.json)と[全product coreのsourc
 
 関連RSS最大は2,883,152KiBで、最大時には検査器も1,043,376KiBを使用していた。publisherのRSSと取り違えず、親より容量が改善したとは主張しない。これは同じsnapshotを使ったモデルなしの配送検査で、履歴が増える回答モデルの両周ではない。遅延の因果比較、総トークン改善、80人継続利用も示さない。
 
-次は同じ薄い負荷clientで4/16を測る。16を通る前に80へ進めない。総トークンの比較条件も緩めない。
+## 並行容量の結果
+
+[同じ4/16負荷](capacity-small.json)では、4件はすべて意味検索・シナプス・本文一致・ACKが完了し、波全体6,121msだった。16件は関連RSS3,678,320KiBで保護停止した。publisherは1,718,384/modelは1,131,040/frontendは319,568KiBだった。親と同様の容量超過であり、文脈の再描画だけを除けば解消するという仮説は支持されなかった。歴史上の別実行より4波の数字が小さいことを、因果的な速度改善とは扱わない。
+
+[停止時の監査](stopped-query-stages.json)では16件すべてがdelivery-domainに到達し、7件にsynaptic-delivery/request-pagesの記録があった。最終成功が保存されたのは題材1の1件（9,552ms）で、15件は結果がない。7/16や1/16を成功率にせず、段階の到達と最終配送を区別する。終了後のprocessは0。
+
+80は開始せず、同じ16を再試行しない。選択の前の`PendingRendering.query?`は、全genericの`UnitPlan`を作り、`LinearNodes.step`で各fragmentの本文を再生成して価格と文字列キーを作っている。これは現行コードの確認で、今回のRSSの主因と確定したものではない。次は既存の出版済みmetadata/cacheとの対応を調べ、選択前に必要な値と、選択後だけ必要な本文を分ける。既存の型付きqueryや原文取得を作り直さない。
+
+停止したsession/重複receipt/endpointは[削除](capacity-small-cleanup.json)し、終了済みのcapacity実行体・sourceコピー・出力DB/cacheも[削除](retired-capacity-helper.json)した。他のnative responseから参照されていないことを確認し、現在の通常実行体・比較元・原DB・project cache・model・6比較本文は保持した。archiveはない。
+
+この候補は未採用。証明と単独配送の成功だけでは採用せず、総トークン・品質・期限の比較条件も緩めない。

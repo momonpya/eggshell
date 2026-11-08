@@ -356,6 +356,36 @@ def collectDelivery : IO Unit := do
     |>.setObjVal! "collectorInitialFalsePositiveNoWorkloadRerun" (toJson true))
   for tag in ["deferred-assembly-build1","deferred-assembly-build-auditor1","deferred-assembly-install1","deferred-assembly-cells1"] do
     for suffix in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++suffix))
+
+def collectCapacity : IO Unit := do
+  drained
+  let evidence ← read (folder/"capacity-small.json")
+  let status := evidence.getObjValD "guard"
+  check (status.getObjValD "state" == toJson "finished" && status.getObjValD "exitCode" == toJson (137 : Nat) &&
+    status.getObjValD "reason" == toJson "aggregate-rss" && status.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+    "preserve the stopped capacity result"
+  check ((← read (folder/"capacity-small-cleanup.json")).getObjValD "completed" == toJson true)
+    "finish stopped session cleanup before collecting ended output"
+  let tag := "deferred-assembly-capacity-build1"
+  let buildGuard ← read (base/(tag++".guard.json"))
+  check (buildGuard.getObjValD "exitCode" == toJson (0 : Nat) &&
+    buildGuard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "capacity build did not drain"
+  let mut attempts := #[]
+  for tag in [tag,"deferred-assembly-capacity-small1"] do
+    attempts := attempts.push (Json.mkObj [("tag",toJson tag),("guard",← read (base/(tag++".guard.json"))),
+      ("stdout",toJson (← IO.FS.readFile (base/(tag++".stdout")))),
+      ("stderr",toJson (← IO.FS.readFile (base/(tag++".stderr"))))])
+  write (folder/"deferred-assembly-capacity-small1.json") (Json.mkObj [("attempts",Json.arr attempts),
+    ("newEightyRuns",toJson (0 : Nat)),("capacityFixHypothesisSupported",toJson false),
+    ("initialStoppedAuditRejectedDriverPidNoLoadRerun",toJson true)])
+  let runtime ← read (folder/"runtime.json")
+  write (folder/"runtime.json") (runtime
+    |>.setObjVal! "newCapacityRuns" (toJson (1 : Nat))
+    |>.setObjVal! "capacityGatePassed" (toJson false)
+    |>.setObjVal! "newEightyRuns" (toJson (0 : Nat))
+    |>.setObjVal! "noUnchangedSixteenRetry" (toJson true))
+  for tag in [tag,"deferred-assembly-capacity-small1"] do
+    for suffix in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++suffix))
 def main (args : List String) : IO Unit := match args with
   | ["prepare"] => prepare
   | ["preflight",tag] => preflight tag
@@ -371,6 +401,7 @@ def main (args : List String) : IO Unit := match args with
   | ["setup-delivery",mode] => setupDelivery mode
   | ["seal-installed"] => sealInstalled
   | ["collect-delivery"] => collectDelivery
+  | ["collect-capacity"] => collectCapacity
   | _ => throw (IO.userError "deferred assembly: prepare|preflight TAG|setup TAG|collect-proofs|prepare-runtime|setup-build TAG")
 end DeferredAssemblyStudy
 def main := DeferredAssemblyStudy.main
