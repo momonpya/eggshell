@@ -32,4 +32,17 @@
 
 整理後も[通常runtimeの305 object](post-cleanup-runtime.json)と[検査器の327 object](post-cleanup-auditor.json)は整合する。[小さいfixture記録](fixture.json)を残し、重複したstage設定/guard記録と、役目を終えた一時controllerも削除した。
 
-次はこの固定runtimeと同じsnapshotで4/16並行を確認する。この部品の短縮だけで80を再試行しない。80人8時間、成長する複数project/NAS、98%必要原文、総token・品質の合格は未達・未検証。回答モデル0、有料比較0/18。本体・README実績・releaseには未採用。
+同じ固定runtime・snapshot・3質問・期待本文で、[事前固定した4/16並行](capacity-plan.json)を実行した。[制御コード](../../../tools/research/PreparedLiteralLoad.lean)は、既存のMemoryCapacityを変更せず、現行監査器から隔離したnative実行体を作る。[全製品coreの一致](capacity-sources.json)、[native closure](capacity-closure.json)、[ビルドと実行体SHA](capacity-client.json)を確認した。準備済みの同じproject cacheを使い、warmは新規窓の埋込み0を要求する。各clientのstdoutを永続化してから実サービスへACKし、返信の全文を期待本文と照合する。
+
+| 同時client | 本文一致・ACK | 必要原文 | 各clientのフックms |
+| --- | --- | --- | --- |
+| 4 | 4/4 | 20/20 | 4,401〜5,304 |
+| 16 | 16/16 | 84/84 | 9,402〜12,953 |
+
+[実行記録](capacity-small.json)では、全20clientの意味検索・シナプス・packetも完了した。表の原文数は、事前監査済み本文とのbyte一致から確認した各clientの必要項目の延べ数であり、104種類の異なる根拠ではない。別枠の3primeも本文/ACKが一致した。関連RSS最大3,893,216KiB（3,986,653,184 bytes）、保護停止なし・exit0・残存0、原DBのhead/pagesは不変。受付初期化は測定波の外にある。3種類の質問を反復した単一fixtureの一波ずつであり、80異種質問・8時間の持続負荷やp99ではない。観測を有効にしているため、旧候補との因果的な速度比較にはしない。
+
+[両側の段階記録](capacity-profiles.json)と[集計](capacity-timing-summary.json)も保存した。16同時の数値サービス32呼び出しは全完了、各163〜621msだった。operation受付のqueueは0〜1ms。`search.trace.semanticMs`をMiniLM単体の時間と読まない。16同時では、automatic準備480〜715ms、選択本体1,013〜2,573ms、binding走査278〜796msが各要求に残る。これは重なった壁時計の区間なので、足してCPU時間や原因の寄与率にはしない。選択器の過去の単独/並行再生を無視して重みや小変更を重ねず、質問非依存の準備と要求固有の処理を、実際に共有されるviewの境界で追う。この結果だけで80を再試行しない。
+
+[終了した負荷試験のsource/build・セッション・受領記録・確認台帳・重複出力・一時設定](capacity-cleanup.json)5,053ファイル、511,670,781論理bytesをarchiveせず削除した。現在のruntime/監査器/installed runtime・原DB・6比較本文のSHAは不変で、projectの準備済みcacheとモデルは保持した。論理bytesを物理解放量と呼ばない。整理後も[通常305 object](capacity-retained-runtime.json)と[監査327 object](capacity-retained-auditor.json)が整合する。
+
+80追加0、回答モデル0、有料比較0/18。本体・README実績・releaseには未採用。80人8時間、成長する複数project/NAS、98%必要原文、総token・品質の合格は未達・未検証。
