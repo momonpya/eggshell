@@ -1,0 +1,7 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/empty-citations-runtime-source/Eggshell/PluginHooks.lean	2026-11-09 04:34:37
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/packed-ledger-runtime-source/Eggshell/PluginHooks.lean	2026-11-09 06:34:56
+@@ -9,0 +10 @@
++public import tools.research.PackedLedgerProjection
+@@ -624 +625 @@
+-          projection := handoff.acknowledgmentProjection }
++          projection := Eggshell.Research.PackedLedgerProjection.compact handoff.acknowledgmentProjection }

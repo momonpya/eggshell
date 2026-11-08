@@ -19,6 +19,6 @@
 
 保存量は両側とも3,061,582 bytesで変わっていない。16出典の5,697範囲を行ごとのJSONとして保存し、消費時の`Journal.presentation`がさらに`compactRanges`する構成が残る。次は、穴を埋めず、DB・Subject・owner・Work・不確実性を分けたまま、保存時から範囲をまとめられるかを、既存consumerの被覆・利用ラベルとの等式で検査する。原文対応のページ走査と選択も別に残っている。この約100msの部品改善だけで80件を再試行しない。
 
-終了した比較用DB・補助source/build・生ログは[削除](cleanup.json)。次の検査の原入力であるACK台帳1件は、[headとSHAを固定](active-input.json)して保持する。終了記録の保管目的ではなく、保存表現を変更する際の同一入力であり、不要になった時点で削除する。原典・現在のproject cache/model/runtime・既存比較本文は保持する。archiveは作らない。
+終了した比較用DB・補助source/build・生ログは[削除](cleanup.json)。ACK台帳1件は[headとSHAを固定](active-input.json)して次の[範囲をまとめる比較](../packed-ledger/README.md)の同一入力として使い、その比較の終了後に[削除した](../packed-ledger/cleanup.json)。同JSONは当時の入力manifestで、パスのDBは保持していない。原典・現在のproject cache/model/runtime・既存比較本文は保持する。archiveは作らない。
 
 回答モデル0、有料比較0/18、製品未接続・未採用。80人8時間、成長する複数DB/NAS、98%必要原文、総token・品質の全体目標は未達。
