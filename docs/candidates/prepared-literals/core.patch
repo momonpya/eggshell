@@ -1,0 +1,271 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -7850,8 +7850,44 @@
+       ("fetchMs",toJson (profileFetched-profileRequests)),("materializeMs",toJson (profileMaterialized-profileFetched)),
+       ("finishMs",toJson (profileFinished-profileMaterialized)),("sourceKeys",toJson profileSourceKeys)]
+     return finished
++
++
++/-- Consume already prepared literal components. Staged/unprepared owners keep
++the original bounded path; authenticated stored facts never reread the text. -/
++def literalFocusWith (facts : Option Research.PreparedLiteralFocus.Data)
++    (question : String) (owner : OutcomeEdge) (ranked : List Nat) : QueryLiterals.Focus :=
++  match facts with
++  | some facts => facts.focus question ranked
++  | none => QueryLiterals.focus question (evidenceSearchWindows owner) ranked
++
++theorem literalFocusWith_exact (facts : Research.PreparedLiteralFocus.Data)
++    (question : String) (owner : OutcomeEdge) (ranked : List Nat)
++    (exact : facts.words = (evidenceSearchWindows owner).map QueryLiterals.identifiers) :
++    literalFocusWith (some facts) question owner ranked =
++      QueryLiterals.focus question (evidenceSearchWindows owner) ranked :=
++  Research.PreparedLiteralFocus.Data.focus_exact _ _ _ _ exact
++
++theorem literalFocusWith_unprepared (question : String) (owner : OutcomeEdge) (ranked : List Nat) :
++    literalFocusWith none question owner ranked = QueryLiterals.focus question (evidenceSearchWindows owner) ranked := rfl
++
++theorem prepared_literal_original_evidence (owner : OutcomeEdge) :
++    Synapses.PreparedFocusFacts.evidence ((Persistence.Store.text? owner.work).getD "")
++      ((Persistence.Store.text? owner.outcome).getD "") = evidenceSearchWindows owner := by
++  have same : Matcher.atomText? owner.work = Persistence.Store.text? owner.work := by
++    cases owner.work <;> rfl
++  simp only [Synapses.PreparedFocusFacts.evidence,Synapses.PreparedFocusFacts.trim,
++    evidenceSearchWindows,Persistence.Store.searchText,same]
+ 
++theorem literalFocusWith_compiled (owner : OutcomeEdge) (question : String) (ranked : List Nat) :
++    literalFocusWith (some (Synapses.PreparedFocusFacts.compile (relationKey owner.relation)
++      (relationKey owner.work) ((Persistence.Store.text? owner.work).getD "")
++      ((Persistence.Store.text? owner.outcome).getD "")).literalData) question owner ranked =
++      QueryLiterals.focus question (evidenceSearchWindows owner) ranked := by
++  change (Synapses.PreparedFocusFacts.compile _ _ _ _).literalData.focus _ _ = _
++  rw [Synapses.PreparedFocusFacts.compiled_literal_focus_exact,prepared_literal_original_evidence]
+ 
++#print axioms literalFocusWith_compiled
++
+ def prepareAutomatic (staged : List Value) (budget : Nat) (current : String)
+     (deliveredGraphs : List String) (enforce : Bool)
+     (stagedVisible : Bool)
+@@ -7877,6 +7913,7 @@
+     (canonicalRecipes : Std.HashMap String Synapses.CheckedOriginal.Recipe := {})
+     (canonicalShells : Std.HashMap String Synapses.PreparedPlanMetadata.Shell := {})
+     (originalStructures : Std.HashMap String Synapses.ObservedRecordView.Geometry := {})
++    (literalFacts : Std.HashMap String Research.PreparedLiteralFocus.Data := {})
+     (captureSelection : Bool := false) (captureRanges : Bool := false)
+     (captureInput : Bool := false) : PreparedRendering :=
+   let extraction := prepared.val
+@@ -7973,8 +8010,8 @@
+         if let some shell := canonicalShells[relationKey first.matched.edge.relation]? then
+           return ({slice with keys := [],text := "",context := none,shared := none,shell := some shell},[])
+         if Matcher.nativeOutcome first.matched.edge then return (slice,[])
+-      let hint := QueryLiterals.focus (requestQuestion.getD current)
+-        (evidenceSearchWindows first.matched.edge) (sourceContextWindows (positions.getD []) referenced)
++      let hint := literalFocusWith (literalFacts[relationKey first.matched.edge.relation]?)
++        (requestQuestion.getD current) first.matched.edge (sourceContextWindows (positions.getD []) referenced)
+       let windows := hint.windows
+       let anchors := hint.anchors
+       let prepared := prepareContextualSlicePlan planningReceipts windows slice anchors
+@@ -8012,8 +8049,8 @@
+           let slice : TransportSlice := {
+             owner := some source.owner.relation,keys := [],text := "",members := [],visibleKeys := []}
+           return (source.owner.relation,(slice,[]))
+-      let hint := QueryLiterals.focus (requestQuestion.getD current)
+-        (evidenceSearchWindows source.owner) (sourceContextWindows (positions.getD []) referenced)
++      let hint := literalFocusWith (literalFacts[relationKey source.owner.relation]?)
++        (requestQuestion.getD current) source.owner (sourceContextWindows (positions.getD []) referenced)
+       let windows := hint.windows
+       let anchors := hint.anchors
+       let prepared := prepareContextualSupportPlan planningReceipts windows source anchors
+@@ -8083,8 +8120,8 @@
+           let owner ← originals.find? (fun owner => owner.relation == choice.1)
+           let positions := (semanticEvidence.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+           let referenced := (referenceEvidence.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+-          let hint := QueryLiterals.focus (requestQuestion.getD current)
+-            (evidenceSearchWindows owner) (sourceContextWindows positions referenced)
++          let hint := literalFocusWith (literalFacts[relationKey owner.relation]?)
++            (requestQuestion.getD current) owner (sourceContextWindows positions referenced)
+           let ranks := (referenceRanks.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+           let ranges := (referenceRanges.find? (·.1 == owner.relation)).map Prod.snd |>.getD []
+           let originalKey := relationKey owner.relation
+@@ -9778,6 +9815,7 @@
+       (canonicalRecipes := canonicalRecipes)
+       (canonicalShells := canonicalShells)
+       (originalStructures := originalStructures)
++      (literalFacts := synaptic.literalFacts)
+       (captureSelection := renderReceipt.isSome)
+       (captureRanges := captureRanges)
+       (captureInput := captureInput)
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -64,6 +64,7 @@
+   canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
+   canonicalFailure : Array (String × String) := #[]
+   originalStructures : Std.HashMap String ObservedRecordView.Geometry := {}
++  literalFacts : Std.HashMap String Eggshell.Research.PreparedLiteralFocus.Data := {}
+   bindingComplete : Bool := true
+   bindingRequests : Nat := 0
+   bindingBytes : Nat := 0
+@@ -261,6 +262,21 @@
+       let mut shells := plan.shells
+       let mut reads := plan.metadataReads
+       for ((reference,_),index) in sources.zipIdx do
++        let some literalRows := batch.palette.literals[index]? |
++          throw (IO.userError "literal metadata lost its pinned project view")
++        for (owner,found) in literalRows do
++          let some facts := found | continue
++          let some witness := admitted.find? (fun item => item.owner.database == reference.access.database &&
++            item.document.owner == owner) | throw (IO.userError "literal metadata has no admitted owner")
++          unless facts.owner == owner && facts.work == witness.document.work && facts.words.length == facts.windows.length do
++            throw (IO.userError "literal metadata crossed its original owner/work/window domain")
++          if let some focus := (batch.requests[index]?).bind (·.focus) then
++            if let some row := focus.rows.find? (·.owner == owner) then
++              unless facts.matches row.owner row.work row.windows do
++                throw (IO.userError "literal metadata disagreed with the checked focus window domain")
++          if let some previous := plan.literalFacts[owner]? then
++            unless previous == facts do throw (IO.userError "literal facts disagreed across original source views")
++          plan := {plan with literalFacts := plan.literalFacts.insert owner facts}
+         let some records := batch.palette.records[index]? |
+           throw (IO.userError "original structures lost their pinned project view")
+         for (owner,found) in records do
+@@ -357,6 +373,7 @@
+     ("unlocatedFileOwners",toJson plan.unlocatedFileOwners),
+     ("observationAges",toJson plan.observations),
+     ("originalRecipeOwners",toJson plan.originalStructures.size),
++    ("literalFactsOwners",toJson plan.literalFacts.size),
+     ("inputs", toJson (plan.results.map Routed.Result.receipt)),
+     ("originalReferences",toJson (originals.map fun source =>
+       let bindings := (bindings.lookup source).map (·.row.binding)
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -410,7 +410,8 @@
+       owners := projected.owners
+       reuse := reuse
+       records := projected.records
+-      focus := projected.focus }
++      focus := projected.focus
++      literals := projected.literals }
+   catch error => server.palettes.release lease key; throw error
+ 
+ def readSourceViews (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
+--- a/tools/research/PreparedFocusFacts.lean
++++ b/tools/research/PreparedFocusFacts.lean
+@@ -1,6 +1,7 @@
+ module
+ public import tools.research.SourceProjectionDictionary
+ public import Eggshell.SearchRank
++public import tools.research.PreparedLiteralFocus
+ @[expose] public section
+ namespace Eggshell.Synapses.PreparedFocusFacts
+ open Lean _root_.Eggshell.Research.SourceProjectionWire
+@@ -11,7 +12,10 @@
+   (include_str "../../Eggshell/SearchUnicode.lean").toUTF8,
+   (include_str "../../Eggshell/Frequency.lean").toUTF8,
+   (include_str "../RetrievalGrams.lean").toUTF8,
+-  (include_str "../RetrievalCategories.lean").toUTF8])
++  (include_str "../RetrievalCategories.lean").toUTF8,
++  (include_str "PreparedLiteralFocus.lean").toUTF8,
++  (include_str "../QueryLiterals.lean").toUTF8,
++  (include_str "../IdentifierParts.lean").toUTF8])
+ 
+ /-- Original search windows keep their positions. Only the Work prefix is
+ removed from their lexical evidence, exactly as in the existing focus. -/
+@@ -27,17 +31,20 @@
+   originalWindows : List String
+   dictionary : Array String
+   windows : List (List Nat)
++  identifierRows : List (List (List String))
+   deriving ToJson,FromJson
+ 
+-def encode (owner work : String) (originals : List String) (rows : List (List String)) : Stored :=
++def encode (owner work : String) (originals : List String) (rows : List (List String))
++    (identifiers : List (List (List String))) : Stored :=
+   let terms := directory rows.flatten
+-  ⟨owner,work,originals,terms.values.toArray,rows.map (·.map terms.index)⟩
++  ⟨owner,work,originals,terms.values.toArray,rows.map (·.map terms.index),identifiers⟩
+ 
+ def Stored.decode (stored : Stored) : Option (List (List String)) :=
+   stored.windows.mapM fun row => row.mapM (stored.dictionary[·]?)
+ 
+ theorem encoded_rows_exact (owner work : String) (originals : List String)
+-    (rows : List (List String)) : (encode owner work originals rows).decode = some rows := by
++    (rows : List (List String)) (identifiers : List (List (List String))) :
++    (encode owner work originals rows identifiers).decode = some rows := by
+   let terms := directory rows.flatten
+   have one (row : List String) (present : ∀ word ∈ row, word ∈ terms.values) :
+       (row.map terms.index).mapM (terms.values.toArray[·]?) = some row := by
+@@ -67,7 +74,20 @@
+   let originals := SearchRank.windows (work++"\n"++outcome)
+   encode owner workKey (originals.map Persistence.Store.windowKey)
+     ((trim work.length originals).map SearchRank.terms)
++    ((trim work.length originals).map QueryLiterals.identifiers)
+ 
++def Stored.literalData (stored : Stored) : Eggshell.Research.PreparedLiteralFocus.Data :=
++  ⟨stored.owner,stored.work,stored.originalWindows,stored.identifierRows⟩
++
++theorem compiled_identifiers_exact (owner workKey work outcome : String) :
++    (compile owner workKey work outcome).literalData.words =
++      (evidence work outcome).map QueryLiterals.identifiers := rfl
++
++theorem compiled_literal_focus_exact (owner workKey work outcome question : String) (ranked : List Nat) :
++    (compile owner workKey work outcome).literalData.focus question ranked =
++      QueryLiterals.focus question (evidence work outcome) ranked :=
++  Eggshell.Research.PreparedLiteralFocus.Data.focus_exact _ _ _ _ (compiled_identifiers_exact ..)
++
+ theorem compiled_rows_exact (owner workKey work outcome : String) :
+     (compile owner workKey work outcome).decode = some ((evidence work outcome).map SearchRank.terms) :=
+   encoded_rows_exact ..
+@@ -81,6 +101,7 @@
+ question's ranking loop. No original text is retained in this value. -/
+ def check (owner : String) (stored : Stored) : Except String Ready := do
+   unless stored.owner == owner && stored.originalWindows.length == stored.windows.length &&
++      stored.identifierRows.length == stored.originalWindows.length &&
+       !stored.originalWindows.isEmpty &&
+       stored.originalWindows.all (fun key => key.length == 64) do
+     throw "prepared focus facts changed owner or original window domain"
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -68,6 +68,7 @@
+   reuse : Array Shared.Reuse
+   records : Array (Array (String × Option ObservedRecordView.Geometry))
+   focus : Array (Array (String × List Nat)) := #[]
++  literals : Array (Array (String × Option Eggshell.Research.PreparedLiteralFocus.Data))
+   deriving ToJson,FromJson
+ 
+ structure Fetch where
+--- a/tools/research/SharedReadViews.lean
++++ b/tools/research/SharedReadViews.lean
+@@ -142,6 +142,7 @@
+   owners : Array (Array (String × OwnerPalette.Descriptor))
+   records : Array (Array (String × Option ObservedRecordView.Geometry))
+   focus : Array (Array (String × List Nat))
++  literals : Array (Array (String × Option Eggshell.Research.PreparedLiteralFocus.Data))
+ 
+ /-- Pure reads receive only an immutable image and the current request. Admission,
+ release, cache state and IO capabilities are absent from this computation. The
+@@ -151,20 +152,23 @@
+   let mut values := #[]
+   let mut records := #[]
+   let mut focused := #[]
++  let mut literals := #[]
+   for (entry,request) in view.sources.zip requests do
+     unless entry.scope == request.access.scope && entry.source == request.access.source &&
+         entry.loaded.metadata == request.access.metadata && request.owners.all entry.owners.contains do
+       throw "original batch changed its immutable read domain"
+-    let owners ← request.owners.mapM fun owner => do
+-      return (owner,(← entry.readMetadata owner).stored.descriptor)
+-    values := values.push owners
++    let metadata ← request.owners.mapM fun owner => do
++      let ready ← entry.readMetadata owner
++      return (owner,ready.stored.descriptor,ready.focus.map (·.stored.literalData))
++    values := values.push (metadata.map fun (owner,descriptor,_) => (owner,descriptor))
++    literals := literals.push (metadata.map fun (owner,_,facts) => (owner,facts))
+     records := records.push (← entry.readRecords request.owners)
+     let ranked ← match request.focus with
+       | none => pure #[]
+       | some focus => focus.rows.mapM fun row => do
+           return (row.owner,← entry.focusWindows row.owner row.work row.windows focus.question row.semantic)
+     focused := focused.push ranked
+-  return ⟨values,records,focused⟩
++  return ⟨values,records,focused,literals⟩
+ 
+ theorem View.project_private_lifetime (view : View) (requests : Array SourceViewBatch.Request)
+     (deadline borrowers : Nat) (released : Bool) :
