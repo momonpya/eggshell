@@ -133,12 +133,23 @@ def setup (mode tag : String) : IO Unit := do
   check (tag.startsWith "group-reuse-") "known group reuse owner required"
   let path := base/(tag++".guard-settings.json")
   check (!(← path.pathExists)) "preserve group attempt"
-  let args ← if ["build","runtime-build","auditor-build"].contains mode then
+  let args ← if ["build","runtime-build","auditor-build","structure-build"].contains mode then
     pure #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
       (workspace/"tools/research/StudyBuildMain.lean").toString,
-      (base/(if mode == "build" then "group-reuse-settings.json" else s!"group-reuse-{mode.dropEnd 6}.json")).toString]
+      (base/(if mode == "build" then "group-reuse-settings.json" else if mode == "structure-build" then
+        "group-reuse-structure-settings.json" else s!"group-reuse-{mode.dropEnd 6}.json")).toString]
     else do
-      if mode == "check" then
+      if mode == "structure" then
+        check ((← read (folder/"structure-closure.json")).getObjValD "consistent" == toJson true &&
+          (← read (folder/"structure-subset-sources.json")).getObjValD "nativeSubsetSourcesExact" == toJson true)
+          "diagnostic subset must match the actual selector source"
+        pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
+          "EGGSHELL_DATA_ROOT="++(base/"real-source-search-read-trial-result/data").toString,
+          (base/"group-reuse-structure-build/StudyMain").toString,
+          (base/"real-source-search-read-trial-result/work.egg").toString,
+          (base/"selection-profile-inputs/selector-fixture.json").toString,
+          (base/"group-reuse-structure.json").toString]
+      else if mode == "check" then
         pure #["/usr/bin/env","LEAN_NUM_THREADS=1",
           "EGGSHELL_DATA_ROOT="++(base/"real-source-search-read-trial-result/data").toString,
           (build/"StudyMain").toString,(base/"real-source-search-read-trial-result/work.egg").toString,
@@ -395,6 +406,101 @@ def collectActual : IO Unit := do
   for tag in ["group-reuse-auditor2","group-reuse-install1","group-reuse-cells1"] do
     for extension in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++extension))
 
+def collectCapacity : IO Unit := do
+  drained
+  let evidence ← read (folder/"capacity-small.json")
+  let stopped := evidence.getObjValD "guard"
+  check (stopped.getObjValD "state" == toJson "finished" &&
+    stopped.getObjValD "exitCode" == toJson (137 : Nat) &&
+    stopped.getObjValD "reason" == toJson "aggregate-rss" &&
+    stopped.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "preserve the actual stopped capacity result"
+  let tag := "group-reuse-capacity-build1"
+  let built ← read (base/(tag++".guard.json"))
+  check (built.getObjValD "exitCode" == toJson (0 : Nat) &&
+    built.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "capacity client build did not drain"
+  write (folder/"capacity-build.json") (Json.mkObj [("guard",built),
+    ("stdout",toJson (← IO.FS.readFile (base/(tag++".stdout")))),
+    ("stderr",toJson (← IO.FS.readFile (base/(tag++".stderr"))))])
+  let previous ← read (folder/"runtime.json")
+  write (folder/"runtime.json") (previous
+    |>.setObjVal! "newCapacityRuns" (toJson (1 : Nat))
+    |>.setObjVal! "newEightyRuns" (toJson (0 : Nat))
+    |>.setObjVal! "capacityGatePassed" (toJson false)
+    |>.setObjVal! "next" (toJson "inspect immutable saved selector structure; no unchanged 16/80 rerun or adoption"))
+  for tag in [tag,"group-reuse-capacity-small1"] do
+    for extension in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++extension))
+
+def collectStructure : IO Unit := do
+  drained
+  let mut attempts := #[]
+  for tag in ["group-reuse-structure1","group-reuse-structure2","group-reuse-structure-build1","group-reuse-structure-build2","group-reuse-structure3"] do
+    let status ← read (base/(tag++".guard.json"))
+    check (status.getObjValD "state" == toJson "finished" &&
+      status.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "structure observer is still live"
+    attempts := attempts.push (Json.mkObj [("tag",toJson tag),("guard",status),
+      ("stdout",toJson (← IO.FS.readFile (base/(tag++".stdout")))),
+      ("stderr",toJson (← IO.FS.readFile (base/(tag++".stderr"))))])
+  let result ← read (base/"group-reuse-structure.json")
+  check (result.getObjValD "originalSourceUnchanged" == toJson true) "structure observer changed original input"
+  write (folder/"selector-structure.json") (Json.mkObj [("result",result),("attempts",toJson attempts)])
+  for tag in ["group-reuse-structure1","group-reuse-structure2","group-reuse-structure-build1","group-reuse-structure-build2","group-reuse-structure3"] do
+    for extension in ["stdout","stderr"] do IO.FS.removeFile (base/(tag++"."++extension))
+
+def prepareStructure : IO Unit := do
+  drained
+  let target := base/"group-reuse-structure-build"
+  check (!(← target.pathExists)) "preserve the structure observer build"
+  IO.FS.writeFile (source/"tools/research/SelectorStructure.lean")
+    (← IO.FS.readFile (workspace/"tools/research/SelectorStructure.lean"))
+  let settings ← read (base/"group-reuse-auditor.json")
+  let parents ← IO.ofExcept (settings.getObjValAs? (Array String) "parents")
+  let parent := base/"group-reuse-capacity-build"
+  write (base/"group-reuse-structure-settings.json") (settings
+    |>.setObjVal! "mainModule" (toJson "tools.research.SelectorStructure")
+    |>.setObjVal! "output" (toJson target.toString)
+    |>.setObjVal! "baselineResponse" (toJson (parent/"runtime.rsp").toString)
+    |>.setObjVal! "baselineMain" (toJson (parent/"tools_research_MemoryCapacity.o").toString)
+    |>.setObjVal! "objectModules" (toJson (parent/"object-mapping.json").toString)
+    |>.setObjVal! "parents" (toJson (#[parent.toString]++parents)))
+
+def repairStructureMap : IO Unit := do
+  drained
+  let path := base/"group-reuse-structure-settings.json"
+  let previous ← read path
+  let selected := base/"group-reuse-capacity-build/object-mapping.json"
+  write (folder/"structure-link-input-repair.json") (Json.mkObj [
+    ("previousObjectMap",previous.getObjValD "objectModules"),("selectedObjectMap",toJson selected.toString),
+    ("selectedMapSha256",toJson (← hash selected)),
+    ("reason",toJson "use the actual selected baseline map, including inherited runtime objects; the older source map omitted their paths"),
+    ("productCodeChanged",toJson false),("actualNewHookCalls",toJson (0 : Nat))])
+  write path (previous.setObjVal! "objectModules" (toJson selected.toString))
+
+def retireStoppedCapacity : IO Unit := do
+  drained
+  let cleanup ← read (folder/"capacity-small-cleanup.json")
+  check (cleanup.getObjValD "completed" == toJson true) "collect stopped ownership and retire sessions first"
+  let product := base/"group-reuse-runtime-build/StudyMain"
+  let productHash ← hash product
+  let original := base/"real-source-search-read-trial-result/work.egg"
+  let files ← IO.ofExcept (((← read (folder/"component.json")).getObjValD "result").getObjValAs?
+    (Array (String × String)) "sourceFiles")
+  for (name,sha) in files do check ((← hash (original/name)) == sha) "original changed before retirement"
+  let binary := base/"group-reuse-capacity-build/StudyMain"
+  let expected := (← read (folder/"capacity-sources.json")).getObjValD "auditorSha256"
+  check (expected == toJson (← hash binary)) "ended capacity client changed"
+  let root := base/"group-reuse-capacity-small-result"
+  check ((← root.symlinkMetadata).type == .dir &&
+    (← IO.FS.realPath root) == (← IO.FS.realPath base)/"group-reuse-capacity-small-result")
+    "capacity result escaped its exact generated root"
+  let executableBytes := (← binary.metadata).byteSize.toNat
+  let resultBytes ← removeTree root
+  IO.FS.removeFile binary
+  for (name,sha) in files do check ((← hash (original/name)) == sha) "retirement changed original"
+  check ((← hash product) == productHash) "retirement changed current runtime"
+  write (folder/"retired-capacity-output.json") (Json.mkObj [("capacityClientSha256",expected),
+    ("executableLogicalBytes",toJson executableBytes),("resultLogicalBytes",toJson resultBytes),
+    ("currentBodiesOriginalDbModelCachesAndNativeInputsRetained",toJson true),("archived",toJson false)])
+
 def refresh : IO Unit := do
   drained
   for name in ["MemoGroupFold","GroupReuseChecks"] do
@@ -426,6 +532,11 @@ def main (args : List String) : IO Unit := match args with
   | ["retire-ended-outputs"] => retireEndedOutputs
   | ["collect-runtime"] => collectRuntime
   | ["collect-actual"] => collectActual
+  | ["collect-capacity"] => collectCapacity
+  | ["collect-structure"] => collectStructure
+  | ["prepare-structure"] => prepareStructure
+  | ["repair-structure-map"] => repairStructureMap
+  | ["retire-stopped-capacity"] => retireStoppedCapacity
   | _ => throw (IO.userError "group reuse: prepare|setup MODE TAG|refresh")
 end GroupReuseStudy
 def main := GroupReuseStudy.main

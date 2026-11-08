@@ -106,6 +106,32 @@ private def sourceWitnesses (directory : System.FilePath) : IO (String × Std.Ha
 
 def main (args : List String) : IO Unit := do
   if args == ["literal-checks"] then literalChecks; return
+  if let "subset-sources"::product::observer::output::required := args then
+    let path : System.FilePath := .mk output
+    unless !(← path.pathExists) && !required.isEmpty do
+      throw (IO.userError "fresh subset record and explicit required modules needed")
+    let (_,original) ← sourceWitnesses (.mk product)
+    let (_,checking) ← sourceWitnesses (.mk observer)
+    let mut failures := #[]
+    for (name,bytes) in checking do
+      unless original[name]? == some bytes do failures := failures.push name
+    for name in required do
+      unless checking.contains name do failures := failures.push name
+    let absent := original.toArray.filterMap fun (name,_) =>
+      if name.startsWith "Eggshell." && !checking.contains name then some name else none
+    let runtimeHash := fun (root : String) => do
+      let result ← IO.Process.output {cmd := "/usr/bin/shasum",args := #["-a","256",root++"/StudyMain"]}
+      unless result.exitCode == 0 do throw (IO.userError "cannot bind native subset audit")
+      return (result.stdout.splitOn " ").headD ""
+    let valid := checking.size > 0 && failures.isEmpty
+    IO.FS.writeFile path (Json.mkObj [("checkedModules",toJson checking.size),
+      ("requiredModules",toJson required),("failures",toJson failures),
+      ("missingProductCore",toJson absent),("allProductCorePresent",toJson absent.isEmpty),
+      ("nativeSubsetSourcesExact",toJson valid),("productSha256",toJson (← runtimeHash product)),
+      ("observerSha256",toJson (← runtimeHash observer)),("actualHookCalls",toJson (0 : Nat)),
+      ("fullProductHarness",toJson false)]).pretty
+    unless valid do throw (IO.userError "native diagnostic subset changed an imported source")
+    return
   if let ["common-sources",product,auditor,output] := args then
     let path : System.FilePath := .mk output
     unless !(← path.pathExists) do throw (IO.userError "preserve native common-source comparison")
