@@ -1,0 +1,108 @@
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -3,0 +4 @@
++public import Eggshell.SynapticBindings
+@@ -128,0 +130,2 @@
++  bindings : String → CanonicalSource.Shared.Access → Option String → Array Range → Array String → Nat →
++    IO IndexedBindings.Projection
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -372,7 +372,13 @@
+-  let response ← Stream.exchange reference.endpoint "source-bindings" (Json.mkObj [
+-    ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
+-    ("metadata",toJson access.metadata),("retained",toJson reference.retained),("wanted",toJson wanted),("allowed",toJson allowed.toArray),
+-    ("budgetMs",toJson budget)]) budget
+-  let profileReceived ← IO.monoMsNow
+-  let found ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.IndexedBindings.Projection))
+-  let profileDecoded ← IO.monoMsNow
++  let (found,diagnostic) ← match reference.localReads.filter (fun localAccess => localAccess.accepts reference.endpoint) with
++    | some localAccess =>
++        let found ← localAccess.bindings reference.endpoint.secret access reference.retained wanted allowed.toArray deadline
++        pure (found,none)
++    | none => do
++        let response ← Stream.exchange reference.endpoint "source-bindings" (Json.mkObj [
++          ("database",toJson access.database),("scope",toJson access.scope),("source",toJson access.source),
++          ("metadata",toJson access.metadata),("retained",toJson reference.retained),("wanted",toJson wanted),("allowed",toJson allowed.toArray),
++          ("budgetMs",toJson budget)]) budget
++        let profileReceived ← IO.monoMsNow
++        let found ← IO.ofExcept (Json.parse response >>= fromJson? (α := Synapses.IndexedBindings.Projection))
++        let profileDecoded ← IO.monoMsNow
++        pure (found,some (response,profileReceived,profileDecoded))
+@@ -391 +397,4 @@
+-  clientProfile "source-bindings" profileStarted profileReceived profileDecoded response
++  match diagnostic with
++  | some (response,profileReceived,profileDecoded) => clientProfile "source-bindings" profileStarted profileReceived profileDecoded response
++  | none => Stream.profile "local-source-bindings" [("elapsedMs",toJson ((← IO.monoMsNow)-profileStarted)),
++      ("targets",toJson wanted.size),("bytes",toJson found.bytes)]
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -571,0 +572,28 @@
++def readSourceBindings (server : Server) (scope : ReadSource) (head : PageMap.Head)
++    (metadata : CanonicalSource.Cache.Manifest) (retained : Option String)
++    (wanted : Array Range) (allowed : Array String) (deadline : Nat) : IO IndexedBindings.Projection := do
++  let started ← IO.monoMsNow
++  unless wanted.size ≤ 32768 && allowed.size ≤ 4096 && head.identity == scope.database &&
++      metadata.source.identity == scope.database && metadata.implementation == CanonicalSource.Cache.implementation &&
++      digest metadata.payload do throw (IO.userError "invalid prepared binding request")
++  withPreparedSource server scope head metadata retained deadline fun loaded _ => do
++    let some original := loaded.originals | throw (IO.userError "original bindings are not prepared")
++    let acquired ← IO.monoMsNow
++    let report ← BindingPageScan.resolveReport original wanted (Std.HashSet.ofArray allowed) deadline
++    let result := report.resolved
++    let scanned ← IO.monoMsNow
++    profile "source-bindings-profile" [("prepareMs",toJson (acquired-started)),
++      ("scanMs",toJson (scanned-acquired)),("targets",toJson wanted.size),
++      ("pages",toJson report.pages),("leaves",toJson report.leaves),
++      ("bytes",toJson result.bytes),("complete",toJson result.complete)]
++    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
++    return {
++      identity := access.identity
++      index := original.index.head
++      rows := result.rows.toArray
++      complete := result.complete
++      requests := result.requests
++      bytes := result.bytes
++      unresolved := result.unresolved
++      unusable := result.unusable}
++
+@@ -586 +614,4 @@
+-    readSelectedRows server first.access.capability requests lease wanted deadline }
++    readSelectedRows server first.access.capability requests lease wanted deadline
++  bindings := fun secret access retained wanted allowed deadline => do
++    let scope ← scopedSource server secret (Json.mkObj [("database",toJson access.database),("scope",toJson access.scope)])
++    readSourceBindings server scope access.source access.metadata retained wanted allowed deadline }
+@@ -587,0 +619,7 @@
++theorem local_bindings_uses_checked_projection (server : Server) (endpoint : Daemon.Endpoint)
++    (secret : String) (access : CanonicalSource.Shared.Access) (retained : Option String)
++    (wanted : Array Range) (allowed : Array String) (deadline : Nat) :
++    (localReadAccess server endpoint).bindings secret access retained wanted allowed deadline = (do
++      let scope ← scopedSource server secret (Json.mkObj [("database",toJson access.database),("scope",toJson access.scope)])
++      readSourceBindings server scope access.source access.metadata retained wanted allowed deadline) := rfl
++
+@@ -608 +645,0 @@
+-  let started ← IO.monoMsNow
+@@ -614,23 +651 @@
+-  unless wanted.size ≤ 32768 && allowed.size ≤ 4096 && head.identity == scope.database &&
+-      metadata.source.identity == scope.database && metadata.implementation == CanonicalSource.Cache.implementation &&
+-      digest metadata.payload do throw (IO.userError "invalid prepared binding request")
+-  withPreparedSource server scope head metadata (← retainedToken payload) deadline fun loaded _ => do
+-    let some original := loaded.originals | throw (IO.userError "original bindings are not prepared")
+-    let acquired ← IO.monoMsNow
+-    let report ← BindingPageScan.resolveReport original wanted (Std.HashSet.ofArray allowed) deadline
+-    let result := report.resolved
+-    let scanned ← IO.monoMsNow
+-    profile "source-bindings-profile" [("prepareMs",toJson (acquired-started)),
+-      ("scanMs",toJson (scanned-acquired)),("targets",toJson wanted.size),
+-      ("pages",toJson report.pages),("leaves",toJson report.leaves),
+-      ("bytes",toJson result.bytes),("complete",toJson result.complete)]
+-    let access : CanonicalSource.Shared.Access := ⟨scope.database,scope.scope,"",head,metadata,.hit⟩
+-    return toJson ({
+-      identity := access.identity
+-      index := original.index.head
+-      rows := result.rows.toArray
+-      complete := result.complete
+-      requests := result.requests
+-      bytes := result.bytes
+-      unresolved := result.unresolved
+-      unusable := result.unusable} : IndexedBindings.Projection)
++  toJson <$> readSourceBindings server scope head metadata (← retainedToken payload) wanted allowed deadline

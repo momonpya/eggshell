@@ -231,6 +231,160 @@ def cleanup : IO Unit := do
   for path in paths do if ← path.pathExists then
     if ← path.isDir then IO.FS.removeDirAll path else IO.FS.removeFile path
   write (folder/"cleanup.json") (record.setObjVal! "completed" (toJson true))
+
+def phaseFolder := project/"docs/candidates/hook-phases"
+def phaseRoot := base/"hook-phases-result"
+def preparePhases : IO Unit := do
+  idle
+  check (!(← phaseRoot.pathExists) && !(← (base/"hook-phases-input.json").pathExists)) "preserve prior full-stage diagnostic"
+  let input ← read (base/"remaining-source-capacity-small-input.json")
+  check (input.getObjValD "runtimeSha256" == toJson (← hash (base/"remaining-source-prefix/libexec/eggshell")))
+    "actual frozen product changed"
+  let env ← IO.ofExcept (input.getObjValAs? (Array (String × Option String)) "environment")
+  let tracePath := phaseRoot/"stages.txt"
+  let env := (env.filter fun pair => !["EGGSHELL_HANDOFF_TRACE","EGGSHELL_TRACE_SERVICE_PROFILE"].contains pair.1).map
+    (fun (name,value) => (name,if name == "EGGSHELL_CONFIG" then some (phaseRoot/"config.toml").toString else value))
+    |>.push ("EGGSHELL_HANDOFF_TRACE",some tracePath.toString)
+    |>.push ("EGGSHELL_TRACE_SERVICE_PROFILE",some "1")
+  write (base/"hook-phases-input.json") (input.setObjVal! "output" (toJson phaseRoot.toString)
+    |>.setObjVal! "config" (toJson (phaseRoot/"config.toml").toString)|>.setObjVal! "environment" (toJson env)
+    |>.setObjVal! "counts" (toJson (#[(4 : Nat)]))|>.setObjVal! "traceOnly" (toJson true)
+    |>.setObjVal! "traceFile" (toJson tracePath.toString)|>.setObjVal! "rssOnly" (toJson false))
+  IO.FS.createDirAll phaseFolder
+  write (phaseFolder/"plan.json") (Json.mkObj [("runtimeSha256",input.getObjValD "runtimeSha256"),
+    ("thinControllerSha256",toJson (← hash (project/"tools/research/SearchCpuThin.lean"))),
+    ("sequentialPrimeQueries",toJson (3 : Nat)),("concurrentQueries",toJson (4 : Nat)),
+    ("noNewNativeProductBuild",toJson true),("unchangedEightyRetry",toJson false),
+    ("purpose",toJson "use existing discovery stage labels; byte offsets separate each sequential prime; concurrent trace is not assigned to individual requests"),
+    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+  write (base/"hook-phases1.guard-settings.json") (Json.mkObj [("command",toJson #[(compiler/"bin/lean").toString,
+    "-j1","-M768","--run",(project/"tools/research/SearchCpuThin.lean").toString,(base/"hook-phases-input.json").toString]),
+    ("cwd",toJson project.toString),("record",toJson (base/"hook-phases1.guard.json").toString),
+    ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (4358524 : Nat)),("minFreeKiB",toJson (2097152 : Nat))])
+
+def collectPhases : IO Unit := do
+  idle
+  let guard ← read (base/"hook-phases1.guard.json")
+  check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
+    guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "phase diagnostic has not passed and drained"
+  let report ← read (phaseRoot/"report.json")
+  check (report.getObjValD "allFourFrozenBodiesByteEqual" == toJson true &&
+    report.getObjValD "originalSourceFilesUnchanged" == toJson true && report.getObjValD "traceOnly" == toJson true)
+    "phase diagnostic changed actual bodies or original source"
+  let shutdown ← #["publisher-shutdown.json","frontend-shutdown.json"].mapM fun name => do
+    let value ← read (phaseRoot/System.FilePath.mk name)
+    check (value.getObjValD "processExited" == toJson true && value.getObjValD "exitCode" == toJson (0 : Nat))
+      "phase service did not stop normally"
+    return value
+  let data := base/"real-source-search-read-trial-result/data"
+  check (!(← (data/"publisher/endpoint.json").pathExists) && !(← (data/"daemon.json").pathExists)) "phase endpoint remains"
+  let raw ← IO.FS.readBinFile (phaseRoot/"stages.txt")
+  let mut serial := #[]
+  for index in [:3] do
+    let outcome ← read (phaseRoot/s!"prime-{index}.json")
+    let first ← IO.ofExcept (outcome.getObjValAs? Nat "traceFirstByte")
+    let last ← IO.ofExcept (outcome.getObjValAs? Nat "traceLastByte")
+    check (first < last && last ≤ raw.size) "sequential trace slice is absent"
+    let some text := String.fromUTF8? (raw.extract first last) | throw (IO.userError "invalid stage UTF8")
+    let rows ← (text.splitOn "\n").filterMapM fun row => do
+      if row.isEmpty then return none
+      let [number,label] := row.splitOn "ms " | throw (IO.userError "unexpected trace label")
+      let some elapsed := number.toNat? | throw (IO.userError "unexpected trace timestamp")
+      return some (elapsed,label)
+    check ((rows.filter (·.2 == "start")).length == 1 && rows.any (·.2 == "automatic rendered"))
+      "sequential trace was mixed with another discovery"
+    let intervals := (rows.zip (rows.drop 1)).map fun ((start,fromLabel),(finish,toLabel)) =>
+      Json.mkObj [("from",toJson fromLabel),("to",toJson toLabel),("ms",toJson (finish-start))]
+    serial := serial.push (Json.mkObj [("topic",toJson (index+1)),("hook",outcome),
+      ("stages",toJson rows),("intervals",toJson intervals)])
+  write (phaseFolder/"phases.json") (Json.mkObj [("guard",guard),("report",report),("serial",toJson serial),
+    ("shutdown",toJson shutdown),("traceSha256",toJson (← hash (phaseRoot/"stages.txt"))),
+    ("concurrentTraceNotIndividuallyAttributed",toJson true),("adopted",toJson false)])
+
+def collectPhaseProfiles : IO Unit := do
+  idle
+  let evidence ← read (phaseFolder/"phases.json")
+  let shutdown ← IO.ofExcept (evidence.getObjValAs? (Array Json) "shutdown")
+  let pid := shutdown[0]!.getObjValD "pid"
+  let first ← IO.ofExcept ((← read (phaseRoot/"prime-0-start.json")).getObjValAs? Nat "startedMs")
+  let last ← IO.monoMsNow
+  let serial ← IO.ofExcept (evidence.getObjValAs? (Array Json) "serial")
+  let data := base/"real-source-search-read-trial-result/data/receipts"
+  let names := ["source-plan-profile","render-client-profile","render-automatic-profile","local-source-plan",
+    "local-source-views","local-source-fetch","source-views-profile","source-bindings-profile","render-selector-path",
+    "server-envelope-profile","client-profile"]
+  let mut profiles := #[]
+  for directory in ← data.readDir do
+    if !(← directory.path.isDir) then continue
+    for name in names do
+      let path := directory.path/(name++".json")
+      if !(← path.pathExists) then continue
+      let value ← read path
+      if value.getObjValD "pid" != pid then continue
+      let observed ← IO.ofExcept (value.getObjValAs? Nat "observedMs")
+      if observed < first || last < observed then continue
+      let topic := (serial.find? fun item =>
+        let hook := item.getObjValD "hook"
+        (hook.getObjValAs? Nat "startedMs").toOption.getD 0 ≤ observed &&
+        observed ≤ (hook.getObjValAs? Nat "finishedMs").toOption.getD 0).map (·.getObjValD "topic")
+      profiles := profiles.push (value.setObjVal! "receiptDirectory" (toJson directory.fileName)
+        |>.setObjVal! "sequentialTopic" (topic.getD Json.null))
+  check ((profiles.filter (·.getObjValD "stage" == toJson "render-client-profile")).size == 7)
+    "all three primes and four concurrent renderers required"
+  write (phaseFolder/"profiles.json") (Json.mkObj [("publisherPid",pid),("firstObserved",toJson first),
+    ("lastObserved",toJson last),("profiles",toJson profiles),("newHookCalls",toJson (0 : Nat)),("adopted",toJson false)])
+
+def cleanupPhases : IO Unit := do
+  idle
+  let evidence ← read (phaseFolder/"phases.json")
+  let guard := evidence.getObjValD "guard"
+  check (guard.getObjValD "state" == toJson "finished" && guard.getObjValD "exitCode" == toJson (0 : Nat) &&
+    guard.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "phase diagnostic has not drained"
+  let data := base/"real-source-search-read-trial-result/data"
+  for stopped in ← IO.ofExcept (evidence.getObjValD "shutdown").getArr? do
+    check (stopped.getObjValD "processExited" == toJson true && stopped.getObjValD "exitCode" == toJson (0 : Nat))
+      "phase service remains live"
+  check (!(← (data/"publisher/endpoint.json").pathExists) && !(← (data/"daemon.json").pathExists)) "phase endpoint remains"
+  let profiles ← read (phaseFolder/"profiles.json")
+  let pid := profiles.getObjValD "publisherPid"
+  let mut retained := #[]
+  for name in ["remaining-source-runtime-build/StudyMain","typed-bindings-runtime-build/StudyMain",
+      "real-source-search-read-trial-result/work.egg/head",
+      "real-source-search-read-trial-result/work.egg/2a1ab5766ac89060c477ae3fc9683c9492574ff843d134c01b53d9697a27359e.pages"] do
+    let path := base/name
+    retained := retained.push (path,← hash path)
+  for topic in [1:4] do
+    for repetition in [:2] do
+      let path := base/"remaining-source-cells-result"/s!"topic-{topic}-chat-{repetition}"/"body.txt"
+      retained := retained.push (path,← hash path)
+  let mut paths : Array System.FilePath := #[]
+  for (kind,count) in [("prime",3),("query",4)] do
+    for index in [:count] do
+      for suffix in ["-start",""] do
+        let row ← read (phaseRoot/s!"{kind}-{index}{suffix}.json")
+        let session ← IO.ofExcept (row.getObjValAs? String "session")
+        let receipt ← IO.ofExcept (row.getObjValAs? String "receipt")
+        check (receipt.length == 64 && receipt.toList.all Char.isAlphanum && session.length == 74 &&
+          session.startsWith ("cpu-"++kind++"-")) "phase receipt or session escaped scope"
+        paths := paths++#[data/"receipts"/receipt,data/"sessions"/session]
+  for row in ← IO.ofExcept (profiles.getObjValD "profiles").getArr? do
+    let id ← IO.ofExcept (row.getObjValAs? String "receiptDirectory")
+    check (id.length == 64 && id.toList.all Char.isAlphanum) "phase profile escaped scope"
+    let path := data/"receipts"/id
+    if paths.contains path || !(← path.pathExists) then continue
+    for entry in ← path.readDir do
+      check (entry.fileName.endsWith ".json" && (← read entry.path).getObjValD "pid" == pid)
+        "phase profile contains another process's record"
+    paths := paths.push path
+  paths := paths.toList.eraseDups.toArray++#[phaseRoot,base/"hook-phases1.stdout",base/"hook-phases1.stderr"]
+  let record := Json.mkObj [("paths",toJson (paths.map (·.toString))),
+    ("retained",toJson (retained.map fun (path,sha) => (path.toString,sha))),
+    ("currentDbCacheModelsAndComparisonBodiesRetained",toJson true),("archived",toJson false)]
+  write (phaseFolder/"cleanup.json") (record.setObjVal! "completed" (toJson false))
+  for path in paths do if ← path.pathExists then
+    if ← path.isDir then IO.FS.removeDirAll path else IO.FS.removeFile path
+  for (path,sha) in retained do check ((← hash path) == sha) "retained original or runtime changed"
+  write (phaseFolder/"cleanup.json") (record.setObjVal! "completed" (toJson true))
 end PostSearchStudy
 def main (args : List String) : IO Unit := do
   match args with
@@ -243,4 +397,8 @@ def main (args : List String) : IO Unit := do
   | ["collect"] => PostSearchStudy.collect
   | ["collect-cpu"] => PostSearchStudy.collect true
   | ["cleanup"] => PostSearchStudy.cleanup
+  | ["prepare-phases"] => PostSearchStudy.preparePhases
+  | ["collect-phases"] => PostSearchStudy.collectPhases
+  | ["collect-phase-profiles"] => PostSearchStudy.collectPhaseProfiles
+  | ["cleanup-phases"] => PostSearchStudy.cleanupPhases
   | _ => throw (IO.userError "saved-stages/prepare/setup/audit required")

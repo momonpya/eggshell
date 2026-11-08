@@ -18,11 +18,14 @@ def read (path : System.FilePath) : IO Json := IO.FS.readFile path >>= (IO.ofExc
 def write (path : System.FilePath) (value : Json) : IO Unit := IO.FS.writeFile path value.compress
 def drained : IO Unit := do
   for tag in ["memory-capacity-small1","memory-capacity-trace1","memory-capacity-build4"] do
-    let record ← read (base/(tag++".guard.json"))
+    let path := base/(tag++".guard.json")
+    if !(← path.pathExists) then continue
+    let record ← read path
     check (record.getObjValD "state" == toJson "finished" && record.getObjValD "ownedPids" == toJson (#[] : Array Nat))
       "previous runtime still owns processes"
   let result ← IO.Process.output {cmd := "/bin/ps",args := #["-axo","command="]}
-  check (!(result.stdout.splitOn "\n").any (·.contains "controller/StudyMain guard ")) "guard still running"
+  check (!(result.stdout.splitOn "\n").any (fun row => row.contains "controller/StudyMain guard " ||
+    row.trimAscii.toString.startsWith ((base/"resource-budget-guard-build/StudyMain").toString++" "))) "guard still running"
   for entry in ← base.readDir do
     if entry.fileName.startsWith "local-batch-" && entry.fileName.endsWith ".guard.json" then
       let record ← read entry.path
@@ -281,7 +284,7 @@ def collectCells (tag : String := "local-batch") (parentTag : String := "deliver
     "actual hooks did not use the direct selected-original path"
   check (!requiresKeyedImage || keyedImageUsed) "delivery passed but candidate shared keyed path was not exercised"
 def cleanupCells (tag : String := "local-batch") : IO Unit := do
-  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit"].contains tag) "unknown ended delivery cohort"
+  check (["local-batch","parallel-encoder","runtime-key","elastic-encoder","keyed-inputs","keyed-discovery","shared-model","encoder-events","local-completion","selection-membership","delivery-key-sets","typed-fetch","typed-plan","resident-source","allocation-probe","canonical-order","rendering-lifetime","single-canonical","deferred-audit","typed-bindings"].contains tag) "unknown ended delivery cohort"
   let study := workspace/"docs/candidates"/tag
   let result ← read (study/"delivery-cells.json")
   let guardTag := (result.getObjValAs? String "guardTag").toOption.getD (tag++"-cells1")

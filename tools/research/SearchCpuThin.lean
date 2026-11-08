@@ -67,6 +67,12 @@ def stop (context : Context) (child : Child) (args : Array String) (path : Syste
   check (result.exitCode == 0 && exit == some 0) "diagnostic service required forced shutdown"
 def hook (context : Context) (session event prompt label : String) (expected : Option Json := none) : IO Json := do
   let receipt ← digest (context.root.toString++":"++label)
+  let tracePath := (context.input.getObjValAs? String "traceFile").toOption.map System.FilePath.mk
+  let traceOffset := do
+    match tracePath with
+    | some path => if ← path.pathExists then return (← path.metadata).byteSize.toNat else return 0
+    | none => return 0
+  let traceFirst ← traceOffset
   let began ← IO.monoMsNow
   let deadline := began+30000
   let payload := Json.mkObj [("session_id",toJson session),("turn_id",toJson "first"),
@@ -101,7 +107,8 @@ def hook (context : Context) (session event prompt label : String) (expected : O
   let value := Json.mkObj [("session",toJson session),("receipt",toJson receipt),("event",toJson event),
     ("startedMs",toJson began),("finishedMs",toJson (← IO.monoMsNow)),
     ("elapsedMs",toJson ((← IO.monoMsNow)-began)),("bodyBytes",toJson body.utf8ByteSize),
-    ("frozenBodyByteEqual",toJson expected.isSome),("ackCommandExitCode",toJson ack.exitCode.toNat)]
+    ("frozenBodyByteEqual",toJson expected.isSome),("ackCommandExitCode",toJson ack.exitCode.toNat),
+    ("traceFirstByte",toJson traceFirst),("traceLastByte",toJson (← traceOffset))]
   write (context.root/(label++".json")) value
   return value
 def run (inputPath : System.FilePath) : IO Unit := do
@@ -126,6 +133,7 @@ def run (inputPath : System.FilePath) : IO Unit := do
     check (topic.getObjValD "sha256" == toJson (← hash (.mk path))) "frozen body changed"
   let publisher ← spawn context #["codex-publication-daemon"]
   let rssOnly := input.getObjValD "rssOnly" == toJson true
+  let traceOnly := input.getObjValD "traceOnly" == toJson true
   let samplingStopped ← IO.mkRef false
   let rssRows ← IO.mkRef (#[] : Array Json)
   let rssTask ← if rssOnly then do
@@ -157,7 +165,7 @@ def run (inputPath : System.FilePath) : IO Unit := do
         discard <| hook context session "SessionStart" "" s!"query-{index}-start"
         sessions := sessions.push session
       let observer ← IO.asTask (do
-        if rssOnly then return
+        if rssOnly || traceOnly then return
         IO.sleep 500
         for round in [:3] do
           let result ← IO.Process.output {
@@ -177,7 +185,8 @@ def run (inputPath : System.FilePath) : IO Unit := do
       write (root/"report.json") (Json.mkObj [("runtimeSha256",input.getObjValD "runtimeSha256"),
         ("queries",toJson results),("allFourFrozenBodiesByteEqual",toJson true),("originalSourceFilesUnchanged",toJson true),
         ("usesActualUnmodifiedProduct",toJson true),("cliDiagnosticNotNativeCapacityHarness",toJson true),
-        ("rssOnly",toJson rssOnly),("cpuSamplingPerturbsTiming",toJson (!rssOnly)),
+        ("rssOnly",toJson rssOnly),("traceOnly",toJson traceOnly),
+        ("stageTracingPerturbsTiming",toJson traceOnly),("cpuSamplingPerturbsTiming",toJson (!rssOnly && !traceOnly)),
         ("rssSamplingPerturbsTiming",toJson rssOnly),("performanceImprovementEstablished",toJson false),
         ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
     finally stop context frontend #["codex-daemon","shutdown"] (root/"frontend-shutdown.json")
