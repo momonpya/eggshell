@@ -1,0 +1,35 @@
+--- a/tools/research/MemoryCapacity.lean
++++ b/tools/research/MemoryCapacity.lean
+@@ -1,3 +1,4 @@
++import tools.research.RealDeliveryProbe
+ import Main
+ import Eggshell.ContractAudit
+ import tools.research.StudyRuntime
+@@ -251,6 +252,25 @@
+   finally StudyRuntime.stopManaged publisher (root/"publisher-shutdown.json")
+ 
+ end Eggshell.Research.MemoryCapacity
++
++open Lean
++
++run_elab do
++  let environment ← getEnv
++  for (consumer,dependency) in [
++      (``Eggshell.Synapses.Recommend.locateOutputsUsing,``Eggshell.Synapses.Recommend.OriginalOutput.compact),
++      (``Eggshell.Synapses.Recommend.locateOutputsUsing,``Eggshell.Synapses.Recommend.locateOutputUsing),
++      (``Eggshell.Synapses.Transport.build,``Eggshell.Synapses.Recommend.locateOutputsUsing)] do
++    let some body := (environment.find? consumer).bind (·.value?) | throwError "Missing checked fragment consumer"
++    unless body.getUsedConstants.contains dependency do throwError "Disconnected checked fragment projection"
++
++#print axioms Eggshell.Synapses.Recommend.OutputFragment.original_checks
++#print axioms Eggshell.Synapses.Recommend.OutputFragment.path_checked
++#print axioms Eggshell.Synapses.Recommend.locateOutputsUsing_exact
++#print axioms Eggshell.Synapses.Recommend.OriginalOutput.compact_fields
++
+ def main (args : List String) : IO Unit := do
+-  let [input] := args | throw (IO.userError "capacity input required")
+-  Eggshell.Research.MemoryCapacity.run (.mk input)
++  match args with
++  | ["cells",_] | ["probe",_] | ["install-prefix",_] => scopedEncodeDeliveryMain args
++  | ["capacity",input] | [input] => Eggshell.Research.MemoryCapacity.run (.mk input)
++  | _ => throw (IO.userError "cells|probe|capacity INPUT")

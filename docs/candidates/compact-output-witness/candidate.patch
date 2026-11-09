@@ -1,0 +1,109 @@
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -367,19 +367,77 @@
+   simp only [Range.contains, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq] at within
+   exact within.1.1
+ 
+-structure LocatedOutput (doc : Extraction.Document) where
++/-- A checked advisory reference keeps only what delivery consumes. The full
++original fragment, including its JSON tree and character arrays, is a proof
++witness and is erased from the executable representation. -/
++structure OutputFragment (doc : Extraction.Document) where
++  occurrence : Occurrence
++  binding : Binding
++  path : Option (List JsonScalars.Segment)
++  checked : ∃ original : ObservationContext.Fragment doc,
++    occurrence = original.occurrence ∧ binding = original.binding ∧
++      path = original.address.map (·.path)
++
++def OutputFragment.ofOriginal (original : ObservationContext.Fragment doc) : OutputFragment doc :=
++  ⟨original.occurrence,original.binding,original.address.map (·.path),⟨original,rfl,rfl,rfl⟩⟩
++
++theorem OutputFragment.original_checks (fragment : OutputFragment doc) :
++    doc.native = true ∧ doc.occurrences.contains fragment.occurrence = true ∧
++      fragment.binding.owner = doc.owner ∧ fragment.binding.work = doc.work ∧
++      fragment.binding.valid = true := by
++  obtain ⟨original,occurrence,binding,_⟩ := fragment.checked
++  simpa only [occurrence,binding] using
++    And.intro original.native ⟨original.origin,original.owner,original.work,original.valid⟩
++
++theorem OutputFragment.path_checked (fragment : OutputFragment doc)
++    (path : List JsonScalars.Segment) (present : fragment.path = some path) :
++    ∃ raw, doc.source = some raw ∧ ∃ address : JsonScalars.Address raw, address.path = path := by
++  obtain ⟨original,_,_,samePath⟩ := fragment.checked
++  rw [samePath] at present
++  obtain ⟨address,_,exact⟩ := Option.map_eq_some_iff.mp present
++  exact ⟨original.raw,original.original,address,exact⟩
++
++/-- The original checked computation is kept as the refinement specification;
++each successful item is projected before it enters the retained array. -/
++structure OriginalOutput (doc : Extraction.Document) where
+   offer : Offer
+   fragment : ObservationContext.Fragment doc
+   target : offer.target = .output fragment.occurrence
+ 
+-def locateOutputsUsing (offers : Array Offer) (database : String)
+-    (prepared : ObservationContext.Prepared doc) : Array (LocatedOutput doc) :=
+-  offers.filterMap fun offer => do
++structure LocatedOutput (doc : Extraction.Document) where
++  offer : Offer
++  fragment : OutputFragment doc
++  target : offer.target = .output fragment.occurrence
++
++def OriginalOutput.compact (original : OriginalOutput doc) : LocatedOutput doc :=
++  ⟨original.offer,OutputFragment.ofOriginal original.fragment,original.target⟩
++
++def locateOutputUsing (database : String) (prepared : ObservationContext.Prepared doc)
++    (offer : Offer) : Option (OriginalOutput doc) := do
+     let .output _ := offer.target | none
+     let .consumed edge := offer.fact | none
+     let fragment ← prepared.locate? database edge
+     if target : offer.target = .output fragment.occurrence then some ⟨offer,fragment,target⟩ else none
+ 
++def locateOutputsUsing (offers : Array Offer) (database : String)
++    (prepared : ObservationContext.Prepared doc) : Array (LocatedOutput doc) :=
++  offers.filterMap fun offer => (locateOutputUsing database prepared offer).map OriginalOutput.compact
++
++/-- Preserve successful items, rejection, order and duplicates for every input.
++The right-hand side is a specification, not the executable allocation order. -/
++theorem locateOutputsUsing_exact (offers : Array Offer) (database : String)
++    (prepared : ObservationContext.Prepared doc) :
++    locateOutputsUsing offers database prepared =
++      (offers.filterMap (locateOutputUsing database prepared)).map OriginalOutput.compact :=
++  Array.map_filterMap.symm
++
++theorem OriginalOutput.compact_fields (original : OriginalOutput doc) :
++    original.compact.offer = original.offer ∧
++      original.compact.fragment.occurrence = original.fragment.occurrence ∧
++      original.compact.fragment.binding = original.fragment.binding ∧
++      original.compact.fragment.path = original.fragment.address.map (·.path) :=
++  ⟨rfl,rfl,rfl,rfl⟩
++
+ def locateOutputs (offers : Array Offer) (database : String) (doc : Extraction.Document) : Array (LocatedOutput doc) :=
+   (ObservationContext.prepare? doc).map (locateOutputsUsing offers database) |>.getD #[]
+ 
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -123,7 +123,7 @@
+     let shared := shared.qsort fun a b => if a.first == b.first then a.limit < b.limit else a.first < b.first
+     (owner.owner.relation, ((owner.outputs.toList.map fun located =>
+       ({priority := located.offer.priority,first := located.fragment.binding.first
+-        limit := located.fragment.binding.limit,path := located.fragment.address.map (·.path)} : OutputRange)) ++
++        limit := located.fragment.binding.limit,path := located.fragment.path} : OutputRange)) ++
+       shared.toList).eraseDups)
+ 
+ /-- A prepared empty file-range demand has no binding rows to retrieve.
+@@ -385,10 +385,10 @@
+     ("originalOutputs",toJson (plan.owners.flatMap fun owner => owner.outputs.map fun located =>
+       Json.mkObj [
+         ("evidence",toJson located.offer.identity), ("binding",toJson located.fragment.binding),
+-        ("path",toJson (located.fragment.address.map (fun address => JsonScalars.pathJson address.path))),
++        ("path",toJson (located.fragment.path.map JsonScalars.pathJson)),
+         ("bodyDelivered",toJson (delivery.coversBinding located.fragment.binding)),
+-        ("addressDelivered",toJson (located.fragment.address.map (fun address =>
+-          delivery.coversAddress located.fragment.binding address.path)))])),
++        ("addressDelivered",toJson (located.fragment.path.map (fun path =>
++          delivery.coversAddress located.fragment.binding path)))])),
+     ("offers", toJson (plan.results.flatMap fun result => result.admitted.map fun offer =>
+       let delivered := match offer.target with
+         | .range source => covered source delivery.ranges

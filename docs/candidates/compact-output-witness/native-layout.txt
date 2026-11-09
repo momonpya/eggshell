@@ -1,0 +1,76 @@
+LEAN_EXPORT lean_object* l_Eggshell_Synapses_Recommend_OutputFragment_ofOriginal___redArg(lean_object* v_original_2830_){
+_start:
+{
+lean_object* v_address_2831_;
+v_address_2831_ = lean_ctor_get(v_original_2830_, 4);
+lean_inc(v_address_2831_);
+if (lean_obj_tag(v_address_2831_) == 0)
+{
+lean_object* v_occurrence_2832_; lean_object* v_binding_2833_; lean_object* v___x_2834_; lean_object* v___x_2835_;
+v_occurrence_2832_ = lean_ctor_get(v_original_2830_, 0);
+lean_inc_ref(v_occurrence_2832_);
+v_binding_2833_ = lean_ctor_get(v_original_2830_, 1);
+lean_inc_ref(v_binding_2833_);
+lean_dec_ref(v_original_2830_);
+v___x_2834_ = lean_box(0);
+v___x_2835_ = lean_alloc_ctor(0, 3, 0);
+lean_ctor_set(v___x_2835_, 0, v_occurrence_2832_);
+lean_ctor_set(v___x_2835_, 1, v_binding_2833_);
+lean_ctor_set(v___x_2835_, 2, v___x_2834_);
+return v___x_2835_;
+}
+else
+{
+lean_object* v_occurrence_2836_; lean_object* v_binding_2837_; lean_object* v_val_2838_; lean_object* v___x_2840_; uint8_t v_isShared_2841_; uint8_t v_isSharedCheck_2847_;
+v_occurrence_2836_ = lean_ctor_get(v_original_2830_, 0);
+lean_inc_ref(v_occurrence_2836_);
+v_binding_2837_ = lean_ctor_get(v_original_2830_, 1);
+lean_inc_ref(v_binding_2837_);
+lean_dec_ref(v_original_2830_);
+v_val_2838_ = lean_ctor_get(v_address_2831_, 0);
+v_isSharedCheck_2847_ = !lean_is_exclusive(v_address_2831_);
+if (v_isSharedCheck_2847_ == 0)
+{
+v___x_2840_ = v_address_2831_;
+v_isShared_2841_ = v_isSharedCheck_2847_;
+goto v_resetjp_2839_;
+}
+else
+{
+lean_inc(v_val_2838_);
+lean_dec(v_address_2831_);
+v___x_2840_ = lean_box(0);
+v_isShared_2841_ = v_isSharedCheck_2847_;
+goto v_resetjp_2839_;
+}
+v_resetjp_2839_:
+{
+lean_object* v___x_2842_; lean_object* v___x_2844_;
+v___x_2842_ = l_Eggshell_JsonScalars_Address_path___redArg(v_val_2838_);
+if (v_isShared_2841_ == 0)
+{
+lean_ctor_set(v___x_2840_, 0, v___x_2842_);
+v___x_2844_ = v___x_2840_;
+goto v_reusejp_2843_;
+}
+else
+{
+lean_object* v_reuseFailAlloc_2846_;
+v_reuseFailAlloc_2846_ = lean_alloc_ctor(1, 1, 0);
+lean_ctor_set(v_reuseFailAlloc_2846_, 0, v___x_2842_);
+v___x_2844_ = v_reuseFailAlloc_2846_;
+goto v_reusejp_2843_;
+}
+v_reusejp_2843_:
+{
+lean_object* v___x_2845_;
+v___x_2845_ = lean_alloc_ctor(0, 3, 0);
+lean_ctor_set(v___x_2845_, 0, v_occurrence_2836_);
+lean_ctor_set(v___x_2845_, 1, v_binding_2837_);
+lean_ctor_set(v___x_2845_, 2, v___x_2844_);
+return v___x_2845_;
+}
+}
+}
+}
+}
