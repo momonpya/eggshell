@@ -37,7 +37,7 @@
 
 次に行うこと：
 
-1. 80が止まった原文準備〜選択の境界で、実際に生きている要求固有の値を特定する。`Snapshot.forkReader`は新しい私有page cacheを作ってsharedPagesを外す。これは数値・focusの非同期読み取り用であり、私有cacheの件数や関数の存在だけでは原因としない。入力snapshotのcache状態、保持期間、各境界の件数・bytesと実processの増加を合わせて確認する。
+1. [読取専用の時系列診断](docs/candidates/request-lifetime/README.md)では、同じ比較元の4/16並行で全20本文と原文104/104を観察したが、終了中のdisk保護停止によりライフサイクルは未合格。16並行のRSS最大時はfocus終了16件、canonical入力・配送ドメイン各1件、選択終了0件だった。focus〜原文/シナプス計画の境界で要求固有の保持値を特定する。過去の同一runtimeより小さいRSSを変更の改善としない。RSSには圧縮/swapが含まれず、観察・OS状態を切り分けていない。`Snapshot.forkReader`やcache件数だけで原因とせず、保持期間・各境界の件数/bytes・processの増加を合わせる。
 2. 質問に依存しない値は既存のproject別prepared viewで共有する。mutable cacheの所有と不変の読取値を分け、元のpin・全Ref・scope・依存記録を保存する。全体の作り直し、新しい永続cache、lockやworker制限を先に増やさない。
 3. 来歴索引の共有部品は、上記の停止原因と区別して接続する。descriptorの成功/拒否、project/snapshot/owner、元の全Read列とlookupの一致を保ち、既存のOwnerReady/viewの寿命と予算内へ置く。実フックでのメモリ改善は別に測る。
 4. 次の候補は比較元と分離し、通常native閉包とsourceを照合する。まず同じsnapshotの題材1/2/3・各2独立chatで原文32/32と本文byte一致、実意味検索・3辺・ACK・正常終了を確認する。このfixtureは中断した未受理seedであり、モデルの両周ではない。未検証part8、背景maintenance警告、受理済みseed不足は未解決として残す。
