@@ -165,7 +165,7 @@ def run (input digest : String) (limits : Option Limits := none) : IO UInt32 := 
         (thread.getObjValAs? (Array Json) "instructionSources").toOption == some #[])
         "actual model, effort or instructions differ from the frozen plan"
       let id ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
-      let endpoint := System.FilePath.mk plan.dataRoot / "sessions" / id / "daemon.json"
+      let endpoint := System.FilePath.mk plan.dataRoot / "daemon.json"
       let owned ← StudyRuntime.startPublisher (.mk plan.runtime.path) (.mk plan.dataRoot) plan.environment
       publisher.set (some owned)
       save directory "publisher.json" (Json.mkObj [("pid",toJson (StudyRuntime.pid owned))])

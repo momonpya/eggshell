@@ -1,5 +1,6 @@
 import tools.research.StudyAdmission
 import tools.research.StudyCommand
+import tools.research.StudyReadiness
 
 open Lean Eggshell
 
@@ -69,11 +70,7 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
   try
     let warm ← StudyCommand.run template.runtime.path #["egg","warm","work"] environment template.workspace "" (root / "warm") 240000
     check (warm.exitCode == 0) "explicit source warm failed"
-    let warmed ← IO.ofExcept (Json.parse warm.stdout >>= (·.getObjValAs? (Array Json) "databases"))
-    check (warmed.size == 1) "warm returned another database set"
-    let coverage ← IO.ofExcept (warmed[0]!.getObjVal? "after")
-    check ((coverage.getObjValAs? Nat "missing").toOption == some 0 &&
-      (coverage.getObjValAs? Nat "invalid").toOption == some 0) "source warm is incomplete"
+    discard <| StudyReadiness.warm warm (.mk template.database)
     let doctor ← StudyCommand.run template.runtime.path #["egg","doctor"] environment template.workspace "" (root / "doctor") 60000
     check (doctor.exitCode == 0) "native doctor failed"
     let mut lastBody : Option String := none
@@ -81,7 +78,7 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
       let session := s!"prepare-{template.label}-{index}"
       let call := root / s!"chat-{index}"
       IO.FS.createDir call
-      let endpoint := data / "sessions" / session / "daemon.json"
+      let endpoint := data / "daemon.json"
       let managed ← StudyRuntime.startManaged (.mk template.runtime.path) (.mk template.pluginRoot) session endpoint environment
       try
         let mut body := ""

@@ -18,6 +18,7 @@ import tools.research.StudyBudgetChecks
 import tools.research.StudyProfileChecks
 import tools.research.StudyPreparationChecks
 import tools.research.StudyStages
+import tools.research.StudyReadiness
 
 open Lean Eggshell.Research
 
@@ -69,6 +70,9 @@ def main (args : List String) : IO UInt32 := do
         let limits ← IO.ofExcept (fromJson? (α := StudyTrial.Limits) (← StudyAdmission.readJson budget))
         StudyAcquire.run input digest (some limits)
     | ["profile-checks",directory,prototype] => StudyProfileChecks.run directory prototype; return 0
+    | ["readiness-checks",warm,database,report] =>
+        StudyReadiness.checks (.mk warm) (.mk database) (.mk report)
+        return 0
     | ["preparation-check",directory] => StudyPreparationChecks.run directory; return 0
     | ["stage-prepare",input,digest] => StudyStages.run input digest; return 0
     | "seed-checks" :: rest => StudySeedChecks.cliMain rest

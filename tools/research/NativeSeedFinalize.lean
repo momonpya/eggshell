@@ -1,4 +1,5 @@
 import tools.research.StudyAcquire
+import tools.research.StudyReadiness
 
 open Lean Eggshell Eggshell.Research
 
@@ -54,7 +55,7 @@ def cliMain (args : List String) : IO UInt32 := do
       let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
       let managed ← try
         StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot)
-          session (files / "daemon.json") environment
+          session (data / "daemon.json") environment
         catch error =>
           StudyRuntime.stopManaged publisher (output / "publisher-shutdown.json")
           throw error
@@ -83,11 +84,7 @@ def cliMain (args : List String) : IO UInt32 := do
     let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment
       plan.workspace "" (output / "warm") 240000
     check (warm.exitCode == 0) "frozen runtime warm failed"
-    let databases ← IO.ofExcept (Json.parse warm.stdout >>= (·.getObjValAs? (Array Json) "databases"))
-    check (databases.size == 1) "seed warm returned another database set"
-    let coverage ← IO.ofExcept (databases[0]!.getObjVal? "after")
-    check ((coverage.getObjValAs? Nat "missing").toOption == some 0 &&
-      (coverage.getObjValAs? Nat "invalid").toOption == some 0) "seed vectors remain incomplete"
+    let coverage := (← StudyReadiness.warm warm (root / "work.egg")).coverage
     let prepared ← DB.PageMap.pin (root / "work.egg")
     let target : Eggshell.Plugin.IndexTarget := {
       owner := DB.Sidecar.Owner.ofSnapshot prepared

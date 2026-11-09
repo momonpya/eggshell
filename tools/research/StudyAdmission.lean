@@ -6,6 +6,7 @@ import tools.research.ArtifactHash
 import Eggshell.Install
 import tools.research.StudySource
 import tools.research.StudyProfile
+import tools.research.StudyReadiness
 
 open Lean Eggshell
 
@@ -160,17 +161,7 @@ def verifyLiveWarm (plan : Plan) : IO Json := do
   let result ← StudyCommand.run plan.runtime.path #["egg","doctor"] plan.environment plan.workspace "" directory 60000
   check (result.exitCode == 0) "current native cache inspection failed"
   let doctor ← IO.ofExcept (Json.parse result.stdout)
-  let databases ← IO.ofExcept (doctor.getObjValAs? (Array Json) "databases")
-  check (databases.size == 1) "current cache inspection selected another database set"
-  let database := databases[0]!
-  check ((database.getObjValAs? String "path").toOption == some plan.database &&
-    (database.getObjValAs? String "state").toOption == some "warm") "current database is cold"
-  let coverage ← IO.ofExcept (database.getObjVal? "coverage")
-  for lane in #[coverage,← IO.ofExcept (coverage.getObjVal? "discovery"),← IO.ofExcept (coverage.getObjVal? "focus")] do
-    let windows ← IO.ofExcept (lane.getObjValAs? Nat "windows")
-    check (windows > 0 && (lane.getObjValAs? Nat "valid").toOption == some windows &&
-      (lane.getObjValAs? Nat "missing").toOption == some 0 &&
-      (lane.getObjValAs? Nat "invalid").toOption == some 0) "current source windows are missing or invalid"
+  StudyReadiness.doctor doctor (.mk plan.database)
   return Json.mkObj [("directory",toJson directory.toString),("report",doctor)]
 
 def admit (path expectedSha256 : String) : IO Admitted := do

@@ -85,9 +85,11 @@ def run (input digest : String) : IO Unit := do
     | _ => throw (IO.userError "exactly three predeclared seed blocks required")
   check (1 ≤ request.stage && request.stage ≤ 6 &&
     #["pilot","comparison"].contains request.purpose) "invalid six-stage preparation"
-  check (request.initialSeedAudits.size == 3 &&
-    (request.initialSeedAudits.map (·.sha256)).toList.eraseDups.length == 3)
-    "three distinct native seed audits must be frozen before the first handoff"
+  let pilot := request.purpose == "pilot"
+  let initialCount := if pilot then 1 else 3
+  check ((!pilot || request.block == 1) && request.initialSeedAudits.size == initialCount &&
+    (request.initialSeedAudits.map (·.sha256)).toList.eraseDups.length == initialCount)
+    "pilot requires one audited seed in block one; adoption comparison requires three distinct audited seeds"
   StudyAdmission.verifyArtifact request.definitions
   let mut seedReports := #[]
   for artifact in request.initialSeedAudits do
@@ -153,7 +155,9 @@ def run (input digest : String) : IO Unit := do
     ("source",Json.mkObj [("required",required)])])
   let mut arms := #[]
   let mut accountSettings : Option String := none
-  for (arm,artifact) in #[(Arm.current,request.currentTemplate),(Arm.candidate,request.candidateTemplate)] do
+  let templates := if pilot then #[(Arm.candidate,request.candidateTemplate)]
+    else #[(Arm.current,request.currentTemplate),(Arm.candidate,request.candidateTemplate)]
+  for (arm,artifact) in templates do
     let template ← IO.ofExcept (fromJson? (α := StudyAdmission.Plan) (← StudyAdmission.readJson artifact.path))
     let template : StudyAdmission.Plan := if arm == .candidate then
       {template with
@@ -198,7 +202,7 @@ def run (input digest : String) : IO Unit := do
       record := preparationGuard.toString,cwd := controller.workspace
       command := #[controller.runner.path,"prepare-live",draftFile.path,(armRoot / "preparation").toString]
       ownedPrefixes := #[armRoot.toString,(prefixOf template.runtime).toString,controller.runner.path]
-      limitRssKiB := 3670016,minFreeKiB := 2097152} : ResourceGuard.Settings))
+      limitRssKiB := ResourceGuard.maximumStopRssKiB,minFreeKiB := 2097152} : ResourceGuard.Settings))
     let prepared ← IO.Process.output {cmd := controller.runner.path,args := #["guard",preparationSettings.path]}
     IO.FS.writeFile (armRoot / "preparation.stdout") prepared.stdout
     IO.FS.writeFile (armRoot / "preparation.stderr") prepared.stderr
@@ -210,7 +214,7 @@ def run (input digest : String) : IO Unit := do
       record := draft.guardRecord,cwd := controller.workspace
       command := #[controller.runner.path,"trial-bounded",plan.path,plan.sha256,request.limits.path,request.limits.sha256]
       ownedPrefixes := #[armRoot.toString,(prefixOf template.runtime).toString,controller.runner.path]
-      limitRssKiB := 3670016,minFreeKiB := 2097152} : ResourceGuard.Settings))
+      limitRssKiB := ResourceGuard.maximumStopRssKiB,minFreeKiB := 2097152} : ResourceGuard.Settings))
     arms := arms.push (Json.mkObj [("arm",toJson arm.label),("plan",toJson plan),("settings",toJson settings)])
   let freshRoot := root / "fresh"
   FileSystem.privateDirectory freshRoot
@@ -222,14 +226,14 @@ def run (input digest : String) : IO Unit := do
     record := fresh.guardRecord,cwd := controller.workspace
     command := #[controller.runner.path,"acquire-bounded",freshPlan.path,freshPlan.sha256,request.limits.path,request.limits.sha256]
     ownedPrefixes := #[freshRoot.toString,controller.runner.path]
-    limitRssKiB := 3670016,minFreeKiB := 2097152} : ResourceGuard.Settings))
+    limitRssKiB := ResourceGuard.maximumStopRssKiB,minFreeKiB := 2097152} : ResourceGuard.Settings))
   arms := arms.push (Json.mkObj [("arm",toJson "fresh"),("plan",toJson freshPlan),("settings",toJson freshSettings)])
   let _ ← StudyHistory.verify request.history
   let _ ← save (root / "stage.json") (Json.mkObj [
     ("block",toJson request.block),("stage",toJson request.stage),("topic",toJson topic),
     ("input",toJson (← StudyPrepare.artifact (.mk input))),("history",toJson request.history),
     ("sourceAudit",toJson request.sourceAudit),("readCoverage",toJson request.readCoverage),
-    ("order",toJson ((order block).map Arm.label)),("arms",toJson arms),
+    ("order",toJson (if pilot then ["fresh","candidate"] else (order block).map Arm.label)),("arms",toJson arms),
     ("forkedFromCommonSourceAndPrivateHistory",toJson true),("answeringModelCalls",toJson (0 : Nat)),
     ("productionAdoption",toJson false)])
   pure ()

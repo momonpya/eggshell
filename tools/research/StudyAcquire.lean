@@ -204,7 +204,7 @@ def run (input digest : String) (limits : Option StudyTrial.Limits := none) : IO
         publisher.set (some owned)
         save root "publisher.json" (Json.mkObj [("pid",toJson (StudyRuntime.pid owned))])
         let managed ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) id
-          (data / "sessions" / id / "daemon.json") environment
+          (data / "daemon.json") environment
         manager.set (some managed)
         save root "manager.json" (Json.mkObj [("session",toJson id),("pid",toJson (StudyRuntime.pid managed))])
       let deadline := (← IO.monoMsNow)+(limits.map (·.answerMs)).getD 900000

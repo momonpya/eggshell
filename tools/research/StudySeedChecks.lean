@@ -1,6 +1,7 @@
 import tools.research.StudyPrepare
 import Eggshell.SynapseLive
 import Eggshell.ContentMetadata
+import tools.research.StudyReadiness
 
 open Lean Eggshell Eggshell.Synapses
 open Eggshell.Research
@@ -36,16 +37,11 @@ private def replaceEnv (original updates : Array (String × Option String)) :=
 private def save (path : System.FilePath) (value : Json) : IO Unit :=
   IO.FS.writeFile path (value.compress ++ "\n")
 
-private def checkedWarm (output : StudyCommand.Result) : IO Unit := do
-  check (output.exitCode == 0) "explicit native warm failed"
-  let databases ← IO.ofExcept (Json.parse output.stdout >>= (·.getObjValAs? (Array Json) "databases"))
-  check (databases.size == 1 && databases.all (fun result =>
-    let journal := result.getObjValD "journal"
-    (journal.getObjValAs? Bool "complete").toOption == some true &&
-    (journal.getObjValAs? Nat "pending").toOption == some 0 &&
-    ((result.getObjValD "after").getObjValAs? Nat "missing").toOption == some 0 &&
-    ((result.getObjValD "after").getObjValAs? Nat "invalid").toOption == some 0))
-    "warm exited before every journal and numerical view was complete"
+private def checkedWarm (output : StudyCommand.Result) (database : System.FilePath) : IO Unit := do
+  discard <| StudyReadiness.warm output database
+  let snapshot ← DB.PageMap.pin database
+  check ((← Synapses.Journal.open? snapshot).isSome && !(← Synapses.Journal.required snapshot .database))
+    "native source journal is not completely prepared"
 
 private def config (binary database : String) (chars : Nat) : IO String := do
   return StudyProfile.render binary database (← IO.ofExcept (StudyProfile.checked chars))
@@ -151,11 +147,11 @@ def recall (plan : Input) (root source : System.FilePath)
   let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment workspace.toString ""
     (root / "recall-warm") 60000
   check (warm.exitCode == 0) "readonly recall source was not warmed"
-  checkedWarm warm
+  checkedWarm warm source
   let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
   let managed ← try
     StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session
-      (data / "sessions" / session / "daemon.json") environment
+      (data / "daemon.json") environment
     catch error =>
       StudyRuntime.stopManaged publisher (root / "recall-publisher-shutdown.json")
       throw error
@@ -225,7 +221,7 @@ def run (templatePath directory : String) (remote : Bool := false)
     let result ← call label #["codex-hook"] (input.compress ++ "\n")
     let _ ← IO.ofExcept (Json.parse result.stdout)
     pure ()
-  let endpoint := root / "data/sessions" / session / "daemon.json"
+  let endpoint := root / "data/daemon.json"
   let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) (root / "data") environment
   let managed ← try
     StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session endpoint environment
@@ -356,7 +352,7 @@ def run (templatePath directory : String) (remote : Bool := false)
     finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
   let prepared ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
     (root / "final-warm") 60000
-  checkedWarm prepared
+  checkedWarm prepared database
   let copied := root / "output.egg"
   let publication ← StudyRuntime.checkpoint database copied
   save (root / "publication-files.json") (toJson publication)
@@ -370,7 +366,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   let warmed ← StudyCommand.run plan.runtime.path #["egg","warm","work"] recoveredEnvironment root.toString ""
     (root / "recover-warm") 60000
   check (warmed.exitCode == 0) "source-only seed could not be warmed without its old private state"
-  checkedWarm warmed
+  checkedWarm warmed copied
   let recovered ← facts copied fun all => all.any isConsumption && all.any supported && all.any coquoted
   if generic then
     check ((← genericAliases (← DB.PageMap.pin copied)) == 15)
