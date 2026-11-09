@@ -1,0 +1,13 @@
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -212 +212 @@
+-def Search.asLexical (request : Search) : Search := {request with route := .lexical}
++def Search.asLexical (request : Search) : Search := {request with route := .lexical,semanticCutoff := none}
+@@ -213,0 +214,7 @@
++theorem Search.lexical_discards_semantic_cutoff (request : Search) :
++    request.asLexical.semanticCutoff = none := rfl
++
++theorem Search.lexical_uses_remaining_hook (request : Search) :
++    min request.asLexical.deadline (request.asLexical.semanticCutoff.getD request.asLexical.deadline) = request.deadline := by
++  simp [Search.asLexical]
++
