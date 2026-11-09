@@ -1,0 +1,50 @@
+--- a/FullHooks.lean
++++ b/FullHooks.lean
+@@ -5 +5 @@
+-namespace Eggshell.Research.FullFallbackTrial
++namespace Eggshell.Research.LexicalStageTrace
+@@ -18,0 +19,15 @@
++def lexicalRanking (work : MemoryCapacity.Input) (prompt : String) (warm : String) : IO Json := do
++  let response ← IO.ofExcept (Json.parse warm >>= fromJson? (α := StudyWarm.Response))
++  let references := response.databases.flatMap fun database => database.sources.filterMap (·.prepared)
++  let snapshot ← DB.PageMap.pin (.mk work.project)
++  let query ← capturedLexicalQuery snapshot (some references) none
++  let population ← Persistence.Store.getNat snapshot.get "candidates"
++  let nominations ← lexicalNominations population query.posting query.ordinal prompt []
++  let reader ← Persistence.Store.NodeReader.new snapshot
++  let mut rows := #[]
++  for (id,rank) in nominations.durableRanking.zipIdx do
++    let owner ← reader.outcome (← reader.locateOutcome id)
++    rows := rows.push (Json.mkObj [("rank",toJson rank),("id",toJson id),
++      ("owner",toJson (relationKey owner.relation)),("work",toJson (relationKey owner.work)),
++      ("nominated",toJson (nominations.durable.contains id))])
++  return Json.arr rows
+@@ -80,0 +96,22 @@
++          save (directory/"request.json") (MemoryCapacity.request work session "UserPromptSubmit" topic.prompt)
++          save (directory/"timing.json") (Json.mkObj [("exitCode",toJson (0 : Nat)),
++            ("elapsedMs",toJson elapsed.toFloat),("stdoutSha256",toJson (Sha256.hex stdout.toUTF8))])
++          save (directory/"audit-input.json") (Json.mkObj [
++            ("source",← read (.mk input.specifications[position]!)),("database",toJson work.project),
++            ("request",toJson (directory/"request.json").toString),
++            ("stdout",toJson (directory/"stdout").toString),
++            ("timing",toJson (directory/"timing.json").toString),
++            ("body",toJson (directory/"body.txt").toString)])
++          let originalAudit ← NativeTrialAudit.inspect (directory/"audit-input.json").toString
++          let receiptDirectory := System.FilePath.mk work.data/"receipts"/receipt
++          let mut stages := #[]
++          for stage in ["delivery-domain","selection-plan","source-support","synaptic-delivery"] do
++            let path := receiptDirectory/(stage++".json")
++            if ← path.pathExists then
++              let value ← if stage == "selection-plan" then Receipt.readSelection receiptDirectory
++                else pure ((← read path).getObjValD "data")
++              stages := stages.push (stage,value)
++          save (directory/"stage-trace.json") (Json.mkObj [
++            ("requirements",originalAudit.getObjValD "requirements"),
++            ("lexicalRanking",← lexicalRanking work topic.prompt warm.stdout),
++            ("stages",Json.mkObj stages.toList)])
+@@ -113 +150 @@
+-end Eggshell.Research.FullFallbackTrial
++end Eggshell.Research.LexicalStageTrace
+@@ -116 +153 @@
+-  | ["full-fallback-hooks",input] => Eggshell.Research.FullFallbackTrial.run (.mk input); return 0
++  | ["lexical-stage-trace",input] => Eggshell.Research.LexicalStageTrace.run (.mk input); return 0

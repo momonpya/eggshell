@@ -1,0 +1,8 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -9557 +9557 @@
+-  let neighborhood ← if evidence.isNone && selection.semanticMatcher.isSome then do
++  let neighborhood ← if evidence.isNone && recommendation then do
+@@ -9580 +9580 @@
+-  if evidence.isNone && selection.semanticMatcher.isSome then
++  if evidence.isNone && recommendation then
