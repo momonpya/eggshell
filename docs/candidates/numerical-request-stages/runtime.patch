@@ -1,0 +1,93 @@
+--- a/Eggshell/KeyedSearchClient.lean	2026-11-09 20:50:12
++++ b/Eggshell/KeyedSearchClient.lean	2026-11-10 00:23:28
+@@ -17,0 +18,21 @@
++
++/-- Owned by one keyed request. Only bounded stage labels and monotonic
++timestamps survive a failure; no query, vector, path or response is retained. -/
++structure StageTrace where
++  events : List (String × Nat) := []
++  omitted : Nat := 0
++
++def StageTrace.advance (trace : StageTrace) (label : String) (now : Nat) : StageTrace :=
++  {events := (((label.take 160).copy,now)::trace.events).take 32
++   omitted := trace.omitted + if trace.events.length < 32 then 0 else 1}
++
++theorem StageTrace.advance_bounded (trace : StageTrace) (label : String) (now : Nat) :
++    (trace.advance label now).events.length ≤ 32 := by
++  simp only [advance,List.length_take,List.length_cons]
++  omega
++
++theorem StageTrace.advance_current (trace : StageTrace) (label : String) (now : Nat) :
++    (trace.advance label now).events.head? = some ((label.take 160).copy,now) := by
++  simp [advance]
++
++
+@@ -22,0 +44,7 @@
++  let enabled := (← IO.getEnv "EGGSHELL_TRACE_NUMERICAL_STAGES") == some "1"
++  let stages ← IO.mkRef ({} : StageTrace)
++  let tracked := fun label => do
++    if enabled then
++      let now ← IO.monoMsNow
++      stages.modify (fun trace => trace.advance label now)
++    mark label
+@@ -40,2 +68,2 @@
+-      let json ← BuiltinSearch.keyed command request mark shared
+-      mark "provider-response-validation:start"
++      let json ← BuiltinSearch.keyed command request tracked shared
++      tracked "provider-response-validation:start"
+@@ -46 +74 @@
+-      mark "provider-response-validation:end"
++      tracked "provider-response-validation:end"
+@@ -49,0 +78,4 @@
++      if enabled then
++        let trace ← stages.get
++        Receipt.observe receipt "keyed-stage-success" (Json.mkObj [("events",toJson trace.events.reverse),
++          ("omitted",toJson trace.omitted),("capturedAt",toJson (← IO.monoMsNow))])
+@@ -51,0 +84,4 @@
++    if enabled then
++      let trace ← stages.get
++      Receipt.observe receipt "keyed-stage-failure" (Json.mkObj [("events",toJson trace.events.reverse),
++        ("omitted",toJson trace.omitted),("capturedAt",toJson (← IO.monoMsNow))])
+--- a/Eggshell/DaemonWire.lean	2026-11-09 20:50:12
++++ b/Eggshell/DaemonWire.lean	2026-11-10 00:28:44
+@@ -167 +167,3 @@
+-    (payload : Json) (deadline : Nat) : IO String := do
++    (payload : Json) (deadline : Nat)
++    (mark : String → IO Unit := fun _ => pure ()) : IO String := do
++  mark "connect:start"
+@@ -169 +171,8 @@
+-  sendFrameBefore client (request endpoint.secret kind payload |>.compress |>.toUTF8) deadline
++  mark "connect:end"
++  mark "frame-encode:start"
++  let frame := request endpoint.secret kind payload |>.compress |>.toUTF8
++  mark "frame-encode:end"
++  mark "send:start"
++  sendFrameBefore client frame deadline
++  mark "send:end"
++  mark "receive:start"
+@@ -170,0 +180 @@
++  mark "receive:end"
+@@ -182,2 +192,3 @@
+-    (payload : Json := Json.null) (budget : Nat := 24000) : IO String := do
+-  exchangeBefore endpoint kind payload ((← IO.monoMsNow) + budget)
++    (payload : Json := Json.null) (budget : Nat := 24000)
++    (mark : String → IO Unit := fun _ => pure ()) : IO String := do
++  exchangeBefore endpoint kind payload ((← IO.monoMsNow) + budget) mark
+--- a/Eggshell/Numerical.lean	2026-11-09 20:50:12
++++ b/Eggshell/Numerical.lean	2026-11-10 00:28:44
+@@ -697,0 +698 @@
++        (mark := fun label => client.onStage ("numerical-"++kind++"-"++label))
+--- a/Eggshell/SearchProvider.lean	2026-11-09 20:50:12
++++ b/Eggshell/SearchProvider.lean	2026-11-10 00:20:02
+@@ -733,2 +733,5 @@
+-  let response ← measuredExchange options child (Json.mkObj [
+-    ("queries", queries), ("blockRows", toJson (batch.map (·.vector)))]) "score"
++  child.onStage "score-batch:serialize:start"
++  let input := Json.mkObj [("queries",queries),("blockRows",toJson (batch.map (·.vector)))]
++  child.onStage "score-batch:exchange:start"
++  let response ← measuredExchange options child input "score"
++  child.onStage "score-batch:validate:start"
+@@ -760,0 +764 @@
++  child.onStage "score-batch:aggregate:start"
+@@ -766,0 +771 @@
++  child.onStage "score-batch:end"
