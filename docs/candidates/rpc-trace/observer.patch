@@ -1,0 +1,195 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-auditor-source/Eggshell/DaemonWire.lean	2026-11-09 07:42:50
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/rpc-trace-source/Eggshell/DaemonWire.lean	2026-11-09 09:11:11
+@@ -165,0 +166,3 @@
++abbrev ExchangeObserver := String → Option Socket.Client → IO Unit
++def quietExchange : ExchangeObserver := fun _ _ => pure ()
++
+@@ -167 +170,2 @@
+-    (payload : Json) (deadline : Nat) : IO String := do
++    (payload : Json) (deadline : Nat) (observe : ExchangeObserver := quietExchange) : IO String := do
++  observe "connect:start" none
+@@ -168,0 +173,2 @@
++  observe "connect:end" (some client)
++  observe "send:start" none
+@@ -169,0 +176,2 @@
++  observe "send:end" none
++  observe "receive:start" none
+@@ -170,0 +179,2 @@
++  observe "receive:end" none
++  observe "decode:start" none
+@@ -176,0 +187 @@
++  observe "decode:end" none
+@@ -182,2 +193,2 @@
+-    (payload : Json := Json.null) (budget : Nat := 24000) : IO String := do
+-  exchangeBefore endpoint kind payload ((← IO.monoMsNow) + budget)
++    (payload : Json := Json.null) (budget : Nat := 24000) (observe : ExchangeObserver := quietExchange) : IO String := do
++  exchangeBefore endpoint kind payload ((← IO.monoMsNow) + budget) observe
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-auditor-source/Eggshell/Numerical.lean	2026-11-09 07:42:50
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/rpc-trace-source/Eggshell/Numerical.lean	2026-11-09 09:12:17
+@@ -11,0 +12 @@
++public import tools.research.RpcTrace
+@@ -526 +527 @@
+-  let enabled := (← IO.getEnv "EGGSHELL_TRACE_NUMERICAL_STAGES") == some "1"
++  let enabled := (← IO.getEnv "EGGSHELL_TRACE_NUMERICAL_STAGES") == some "1" || Research.RpcTrace.configured.isSome
+@@ -535,51 +536,60 @@
+-  let reply ← try
+-    mark "request-read:start"
+-    let header ← receiveLive backend client 4 deadline
+-    let length := decodeLength header
+-    unless length ≤ maxFrameBytes do throw (IO.userError "numerical frame exceeds the transport bound")
+-    let bytes ← receiveLive backend client length deadline
+-    mark "request-read:end"
+-    mark "request-parse:start"
+-    let some text := String.fromUTF8? bytes | throw (IO.userError "invalid numerical frame encoding")
+-    let request ← IO.ofExcept (Json.parse text)
+-    unless (request.getObjValAs? String "secret").toOption == some secret do
+-      throw (IO.userError "unauthorized numerical request")
+-    let kind ← IO.ofExcept (request.getObjValAs? String "kind")
+-    mark "request-parse:end"
+-    let output ← match kind with
+-      | "ping" => pure ""
+-      | "stats" => do
+-        let models ← backend.models.state.atomically get
+-        let computes ← backend.encoders.state.atomically get
+-        let servers := models.slots.filterMap fun slot => match slot with
+-          | .idle server | .running _ (some server) | .retiring _ server => some server
+-          | _ => none
+-        let pids := servers.map (·.core.child.pid.toNat)
+-        let idle ← servers.foldlM (fun count server => do
+-          return count + if !(← server.closed) && (← server.pending) == 0 then 1 else 0) (0 : Nat)
+-        pure ((Json.mkObj [("modelStarts",toJson models.starts),
+-          ("modelPids",toJson pids),("modelCapacity",toJson models.slots.size),
+-          ("computeCapacity",toJson computes.slots.size),("waitingEncodes",toJson computes.waiting),
+-          ("activeEncodes",toJson (computes.slots.filter (fun slot => match slot with | .running _ _ => true | _ => false)).size),
+-          ("encodingMemoEntries",toJson (← backend.encoded.snapshot.get).entries.length),
+-          ("encodingMemoBytes",toJson (Research.ScopedEncodeMemo.weight (← backend.encoded.snapshot.get).entries)),
+-          ("waitingModelHandles",toJson models.waiting),("idleModels",toJson idle),
+-          ("modelSlots",toJson (models.slots.map fun slot => match slot with
+-            | .empty => "empty" | .idle _ => "idle" | .running _ none => "starting"
+-            | .running _ (some _) => "running" | .retiring _ _ => "retiring")),
+-          ("hardwareThreads",toJson backend.hardwareThreads),
+-          ("rawStarts",toJson (← backend.rawStarts.get)),("rawPid",toJson ((← backend.rawChild.get).map (·.pid.toNat))),
+-          ("projectionCacheBytes",toJson (← backend.projections.state.get).bytes),
+-          ("projectionCacheRows",toJson (← backend.projections.state.get).entries.size)]).compress)
+-      | "shutdown" => backend.requestStop; pure ""
+-      | "blocks" =>
+-          backend.scoreBlocks config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline mark
+-      | "encode" =>
+-          backend.encode config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline mark
+-      | _ => throw (IO.userError "unsupported numerical operation")
+-    mark "output-ready"
+-    let metadata := Json.mkObj [("events",toJson (← events.get)),("kind",toJson kind),
+-      ("requestFramePayloadBytes",toJson length)]
+-    pure (response (.ok (observedOutput enabled output metadata)))
+-  catch error => pure (response (.error error.toString))
+-  sendFrame client reply.compress.toUTF8
++  let probe ← Research.RpcTrace.start? "server" "other" (some events)
++  Research.RpcTrace.connected probe client
++  let handle := do
++    let reply ← try
++      mark "request-read:start"
++      let header ← receiveLive backend client 4 deadline
++      let length := decodeLength header
++      unless length ≤ maxFrameBytes do throw (IO.userError "numerical frame exceeds the transport bound")
++      let bytes ← receiveLive backend client length deadline
++      mark "request-read:end"
++      mark "request-parse:start"
++      let some text := String.fromUTF8? bytes | throw (IO.userError "invalid numerical frame encoding")
++      let request ← IO.ofExcept (Json.parse text)
++      unless (request.getObjValAs? String "secret").toOption == some secret do
++        throw (IO.userError "unauthorized numerical request")
++      let kind ← IO.ofExcept (request.getObjValAs? String "kind")
++      Research.RpcTrace.kind probe kind
++      mark "request-parse:end"
++      let output ← match kind with
++        | "ping" => pure ""
++        | "stats" => do
++          let models ← backend.models.state.atomically get
++          let computes ← backend.encoders.state.atomically get
++          let servers := models.slots.filterMap fun slot => match slot with
++            | .idle server | .running _ (some server) | .retiring _ server => some server
++            | _ => none
++          let pids := servers.map (·.core.child.pid.toNat)
++          let idle ← servers.foldlM (fun count server => do
++            return count + if !(← server.closed) && (← server.pending) == 0 then 1 else 0) (0 : Nat)
++          pure ((Json.mkObj [("modelStarts",toJson models.starts),
++            ("modelPids",toJson pids),("modelCapacity",toJson models.slots.size),
++            ("computeCapacity",toJson computes.slots.size),("waitingEncodes",toJson computes.waiting),
++            ("activeEncodes",toJson (computes.slots.filter (fun slot => match slot with | .running _ _ => true | _ => false)).size),
++            ("encodingMemoEntries",toJson (← backend.encoded.snapshot.get).entries.length),
++            ("encodingMemoBytes",toJson (Research.ScopedEncodeMemo.weight (← backend.encoded.snapshot.get).entries)),
++            ("waitingModelHandles",toJson models.waiting),("idleModels",toJson idle),
++            ("modelSlots",toJson (models.slots.map fun slot => match slot with
++              | .empty => "empty" | .idle _ => "idle" | .running _ none => "starting"
++              | .running _ (some _) => "running" | .retiring _ _ => "retiring")),
++            ("hardwareThreads",toJson backend.hardwareThreads),
++            ("rawStarts",toJson (← backend.rawStarts.get)),("rawPid",toJson ((← backend.rawChild.get).map (·.pid.toNat))),
++            ("projectionCacheBytes",toJson (← backend.projections.state.get).bytes),
++            ("projectionCacheRows",toJson (← backend.projections.state.get).entries.size)]).compress)
++        | "shutdown" => backend.requestStop; pure ""
++        | "blocks" =>
++            backend.scoreBlocks config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline mark
++        | "encode" =>
++            backend.encode config client (← IO.ofExcept (request.getObjValAs? String "payload")) deadline mark
++        | _ => throw (IO.userError "unsupported numerical operation")
++      mark "output-ready"
++      let metadata := Json.mkObj [("events",toJson (← events.get)),("kind",toJson kind),
++        ("requestFramePayloadBytes",toJson length)]
++      pure (response (.ok (observedOutput enabled output metadata)))
++    catch error =>
++      mark "handler:failed"
++      pure (response (.error error.toString))
++    mark "send:start"
++    sendFrame client reply.compress.toUTF8
++    mark "send:end"
++  try handle finally Research.RpcTrace.close probe
+@@ -697 +707 @@
+-      let result ← exchange endpoint kind (toJson body)
++      let result ← Research.RpcTrace.exchange endpoint kind (toJson body) ((← IO.monoMsNow)+24000)
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-auditor-source/Eggshell/ContractAudit.lean	2026-11-09 07:42:50
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/rpc-trace-source/Eggshell/ContractAudit.lean	2026-11-09 09:19:19
+@@ -41 +41,5 @@
+-      (``Eggshell.Numerical.Client.request, ``Eggshell.Plugin.Daemon.exchange),
++      (``Eggshell.Numerical.Client.request, ``Eggshell.Research.RpcTrace.exchange),
++      (``Eggshell.Research.RpcTrace.exchange, ``Eggshell.Plugin.Daemon.exchangeBefore),
++      (``Eggshell.Plugin.Daemon.exchangeBefore, ``Eggshell.Plugin.Daemon.request),
++      (``Eggshell.Plugin.Daemon.exchangeBefore, ``Eggshell.Plugin.Daemon.sendFrameBefore),
++      (``Eggshell.Plugin.Daemon.exchangeBefore, ``Eggshell.Plugin.Daemon.receiveFrameBefore),
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-auditor-source/tools/research/NumericalProtocolProbe.lean	2026-11-09 07:42:52
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/rpc-trace-source/tools/research/NumericalProtocolProbe.lean	2026-11-09 09:12:55
+@@ -1,0 +1 @@
++import tools.research.RpcTrace
+@@ -8,2 +9,2 @@
+-def source := base/"real-source-search-read-trial-result/work.egg"
+-def fixedInput := base/"shared-model-capacity-80-input.json"
++def source := base/"prepared-literals-fixture/work.egg"
++def fixedInput := base/"rpc-trace-protocol-input.json"
+@@ -38,19 +39,3 @@
+-  mark "connect:start"
+-  let client ← connectBefore endpoint deadline
+-  mark "connect:end"
+-  let payload := (request endpoint.secret kind (toJson (Numerical.requestBody body))).compress.toUTF8
+-  mark "send:start"
+-  sendFrameBefore client payload deadline
+-  mark "send:end"
+-  mark "receive:start"
+-  let header ← receiveExactly client 4 deadline
+-  mark "header-ready"
+-  let length := decodeLength header
+-  check (length ≤ maxFrameBytes) "numerical response exceeds transport bound"
+-  let bytes ← receiveExactly client length deadline
+-  mark "body-ready"
+-  let some text := String.fromUTF8? bytes | throw (IO.userError "non-UTF8 numerical response")
+-  let outer ← IO.ofExcept (Json.parse text)
+-  check (outer.getObjValD "ok" == toJson true) ((outer.getObjValAs? String "error").toOption.getD "numerical request failed")
+-  let output ← IO.ofExcept (outer.getObjValAs? String "output")
+-  mark "outer-decoded"
++  mark "exchange:start"
++  let output ← Eggshell.Research.RpcTrace.exchange endpoint kind (toJson (Numerical.requestBody body)) deadline
++  mark "exchange:end"
+@@ -73 +58 @@
+-    ("requestBytes",toJson payload.size),("responseBytes",toJson bytes.size),
++    ("requestBytes",toJson ((request endpoint.secret kind (toJson (Numerical.requestBody body))).compress.utf8ByteSize)),
+@@ -175 +160 @@
+-  check ((← Paths.dataRoot) == base/"real-source-search-read-trial-result/data")
++  check ((← Paths.dataRoot) == base/"prepared-literals-fixture/data")
