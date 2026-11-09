@@ -69,6 +69,12 @@ ABBAは測定前のcold cache生成を分離した後、最初の比較元`44484
 
 最大標本ではpublisher1,850,144KiBに加えてfrontend631,664KiB、数値Lean164,528KiB、model1,099,568KiB等があり、残るRSSを選択器/metadataだけへ帰属させない。既存23 service profileのdomain構築は8〜36ms、units22〜167ms、problem/scoping込みselection335〜1,532msだった。次は選択IR準備と要求状態の実保持、およびfrontendの返信/状態保持を区別する。8〜36msを主因と仮定して既存canonical cacheを増やしたり、既検証の同じOwned部品・batch-winner・cue共有・無変更80を繰り返さない。終了した試験3,828file・234,322,619論理bytesはarchiveせず削除した。現sourceの`.lake`が参照するbenchmark compiler interfaceは必要依存として保持し、原典/現runtimeのSHAを前後照合した。
 
+[実際の選択準備の内訳](docs/candidates/selection-preparation/README.md)を隔離nativeで測った。3題材primeと4並行の全7本文がcanonical byte一致・ACK成功で、4並行は意味検索/シナプスとも4/4、wave4.455秒、関連RSS最大2,030,208KiB。前の16並行とは負荷が違うので容量改善としない。324 objectのnative閉包、source/literal差分、元関数との全関数rfl検査を通した。ただし63 markerのtagが1つに共有され、並行の要求別内訳は不適格とした。出版済みの独立したhook時刻窓で重ならないことと9段階/単調counterを確認した3 primeだけを使い、problem構築133.903〜182.389ms、scope4.832〜5.614ms、Owned選択178.649〜264.236ms、最終projection21.194〜23.272msと分解した。選択のallocation event約320〜484万件をbytes/RSSへ読み替えない。scopeやdomainのcacheを増やす根拠にしない。
+
+frontendのSession一覧は本文/ThreadStateを保持せず、検索要求にはThreadStateが含まれるが、この新規chat負荷では前回本文が空なので、そのcopyを今回のpublisherピークの原因としない。残るlive heap/返信・ACKの保持量は未確定である。[base cueの範囲索引候補](docs/candidates/base-cue-buckets/README.md)は、現在残るfamily全体の候補照合を既存512文字bucketへ狭め、順序・重複・退化区間も含む全Problemの等しさをLeanで証明した。標準公理のみで、sorry/native_decide/Z3なし。これはnative未計測・未接続・未採用で、80のメモリ修復とはしない。次は広い/重なる/空/退化範囲を含むnative対照で索引の実費用を確認してから接続を判断する。同じ失敗した並行tag観測や無変更80は繰り返さない。
+
+終了した観測runtime/source/build/prefix、重複本文・session/receipt・生ログ3,899 file、548,725,550論理bytesをarchiveせず削除した。原DB/現runtime/比較本文のSHAを前後照合し、保持するOwned runtimeの323 objectは削除後も整合した。新seed、回答model両周、総token比較、採用は0のままである。
+
 次に行うこと：
 
 1. 字句切替の期限継承とWorkGraph展開欠落は隔離候補で修正・実フック検証済み。空出力の準備省略はABBAで容量改善を確認できず未採用としたので再試行しない。原文recordの価格を出版し参照選択へ渡す経路は上記候補まで接続済みで、各queryの2,124 recordと残る9/530 eager unitを確認した。型・原文の一致と、実負荷の速度/RSS改善は別に扱う。題材固有の規則・重み調整・同じ80の無条件再試行はしない。
