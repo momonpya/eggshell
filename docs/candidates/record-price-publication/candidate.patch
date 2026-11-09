@@ -1,0 +1,191 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -4,0 +5 @@
++public import Eggshell.OriginalPresentation
+@@ -138,9 +138,0 @@
+-/-- A bounded original excerpt, retained only for late receipt reconciliation.
+-No whole source body or reconstructed graph crosses the publication boundary. -/
+-structure DeliveryFragment where
+-  first : Nat
+-  original : String
+-  decoded : Bool := false
+-  path : Option (List JsonScalars.Segment) := none
+-  deriving ToJson, FromJson
+-
+@@ -239,20 +230,0 @@
+-
+-def DeliveryFragment.presentation (fragment : DeliveryFragment) : String × Bool :=
+-  if fragment.decoded then
+-      match (Json.parse ("\"" ++ fragment.original ++ "\"")).toOption.bind
+-          (fun value => value.getStr?.toOption) with
+-      | some text => (text, true)
+-      | none => (fragment.original, false)
+-    else (fragment.original, false)
+-
+-/-- Coordinates and encoding share one label. Repeating their explanation
+-for every excerpt consumes space without adding original evidence. -/
+-def DeliveryFragment.render (fragment : DeliveryFragment) (compact : Bool := false) : String :=
+-  let body := fragment.presentation
+-  let label := if compact then
+-      s!"  CHARS [{fragment.first},{fragment.first + fragment.original.length})" ++
+-        (if body.2 then " decoded\n" else "\n")
+-    else s!"  ORIGINAL CHARS [{fragment.first},{fragment.first + fragment.original.length})\n" ++
+-      (if body.2 then "  DECODED JSON STRING DATA\n" else "")
+-  let address := fragment.path.map (fun path => "  JSON PATH " ++ (JsonScalars.pathJson path).compress ++ "\n") |>.getD ""
+-  (address ++ label) ++ body.1
+--- a/Eggshell/ObservedRecordView.lean
++++ b/Eggshell/ObservedRecordView.lean
+@@ -3,0 +4 @@
++public import Eggshell.OriginalPresentation
+@@ -27,0 +29 @@
++  prices : Array Plugin.OriginalRecordPrice.Stored
+@@ -33,0 +36 @@
++  prices : Array Plugin.OriginalRecordPrice.Stored
+@@ -45 +48 @@
+-def recipeSize := 128
++def recipeSize := 64
+@@ -60 +63,2 @@
+-    document.occurrences,characters.size,blocks.size,spans.size⟩,spans,blocks⟩
++    document.occurrences,characters.size,blocks.size,spans.size⟩,spans,blocks,
++      spans.map (Plugin.OriginalRecordPrice.prepare ⟨characters,rfl⟩)⟩
+@@ -77,3 +81,3 @@
+-    let spans := view.spans.extract (page*recipeSize) ((page+1)*recipeSize)
+-    let bytes := (toJson spans).compress.toUTF8
+-    unless bytes.size ≤ 16384 do throw (IO.userError "original recipe page exceeds its bound")
++    let records := view.prices.extract (page*recipeSize) ((page+1)*recipeSize)
++    let bytes := (toJson records).compress.toUTF8
++    unless bytes.size ≤ 6144 do throw (IO.userError "original recipe page exceeds its bound")
+@@ -97,0 +102 @@
++  let mut prices := #[]
+@@ -103,2 +108,6 @@
+-    unless bytes.size ≤ 16384 && Sha256.hex bytes == digest do throw (IO.userError "invalid original recipe digest")
+-    let rows ← ObservedRecords.decode (α := Array Span) bytes
++    unless bytes.size ≤ 6144 && Sha256.hex bytes == digest do throw (IO.userError "invalid original recipe digest")
++    let records ← ObservedRecords.decode (α := Array Plugin.OriginalRecordPrice.Stored) bytes
++    let rows := records.map (·.span)
++    unless records.all Plugin.OriginalRecordPrice.Stored.bounded do
++      throw (IO.userError "original price exceeds its bounded presentation")
++    prices := prices ++ records
+@@ -111 +120 @@
+-  return some ⟨header,spans⟩
++  return some ⟨header,spans,prices⟩
+@@ -131 +140 @@
+-  return some ⟨header,geometry.spans,blocks⟩
++  return some ⟨header,geometry.spans,blocks,geometry.prices⟩
+--- a/Eggshell/SynapseIndex.lean
++++ b/Eggshell/SynapseIndex.lean
+@@ -37,0 +38 @@
++    (include_str "OriginalPresentation.lean").toUTF8,
+--- a/Eggshell/OriginalPresentation.lean
++++ b/Eggshell/OriginalPresentation.lean
+@@ -0,0 +1,110 @@
++module
++public import Eggshell.OriginalStructure
++public import Eggshell.JsonScalars
++@[expose] public section
++namespace Eggshell.Plugin
++open Lean
++/-- A bounded original excerpt, retained only for late receipt reconciliation.
++No whole source body or reconstructed graph crosses the publication boundary. -/
++structure DeliveryFragment where
++  first : Nat
++  original : String
++  decoded : Bool := false
++  path : Option (List JsonScalars.Segment) := none
++  deriving ToJson, FromJson
++
++def DeliveryFragment.presentation (fragment : DeliveryFragment) : String × Bool :=
++  if fragment.decoded then
++      match (Json.parse ("\"" ++ fragment.original ++ "\"")).toOption.bind
++          (fun value => value.getStr?.toOption) with
++      | some text => (text, true)
++      | none => (fragment.original, false)
++    else (fragment.original, false)
++
++/-- Coordinates and encoding share one label. Repeating their explanation
++for every excerpt consumes space without adding original evidence. -/
++def DeliveryFragment.render (fragment : DeliveryFragment) (compact : Bool := false) : String :=
++  let body := fragment.presentation
++  let label := if compact then
++      s!"  CHARS [{fragment.first},{fragment.first + fragment.original.length})" ++
++        (if body.2 then " decoded\n" else "\n")
++    else s!"  ORIGINAL CHARS [{fragment.first},{fragment.first + fragment.original.length})\n" ++
++      (if body.2 then "  DECODED JSON STRING DATA\n" else "")
++  let address := fragment.path.map (fun path => "  JSON PATH " ++ (JsonScalars.pathJson path).compress ++ "\n") |>.getD ""
++  (address ++ label) ++ body.1
++
++
++
++namespace OriginalRecordPrice
++
++/-- Exact rendered payload costs include LinearNodes' one separator. No
++original bytes, character arrays, rendered strings or JSON tree are retained. -/
++structure Cost where
++  characters : Nat
++  bytes : Nat
++  deriving BEq,ToJson,FromJson
++
++def Cost.ofText (text : String) : Cost := ⟨text.length+1,text.utf8ByteSize+1⟩
++
++structure Stored where
++  span : OriginalStructure.Span
++  normal : Cost
++  compact : Cost
++  deriving BEq
++
++/-- One compact coordinate/price tuple, rather than repeated field names
++for every record in an immutable page. -/
++instance : ToJson Stored where
++  toJson value := toJson (value.span.first,value.span.limit,value.span.decoded,
++    value.normal.characters,value.normal.bytes,value.compact.characters,value.compact.bytes)
++
++instance : FromJson Stored where
++  fromJson? value := do
++    let (first,last,decoded,nc,nb,cc,cb) ←
++      fromJson? (α := Nat × Nat × Bool × Nat × Nat × Nat × Nat) value
++    return ⟨⟨first,last,decoded⟩,⟨nc,nb⟩,⟨cc,cb⟩⟩
++
++def fragment (original : IndexedCharacters source) (span : OriginalStructure.Span) : DeliveryFragment :=
++  {first := span.first
++   original := original.slice span.first (span.limit-span.first)
++   decoded := span.decoded}
++
++def prepare (original : IndexedCharacters source) (span : OriginalStructure.Span) : Stored :=
++  let value := fragment original span
++  ⟨span,Cost.ofText (value.render false),Cost.ofText (value.render true)⟩
++
++def Stored.cost (stored : Stored) (compact : Bool) : Cost :=
++  if compact then stored.compact else stored.normal
++
++/-- Structural read bounds reject corrupt metadata before it can enter a
++shared view. Content identity and the page digest are checked by that view. -/
++def Stored.bounded (stored : Stored) : Bool :=
++  [stored.normal,stored.compact].all fun cost =>
++    0 < cost.characters && cost.characters ≤ 16384 &&
++    cost.characters ≤ cost.bytes && cost.bytes ≤ 65536
++
++theorem prepared_span_exact (original : IndexedCharacters source) (span : OriginalStructure.Span) :
++    (prepare original span).span = span := rfl
++
++theorem prepared_cost_exact (original : IndexedCharacters source) (span : OriginalStructure.Span)
++    (compact : Bool) :
++    (prepare original span).cost compact = Cost.ofText ((fragment original span).render compact) := by
++  cases compact <;> rfl
++
++theorem prepared_characters_exact (original : IndexedCharacters source) (span : OriginalStructure.Span)
++    (compact : Bool) :
++    ((prepare original span).cost compact).characters =
++      ((fragment original span).render compact).length+1 := by
++  rw [prepared_cost_exact]
++  rfl
++
++theorem prepared_bytes_exact (original : IndexedCharacters source) (span : OriginalStructure.Span)
++    (compact : Bool) :
++    ((prepare original span).cost compact).bytes =
++      ((fragment original span).render compact).utf8ByteSize+1 := by
++  rw [prepared_cost_exact]
++  rfl
++
++end OriginalRecordPrice
++
++end Eggshell.Plugin
