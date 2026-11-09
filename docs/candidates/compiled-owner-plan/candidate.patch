@@ -1,0 +1,263 @@
+--- a/tools/research/OwnerPalette.lean
++++ b/tools/research/OwnerPalette.lean
+@@ -14,7 +14,7 @@
+   line : Nat
+   origins : Array EncodedOrigin
+   cost : Nat × Nat
+-  deriving BEq
++  deriving BEq, ReflBEq, LawfulBEq
+ 
+ abbrev RowWire := Nat × Nat × Array (Nat × Nat × Nat × Nat) × (Nat × Nat)
+ 
+@@ -32,7 +32,7 @@
+   scopes : Array Scope
+   rows : Array Row
+   catalogue : List (List Nat)
+-  deriving BEq,ToJson,FromJson
++  deriving BEq,ReflBEq,LawfulBEq,ToJson,FromJson
+ 
+ def Descriptor.origin? (descriptor : Descriptor) (origin : EncodedOrigin) : Option Origin :=
+   readOriginUsing descriptor.occurrences descriptor.scopes origin
+--- a/tools/research/PreparedSourceView.lean
++++ b/tools/research/PreparedSourceView.lean
+@@ -5,6 +5,7 @@
+ public import tools.research.ScopeAlternatives
+ public import tools.research.PreparedFocusFacts
+ public import tools.research.MemoGroupFold
++public import tools.research.CompiledOwnerPlan
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.PreparedSourceView
+@@ -51,6 +52,7 @@
+   json : Json
+   bytes : Nat
+   focus : Option PreparedFocusFacts.Ready := none
++  planning : CompiledOwnerPlan.Checked stored.plan.owner stored.descriptor
+ 
+ def references (origins : Array Origin) : Array String :=
+   (hashDistinct (origins.toList.map fun origin =>
+@@ -90,7 +92,9 @@
+   let focus ← stored.focus.mapM (PreparedFocusFacts.check owner)
+   let bytes := json.compress.utf8ByteSize+
+     (stored.focus.map (fun facts => (toJson facts).compress.utf8ByteSize)).getD 0
+-  return ⟨stored,rows,units,json,bytes,focus⟩
++  let some planning := CompiledOwnerPlan.Checked.prepare? stored.plan.owner stored.descriptor |
++    throw "published owner planning metadata is not addressable"
++  return ⟨stored,rows,units,json,bytes,focus,planning⟩
+ 
+ def ownerName (owner : String) : String := "view-owner:" ++ owner
+ 
+--- a/tools/research/SourceViewBatch.lean
++++ b/tools/research/SourceViewBatch.lean
+@@ -61,7 +61,7 @@
+   simp [key,Array.map_map]
+   rfl
+ 
+-structure Palette where
++structure WirePalette where
+   identities : Array Json
+   lease : String
+   owners : Array (Array (String × OwnerPalette.Descriptor))
+@@ -71,6 +71,15 @@
+   literals : Array (Array (String × Option Eggshell.Research.PreparedLiteralFocus.Data))
+   deriving ToJson,FromJson
+ 
++structure Palette extends WirePalette where
++  /-- Process-local immutable references; never written to a wire or DB. -/
++  planning : Array (Array CompiledOwnerPlan.Ready) := #[]
++
++instance : ToJson Palette := ⟨fun value => toJson value.toWirePalette⟩
++instance : FromJson Palette := ⟨fun value => do return ⟨← fromJson? value,#[]⟩⟩
++
++theorem palette_wire_exact (value : Palette) : toJson value = toJson value.toWirePalette := rfl
++
+ structure Fetch where
+   source : Nat
+   requests : Array OwnerPalette.Fetch
+--- a/tools/research/SharedReadViews.lean
++++ b/tools/research/SharedReadViews.lean
+@@ -143,6 +143,7 @@
+   records : Array (Array (String × Option ObservedRecordView.Geometry))
+   focus : Array (Array (String × List Nat))
+   literals : Array (Array (String × Option Eggshell.Research.PreparedLiteralFocus.Data))
++  planning : Array (Array CompiledOwnerPlan.Ready)
+ 
+ /-- Pure reads receive only an immutable image and the current request. Admission,
+ release, cache state and IO capabilities are absent from this computation. The
+@@ -153,6 +154,7 @@
+   let mut records := #[]
+   let mut focused := #[]
+   let mut literals := #[]
++  let mut planning := #[]
+   for (entry,request) in view.sources.zip requests do
+     unless entry.scope == request.access.scope && entry.source == request.access.source &&
+         entry.loaded.metadata == request.access.metadata && request.owners.all entry.owners.contains do
+@@ -162,13 +164,16 @@
+       return (owner,ready.stored.descriptor,ready.focus.map (·.stored.literalData))
+     values := values.push (metadata.map fun (owner,descriptor,_) => (owner,descriptor))
+     literals := literals.push (metadata.map fun (owner,_,facts) => (owner,facts))
++    planning := planning.push (← request.owners.mapM fun owner => do
++      let ready ← entry.readMetadata owner
++      return (⟨ready.stored.plan.owner,ready.stored.descriptor,ready.planning⟩ : CompiledOwnerPlan.Ready))
+     records := records.push (← entry.readRecords request.owners)
+     let ranked ← match request.focus with
+       | none => pure #[]
+       | some focus => focus.rows.mapM fun row => do
+           return (row.owner,← entry.focusWindows row.owner row.work row.windows focus.question row.semantic)
+     focused := focused.push ranked
+-  return ⟨values,records,focused,literals⟩
++  return ⟨values,records,focused,literals,planning⟩
+ 
+ theorem View.project_private_lifetime (view : View) (requests : Array SourceViewBatch.Request)
+     (deadline borrowers : Nat) (released : Bool) :
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -411,7 +411,8 @@
+       reuse := reuse
+       records := projected.records
+       focus := projected.focus
+-      literals := projected.literals }
++      literals := projected.literals
++      planning := projected.planning }
+   catch error => server.palettes.release lease key; throw error
+ 
+ def readSourceViews (server : Server) (secret : String) (requests : Array SourceViewBatch.Request)
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -60,7 +60,7 @@
+   canonical : Std.HashMap String CheckedOriginal.Recipe := {}
+   batch : Option Plugin.Publication.Client.SourceBatch := none
+   shells : Std.HashMap String PreparedPlanMetadata.Shell := {}
+-  metadataReads : Array Read := #[]
++  metadataParts : Array ReadEvidence.Part := #[]
+   canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
+   canonicalFailure : Array (String × String) := #[]
+   originalStructures : Std.HashMap String ObservedRecordView.Geometry := {}
+@@ -260,7 +260,7 @@
+           acquired := some batch
+           pure batch
+       let mut shells := plan.shells
+-      let mut reads := plan.metadataReads
++      let mut parts := plan.metadataParts
+       for ((reference,_),index) in sources.zipIdx do
+         let some literalRows := batch.palette.literals[index]? |
+           throw (IO.userError "literal metadata lost its pinned project view")
+@@ -302,16 +302,22 @@
+         plan := {plan with canonicalReuse := plan.canonicalReuse.push (reference.access.database,reference.access.reuse,reuse)}
+         for (owner,descriptor) in descriptors do
+           if descriptor.rows.isEmpty then continue
+-          let some shell := PreparedPlanMetadata.describe owner descriptor |
+-            throw (IO.userError "invalid original row metadata")
+-          let some originalReads := PreparedPlanMetadata.reads descriptor |
+-            throw (IO.userError "invalid original read metadata")
++          let compiled ← match (batch.palette.planning[index]?).bind (fun entries => entries.find? (·.owner == owner)) with
++            | some ready =>
++              let some checked := ready.check owner descriptor |
++                throw (IO.userError "prepared planning metadata changed its original owner or descriptor")
++              pure checked
++            | none =>
++              let some checked := CompiledOwnerPlan.Checked.prepare? owner descriptor |
++                throw (IO.userError "invalid original planning metadata")
++              pure checked
++          let shell := compiled.shell
+           let shell := match shells[owner]? with
+             | none => shell
+             | some prior => PreparedPlanMetadata.combine #[prior,shell]
+           shells := shells.insert owner shell
+-          reads := reads ++ originalReads
+-      plan := {plan with batch := some batch,shells,metadataReads := reads}
++          parts := parts.push compiled.evidence.part
++      plan := {plan with batch := some batch,shells,metadataParts := parts}
+     catch error =>
+       if let some batch := acquired then
+         try batch.release ((← IO.monoMsNow)+1000) catch _ => pure ()
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -374,11 +374,8 @@
+   let native := Synapses.PacketReceipt.prepare (plan.documents.filter (fun doc => owners.contains doc.owner))
+   let canonical := plan.canonical.toArray.flatMap fun (owner,rows) =>
+     if owners.contains owner then rows.rows else #[]
+-  let savedReads := plan.rows ++ plan.metadataReads ++ Synapses.PacketReceipt.canonicalReads canonical
+-  let reads := KeyPostings.prepare (fun saved : {read : Synapses.Read // read ∈ savedReads} =>
+-    (saved.val.binding,saved.val.occurrence)) (savedReads.attach.filter fun saved => owners.contains saved.val.binding.owner)
+-  let byOwner := KeyPostings.prepare (fun saved : {read : Synapses.Read // read ∈ savedReads} =>
+-    saved.val.binding.owner) (savedReads.attach.filter fun saved => owners.contains saved.val.binding.owner)
++  let readParts := #[Synapses.ReadEvidence.Part.prepare plan.rows] ++ plan.metadataParts ++
++    #[Synapses.ReadEvidence.Part.prepare (Synapses.PacketReceipt.canonicalReads canonical)]
+   let mut originals := #[]
+   let mut sharedWitnessesChecked : Nat := 0
+   let mut unverified := #[]
+@@ -400,7 +397,7 @@
+             |>.setObjVal! "decoded" (toJson fragment.presentation.2)
+             |>.setObjVal! "declaredPath" (toJson (fragment.path.map JsonScalars.pathJson)))
+         let identity := Synapses.ObservationContext.originalSubject source.document.work source.source.raw
+-        for saved in byOwner.lookup context.owner do
++        for saved in Synapses.ReadEvidence.owner readParts context.owner do
+           let read := saved.val
+           if read.valid && read.binding.work == source.document.work &&
+               source.document.occurrences.contains read.occurrence then
+@@ -418,7 +415,7 @@
+           for origin in row.origins do
+             let some source := native[origin.binding.owner]? | unverified := unverified.push partIndex; continue
+             let mut checked := false
+-            for read in reads.lookup (origin.binding,origin.occurrence) do
++            for read in Synapses.ReadEvidence.binding readParts (origin.binding,origin.occurrence) do
+               if let some witness := Synapses.PacketReceipt.shared? source.source row origin read then
+                 sharedWitnessesChecked := sharedWitnessesChecked+1
+                 checked := true
+--- a/tools/research/CompiledOwnerPlan.lean
++++ b/tools/research/CompiledOwnerPlan.lean
+@@ -0,0 +1,53 @@
++module
++public import tools.research.ReadEvidence
++@[expose] public section
++namespace Eggshell.Synapses.CompiledOwnerPlan
++
++/-- Pure publication metadata. No score, question, lease, mutable state or
++completion authority is retained in these precompiled keys and read indexes. -/
++structure Checked (owner : String) (descriptor : OwnerPalette.Descriptor) where
++  shell : PreparedPlanMetadata.Shell
++  shellExact : PreparedPlanMetadata.describe owner descriptor = some shell
++  evidence : ReadEvidence.Cached descriptor
++
++def Checked.prepare? (owner : String) (descriptor : OwnerPalette.Descriptor) : Option (Checked owner descriptor) :=
++  match found : PreparedPlanMetadata.describe owner descriptor with
++  | none => none
++  | some shell => do
++    let evidence ← ReadEvidence.prepare? descriptor
++    return ⟨shell,found,evidence⟩
++
++structure Ready where
++  owner : String
++  descriptor : OwnerPalette.Descriptor
++  compiled : Checked owner descriptor
++
++/-- A transient local reference is usable only with the exact owner and
++descriptor from the authorized palette; a foreign hint cannot replace it. -/
++def Ready.check (ready : Ready) (owner : String) (descriptor : OwnerPalette.Descriptor) :
++    Option (Checked owner descriptor) :=
++  if accepted : (ready.owner == owner && ready.descriptor == descriptor) = true then
++    some (by
++      have same : ready.owner = owner ∧ ready.descriptor = descriptor := by
++        simpa only [Bool.and_eq_true,beq_iff_eq] using accepted
++      simpa only [← same.1,← same.2] using ready.compiled)
++  else none
++
++theorem checked_shell (ready : Checked owner descriptor) :
++    PreparedPlanMetadata.describe owner descriptor = some ready.shell := ready.shellExact
++
++theorem checked_reads (ready : Checked owner descriptor) :
++    PreparedPlanMetadata.reads descriptor = some ready.evidence.part.rows := ready.evidence.exact
++
++theorem foreign_owner (ready : Ready) (owner : String) (descriptor : OwnerPalette.Descriptor)
++    (different : ready.owner ≠ owner) : ready.check owner descriptor = none := by
++  simp [Ready.check,different]
++
++theorem foreign_descriptor (ready : Ready) (owner : String) (descriptor : OwnerPalette.Descriptor)
++    (different : ready.descriptor ≠ descriptor) : ready.check owner descriptor = none := by
++  simp [Ready.check,different]
++
++theorem same_input (ready : Ready) : ready.check ready.owner ready.descriptor = some ready.compiled := by
++  simp [Ready.check]
++
++end Eggshell.Synapses.CompiledOwnerPlan
