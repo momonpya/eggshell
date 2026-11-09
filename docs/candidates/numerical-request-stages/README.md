@@ -15,3 +15,5 @@
 [資源と終了](resources.json)、[検証範囲](evidence.json)を併記する。全体80並行、成長DB、NAS、受理済みseed、モデル両周、総token削減率、品質は未検証である。成功しても、過去の停止の原因や再発防止を証明したことにはならない。観測にない内積の遅さ・global queue・native receive取消の不具合を原因と断定しない。シナプスの未確認part8も従来どおり残る。
 
 メモリ上限は利用者の5GB（5,000,000,000 bytes）を維持し、512MiBの余裕を残す4,358,524KiBで保護停止する。終了済みの試行本文・session・receipt・重複生成物は[削除記録](cleanup.json)を残して削除し、archiveを作らない。現在の比較元・参照選択候補・停止を追う観測実行体・必要なproject cacheだけを保持する。
+
+後続の[参照選択の容量試験](../reference-record-capacity/README.md)で段階観測を参照選択候補へ統合した。統合実行体を現在の診断用に保持し、この節の旧観測source/build/prefixは退役・削除した。差分・証明・実行記録は本ディレクトリに残す。
