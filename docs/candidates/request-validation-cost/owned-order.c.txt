@@ -1,0 +1,251 @@
+LEAN_EXPORT lean_object* l_SharedCoverage_OwnedAdvance_evaluation___redArg(lean_object* v_p_164_, lean_object* v_cached_165_, lean_object* v_index_166_){
+_start:
+{
+lean_object* v_freshNodes_167_; lean_object* v_freshCues_168_; lean_object* v_nodeIndex_169_; lean_object* v_cueIndex_170_; lean_object* v_totalCost_171_; lean_object* v_totalBenefit_172_; lean_object* v___x_174_; uint8_t v_isShared_175_; uint8_t v_isSharedCheck_181_;
+v_freshNodes_167_ = l_SharedCoverage_Evaluation_freshNodes___redArg(v_p_164_, v_cached_165_, v_index_166_);
+v_freshCues_168_ = l_SharedCoverage_Evaluation_freshCues___redArg(v_p_164_, v_cached_165_, v_index_166_);
+v_nodeIndex_169_ = lean_ctor_get(v_cached_165_, 0);
+lean_inc_ref(v_nodeIndex_169_);
+v_cueIndex_170_ = lean_ctor_get(v_cached_165_, 1);
+lean_inc_ref(v_cueIndex_170_);
+lean_inc_ref(v_cached_165_);
+v_totalCost_171_ = l_SharedCoverage_Evaluation_afterCost___redArg(v_p_164_, v_cached_165_, v_index_166_);
+lean_inc_ref(v_p_164_);
+v_totalBenefit_172_ = l_SharedCoverage_Deferred_afterBenefitFold___redArg(v_p_164_, v_cached_165_, v_index_166_);
+v_isSharedCheck_181_ = !lean_is_exclusive(v_cached_165_);
+if (v_isSharedCheck_181_ == 0)
+{
+lean_object* v_unused_182_; lean_object* v_unused_183_; lean_object* v_unused_184_; lean_object* v_unused_185_;
+v_unused_182_ = lean_ctor_get(v_cached_165_, 3);
+lean_dec(v_unused_182_);
+v_unused_183_ = lean_ctor_get(v_cached_165_, 2);
+lean_dec(v_unused_183_);
+v_unused_184_ = lean_ctor_get(v_cached_165_, 1);
+lean_dec(v_unused_184_);
+v_unused_185_ = lean_ctor_get(v_cached_165_, 0);
+lean_dec(v_unused_185_);
+v___x_174_ = v_cached_165_;
+v_isShared_175_ = v_isSharedCheck_181_;
+goto v_resetjp_173_;
+}
+else
+{
+lean_dec(v_cached_165_);
+v___x_174_ = lean_box(0);
+v_isShared_175_ = v_isSharedCheck_181_;
+goto v_resetjp_173_;
+}
+v_resetjp_173_:
+{
+lean_object* v___x_176_; lean_object* v___x_177_; lean_object* v___x_179_;
+v___x_176_ = l_List_foldl___at___00SharedCoverage_OwnedAdvance_evaluation_spec__1(v_p_164_, v_nodeIndex_169_, v_freshNodes_167_);
+v___x_177_ = l_List_foldl___at___00SharedCoverage_OwnedAdvance_evaluation_spec__2(v_p_164_, v_cueIndex_170_, v_freshCues_168_);
+lean_dec_ref(v_p_164_);
+if (v_isShared_175_ == 0)
+{
+lean_ctor_set(v___x_174_, 3, v_totalBenefit_172_);
+lean_ctor_set(v___x_174_, 2, v_totalCost_171_);
+lean_ctor_set(v___x_174_, 1, v___x_177_);
+lean_ctor_set(v___x_174_, 0, v___x_176_);
+v___x_179_ = v___x_174_;
+goto v_reusejp_178_;
+}
+else
+{
+lean_object* v_reuseFailAlloc_180_;
+v_reuseFailAlloc_180_ = lean_alloc_ctor(0, 4, 0);
+lean_ctor_set(v_reuseFailAlloc_180_, 0, v___x_176_);
+lean_ctor_set(v_reuseFailAlloc_180_, 1, v___x_177_);
+lean_ctor_set(v_reuseFailAlloc_180_, 2, v_totalCost_171_);
+lean_ctor_set(v_reuseFailAlloc_180_, 3, v_totalBenefit_172_);
+v___x_179_ = v_reuseFailAlloc_180_;
+goto v_reusejp_178_;
+}
+v_reusejp_178_:
+{
+return v___x_179_;
+}
+}
+}
+}
+
+LEAN_EXPORT lean_object* l_SharedCoverage_OwnedAdvance_values___redArg(lean_object* v_p_277_, lean_object* v_stored_278_, lean_object* v_layout_279_, lean_object* v_next_280_, lean_object* v_winner_281_){
+_start:
+{
+lean_object* v_base_282_; lean_object* v_costs_283_; lean_object* v_gains_284_; lean_object* v___x_286_; uint8_t v_isShared_287_; uint8_t v_isSharedCheck_313_;
+v_base_282_ = lean_ctor_get(v_stored_278_, 0);
+v_costs_283_ = lean_ctor_get(v_stored_278_, 1);
+v_gains_284_ = lean_ctor_get(v_stored_278_, 2);
+v_isSharedCheck_313_ = !lean_is_exclusive(v_stored_278_);
+if (v_isSharedCheck_313_ == 0)
+{
+v___x_286_ = v_stored_278_;
+v_isShared_287_ = v_isSharedCheck_313_;
+goto v_resetjp_285_;
+}
+else
+{
+lean_inc(v_gains_284_);
+lean_inc(v_costs_283_);
+lean_inc(v_base_282_);
+lean_dec(v_stored_278_);
+v___x_286_ = lean_box(0);
+v_isShared_287_ = v_isSharedCheck_313_;
+goto v_resetjp_285_;
+}
+v_resetjp_285_:
+{
+lean_object* v_costs_288_; lean_object* v_weights_289_; lean_object* v_offers_290_; lean_object* v_nodes_291_; lean_object* v_cues_292_; lean_object* v_nodeIndex_293_; lean_object* v_cueIndex_294_; lean_object* v___x_295_; lean_object* v_closure_296_; lean_object* v_covers_297_; lean_object* v___f_298_; lean_object* v___f_299_; lean_object* v___x_300_; lean_object* v___x_301_; lean_object* v_changedNodes_302_; lean_object* v___x_303_; lean_object* v_changedCues_304_; lean_object* v_after_305_; lean_object* v___x_306_; lean_object* v___x_307_; lean_object* v___x_308_; lean_object* v___x_309_; lean_object* v___x_311_;
+v_costs_288_ = lean_ctor_get(v_p_277_, 0);
+v_weights_289_ = lean_ctor_get(v_p_277_, 1);
+v_offers_290_ = lean_ctor_get(v_p_277_, 2);
+v_nodes_291_ = lean_ctor_get(v_layout_279_, 0);
+lean_inc_ref(v_nodes_291_);
+v_cues_292_ = lean_ctor_get(v_layout_279_, 1);
+lean_inc_ref(v_cues_292_);
+lean_dec_ref(v_layout_279_);
+v_nodeIndex_293_ = lean_ctor_get(v_base_282_, 0);
+v_cueIndex_294_ = lean_ctor_get(v_base_282_, 1);
+v___x_295_ = lean_array_fget_borrowed(v_offers_290_, v_winner_281_);
+v_closure_296_ = lean_ctor_get(v___x_295_, 0);
+v_covers_297_ = lean_ctor_get(v___x_295_, 1);
+lean_inc_ref_n(v_offers_290_, 2);
+v___f_298_ = lean_alloc_closure((void*)(l_SharedCoverage_OwnedAdvance_values___redArg___lam__0___boxed), 2, 1);
+lean_closure_set(v___f_298_, 0, v_offers_290_);
+v___f_299_ = lean_alloc_closure((void*)(l_SharedCoverage_OwnedAdvance_values___redArg___lam__1___boxed), 2, 1);
+lean_closure_set(v___f_299_, 0, v_offers_290_);
+v___x_300_ = lean_array_get_size(v_offers_290_);
+v___x_301_ = lean_array_get_size(v_costs_288_);
+lean_inc(v_closure_296_);
+v_changedNodes_302_ = l_SharedCoverage_Deferred_Sparse_Incidence_changedStreaming(v___x_300_, v___x_301_, v___f_298_, v_nodes_291_, v_nodeIndex_293_, v_closure_296_);
+v___x_303_ = lean_array_get_size(v_weights_289_);
+lean_inc(v_covers_297_);
+v_changedCues_304_ = l_SharedCoverage_Deferred_Sparse_Incidence_changedStreaming(v___x_300_, v___x_303_, v___f_299_, v_cues_292_, v_cueIndex_294_, v_covers_297_);
+lean_inc_ref_n(v_p_277_, 2);
+v_after_305_ = l_SharedCoverage_OwnedAdvance_evaluation___redArg(v_p_277_, v_base_282_, v_winner_281_);
+lean_inc_ref_n(v_after_305_, 2);
+lean_inc(v_next_280_);
+v___x_306_ = lean_alloc_closure((void*)(l_SharedCoverage_Deferred_Sparse_rawCost___boxed), 4, 3);
+lean_closure_set(v___x_306_, 0, v_p_277_);
+lean_closure_set(v___x_306_, 1, v_next_280_);
+lean_closure_set(v___x_306_, 2, v_after_305_);
+v___x_307_ = l_List_foldl___at___00SharedCoverage_Deferred_Sparse_patch_spec__0(lean_box(0), v___x_306_, v___x_300_, v_costs_283_, v_changedNodes_302_);
+v___x_308_ = lean_alloc_closure((void*)(l_SharedCoverage_Deferred_Sparse_rawGain___boxed), 4, 3);
+lean_closure_set(v___x_308_, 0, v_p_277_);
+lean_closure_set(v___x_308_, 1, v_next_280_);
+lean_closure_set(v___x_308_, 2, v_after_305_);
+v___x_309_ = l_List_foldl___at___00SharedCoverage_Deferred_Sparse_patch_spec__0(lean_box(0), v___x_308_, v___x_300_, v_gains_284_, v_changedCues_304_);
+if (v_isShared_287_ == 0)
+{
+lean_ctor_set(v___x_286_, 2, v___x_309_);
+lean_ctor_set(v___x_286_, 1, v___x_307_);
+lean_ctor_set(v___x_286_, 0, v_after_305_);
+v___x_311_ = v___x_286_;
+goto v_reusejp_310_;
+}
+else
+{
+lean_object* v_reuseFailAlloc_312_;
+v_reuseFailAlloc_312_ = lean_alloc_ctor(0, 3, 0);
+lean_ctor_set(v_reuseFailAlloc_312_, 0, v_after_305_);
+lean_ctor_set(v_reuseFailAlloc_312_, 1, v___x_307_);
+lean_ctor_set(v_reuseFailAlloc_312_, 2, v___x_309_);
+v___x_311_ = v_reuseFailAlloc_312_;
+goto v_reusejp_310_;
+}
+v_reusejp_310_:
+{
+return v___x_311_;
+}
+}
+}
+}
+
+LEAN_EXPORT lean_object* l_SharedCoverage_OwnedAdvance_winnerAdvance___redArg(lean_object* v_p_336_, lean_object* v_treeDepth_337_, lean_object* v_state_338_, lean_object* v_next_339_, lean_object* v_updated_340_, lean_object* v_seen_341_, lean_object* v_changed_342_){
+_start:
+{
+lean_object* v___x_343_; lean_object* v_cache_344_;
+lean_inc_ref(v_p_336_);
+v___x_343_ = lean_alloc_closure((void*)(l_SharedCoverage_Deferred_VerifiedWinner_ratingAt___boxed), 5, 4);
+lean_closure_set(v___x_343_, 0, v_p_336_);
+lean_closure_set(v___x_343_, 1, v_next_339_);
+lean_closure_set(v___x_343_, 2, v_updated_340_);
+lean_closure_set(v___x_343_, 3, v_seen_341_);
+v_cache_344_ = l_List_foldl___at___00SharedCoverage_Deferred_VerifiedWinner_updateMany_spec__0(v_p_336_, v___x_343_, v_treeDepth_337_, v_state_338_, v_changed_342_);
+lean_dec_ref(v_p_336_);
+return v_cache_344_;
+}
+}
+
+LEAN_EXPORT lean_object* l_SharedCoverage_OwnedAdvance_fillOwned(lean_object* v_p_383_, lean_object* v_layout_384_, lean_object* v_fuel_385_, lean_object* v_prior_386_, lean_object* v_stored_387_, lean_object* v_state_388_, lean_object* v_seen_389_){
+_start:
+{
+lean_object* v_zero_390_; uint8_t v_isZero_391_;
+v_zero_390_ = lean_unsigned_to_nat(0u);
+v_isZero_391_ = lean_nat_dec_eq(v_fuel_385_, v_zero_390_);
+if (v_isZero_391_ == 1)
+{
+lean_dec_ref(v_seen_389_);
+lean_dec_ref(v_state_388_);
+lean_dec_ref(v_stored_387_);
+lean_dec(v_fuel_385_);
+lean_dec_ref(v_layout_384_);
+lean_dec_ref(v_p_383_);
+return v_prior_386_;
+}
+else
+{
+lean_object* v_resolved_392_; lean_object* v_score_393_;
+lean_inc_ref(v_stored_387_);
+v_resolved_392_ = l_SharedCoverage_Deferred_VerifiedWinner_State_resolveWith___redArg(v_p_383_, v_stored_387_, v_state_388_, v_seen_389_);
+v_score_393_ = lean_ctor_get(v_resolved_392_, 0);
+lean_inc(v_score_393_);
+if (lean_obj_tag(v_score_393_) == 0)
+{
+lean_dec_ref(v_resolved_392_);
+lean_dec_ref(v_seen_389_);
+lean_dec_ref(v_stored_387_);
+lean_dec(v_fuel_385_);
+lean_dec_ref(v_layout_384_);
+lean_dec_ref(v_p_383_);
+return v_prior_386_;
+}
+else
+{
+lean_object* v_state_394_; lean_object* v_val_395_; lean_object* v___x_396_; lean_object* v_result_397_; lean_object* v_index_398_; lean_object* v_one_399_; lean_object* v_n_400_; lean_object* v___x_401_; lean_object* v_changed_402_; lean_object* v_updated_403_; lean_object* v_nextSeen_404_; lean_object* v___x_405_;
+v_state_394_ = lean_ctor_get(v_resolved_392_, 1);
+lean_inc_ref(v_state_394_);
+lean_dec_ref(v_resolved_392_);
+v_val_395_ = lean_ctor_get(v_score_393_, 0);
+lean_inc_n(v_val_395_, 2);
+lean_dec_ref_known(v_score_393_, 1);
+v___x_396_ = l_SharedCoverage_Deferred_Score_proposal___redArg(v_prior_386_, v_val_395_);
+v_result_397_ = lean_ctor_get(v___x_396_, 0);
+lean_inc_n(v_result_397_, 3);
+lean_dec_ref(v___x_396_);
+v_index_398_ = lean_ctor_get(v_val_395_, 0);
+lean_inc_n(v_index_398_, 2);
+lean_dec(v_val_395_);
+v_one_399_ = lean_unsigned_to_nat(1u);
+v_n_400_ = lean_nat_sub(v_fuel_385_, v_one_399_);
+lean_dec(v_fuel_385_);
+v___x_401_ = l_SharedCoverage_Deferred_VerifiedWinner_depth(v_p_383_);
+lean_inc_ref_n(v_layout_384_, 2);
+lean_inc_ref_n(v_p_383_, 3);
+v_changed_402_ = l_SharedCoverage_Deferred_VerifiedWinner_affected___redArg(v_p_383_, v_layout_384_, v_stored_387_, v_index_398_);
+v_updated_403_ = l_SharedCoverage_OwnedAdvance_values___redArg(v_p_383_, v_stored_387_, v_layout_384_, v_result_397_, v_index_398_);
+v_nextSeen_404_ = l_SharedCoverage_Deferred_VerifiedWinner_advanceKnown___redArg(v_p_383_, v_seen_389_, v_index_398_);
+lean_inc_ref(v_nextSeen_404_);
+lean_inc_ref(v_updated_403_);
+v___x_405_ = l_SharedCoverage_OwnedAdvance_winnerAdvance___redArg(v_p_383_, v___x_401_, v_state_394_, v_result_397_, v_updated_403_, v_nextSeen_404_, v_changed_402_);
+lean_dec(v___x_401_);
+v_fuel_385_ = v_n_400_;
+v_prior_386_ = v_result_397_;
+v_stored_387_ = v_updated_403_;
+v_state_388_ = v___x_405_;
+v_seen_389_ = v_nextSeen_404_;
+goto _start;
+}
+}
+}
+}

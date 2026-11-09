@@ -61,6 +61,10 @@ ABBAは測定前のcold cache生成を分離した後、最初の比較元`44484
 
 [原文recordのcue共有候補](docs/candidates/shared-record-cues/README.md)はfamilyのcue/contextを共有し、選択されたrecordだけでclipする。任意recordで範囲・順序・最終contextと価格の一致をLeanで確認し、AST監査も準備段階のclipを禁止した。既存eager候補との全query/全draft照合を有効にした6実フックは本文・ACKが一致し、凍結DB内の根拠32/32、3.384〜6.699秒だった。各queryの2,124 recordに対する158,785〜369,042入力比較を準備から外したが、allocation削減とは同一視しない。normal 4/16並行は全件意味検索・シナプス・本文・ACK成功、4.433/11.388秒、関連RSS最大3,951,392KiB。対比較による容量改善は確認できず、80の失敗も主にこの段階より前だったため、40/80へ進めず未採用とした。新seed/初回・履歴ありの回答model実験ではなく、総token比較・採用は0のまま。同じ候補を無条件で再実行しない。
 
+[実要求の検査費用と選択状態の所有](docs/candidates/request-validation-cost/README.md)を確認した。固定40原典のnative部品で、1 inventory passの原文ID計算は約22.1ms、descriptor scopeは0.60〜0.64ms、Read展開0.98〜1.03ms、shell展開約0.12msだった。秒単位の遅延とみなして検査を省く変更はしない。現行`c1de4407…`の追加4並行CPU診断は、全4本文・意味検索・シナプス・ACKが一致し、5.412秒・関連RSS最大2,863,776KiB。観測は遅延へ干渉し、CPU割合や80の原因を確定するものではない。選択器のarray copyと`Sparse.Values.advance`/`Evaluation.advance`が見え、元の呼出しでは次の値を作った後にも`State.advanceUsing`が古い値でaffectedを計算していた。
+
+新しい隔離Lean候補`OwnedCoverageAdvance`は、古い状態の読取りとaffected計算を先に済ませ、次の値だけをwinner更新へ渡す。任意入力で完全な選択結果が元と一致する5定理と、実際の生成codeの順序・旧stored引数の消去まで確認した。標準公理のみ、sorry/native_decide/Z3なし。compiler置換・製品接続・速度/RSS改善・採用はまだ行っていない。外部aliasがあるときのCOWも維持する。次はこの新しい所有順序について、消費する入力/意図的に残すsnapshotを分けたnative対照を実施し、効果が確認できてから同じ6実フックと小負荷へつなぐ。既存batch-winnerの再投入や無変更80はしない。終了した診断3,241file・434,523,651論理bytesはarchiveせず削除し、原典と現runtime入力は維持した。
+
 次に行うこと：
 
 1. 字句切替の期限継承とWorkGraph展開欠落は隔離候補で修正・実フック検証済み。空出力の準備省略はABBAで容量改善を確認できず未採用としたので再試行しない。原文recordの価格を出版し参照選択へ渡す経路は上記候補まで接続済みで、各queryの2,124 recordと残る9/530 eager unitを確認した。型・原文の一致と、実負荷の速度/RSS改善は別に扱う。題材固有の規則・重み調整・同じ80の無条件再試行はしない。

@@ -1,0 +1,153 @@
+Analysis of sampling eggshell (pid 66168) every 5 milliseconds
+Process:         eggshell [66168]
+Path:            /Users/USER/*/eggshell
+Load Address:    0x100fc8000
+Identifier:      eggshell
+Version:         ???
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  eggshell [65045]
+Target Type:     live task
+
+Date/Time:       2026-11-10 02:53:03.166 +0900
+Launch Time:     2026-11-10 02:52:45.390 +0900
+OS Version:      macOS 26.6.2 (25G83)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+
+Physical footprint:         522.8M
+Physical footprint (peak):  522.8M
+Idle exit:                  untracked
+----
+
+Call graph:
+
+=== l_Eggshell_Plugin_PreparedRendering_usingService ===
+    +                                               414 l_Eggshell_Plugin_indexedDiscoveryUsing___redArg___lam__15___boxed  (in eggshell) + 520  [0x101c8a678]
+    +                                                 198 l_Eggshell_Plugin_indexedDiscoveryUsing___redArg___lam__15  (in eggshell) + 46552  [0x101c87004]
+    +                                                 ! 182 l_Eggshell_Plugin_PreparedRendering_usingService  (in eggshell) + 4404  [0x101bebbec]
+    +                                                 ! : 182 l_Eggshell_Plugin_Publication_Client_SourceBatch_select  (in eggshell) + 616  [0x1010b3c30]
+    +                                                 ! :   182 lean_apply_5  (in eggshell) + 3416  [0x106430a78]
+    +                                                 ! :     182 l_Eggshell_Plugin_Publication_Service_localReadAccess___lam__3  (in eggshell) + 224  [0x102516290]
+    +                                                 ! :       182 l_Eggshell_Synapses_SharedReadViews_Pool_withView___redArg  (in eggshell) + 476  [0x10249a800]
+    +                                                 ! :         182 lean_apply_2  (in eggshell) + 2240  [0x10642aa48]
+    +                                                 ! :           182 l_Eggshell_Plugin_Publication_Service_selectSourcePlan___lam__3___boxed  (in eggshell) + 56  [0x10250f7bc]
+    +                                                 ! :             166 l_Eggshell_Plugin_Publication_Service_selectSourcePlan___lam__3  (in eggshell) + 4012  [0x10250d0e0]
+    +                                                 ! :             | 112 l_Eggshell_Plugin_SharedRangeAdapter_selectView  (in eggshell) + 2372  [0x101ba391c]
+    +                                                 ! :             | + 100 l_SharedCoverage_Deferred_VerifiedWinner_choose_x3f  (in eggshell) + 412  [0x1019b1040]
+    +                                                 ! :             | + ! 35 l_SharedCoverage_Deferred_VerifiedWinner_fillKnown  (in eggshell) + 616  [0x1019b0870]
+    +                                                 ! :             | + ! : 16 l_SharedCoverage_Deferred_Sparse_Values_advance___redArg  (in eggshell) + 688  [0x101d469b4]
+    +                                                 ! :             | + ! : | 8 l_SharedCoverage_Evaluation_advance___redArg  (in eggshell) + 208  [0x1014cb4d4]
+    +                                                 ! :             | + ! : | + 8 l_List_foldl___at___00SharedCoverage_evaluation_spec__1  (in eggshell) + 284  [0x1014c82e4]
+    +                                                 ! :             | + ! : | +   8 l_Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_nodesFast_spec__0_spec__1___redArg  (in eggshell) + 724  [0x1014c4434]
+    +                                                 ! :             | + ! : | +     7 lean_copy_expand_array  (in eggshell) + 176,184,...  [0x106425370,0x106425378,...]
+    +                                                 ! :             | + ! : | +     1 lean_copy_expand_array  (in eggshell) + 68  [0x106425304]
+    +                                                 ! :             | + ! : | +       1 _mi_malloc_generic(mi_heap_s*, unsigned long, bool, unsigned long)  (in eggshell) + 96  [0x106454d4c]
+    +                                                 ! :             | + ! : | +         1 mi_find_page(mi_heap_s*, unsigned long, unsigned long)  (in eggshell) + 1448  [0x106455528]
+    +                                                 ! :             | + ! : | +           1 mi_large_huge_page_alloc(mi_heap_s*, unsigned long, unsigned long)  (in eggshell) + 212  [0x10645986c]
+    +                                                 ! :             | + ! : | +             1 mi_page_fresh_alloc(mi_heap_s*, mi_page_queue_s*, unsigned long, unsigned long)  (in eggshell) + 56  [0x1064599a4]
+    +                                                 ! :             | + ! : | +               1 mi_segments_page_alloc(mi_heap_s*, mi_page_kind_e, unsigned long, unsigned long, mi_segments_tld_s*)  (in eggshell) + 780  [0x1064576f4]
+
+=== l_SharedCoverage_Deferred_Sparse_Values_advance ===
+    +                                                 ! :             | + 100 l_SharedCoverage_Deferred_VerifiedWinner_choose_x3f  (in eggshell) + 412  [0x1019b1040]
+    +                                                 ! :             | + ! 35 l_SharedCoverage_Deferred_VerifiedWinner_fillKnown  (in eggshell) + 616  [0x1019b0870]
+    +                                                 ! :             | + ! : 16 l_SharedCoverage_Deferred_Sparse_Values_advance___redArg  (in eggshell) + 688  [0x101d469b4]
+    +                                                 ! :             | + ! : | 8 l_SharedCoverage_Evaluation_advance___redArg  (in eggshell) + 208  [0x1014cb4d4]
+    +                                                 ! :             | + ! : | + 8 l_List_foldl___at___00SharedCoverage_evaluation_spec__1  (in eggshell) + 284  [0x1014c82e4]
+    +                                                 ! :             | + ! : | +   8 l_Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_nodesFast_spec__0_spec__1___redArg  (in eggshell) + 724  [0x1014c4434]
+    +                                                 ! :             | + ! : | +     7 lean_copy_expand_array  (in eggshell) + 176,184,...  [0x106425370,0x106425378,...]
+    +                                                 ! :             | + ! : | +     1 lean_copy_expand_array  (in eggshell) + 68  [0x106425304]
+    +                                                 ! :             | + ! : | +       1 _mi_malloc_generic(mi_heap_s*, unsigned long, bool, unsigned long)  (in eggshell) + 96  [0x106454d4c]
+    +                                                 ! :             | + ! : | +         1 mi_find_page(mi_heap_s*, unsigned long, unsigned long)  (in eggshell) + 1448  [0x106455528]
+    +                                                 ! :             | + ! : | +           1 mi_large_huge_page_alloc(mi_heap_s*, unsigned long, unsigned long)  (in eggshell) + 212  [0x10645986c]
+    +                                                 ! :             | + ! : | +             1 mi_page_fresh_alloc(mi_heap_s*, mi_page_queue_s*, unsigned long, unsigned long)  (in eggshell) + 56  [0x1064599a4]
+    +                                                 ! :             | + ! : | +               1 mi_segments_page_alloc(mi_heap_s*, mi_page_kind_e, unsigned long, unsigned long, mi_segments_tld_s*)  (in eggshell) + 780  [0x1064576f4]
+    +                                                 ! :             | + ! : | +                 1 mi_segment_try_purge(mi_segment_s*, bool)  (in eggshell) + 140  [0x106455bc4]
+    +                                                 ! :             | + ! : | +                   1 clock_gettime  (in libsystem_c.dylib) + 296  [0x18c1a7e4c]
+    +                                                 ! :             | + ! : | +                     1 _mach_boottime_usec  (in libsystem_c.dylib) + 64  [0x18c1cd4b0]
+    +                                                 ! :             | + ! : | +                       1 gettimeofday  (in libsystem_c.dylib) + 56  [0x18c19fdc0]
+    +                                                 ! :             | + ! : | +                         1 __commpage_gettimeofday_internal  (in libsystem_kernel.dylib) + 44  [0x18c2c9c24]
+    +                                                 ! :             | + ! : | +                           1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x18c2c810c]
+    +                                                 ! :             | + ! : | 6 l_SharedCoverage_Evaluation_advance___redArg  (in eggshell) + 152  [0x1014cb49c]
+    +                                                 ! :             | + ! : | + 6 l_List_foldl___at___00SharedCoverage_evaluation_spec__0  (in eggshell) + 284  [0x1014c85cc]
+    +                                                 ! :             | + ! : | +   5 l_Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_nodesFast_spec__0_spec__1___redArg  (in eggshell) + 724  [0x1014c4434]
+    +                                                 ! :             | + ! : | +   ! 4 lean_copy_expand_array  (in eggshell) + 200,176  [0x106425388,0x106425370]
+    +                                                 ! :             | + ! : | +   ! 1 lean_copy_expand_array  (in eggshell) + 68  [0x106425304]
+
+=== l_SharedCoverage_Evaluation_advance ===
+    +                                                 ! :             | + ! 35 l_SharedCoverage_Deferred_VerifiedWinner_fillKnown  (in eggshell) + 616  [0x1019b0870]
+    +                                                 ! :             | + ! : 16 l_SharedCoverage_Deferred_Sparse_Values_advance___redArg  (in eggshell) + 688  [0x101d469b4]
+    +                                                 ! :             | + ! : | 8 l_SharedCoverage_Evaluation_advance___redArg  (in eggshell) + 208  [0x1014cb4d4]
+    +                                                 ! :             | + ! : | + 8 l_List_foldl___at___00SharedCoverage_evaluation_spec__1  (in eggshell) + 284  [0x1014c82e4]
+    +                                                 ! :             | + ! : | +   8 l_Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_nodesFast_spec__0_spec__1___redArg  (in eggshell) + 724  [0x1014c4434]
+    +                                                 ! :             | + ! : | +     7 lean_copy_expand_array  (in eggshell) + 176,184,...  [0x106425370,0x106425378,...]
+    +                                                 ! :             | + ! : | +     1 lean_copy_expand_array  (in eggshell) + 68  [0x106425304]
+    +                                                 ! :             | + ! : | +       1 _mi_malloc_generic(mi_heap_s*, unsigned long, bool, unsigned long)  (in eggshell) + 96  [0x106454d4c]
+    +                                                 ! :             | + ! : | +         1 mi_find_page(mi_heap_s*, unsigned long, unsigned long)  (in eggshell) + 1448  [0x106455528]
+    +                                                 ! :             | + ! : | +           1 mi_large_huge_page_alloc(mi_heap_s*, unsigned long, unsigned long)  (in eggshell) + 212  [0x10645986c]
+    +                                                 ! :             | + ! : | +             1 mi_page_fresh_alloc(mi_heap_s*, mi_page_queue_s*, unsigned long, unsigned long)  (in eggshell) + 56  [0x1064599a4]
+    +                                                 ! :             | + ! : | +               1 mi_segments_page_alloc(mi_heap_s*, mi_page_kind_e, unsigned long, unsigned long, mi_segments_tld_s*)  (in eggshell) + 780  [0x1064576f4]
+    +                                                 ! :             | + ! : | +                 1 mi_segment_try_purge(mi_segment_s*, bool)  (in eggshell) + 140  [0x106455bc4]
+    +                                                 ! :             | + ! : | +                   1 clock_gettime  (in libsystem_c.dylib) + 296  [0x18c1a7e4c]
+    +                                                 ! :             | + ! : | +                     1 _mach_boottime_usec  (in libsystem_c.dylib) + 64  [0x18c1cd4b0]
+    +                                                 ! :             | + ! : | +                       1 gettimeofday  (in libsystem_c.dylib) + 56  [0x18c19fdc0]
+    +                                                 ! :             | + ! : | +                         1 __commpage_gettimeofday_internal  (in libsystem_kernel.dylib) + 44  [0x18c2c9c24]
+    +                                                 ! :             | + ! : | +                           1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x18c2c810c]
+    +                                                 ! :             | + ! : | 6 l_SharedCoverage_Evaluation_advance___redArg  (in eggshell) + 152  [0x1014cb49c]
+    +                                                 ! :             | + ! : | + 6 l_List_foldl___at___00SharedCoverage_evaluation_spec__0  (in eggshell) + 284  [0x1014c85cc]
+    +                                                 ! :             | + ! : | +   5 l_Std_DHashMap_Internal_Raw_u2080_insert___at___00Eggshell_hashDistinct___at___00SharedCoverage_nodesFast_spec__0_spec__1___redArg  (in eggshell) + 724  [0x1014c4434]
+    +                                                 ! :             | + ! : | +   ! 4 lean_copy_expand_array  (in eggshell) + 200,176  [0x106425388,0x106425370]
+    +                                                 ! :             | + ! : | +   ! 1 lean_copy_expand_array  (in eggshell) + 68  [0x106425304]
+    +                                                 ! :             | + ! : | +   !   1 _mi_malloc_generic(mi_heap_s*, unsigned long, bool, unsigned long)  (in eggshell) + 332  [0x106454e38]
+
+=== l_SharedCoverage_Deferred_VerifiedWinner_State_advanceUsing ===
+    +                                                 ! :             | + ! :     1 l_List_reverseAux___redArg  (in eggshell) + 80  [0x10287dd80]
+    +                                                 ! :             | + ! 34 l_SharedCoverage_Deferred_VerifiedWinner_fillKnown  (in eggshell) + 700  [0x1019b08c4]
+    +                                                 ! :             | + ! : 31 l_SharedCoverage_Deferred_VerifiedWinner_State_advanceUsing___redArg  (in eggshell) + 100  [0x101f36cb8]
+    +                                                 ! :             | + ! : | 30 l_List_foldl___at___00SharedCoverage_Deferred_VerifiedWinner_updateMany_spec__0___at___00SharedCoverage_Deferred_VerifiedWinner_State_advanceUsing_spec__0___redArg  (in eggshell) + 448  [0x101f36944]
+    +                                                 ! :             | + ! : | + 22 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! 14 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : 8 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : | 4 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : | + 3 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : | + ! 1 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 372  [0x1019743a0]
+    +                                                 ! :             | + ! : | + ! : | + ! : 1 lean_nat_pow  (in eggshell) + 108  [0x106421e3c]
+    +                                                 ! :             | + ! : | + ! : | + ! :   1 lean::mpz::mpz(unsigned long long)  (in eggshell) + 44  [0x10641be64]
+    +                                                 ! :             | + ! : | + ! : | + ! :     1 __gmpz_init_set_ui  (in eggshell) + 48  [0x1064778c0]
+    +                                                 ! :             | + ! : | + ! : | + ! :       1 __gmp_default_allocate  (in eggshell) + 20  [0x10645c620]
+    +                                                 ! :             | + ! : | + ! : | + ! :         1 _xzm_xzone_malloc  (in libsystem_malloc.dylib) + 336  [0x18c127aa0]
+    +                                                 ! :             | + ! : | + ! : | + ! 1 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : | + ! : 1 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : | + ! :   1 l_StableWinnerIndex_Tree_updated___redArg  (in eggshell) + 484  [0x101974410]
+    +                                                 ! :             | + ! : | + ! : | + ! :     1 l_StableWinnerIndex_join___redArg  (in eggshell) + 388  [0x101973cb8]
+    +                                                 ! :             | + ! : | + ! : | + ! :       1 l_StableWinnerIndex_merge___redArg  (in eggshell) + 176  [0x10197373c]
+    +                                                 ! :             | + ! : | + ! : | + ! :         1 lean_apply_2  (in eggshell) + 3592  [0x10642af90]
+    +                                                 ! :             | + ! : | + ! : | + ! :           1 l_SharedCoverage_Rating_better___boxed  (in eggshell) + 40  [0x1011ca240]
+    +                                                 ! :             | + ! : | + ! : | + ! :             1 l_SharedCoverage_Rating_better___redArg  (in eggshell) + 912  [0x1011c9eb8]
+    +                                                 ! :             | + ! : | + ! : | + ! :               1 lean_nat_big_mul  (in eggshell) + 356  [0x10642096c]
+
+=== Sort by top of stack ===
+        5       operator new(unsigned long)  (in libc++abi.dylib) + 52  [0x18c2c27e8]
+
+Sort by top of stack, same collapsed (when >= 5):
+        __semwait_signal  (in libsystem_kernel.dylib)        3262
+        __psynch_cvwait  (in libsystem_kernel.dylib)        2248
+        __ulock_wait  (in libsystem_kernel.dylib)        414
+        kevent  (in libsystem_kernel.dylib)        403
+        lean::lean_del_core_other(lean_object*, unsigned char, lean_object*&)  (in eggshell)        107
+        lean_copy_expand_array  (in eggshell)        79
+        l_List_any___at___00Eggshell_Plugin_SharedRangeAdapter_basePieceAccept_spec__0  (in eggshell)        55
+        _platform_memcmp  (in libsystem_platform.dylib)        46
+        lean_apply_1  (in eggshell)        46
+        l_Eggshell_Blake3_round  (in eggshell)        42
+        lean_dec_ref_cold  (in eggshell)        42
+        l_Eggshell_Blake3_Source_byteAt  (in eggshell)        39
+        l_Eggshell_Research_RegisterMix_instDecidableValid  (in eggshell)        38
+        _tlv_get_addr  (in libdyld.dylib)        36
+        l_List_reverseAux___redArg  (in eggshell)        32
+        lean_array_get_borrowed  (in eggshell)        32
+        lean_array_push  (in eggshell)        29
+        __read_nocancel  (in libsystem_kernel.dylib)        27
+        l___private_Lean_Data_Json_Printer_0__Lean_Json_compress_go  (in eggshell)        26
+        _platform_memmove  (in libsystem_platform.dylib)        24
+        l_List_any___at___00List_eraseDupsBy_loop_spec__0___redArg  (in eggshell)        24
