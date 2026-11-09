@@ -37,9 +37,11 @@
 
 続く[共有metadata候補](docs/candidates/compiled-owner-plan/README.md)（`5b82fd60`）は、この部品を既存OwnerReady/viewへ接続した隔離実行体。6本文byte一致・原文32/32、4/16の104/104、40の212/212が完了した。40の波は26.805秒、標本RSS最大4,092,896KiBで、容量改善は確認できず80へ拡大していない。候補は未採用。`state.guard`待ち・未完了maintenanceの警告も未解決である。
 
+[OS footprintの観察](docs/candidates/process-footprint/README.md)で、RSSと圧縮・退避量が異なることを確認した。5GB上限と安全停止線を維持。事前固定した対比較は、比較元4並行の1要求がfocus途中で15秒期限切れになったため未完了で、候補の容量改善は未確認。記録済みの採点は1,933窓中1,792窓・83msで、残りの取得/採点/返信境界の停滞を先に限定する。上限緩和や同負荷の無条件再試行はしない。終了済み診断4,167 file / 621,238,462論理bytesを削除し、26保護SHAを保持した。回答モデル0、採用0、80並行の新規合格0。
+
 次に行うこと：
 
-1. [読取専用の時系列診断](docs/candidates/request-lifetime/README.md)では、16並行のRSS最大時はfocus終了16件、canonical入力・配送ドメイン各1件、選択終了0件だった。共有metadata候補でも40で容量の改善を確認できていない。先にRSSと圧縮/swapを含むprocess footprintを区別し、focus〜原文/シナプス計画の保持値を特定する。既存traceの題材2ではグラフ/対応811ms、描画1,394ms、数値呼出し526/172msで、semanticMs=6,722を数値単独の費用と誤認しない。過去の同一runtimeのRSS変動を改善とせず、`Snapshot.forkReader`やcache件数・encoded bytesだけでも原因としない。
+1. 最初に[比較元4並行の期限切れ](docs/candidates/process-footprint/README.md)の残り141窓の取得・batch採点・返信境界を追う。原因未確定のままABBAや80をやり直さない。[読取専用の時系列診断](docs/candidates/request-lifetime/README.md)では、16並行のRSS最大時はfocus終了16件、canonical入力・配送ドメイン各1件、選択終了0件だった。共有metadata候補でも40で容量改善は未確認。RSSと圧縮/swapを含むprocess footprintを区別し、focus〜原文/シナプス計画の保持値を特定する。既存traceの題材2ではグラフ/対応811ms、描画1,394ms、数値呼出し526/172msで、semanticMs=6,722を数値単独の費用と誤認しない。過去の同一runtimeのRSS変動を改善とせず、`Snapshot.forkReader`やcache件数・encoded bytesだけでも原因としない。
 2. 質問に依存しない値は既存のproject別prepared viewで共有する。mutable cacheの所有と不変の読取値を分け、元のpin・全Ref・scope・依存記録を保存する。全体の作り直し、新しい永続cache、lockやworker制限を先に増やさない。
 3. 来歴索引の共有は隔離候補へ接続済みだが、上記の停止原因の解消とは扱わない。descriptorの成功/拒否、project/snapshot/owner、元の全Read列とlookupの一致、既存OwnerReady/viewの寿命と予算を維持する。実フックでの容量改善が得られないまま本体へ採用したり、同じ80を再試行したりしない。
 4. 次の候補は比較元と分離し、通常native閉包とsourceを照合する。まず同じsnapshotの題材1/2/3・各2独立chatで原文32/32と本文byte一致、実意味検索・3辺・ACK・正常終了を確認する。このfixtureは中断した未受理seedであり、モデルの両周ではない。未検証part8、背景maintenance警告、受理済みseed不足は未解決として残す。
