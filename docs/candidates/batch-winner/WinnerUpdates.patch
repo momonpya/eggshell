@@ -1,0 +1,28 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/winner-replay-original-source/tools/WinnerUpdates.lean	2026-11-09 10:27:21
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/winner-replay-batch-source/tools/WinnerUpdates.lean	2026-11-09 10:29:40
+@@ -2,0 +3 @@
++public import tools.research.BatchWinner
+@@ -12 +13 @@
+-  indices.foldl (fun cache index => cache.tree.updated index.val (replacement index.val)) cache
++  StableWinnerIndex.Batch.update cache (indices.map Fin.val) replacement
+@@ -19,14 +20,6 @@
+-  induction indices generalizing cache with
+-  | nil => simp [updateMany]
+-  | cons head tail ih =>
+-      simp only [updateMany,List.foldl_cons] at *
+-      rw [ih]
+-      by_cases later : ∃ index ∈ tail, index.val = query
+-      · simp [later]
+-      · rw [if_neg later,Tree.updated_values _ _ _ (Nat.lt_of_lt_of_le head.isLt capacity)]
+-        by_cases same : head.val = query
+-        · subst query
+-          have bound : head.val < cache.tree.values.length := by
+-            simpa only [Tree.values_length] using Nat.lt_of_lt_of_le head.isLt capacity
+-          simp [List.getElem?_set_self bound]
+-        · simp [List.getElem?_set_ne same,later,same]
++  have bounded : ∀ index ∈ indices.map Fin.val, index < 2^depth := by
++    intro index present
++    rcases List.mem_map.mp present with ⟨original,_,rfl⟩
++    exact Nat.lt_of_lt_of_le original.isLt capacity
++  simpa only [updateMany,List.mem_map] using
++    (StableWinnerIndex.Batch.update_lookup cache (indices.map Fin.val) replacement bounded query)
