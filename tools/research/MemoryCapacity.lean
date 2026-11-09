@@ -179,10 +179,10 @@ def run (path : System.FilePath) : IO Unit := do
   let root : System.FilePath := .mk input.output
   check (root.isAbsolute && !(← root.pathExists) && input.topics.map (·.topic) == #[1,2,3]) "fresh frozen capacity inputs required"
   check ((input.diagnostic && input.counts == #[4]) ||
-    (!input.diagnostic && (input.counts == #[4,16] || input.counts == #[80])))
+    (!input.diagnostic && (input.counts == #[4,16] || input.counts == #[40] || input.counts == #[80])))
     "predeclared capacity stages or four-client diagnosis required"
-  if input.counts == #[80] then
-    let some gate := input.gate | throw (IO.userError "80 clients require a completed small-load gate")
+  if input.counts == #[40] || input.counts == #[80] then
+    let some gate := input.gate | throw (IO.userError "40/80 clients require a completed small-load gate")
     let previous ← read (.mk gate)
     check (previous.getObjValD "allPhasesPassed" == toJson true &&
       previous.getObjValD "runtimeSha256" == toJson input.runtimeSha256 &&
