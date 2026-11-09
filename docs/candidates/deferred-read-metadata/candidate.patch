@@ -1,0 +1,145 @@
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/SynapseTransport.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-reads-checked-source/Eggshell/SynapseTransport.lean
+index 381ccac8..6d119199 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/SynapseTransport.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-reads-checked-source/Eggshell/SynapseTransport.lean
+@@ -5,6 +5,7 @@ public import tools.KeyPostings
+ public import Eggshell.HashDistinct
+ public import Eggshell.SynapticBindings
+ public import tools.research.PreparedPlanMetadata
++public import tools.research.DeferredReadMetadata
+ 
+ @[expose] public section
+ 
+@@ -60,7 +61,7 @@ structure Plan where
+   canonical : Std.HashMap String CheckedOriginal.Recipe := {}
+   batch : Option Plugin.Publication.Client.SourceBatch := none
+   shells : Std.HashMap String PreparedPlanMetadata.Shell := {}
+-  metadataReads : Array Read := #[]
++  readStencils : Array DeferredReadMetadata.Checked := #[]
+   canonicalReuse : Array (String × CanonicalSource.Shared.Reuse × CanonicalSource.Shared.Reuse) := #[]
+   canonicalFailure : Array (String × String) := #[]
+   originalStructures : Std.HashMap String ObservedRecordView.Geometry := {}
+@@ -260,7 +261,7 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+           acquired := some batch
+           pure batch
+       let mut shells := plan.shells
+-      let mut reads := plan.metadataReads
++      let mut readStencils := plan.readStencils
+       for ((reference,_),index) in sources.zipIdx do
+         let some literalRows := batch.palette.literals[index]? |
+           throw (IO.userError "literal metadata lost its pinned project view")
+@@ -304,14 +305,14 @@ def build (prepared : Array Recommend.Prepared) (answers : Array (String × Nat)
+           if descriptor.rows.isEmpty then continue
+           let some shell := PreparedPlanMetadata.describe owner descriptor |
+             throw (IO.userError "invalid original row metadata")
+-          let some originalReads := PreparedPlanMetadata.reads descriptor |
++          let some readStencil := DeferredReadMetadata.prepare? descriptor |
+             throw (IO.userError "invalid original read metadata")
+           let shell := match shells[owner]? with
+             | none => shell
+             | some prior => PreparedPlanMetadata.combine #[prior,shell]
+           shells := shells.insert owner shell
+-          reads := reads ++ originalReads
+-      plan := {plan with batch := some batch,shells,metadataReads := reads}
++          readStencils := readStencils.push readStencil
++      plan := {plan with batch := some batch,shells,readStencils}
+     catch error =>
+       if let some batch := acquired then
+         try batch.release ((← IO.monoMsNow)+1000) catch _ => pure ()
+diff --git a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/Handoff.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-reads-checked-source/Eggshell/Handoff.lean
+index bfc9a16d..e067fc49 100644
+--- a/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/byte-pages-runtime-source/Eggshell/Handoff.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-reads-checked-source/Eggshell/Handoff.lean
+@@ -374,7 +374,8 @@ def Handoff.prepareDelivery (handoff : Handoff) (plan : Synapses.Transport.Plan)
+   let native := Synapses.PacketReceipt.prepare (plan.documents.filter (fun doc => owners.contains doc.owner))
+   let canonical := plan.canonical.toArray.flatMap fun (owner,rows) =>
+     if owners.contains owner then rows.rows else #[]
+-  let savedReads := plan.rows ++ plan.metadataReads ++ Synapses.PacketReceipt.canonicalReads canonical
++  let savedReads := plan.rows ++ DeferredReadMetadata.expand plan.readStencils ++
++    Synapses.PacketReceipt.canonicalReads canonical
+   let reads := KeyPostings.prepare (fun saved : {read : Synapses.Read // read ∈ savedReads} =>
+     (saved.val.binding,saved.val.occurrence)) (savedReads.attach.filter fun saved => owners.contains saved.val.binding.owner)
+   let byOwner := KeyPostings.prepare (fun saved : {read : Synapses.Read // read ∈ savedReads} =>
+diff --git a/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/DeferredReadMetadata.lean b/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/DeferredReadMetadata.lean
+new file mode 100644
+index 00000000..96ac2334
+--- /dev/null
++++ b/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/DeferredReadMetadata.lean
+@@ -0,0 +1,77 @@
++module
++public import tools.research.PreparedPlanMetadata
++
++@[expose] public section
++namespace DeferredReadMetadata
++open Eggshell.Synapses
++
++private theorem list_mapM_present (rows : List α) (read : α → Option β) :
++    (rows.mapM read).isSome = rows.all (fun row => (read row).isSome) := by
++  induction rows with
++  | nil => rfl
++  | cons row rest ih =>
++    cases found : read row <;> cases tail : rest.mapM read <;>
++      simp [List.mapM_cons,found,tail,← ih]
++
++private theorem bind_pure_present (value : Option α) (f : α → β) :
++    (value.bind fun value => some (f value)).isSome = value.isSome := by
++  cases value <;> rfl
++
++theorem array_mapM_present (rows : Array α) (read : α → Option β) :
++    (rows.mapM read).isSome = rows.all (fun row => (read row).isSome) := by
++  rw [Array.mapM_eq_mapM_toList]
++  simp [list_mapM_present]
++
++/-- Check only addressability. This is exactly the failure condition of the
++existing expansion, but allocates no Read or per-row provenance arrays. -/
++def readable (descriptor : OwnerPalette.Descriptor) : Bool :=
++  descriptor.rows.all fun row =>
++    (descriptor.files[row.file]?).isSome &&
++    row.origins.all (fun origin => (descriptor.origin? origin).isSome)
++
++theorem readable_exact (descriptor : OwnerPalette.Descriptor) :
++    (PreparedPlanMetadata.reads descriptor).isSome = readable descriptor := by
++  let emit := fun (row : OwnerPalette.Row) => (do
++    let file ← descriptor.files[row.file]?
++    let origins ← row.origins.mapM descriptor.origin?
++    return origins.map fun origin =>
++      (⟨origin.occurrence,⟨.file file,row.line,row.line⟩,origin.binding,#[]⟩ : Read) : Option (Array Read))
++  change ((descriptor.rows.mapM emit).bind fun rows => some rows.flatten).isSome = _
++  rw [bind_pure_present,array_mapM_present]
++  unfold readable
++  apply congrArg (Array.all descriptor.rows)
++  funext row
++  cases file : descriptor.files[row.file]? <;>
++    cases origins : row.origins.mapM descriptor.origin? <;>
++      simp [emit,file,origins,← array_mapM_present]
++
++structure Checked where
++  descriptor : OwnerPalette.Descriptor
++  present : readable descriptor = true
++
++def prepare? (descriptor : OwnerPalette.Descriptor) : Option Checked :=
++  if accepted : readable descriptor = true then some ⟨descriptor,accepted⟩ else none
++
++theorem prepare_present (descriptor : OwnerPalette.Descriptor) :
++    (prepare? descriptor).isSome = (PreparedPlanMetadata.reads descriptor).isSome := by
++  rw [readable_exact]
++  by_cases accepted : readable descriptor = true <;> simp [prepare?,accepted]
++
++def Checked.expand (checked : Checked) : Array Read :=
++  (PreparedPlanMetadata.reads checked.descriptor).get (by
++    rw [readable_exact]
++    exact checked.present)
++
++theorem Checked.expand_exact (checked : Checked) :
++    PreparedPlanMetadata.reads checked.descriptor = some checked.expand := by
++  simp [expand]
++
++def expand (sources : Array Checked) : Array Read := sources.flatMap Checked.expand
++
++theorem expand_empty : expand #[] = #[] := rfl
++
++theorem expand_push (sources : Array Checked) (source : Checked) :
++    expand (sources.push source) = expand sources ++ source.expand := by
++  simp [expand]
++
++end DeferredReadMetadata

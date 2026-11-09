@@ -1,0 +1,36 @@
+diff --git a/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/MemoryCapacity.lean b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-reads-auditor-source/tools/research/MemoryCapacity.lean
+index eb11df33..a4f0c956 100644
+--- a/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/MemoryCapacity.lean
++++ b/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/deferred-reads-auditor-source/tools/research/MemoryCapacity.lean
+@@ -1,4 +1,5 @@
+ import Main
++import tools.research.RealDeliveryProbe
+ import Eggshell.ContractAudit
+ import tools.research.StudyRuntime
+ import tools.research.StudyCommand
+@@ -251,6 +252,23 @@ def run (path : System.FilePath) : IO Unit := do
+   finally StudyRuntime.stopManaged publisher (root/"publisher-shutdown.json")
+ 
+ end Eggshell.Research.MemoryCapacity
++
++open Lean
++run_elab do
++  let environment ← getEnv
++  for (consumer,dependency) in [
++      (``Eggshell.Synapses.Transport.build,``DeferredReadMetadata.prepare?),
++      (``Eggshell.Plugin.Handoff.prepareDelivery,``DeferredReadMetadata.expand)] do
++    let some body := (environment.find? consumer).bind (·.value?) | throwError "Missing deferred-read consumer"
++    unless body.getUsedConstants.contains dependency do throwError "Disconnected deferred-read consumer"
++
++#print axioms DeferredReadMetadata.readable_exact
++#print axioms DeferredReadMetadata.prepare_present
++#print axioms DeferredReadMetadata.Checked.expand_exact
++#print axioms DeferredReadMetadata.expand_push
++
+ def main (args : List String) : IO Unit := do
+-  let [input] := args | throw (IO.userError "capacity input required")
+-  Eggshell.Research.MemoryCapacity.run (.mk input)
++  match args with
++  | ["cells",_] | ["probe",_] | ["install-prefix",_] => scopedEncodeDeliveryMain args
++  | ["capacity",input] | [input] => Eggshell.Research.MemoryCapacity.run (.mk input)
++  | _ => throw (IO.userError "cells|probe|capacity INPUT")
