@@ -1,0 +1,21 @@
+--- a/Eggshell/OperationPool.lean	2026-11-09 07:33:10
++++ b/Eggshell/OperationPool.lean	2026-11-09 19:15:49
+@@ -248,0 +249,10 @@
++      let fault ← IO.getEnv "EGGSHELL_RESEARCH_PHASE_FAULT"
++      if request.route == .configured then
++        if fault == some "before-ready" then
++          while !(← IO.checkCanceled) do IO.sleep 1
++          throw (IO.userError "controlled semantic timeout before readiness")
++        else if fault == some "after-ready" || fault == some "legacy-after-ready" then
++          ready
++          let now ← IO.monoMsNow
++          IO.sleep ((request.semanticCutoff.getD now)+100-now).toUInt32
++          throw (IO.userError "controlled semantic failure after cutoff")
+@@ -287 +297,6 @@
+-    let result ← Worker.executeUsing request (fun phase signal => searchPhase phase environment readers signal) ready
++    let fault ← IO.getEnv "EGGSHELL_RESEARCH_PHASE_FAULT"
++    let result ← Worker.executeUsing request (fun phase signal => do
++      let phase := if fault == some "legacy-after-ready" && phase.route == .lexical then
++          {phase with semanticCutoff := request.semanticCutoff}
++        else phase
++      searchPhase phase environment readers signal) ready

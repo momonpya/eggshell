@@ -26,7 +26,29 @@
 
 [native検査](evidence.json)は、実際に使用した259 objectの依存が整合した。比較元からの直接のsource変更は`Eggshell.Worker`だけで、埋込みsourceも一致する。ただしこの入口は必要な部分だけをimportし、57 moduleを含まないため、全製品に対するsource照合は不合格である。その結果を隠さず保存し、全製品の認定には使わない。初回の制御入口は構文エラーで失敗し、修正後にbuildと24検査が通った。保存したControlsはnativeで検査された実バイトに一致する。追加のsource検査は768MiBのheap条件で失敗した後、native buildと同じ1536MiBで通り、RSS最大約1.53GBだった。5GBの利用者上限は変えていない。
 
-次は全製品runtimeへ同じ修正を接続し、意味検索の遅延・失敗を強制した実フックで、元DBの字句本文とACKが元の期限内に戻ることを検証する。今回の修正は、意味検索内で一度起きた待機停止そのものを直したとするものではない。採用にはAGENTS.mdのmatched総token・品質条件も必要である。
+上記は先行した部品検査の範囲である。続く全製品runtimeと実フックの検証は次節のとおり。意味検索内で一度起きた待機停止そのものの修復とはしない。採用にはAGENTS.mdのmatched総token・品質条件も必要である。
+
+## 全製品runtimeと実フック
+
+実行体SHAは`2c061098775338c794f32f401c4f244495d14bd41cf9ae7f03254cd885e86364`。native閉包321 objectが整合し、比較元の製品moduleの欠落はない。source照合は直接2変更（Workerの修正と、OperationPoolの試験用故障注入）、ハーネス12追加に一致した。呼出し側のnative閉包も321 objectが整合し、製品との共通320 moduleは同一。これにより先行した部品検査の全製品照合不足を補った。編集checkoutの製品sourceは変更せず、候補を隔離したまま検証した。
+
+[FullHooks](FullHooks.lean)は実際のdaemonへhook要求を送り、stdoutを保存・flushしてからACKする。DB、head、対象source、質問、500,000文字の配送枠と実行体を固定し、3題材を各2独立chatで検査した。下表は全30件の最終コホートであり、回答モデルによる1周目・2周目ではない。
+
+| 条件 | 本文ACK | DBにある凍結原文 | hook実測範囲 | 関連RSS標本最大 KiB |
+| --- | --- | --- | --- | --- |
+| 通常の意味検索 | 6/6 | 32/32 | 3.136〜5.848秒 | 1,992,544 |
+| 意味検索を無効にした字句経路 | 6/6 | 26/32 | 1.034〜1.821秒 | 654,096 |
+| readiness前の意味検索タイムアウト | 6/6 | 26/32 | 15.474〜16.120秒 | 557,536 |
+| readiness後、意味検索期限を過ぎて失敗 | 6/6 | 26/32 | 15.571〜16.323秒 | 546,160 |
+| 同じ失敗で古い切替期限を復元 | 0/6 | 0/32 | 14.643〜14.654秒 | 313,168 |
+
+通常6件の本文は比較元の正本とbyte一致した。二つの修正済み故障条件12件は、直接字句検索の本文と題材ごとにbyte一致した。古い期限を戻した対照6件は未完了通知だけでACKがなかった。故障は[phaseの境界で注入](fault-injection.patch)したもので、数値kernelの停止を再現したものではない。全サービスの終了codeは0、guardの終了と残存owned PIDなしを確認した。順次の小規模試験であり、80並行、p99、実メモリ改善の証拠にはしない。
+
+**字句本文は98%の配送条件に不合格。** 両chatとも題材1が2/4、題材2が6/7、題材3が5/5で、合計26/32（81.25%）。題材1の`tracked-input-language`と`trailing-language-warning`、題材2の`dumpmachine-reports-toolchain-triple`が欠ける。本文が戻ることと必要原文が届くことを分けて記録した。DBにない題材1の`input-language-predicate`、題材3の`syntax-only-no-output-action`と`frontend-job-construction`は事前に凍結した分母から除外し、その不在も保存した。
+
+呼出し側の初期検査では、字句用設定を削除したことで意味検索が自動有効になった。明示的な`false`へ直した後は、配送の合否と輸送の因果検査を混同した停止、直接字句経路のroute値を誤認した停止もあった。訂正ごとに題材1から再開し、製品runtimeは一度も変更していない。成功したセルだけを拾わず、途中停止・失敗を含む全試行を[evidence.json](evidence.json)の`allAttemptsIncludingSuperseded`へ残した。回答モデル呼出し0、有料比較0/18、採用0を維持する。
+
+終了済みの呼出し側build/source、51 sessionと台帳、650 profile directory、生ログ、重複本文など12,131 file / 1,662,164,733論理bytesを削除した。その前に退役したcompiler生成物5,326 file / 744,122,696論理bytesも削除した。archiveなし。原DB・project cache/model・正本本文・比較元など26保護SHAは不変で、現在の全製品候補runtime・prefix・必要なnative source/object/interfaceは保持した。古い呼出し側実行体は再利用できない。
 
 ## focusの観察
 
