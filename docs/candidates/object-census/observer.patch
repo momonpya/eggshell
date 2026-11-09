@@ -1,0 +1,18 @@
+--- a/Eggshell/SynapseTransport.lean	2026-11-10 01:02:17
++++ b/Eggshell/SynapseTransport.lean	2026-11-10 01:35:57
+@@ -7,0 +8 @@
++public import tools.research.ObjectCensus
+@@ -179,0 +181,3 @@
++  let tracing := (← IO.getEnv "EGGSHELL_TRACE_OBJECTS") == some "1"
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-input" (owners,answers)
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-prepared" prepared
+@@ -194,0 +199 @@
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-routed" (plan.results,outputWitnesses)
+@@ -204,0 +210 @@
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-admitted" (admitted,originals)
+@@ -245,0 +252 @@
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-bound" (plan,origins)
+@@ -319,0 +327 @@
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-metadata" plan
+@@ -360,0 +369 @@
++  if tracing then Eggshell.Research.ObjectCensus.observe "synapse-complete" plan

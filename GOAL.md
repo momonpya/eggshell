@@ -57,6 +57,10 @@ ABBAは測定前のcold cache生成を分離した後、最初の比較元`44484
 
 [原文参照候補の容量試験](docs/candidates/reference-record-capacity/README.md)を初めて4/16→40→80へ接続した。前のmatched試験は比較元で停止し候補側を実行していなかったため、その未実施部分を段階観測付き`c1de4407…`で測った。4/16は全件4.381/11.068秒、40は全40件27.573秒で、canonical本文・意味検索・シナプス・ACKが成功した。RSS最大は4/16全体3,696,880KiB、40が4,001,632KiB。80は4,360,656KiBの標本で保護停止し、最終client結果・search・published・ACKが残らず未達である。欠けた記録を配送率へ換算しない。全80のkeyed成功とfocusは残り、source view80、binding投影19、delivery-domain22、参照準備完了2、source-plan/render完了0が観測された。したがって今回の80失敗は数値部分待ちではなくfocus後のRSS超過であり、後段の参照選択だけでは解消しない。記録の欠如から未開始を断定せず、live heapとRSSも分ける。以前の数値部分待ちは別の未解決事項として残す。原典SHAは不変、回答モデル0、性能の対比較/総token/品質/採用0。終了済みの12,847file・735,571,050論理bytesと旧段階観測source/build/prefixをarchiveせず削除し、現在の統合実行体・project cache・比較元と必要native入力を維持した。
 
+[不変objectの有界診断](docs/candidates/object-census/README.md)では、3題材primeと4並行の全7実フックで本文・意味検索・シナプス・ACKが一致し、測定waveは4.004秒、関連RSS標本最大2,385,824KiBだった。mutable ref/closure等を辿らないcensusなのでRSSそのものではなく、metadata/complete rootは全7標本で262,144 objectの上限に達した。独立した40 ownerのfield診断は完走したが、共有するrootの合計を80倍してqueryの保持量としない。source view cacheはprime後4/16/40までload増加・evictionがなく、同じcache追加を行う根拠はない。初期化時のdead publisher endpointは元PIDの不在を確認して除去し、nativeを変えず再開した。終了した診断・候補の実行体/生成物は合計12,150file・1,595,429,084論理bytesをarchiveせず削除し、原典と現在のproject cache・親native入力を維持した。80の修復・全体heapの原因確定・総token改善・採用は未達。
+
+[原文recordのcue共有候補](docs/candidates/shared-record-cues/README.md)はfamilyのcue/contextを共有し、選択されたrecordだけでclipする。任意recordで範囲・順序・最終contextと価格の一致をLeanで確認し、AST監査も準備段階のclipを禁止した。既存eager候補との全query/全draft照合を有効にした6実フックは本文・ACKが一致し、凍結DB内の根拠32/32、3.384〜6.699秒だった。各queryの2,124 recordに対する158,785〜369,042入力比較を準備から外したが、allocation削減とは同一視しない。normal 4/16並行は全件意味検索・シナプス・本文・ACK成功、4.433/11.388秒、関連RSS最大3,951,392KiB。対比較による容量改善は確認できず、80の失敗も主にこの段階より前だったため、40/80へ進めず未採用とした。新seed/初回・履歴ありの回答model実験ではなく、総token比較・採用は0のまま。同じ候補を無条件で再実行しない。
+
 次に行うこと：
 
 1. 字句切替の期限継承とWorkGraph展開欠落は隔離候補で修正・実フック検証済み。空出力の準備省略はABBAで容量改善を確認できず未採用としたので再試行しない。原文recordの価格を出版し参照選択へ渡す経路は上記候補まで接続済みで、各queryの2,124 recordと残る9/530 eager unitを確認した。型・原文の一致と、実負荷の速度/RSS改善は別に扱う。題材固有の規則・重み調整・同じ80の無条件再試行はしない。

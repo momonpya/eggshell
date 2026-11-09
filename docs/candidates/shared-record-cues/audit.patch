@@ -1,0 +1,19 @@
+--- a/tools/research/SingleCanonicalChecks.lean	2026-11-10 01:02:17
++++ b/tools/research/SingleCanonicalChecks.lean	2026-11-10 02:25:18
+@@ -85,6 +85,7 @@
+       (``PendingRendering.materializeReferences,``PendingRendering.materializeDraftReport),
+       (``ReferenceRecords.selectedDrafts,``ReferenceRecords.Candidate.toDraft),
+       (``ReferenceRecords.Candidate.toDraft,``ReferenceRecords.Record.fragment),
++      (``ReferenceRecords.Candidate.toDraft,``ReferenceRecords.Record.materializationCues),
+       (``PendingRendering.queryDraft?,``PendingRendering.queryDraftWith),
+       (``PendingRendering.queryDraft?,``DraftUnit.pricing),
+       (``PendingRendering.materializeDraftReport,``materializeDraftFetched),
+@@ -99,7 +100,7 @@
+       if body.getUsedConstants.contains forbidden then throwError "draft stage renders an unselected whole unit"
+   for target in [``ReferenceRecords.prepare,``ReferenceRecords.parts,``PendingRendering.queryReferences?] do
+     let some body := (env.find? target).bind (·.value?) | throwError "missing original reference preparation"
+-    for forbidden in [``ReferenceRecords.Record.fragment,``ReferenceRecords.Candidate.toDraft,``originalRecordFragment] do
++    for forbidden in [``ReferenceRecords.Record.fragment,``ReferenceRecords.Record.materializationCues,``ReferenceRecords.Candidate.toDraft,``originalRecordFragment] do
+       if body.getUsedConstants.contains forbidden then throwError "reference stage materializes an unselected original record"
+   let some (.inductInfo info) := env.find? ``Delivery.Merged | throwError "merged row type missing"
+   for ctor in info.ctors do
