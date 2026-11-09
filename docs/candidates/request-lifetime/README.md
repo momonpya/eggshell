@@ -1,5 +1,7 @@
 # 要求の段階とプロセスRSSの時系列
 
+後続の[出力scope診断](output-scope.json)は、実フックの推薦起点と同じsnapshotを再生し、任意出力の対応付け証拠が3題材×2chatで全て0件と確認した。通常6本文は比較元とbyte一致し、原文32/32・ACKが通った。Transport.buildの任意出力解析は既に省かれており、そこを修復対象にしない。一方、後段の空範囲でも残るJSON/文字配列準備はnative objectでも確認し、[等価な省略候補](../empty-output-preparation/README.md)を検証したが、ABBAの4/16並行で容量改善は確認できなかった。[診断差分](output-scope.patch)と集計を残し、終了した実行体・原DB以外の状態・重複本文・compiler cacheなど3,059 file / 409,650,266論理bytesをarchiveせず削除した。
+
 製品を変更しない診断。比較元はbyte-pages、SHA-256 `534a92d6f93fb253819cfbdcb32eea0643606e70c6e3c52eeae6e78bbdaee552`。新しい80並行試行、回答モデル呼出し、採用は0。
 
 ## 観察できたこと

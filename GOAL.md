@@ -45,10 +45,12 @@
 
 小規模順次の未受理seed由来fixtureであり、80並行、p99、受理済みseed、モデルの両周、総token・品質は未達/未検証。詳細な選択記録付きの通常要求は失敗し、記録を外した通常対照を題材1から再開して全6本文一致を確認した。詳細な字句記録にはnullのselection-planに対する診断panicも残る。候補の配送比較では詳細記録を無効にし、診断の修復とはしない。終了済み31 session・30確認台帳、診断実行体・生ログ・重複本文など4,742 file / 298,321,702論理bytesをarchiveせず削除し、26保護SHAと候補runtime/cache/必要native入力を保持した。削除後もnative321 objectが整合した。回答モデル0、採用0、80並行未達を維持する。
 
+[空出力準備の省略候補](docs/candidates/empty-output-preparation/README.md)は未採用。実フックの起点から再生した任意出力証拠は6件とも0で、Transport.buildのその解析は既に省略されていた。後段の空範囲にも残るJSON/文字配列準備をnative objectで確認し、元関数と全入力で等しいcompiler置換をLeanで証明した。通常・字句・強制失敗後の全18本文が比較元と一致し各32/32を配送したが、事前固定ABBAの4/16並行で速度・容量の改善は確認できなかった。全80測定要求・416原文と12 primeは成功したが、80同時ではない。比較元RSS標本最大2,782,784/3,272,992KiB、候補2,869,792/3,571,744KiBで、同じ実装内でも揺れた。lease/borrowerは測定後に解放されていたが、全heapの証明ではない。state.guard/背景maintenance警告も残る。この案を容量修復として再試行せず、40/80への拡大も行わない。終了済み110 sessionと未採用実行体/source/cacheなど20,392 file / 1,640,506,848論理bytesを削除し、現在の比較元と28保護SHAを維持した。出力scope診断の終了生成物3,059 file / 409,650,266論理bytesも別に削除した。archiveなし、回答モデル0、採用0。
+
 次に行うこと：
 
-1. 字句切替の期限継承と、字句のWorkGraph展開欠落は隔離候補で修正・実フック検証済み。次は80並行の容量を妨げる、focus〜原文/シナプス計画の保持値を特定する。[時系列診断](docs/candidates/request-lifetime/README.md)では16並行のRSS最大時はfocus終了16件、選択終了0件だったが、これは選択未開始の証拠ではない。共有metadata候補でも容量改善は未確認。要求の段階開始・終了と保持する不変値の寿命を区別し、容量改善を示す小さい対比較を先に行う。RSSと圧縮/swapを区別し、既存の題材2のsemanticMs=6,722を数値単独の費用と誤認しない。cache件数・encoded bytes・`Snapshot.forkReader`の存在だけでも原因としない。元の数値待機停止の原因は未確定であり、同じ80の無条件再試行はしない。題材固有の規則や重み調整も追加しない。
-2. 質問に依存しない値は既存のproject別prepared viewで共有する。mutable cacheの所有と不変の読取値を分け、元のpin・全Ref・scope・依存記録を保存する。全体の作り直し、新しい永続cache、lockやworker制限を先に増やさない。
+1. 字句切替の期限継承とWorkGraph展開欠落は隔離候補で修正・実フック検証済み。空出力の準備省略はABBAで容量改善を確認できず未採用としたので再試行しない。次は`PendingRendering.queryDraftWith`で、選択前に作る原文fragment・payload key・costと、選択に必要な座標/重みを分ける。既存draftはtext描画を遅延するが、原文fragmentの切出し・価格付けまで全て出版済みという意味ではない。まずこの実経路の単位数と準備/保持範囲を確認し、公開済みの原文範囲と価格を参照する形へ進める。RSS原因と未測定の改善量は断定しない。題材固有の規則・重み調整・同じ80の無条件再試行はしない。
+2. 質問によらないrecordの座標・payload identity・正確な価格は、既存project別prepared viewと出版差分へ結び付ける。問い合わせでは参照と質問のcue/重みを扱い、原文fragmentの具体化は選択後へ寄せる。元のrenderer/pricerとの一致をLeanで証明し、pin・全Ref・scope・依存記録・完全な認定を保持する。全起点の閉包を保存したり、新しいcacheやlock/worker制限を先に増やしたりしない。容量改善を小さい対比較で確認してから40/80へ進む。[時系列診断](docs/candidates/request-lifetime/README.md)の終了markerだけで選択未開始と判断せず、RSSと圧縮/swap、入力のencoded bytesとnative heapを区別する。
 3. 来歴索引の共有は隔離候補へ接続済みだが、上記の停止原因の解消とは扱わない。descriptorの成功/拒否、project/snapshot/owner、元の全Read列とlookupの一致、既存OwnerReady/viewの寿命と予算を維持する。実フックでの容量改善が得られないまま本体へ採用したり、同じ80を再試行したりしない。
 4. 次の候補は比較元と分離し、通常native閉包とsourceを照合する。まず同じsnapshotの題材1/2/3・各2独立chatで原文32/32と本文byte一致、実意味検索・3辺・ACK・正常終了を確認する。このfixtureは中断した未受理seedであり、モデルの両周ではない。未検証part8、背景maintenance警告、受理済みseed不足は未解決として残す。
 5. 4/16の実測で理由が得られてから40/80へ進む。本文通知だけ、段階途中のreceipt、部品80、数値完了を実80の成功へ読み替えない。その後は下の契約どおり、受理済みseedからの両周・matched総token/品質・持続負荷・成長DB・NASを満たす。

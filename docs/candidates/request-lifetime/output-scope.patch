@@ -1,0 +1,50 @@
+--- a/FullHooks.lean
++++ b/FullHooks.lean
+@@ -5 +5 @@
+-namespace Eggshell.Research.FullFallbackTrial
++namespace Eggshell.Research.OutputScopeInventory
+@@ -18,0 +19,36 @@
++def inventory (work : MemoryCapacity.Input) (warm receipt question : String) : IO Json := do
++  let response ← IO.ofExcept (Json.parse warm >>= fromJson? (α := StudyWarm.Response))
++  let references := response.databases.flatMap fun database => database.sources.filterMap (·.prepared)
++  let snapshot ← DB.PageMap.pin (.mk work.project)
++  let some reference := references.find? (·.source == snapshot.head) | throw (IO.userError "prepared snapshot missing")
++  let prepared ← Synapses.Recommend.capturedLocal snapshot reference
++  let domain ← read (System.FilePath.mk work.data/"receipts"/receipt/"delivery-domain.json")
++  let roots ← IO.ofExcept ((domain.getObjValD "data").getObjValAs? (Array String) "nominated")
++  let wanted ← IO.ofExcept ((domain.getObjValD "data").getObjValAs? (Array String) "hydrated")
++  let reader ← Persistence.Store.NodeReader.new snapshot
++  let mut owners := #[]
++  for entry in ← Synapses.Build.entries snapshot do
++    let original ← reader.outcome (← reader.locateOutcome entry.id)
++    if wanted.contains (relationKey original.relation) then owners := owners.push original
++  let answers := roots.zipIdx
++  let consumers := owners.flatMap fun owner =>
++    let priorities := answers.filterMap fun (key,priority) => if key == relationKey owner.relation then some priority else none
++    (Synapses.Provenance.identities owner).flatMap fun occurrence => priorities.map (occurrence,·)
++  let deadline := (← IO.monoMsNow)+30000
++  check (owners.size == wanted.size) "inventory omitted hydrated owners"
++  let result ← Synapses.Routed.collect prepared answers (Sha256.hex question.toUTF8) deadline consumers
++  check result.complete "complete graph is required for inventory"
++  let outputs ← Synapses.Routed.outputOffers prepared result deadline
++  let mut rows := #[]
++  for owner in owners do
++    let occurrences := Synapses.Provenance.identities owner
++    let relevant := outputs.filter fun offer => match offer.target with
++      | .output producer => occurrences.contains producer
++      | _ => false
++    let raw := (Matcher.atomText? owner.outcome).getD ""
++    rows := rows.push (Json.mkObj [("owner",toJson (relationKey owner.relation)),
++      ("rawCharacters",toJson raw.length),("rawBytes",toJson raw.utf8ByteSize),
++      ("allWitnesses",toJson outputs.size),("matchingProducerWitnesses",toJson relevant.size)])
++  return Json.mkObj [("source",toJson snapshot.head),("roots",toJson roots),
++    ("graphComplete",toJson result.complete),("nodes",toJson result.nodes),("arcs",toJson result.arcs),
++    ("outputWitnesses",toJson outputs.size),("owners",toJson rows)]
+@@ -80,0 +117 @@
++          save (directory/"output-scope.json") (← inventory work warm.stdout receipt topic.prompt)
+@@ -113 +150 @@
+-end Eggshell.Research.FullFallbackTrial
++end Eggshell.Research.OutputScopeInventory
+@@ -116 +153 @@
+-  | ["full-fallback-hooks",input] => Eggshell.Research.FullFallbackTrial.run (.mk input); return 0
++  | ["output-scope-inventory",input] => Eggshell.Research.OutputScopeInventory.run (.mk input); return 0
