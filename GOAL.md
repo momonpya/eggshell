@@ -24,6 +24,12 @@
 
 終了した部品と99clientの状態・重複本文・未使用prototypeなど10,187項目/438,162,719論理bytesをarchiveせず削除した。現行候補/比較元・2制御器・原DB/正本本文・使用中cache/modelを保持し、4701現行compiler入力と保護SHAを確認した。部品2倍が全体では約6%に留まるため、同じparser小修正を繰り返さず、選択と原文対応の質問固有IRを不変なproject情報から分ける境界へ進む。
 
+[独立した射影とシナプスIOを重ねる候補](docs/candidates/reference-pipeline/README.md)は未採用。共有batchを借りた後の純粋なfocus/引用対応を通常のLean CPU poolへ渡し、元の要求actorでtransportを進め、cancel/join後にだけbatchを返す構成を実フックへ接続した。selectorだけをpoolへ渡す旧案とは境界が異なるが、同じsnapshot・質問・枠の固定ABBAは16並行が親12.806/14.215秒、候補13.481/12.750秒、平均13.5105→13.1155秒で記述的な差は2.924%に留まった。4並行の平均5.223→4.630秒を16並行の成果にしない。候補RSS最大4,083,584KiBでメモリ改善も未確認。今回のpool配置を主解決として繰り返さない。
+
+全99本文/ACK、測定wave84件の意味検索/シナプス、原典不変、guardの正常終了を確認した。最終headの全体保存18/18・部分込み19/19を保つが、一般98%・モデル両周・総token/品質・p99・16並行数秒の実証ではない。純粋な対の射影の等式は公理なし、nativeの通常/例外/期限切れ/取消の寿命検査も通過した。直接変更Handoffのみ・helper追加1と実link/callを照合し、時計を読む位置や失敗時の副作用まで全入力で等しいとは主張しない。親A1のmaintenance保留警告も背景処理の完了とは数えない。回答モデル0・採用0・有料比較0/18を維持する。
+
+終了したこの候補の実行体・source/build・私有cache・99session/受領記録・重複本文など15,375項目/1,198,260,263論理bytesをarchiveせず削除した。比較元と現行制御器・原DB・3正本本文・使用中cache/modelのhashを保ち、4690現行compiler入力に退役先への依存がないことを確認した。OSの並べ方だけで大幅に改善するという根拠は得られなかったため、新しいpoolやworker数の調整を重ねず、既存project imageから要求ごとに作り直す原文・引用の不変構造を減らす方向へ進む。
+
 [不変page集合を共有する候補](docs/candidates/quiescent-page-base/README.md)をLeanで隔離実装した。利用中はbaseを固定し、親が検索actorと子taskをjoinした後だけfrontを返し、coordinatorが終了済みfrontを併合して無利用時に次baseを公開する。利用中base・更新待ちcache・既存image seedを元の128MiB公開page枠に収める等式、元image不変など6法則を標準公理だけで確認した。native部品ではowner mutex保持中のread、scope/full ref拒否、独立front、epoch更新、cancel/終了済み要求、元の値とread trace、出版後の新旧値を確認した。324 native objectと全変更source/埋込literalを照合し、製品変更は予定した4 module、追加は検査器1 module、既存module除去0である。
 
 ただし候補`19e6b870…`は不採用。同一snapshotのA1は4/16全件5.989/15.431秒で本文・意味検索・シナプス・ACKが成功したが、B1は最初のprimeが15.420秒・本文不一致・synaptic complete=falseで停止した。先頭pageを512枠に固定する新policyが後続のhot pageを入れられず、missが約1,700から38,557へ増えた。共有base hit106,936でも埋められていない。B2/A2・候補16並行・回答モデルは未実行。元DBは不変、候補の独立した原文配送率は未監査なので0%や98%とは報告しない。次は元の回転するhot frontを保つ構成へ修正し、同じ失敗policyを再投入しない。

@@ -1,0 +1,65 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/canonical-decoder-runtime/source/Eggshell/Handoff.lean	2026-11-11 02:33:54
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/reference-pipeline/source/Eggshell/Handoff.lean	2026-11-11 03:25:52
+@@ -3,0 +4 @@
++public import tools.research.ParallelProjection
+@@ -9908,3 +9909,32 @@
+-    let observedNeighborhood := indexedFocus.bind fun focused =>
+-      refocusObservedNeighborhoodUsing rankWindows focusQuestion focusDomain (focused.ranking.filterMap (rankedOwners[·]?))
+-        (focused.windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions))
++    let (synaptic,projections) ← Research.ParallelProjection.alongside
++      (Research.ParallelProjection.paired
++        (fun _ =>
++          indexedFocus.bind fun focused =>
++            refocusObservedNeighborhoodUsing rankWindows focusQuestion focusDomain (focused.ranking.filterMap (rankedOwners[·]?))
++              (focused.windows.filterMap fun (id, positions) => (rankedOwners[id]?).map (·, positions)))
++        (fun _ => Id.run do
++          let parents := nominationRanking.zipIdx.filterMap fun (relation,rank) => do
++            let owner ← nominatedOwners.find? (·.relation == relation)
++            let text ← Matcher.atomText? owner.outcome
++            if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
++          let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
++            let admitted := parents.filterMap fun (rank,work,text) =>
++              if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
++                some (rank,text) else none
++            (if admitted.isEmpty then none else
++              rankedCitedObservationCoordinates admitted item.owner item.provenance).map
++              (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
++          return referenced)) advisoryDeadline (do
++      trace "synaptic owners"
++      let graphNow ← IO.monoMsNow
++      let synaptic ← if recommendation && evidence.isNone then
++        Synapses.Transport.build source.synaptic
++          ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
++            (relationKey owner,priority))
++          synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) advisoryDeadline
++          (graphDeadline := some (Synapses.Routed.graphDeadline graphNow advisoryDeadline))
++          (preparedBatch := focusBatch)
++        else pure ({} : Synapses.Transport.Plan)
++      return synaptic)
++    trace "synaptic built"
++    let observedNeighborhood := projections.1
+@@ -9944,11 +9974 @@
+-    let parents := nominationRanking.zipIdx.filterMap fun (relation,rank) => do
+-      let owner ← nominatedOwners.find? (·.relation == relation)
+-      let text ← Matcher.atomText? owner.outcome
+-      if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
+-    let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
+-      let admitted := parents.filterMap fun (rank,work,text) =>
+-        if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
+-          some (rank,text) else none
+-      (if admitted.isEmpty then none else
+-        rankedCitedObservationCoordinates admitted item.owner item.provenance).map
+-        (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
++    let referenced := projections.2
+@@ -9960,11 +9979,0 @@
+-    trace "synaptic owners"
+-    let graphNow ← IO.monoMsNow
+-    let synaptic ← if recommendation && evidence.isNone then
+-      Synapses.Transport.build source.synaptic
+-        ((synapticRoots nominationRanking nominatedOwners).toArray.map fun (owner,priority) =>
+-          (relationKey owner,priority))
+-        synapticOwners (Sha256.hex (meaningQuery.getD current).toUTF8) advisoryDeadline
+-        (graphDeadline := some (Synapses.Routed.graphDeadline graphNow advisoryDeadline))
+-        (preparedBatch := focusBatch)
+-      else pure ({} : Synapses.Transport.Plan)
+-    trace "synaptic built"
