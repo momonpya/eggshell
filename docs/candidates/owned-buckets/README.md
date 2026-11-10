@@ -1,6 +1,7 @@
 # Updating array buckets through their owning map
 
-Isolated component, not adopted or connected to product code. The
+Isolated component, not adopted. Its later [real-hook connection](runtime/README.md)
+is recorded separately. The
 [current real-hook profile](../register-rounds/runtime/profile.md) found
 repeated array copying after the ready marker. `ownerReach` uses an explicit
 lookup/push/insert pattern. This study tests that pattern without changing
@@ -53,10 +54,11 @@ are events, not allocated bytes.
 The observed growth supports the copy-on-write hypothesis for this construction
 pattern. It does not establish the number of actual ranges per owner, its
 fraction of hook time, whole-hook speed or the few-second sixteen-client target.
-The product's owner-range index still needs a formal connection, followed by
-canonical-body and matched real-hook comparisons. Generic lookup equality is
-not presented as a theorem about the entire selector. Answering-model calls
-and adoption are zero; inclusive token/quality gates remain unpassed.
+At this component stage, the product's owner-range index still needed a formal
+connection and matched real-hook comparisons. Those later steps are recorded
+in the runtime study. The component's generic lookup equality alone is not
+presented as a theorem about the entire selector. Answering-model calls and
+adoption remain zero; inclusive token/quality gates remain unpassed.
 
 The connection must preserve the existing `RangeReach.prepare` and its ordered
 input. `memberChoices` observes the index through `reach[bound.owner]?`, so a

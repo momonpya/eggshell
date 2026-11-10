@@ -1,0 +1,188 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/register-rounds-runtime/source/Eggshell/Handoff.lean	2026-11-10 22:05:11
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/owner-reach-runtime/source/Eggshell/Handoff.lean	2026-11-11 00:14:06
+@@ -11,6 +11,7 @@
+ public import Eggshell.LexicalEvidence
+ public import Eggshell.Receipt
+ public import tools.research.SelectionReceipt
++public import tools.research.BucketView
+ 
+ public import Std.Data.HashSet.Lemmas
+ public import Std.Data.TreeMap.Lemmas
+@@ -6071,7 +6072,123 @@
+     let parts ← bound.spans.mapM fun (first,last) => index.cover? first last
+     let parts := parts.flatten.eraseDups
+     if memberCovered keys units parts member then some parts else none
++
++namespace ReachBuilder
++open Eggshell.Research
++
++abbrev Rows (units : Array UnitShape) := Std.HashMap String (Array (RangeReach.Entry (Fin units.size)))
++
++def collectWith (keys : Array String) (units : Array UnitShape)
++    (update : Rows units → String × RangeReach.Entry (Fin units.size) → Rows units) : Rows units := Id.run do
++  let mut rows := {}
++  for index in List.finRange units.size do
++    let some owner := keys[units[index].family]? | continue
++    for (first,limit) in units[index].ranges do
++      rows := update rows (owner,⟨first,limit,index⟩)
++  return rows
++
++theorem original_is_finished (keys : Array String) (units : Array UnitShape) :
++    ownerReach keys units = BucketView.finish (collectWith keys units OwnedBuckets.appendSlow) RangeReach.prepare := by
++  rfl
++
++def step (keys : Array String) (units : Array UnitShape)
++    (update : Rows units → String × RangeReach.Entry (Fin units.size) → Rows units)
++    (state : Rows units) (index : Fin units.size) : Rows units :=
++  match keys[units[index].family]? with
++  | none => state
++  | some owner => units[index].ranges.foldl
++      (fun state span => update state (owner,⟨span.1,span.2,index⟩)) state
++
++theorem collect_is_fold (keys : Array String) (units : Array UnitShape)
++    (update : Rows units → String × RangeReach.Entry (Fin units.size) → Rows units) :
++    collectWith keys units update = (List.finRange units.size).foldl (step keys units update) {} := by
++  have wrapped (index : Fin units.size) (state : Rows units) :
++      (match keys[units[index].family]? with
++      | some owner => pure (ForInStep.yield (units[index].ranges.foldl
++          (fun rows span => update rows (owner,⟨span.1,span.2,index⟩)) state))
++      | _ => pure (ForInStep.yield state) : Id (ForInStep (Rows units))) =
++        pure (ForInStep.yield (step keys units update state index)) := by
++    cases captured : keys[units[index].family]? <;> simp only [step,captured]
++  simp only [collectWith,List.forIn_pure_yield_eq_foldl,pure_bind,bind_pure]
++  calc
++    _ = (forIn (List.finRange units.size) ({} : Rows units)
++        (fun index state => pure (ForInStep.yield (step keys units update state index))) : Id (Rows units)).run :=
++      congrArg (fun body => (forIn (List.finRange units.size) ({} : Rows units) body : Id (Rows units)).run)
++        (funext fun index => funext fun state => wrapped index state)
++    _ = _ := List.forIn_pure_yield_eq_foldl _ _
+ 
++theorem step_observes (keys : Array String) (units : Array UnitShape)
++    (left right : Rows units) (same : ∀ key : String, left[key]? = right[key]?) (index : Fin units.size) :
++    ∀ key : String, (step keys units OwnedBuckets.appendFast left index)[key]? =
++      (step keys units OwnedBuckets.appendSlow right index)[key]? := by
++  cases captured : keys[units[index].family]? with
++  | none => simpa only [step,captured] using same
++  | some owner =>
++    have result := OwnedBuckets.fold_observes
++      (units[index].ranges.map fun span => (owner,({ first := span.1, limit := span.2, value := index } : RangeReach.Entry (Fin units.size))))
++      left right same
++    simpa only [OwnedBuckets.exclusive,OwnedBuckets.reference,List.foldl_map,step,captured] using result
++
++theorem collect_observes (keys : Array String) (units : Array UnitShape) :
++    ∀ key : String, (collectWith keys units OwnedBuckets.appendFast)[key]? =
++      (collectWith keys units OwnedBuckets.appendSlow)[key]? := by
++  have loop (indices : List (Fin units.size)) (left right : Rows units)
++      (same : ∀ key : String, left[key]? = right[key]?) :
++      ∀ key : String, (indices.foldl (step keys units OwnedBuckets.appendFast) left)[key]? =
++        (indices.foldl (step keys units OwnedBuckets.appendSlow) right)[key]? := by
++    induction indices generalizing left right with
++    | nil => exact same
++    | cons index rest ih => exact ih _ _ (step_observes keys units left right same index)
++  simpa only [collect_is_fold] using loop (List.finRange units.size) {} {} (fun _ => rfl)
++
++def referenceLookup (keys : Array String) (units : Array UnitShape) :
++    String → Option (RangeReach.Prepared (Fin units.size)) :=
++  let ready := ownerReach keys units
++  fun key => ready[key]?
++
++def exclusiveLookup (keys : Array String) (units : Array UnitShape) :
++    String → Option (RangeReach.Prepared (Fin units.size)) :=
++  let ready := (collectWith keys units OwnedBuckets.appendFast).map (fun _ rows => RangeReach.prepare rows)
++  fun key => ready[key]?
++
++theorem lookup_exact : @referenceLookup = @exclusiveLookup := by
++  funext keys units probe
++  simp only [referenceLookup,exclusiveLookup,original_is_finished,BucketView.finish_lookup,Std.HashMap.getElem?_map]
++  exact congrArg (Option.map RangeReach.prepare) (collect_observes keys units probe).symm
++
++def fromLookup (keys : Array String) (units : Array UnitShape)
++    (lookup : String → Option (RangeReach.Prepared (Fin units.size)))
++    (member : Synapses.AdvisoryBundles.Member) : List (List (Fin units.size)) :=
++  member.choices.toList.filterMap fun bound => do
++    let index ← lookup bound.owner
++    let parts ← bound.spans.mapM fun (first,last) => index.cover? first last
++    let parts := parts.flatten.eraseDups
++    if memberCovered keys units parts member then some parts else none
++
++def memberChooser (keys : Array String) (units : Array UnitShape) :
++    Synapses.AdvisoryBundles.Member → List (List (Fin units.size)) :=
++  let reach := ownerReach keys units
++  fun member => memberChoices keys units reach member
++
++def exclusiveChooser (keys : Array String) (units : Array UnitShape) :
++    Synapses.AdvisoryBundles.Member → List (List (Fin units.size)) :=
++  let lookup := exclusiveLookup keys units
++  fun member => fromLookup keys units lookup member
++
++theorem chooser_exact : @memberChooser = @exclusiveChooser := by
++  funext keys units member
++  change fromLookup keys units (referenceLookup keys units) member =
++    fromLookup keys units (exclusiveLookup keys units) member
++  rw [lookup_exact]
++
++#print axioms original_is_finished
++#print axioms collect_observes
++#print axioms lookup_exact
++#print axioms chooser_exact
++
++@[csimp] theorem memberChooser_compiled : @memberChooser = @exclusiveChooser := chooser_exact
++end ReachBuilder
++
+ /-- Every member has a complete original binding. Choose among its original
+ unit alternatives using the actual shared marginal wire cost, never gold. -/
+ def bundlePlan? (keys : Array String) (units : Array UnitShape) (p : SharedCoverage.Problem)
+@@ -6398,7 +6515,7 @@
+     let p ← problemUsingSource source units pieces fixed ceiling
+     let keys := (families.map fun family => relationKey family.owner.relation).toArray
+     let shapes := unitArray.map UnitPlan.shape
+-    let reach := ownerReach keys shapes
++    let choicesFor := ReachBuilder.memberChooser keys shapes
+     let mut candidates : Std.HashMap Synapses.Range (List (List (Fin shapes.size))) := {}
+     let mut bindingAudit := #[]
+     let mut fragmented := 0
+@@ -6406,7 +6523,7 @@
+     for projected in bundles do
+       for member in projected.members do
+         if candidates.contains member.source then continue
+-        let choices := memberChoices keys shapes reach member
++        let choices := choicesFor member
+         fragmented := fragmented + choices.countP (fun choice => choice.length > 1)
+         if choices.isEmpty then uncovered := uncovered+1
+         if captureBindings then
+@@ -6593,7 +6710,7 @@
+   let p ← problemFromPrepared query source units pieces
+   let keys := query.owners
+   let shapes := units.map (·.shape)
+-  let reach := ownerReach keys shapes
++  let choicesFor := ReachBuilder.memberChooser keys shapes
+   let mut candidates : Std.HashMap Synapses.Range (List (List (Fin shapes.size))) := {}
+   let mut fragmented := 0
+   let mut uncovered := 0
+@@ -6601,7 +6718,7 @@
+   for projected in query.bundles do
+     for member in projected.members do
+       if candidates.contains member.source then continue
+-      let choices := memberChoices keys shapes reach member
++      let choices := choicesFor member
+       fragmented := fragmented+choices.countP (fun choice => choice.length > 1)
+       if choices.isEmpty then uncovered := uncovered+1
+       if query.captureRanges then
+@@ -6725,7 +6842,7 @@
+   let p ← problemFromView query source units pieces
+   let keys := query.owners
+   let shapes := units.map (·.shape)
+-  let reach := ownerReach keys shapes
++  let choicesFor := ReachBuilder.memberChooser keys shapes
+   let mut candidates : Std.HashMap Synapses.Range (List (List (Fin shapes.size))) := {}
+   let mut fragmented := 0
+   let mut uncovered := 0
+@@ -6733,7 +6850,7 @@
+   for projected in query.bundles do
+     for member in projected.members do
+       if candidates.contains member.source then continue
+-      let choices := memberChoices keys shapes reach member
++      let choices := choicesFor member
+       fragmented := fragmented+choices.countP (fun choice => choice.length > 1)
+       if choices.isEmpty then uncovered := uncovered+1
+       if query.captureRanges then

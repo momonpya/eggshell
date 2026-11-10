@@ -68,7 +68,15 @@ CPU集計器は同名symbolを別libraryでも合算していたため新標本�
 
 [所有者別の配列更新](docs/candidates/owned-buckets/README.md)を汎用のLean部品で検証した。lookup/push/insertとmap内alterの間で、任意のlawful key/hash・値・初期table・row列・probeについて、欠けたkey/空bucket/順序/重複を含む全lookup等価を証明した。内部HashMap layoutの等式や全selector等式は主張しない。198 native対照と、sourceを保持してdedicated actorへ渡すAB/BA/ABで内容が一致した。8,192row・1ownerは85.732〜86.247→0.224〜0.240ms、46ownerは1.777〜1.831→0.279〜0.284msだった。native2objectと実specialization両経路を照合し、guard正常・RSS標本最大93,904KiB。合成部品であり、実queryのowner別range数やhook時間の占有率は未確認、製品へ未接続・未採用・回答モデル0である。
 
-次は、実際のownerReach/memberChoicesの利用側をlookupインターフェースとして扱い、一般等式を接続する。HashMap内部表現のEqであるかのように扱わない。出版時に保持できる不変の範囲索引とquery依存部分も分け、全体を毎回作り直す構成を完成としない。元の候補/順序/元本文と認定を維持した同一snapshotの実フック比較へ進め、部品の倍率を全フックや80人へ外挿しない。
+この後、[実際の範囲索引と利用側への接続](docs/candidates/owned-buckets/runtime/README.md)を隔離版で完了した。任意の順序付きbucketの等式を既存のRangeReach.prepareと全lookupへ持ち上げ、元のplan/selectPrepared/selectView全体のrefactor等式もLeanで確認した。標準公理のみ。最初の関数返却案は、nativeで準備が個別lookupへ遅延する形を検出し、実フックを呼ばず却下した。構築済みIndexを値として返す修正では、3入口にcollectorとprepare mapperのcallが各1つあり、member loopにはないことをnativeで検査した。直接変更Handoffのみ・helper追加2・3埋込literalの実バイト差分・全親module・entry不変と実行体SHAを照合した。HashMap内部layoutのEqは主張しない。
+
+source hashと3基準本文が同じ[完了ABBA](docs/candidates/owned-buckets/runtime/comparison.json)は、4並行が親5.189/5.944秒・候補4.948/5.658秒、16並行が親13.673/15.324秒・候補12.943/14.208秒だった。16並行の記述的な平均短縮は6.366%で、揺れがあり、数秒目標は未達。全waveの意味検索/シナプス・本文byte一致・ACK・原典不変・正常guard終了を確認した。今回の完了比較92prompt配送とpreflight7件を、別の中断試行やpilotへ混ぜない。元の6モデル段階をこのruntimeでやり直した結果ではなく、総token/品質の採用比較0/18・採用0・回答モデル0を維持する。候補RSS標本最大3,884,000KiBだが、メモリ改善の実証とはしない。
+
+最初の比較は2pilot完了後、次の4並行でdisk保護停止した。4clientの空directoryがあり、計測前との断定を訂正した。成功pilotと停止armの3prime、出力のない4clientを記録し、別に固定した完全ABBAへpoolしない。強制停止で残ったendpointによる起動失敗も残し、停止guardの所有PIDかつ実process不在を確認してendpointだけを回復した。元DB全fileのSHAと保護条件は維持する。各完了armの収集直後に重複状態を削除し、容量増加を次のarmへ持ち越さない。
+
+終了後は今回の未採用build/source/proof cache、旧sourceコピー、重複本文と試験専用session/台帳/receipt等29,367項目・1,150,974,842論理bytesをarchiveせず削除した。現在の親/選択済みruntime/制御器/比較元/headの前後SHA、必要compiler参照先、current project read-cacheとモデルを保持した。退役した0673de6c候補を再利用可能とは扱わず、証明source・patch・compact native監査・scalar結果を保持する。
+
+ownerReachの接続は部品段階から進んだが、残る遅延全体の解決ではない。同じ配列更新やselectorだけpoolを再試行しない。既に共有されている準備済みproject imageを足場に、要求ごとに残る不変部分の復元/検証/構造化とquery依存の差分を実経路で区別する。共有不変データからCPU処理を開始できるpoolは採用候補に含め、状態の所有と完了/取消を保つ。同一snapshotの実フック全体の比較を先に行い、局所倍率を80人や数秒へ外挿しない。
 
 今回の終了済み観測器/部品のsource/build/runと重複出力3,865項目/224,510,625bytes、7session/台帳/receipt 534項目/17,016,801bytesをarchiveせず削除した。5対象の15,600件の参照先照合、現在の製品/比較元/制御器/headの前後hashを確認した。現在のCPU原標本、scalar結果・metadataと証明sourceを保持し、退役した実行体を再利用可能と扱わない。
 
