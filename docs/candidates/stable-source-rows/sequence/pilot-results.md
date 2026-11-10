@@ -12,8 +12,9 @@ their own cost records; they are not rolled into a per-question saving.
 | Round / topic | Fresh input + output | Memory input + output | Saving | Delivered fully stored units | Including partially stored evidence |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | First / 1 | 4,888,585 | 1,306,474 | 73.275% | 3/3 | 4/4 |
+| First / 2 | 3,419,749 | 174,754 | 94.890% | 5/5 | 7/7 |
 
-Five remaining paired stages are incomplete. No aggregate or second-round
+Four remaining paired stages are incomplete. No aggregate or second-round
 claim is available. This table includes cached input within input, and includes
 reasoning within output exactly once. Topic one has no failed model attempt.
 
@@ -43,3 +44,22 @@ Clang/lit build in the fixed workspace, so these are static observations,
 not dynamically reproduced compiler failures. The differing conclusion must
 remain visible; this one pair does not identify its causal source or establish
 model variance. The runtime remains isolated and unadopted.
+
+For topic two, fresh input/output is 3,398,207 / 21,542 and memory is
+166,614 / 8,140. Cached input is 3,158,784 / zero. Memory made no tool calls;
+all three hooks completed and the initial packet matches the audited body.
+Its actual prompt hook took 7,978 ms; preflight chats took 7,494 / 5,351 ms.
+Both partially stored requirements were included in the 7/7 available-evidence
+assessment. Both model runs and source-history closure completed; neither
+answering-model arm was retried. A preparation-controller identity check was
+corrected before closure could start; it did not rerun or alter the answers.
+
+The second memory answer covers driver mode, option visibility, configuration
+head/tail ordering, triple normalization, ToolChain/tool selection, lifecycle
+assumptions and an additional boundary-test proposal. Fresh additionally
+discusses explicit option aliases, downstream callers and a duplicate legacy
+spelling test. This is an unblinded content observation, not a non-inferiority
+finding. No executable Clang/lit comparison has been performed.
+
+Topic-three preflight also passes 5/5 DB-present units. Its two unavailable
+requirements are excluded explicitly. The actual model comparison is pending.

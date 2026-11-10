@@ -53,8 +53,9 @@ def run (stage digest destination : String) (preparationRunner : Option String :
   let seed ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan) (← read (.mk request.controllerSeedPlan.path)))
   StudyAdmission.verifyArtifact request.controllerSeedPlan
   StudyAdmission.verifyArtifact seed.runner
-  check ((← IO.FS.realPath (← IO.appPath)) == (← IO.FS.realPath (.mk seed.runner.path)))
-    "stage closure is not using the frozen controller"
+  check ((← IO.FS.realPath (← IO.appPath)) ==
+    (← IO.FS.realPath (.mk (preparationRunner.getD seed.runner.path))))
+    "stage closure is not using its selected native preparation controller"
   let arms ← IO.ofExcept (prepared.getObjValAs? (Array Json) "arms")
   let labels ← arms.mapM fun row => IO.ofExcept (row.getObjValAs? String "arm")
   let expected := if request.purpose == "pilot" then #["fresh","candidate"] else #["fresh","current","candidate"]

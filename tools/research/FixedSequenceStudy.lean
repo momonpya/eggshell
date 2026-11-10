@@ -28,7 +28,8 @@ def preparationExecutor : IO String := do
   let selected ← read selection
   let path ← IO.ofExcept (selected.getObjValAs? String "path")
   let audit ← IO.ofExcept (selected.getObjValAs? String "sourceAudit")
-  check (#[directory/"preparation-build/StudyMain",directory/"preparation-history-build/StudyMain"].any
+  check (#[directory/"preparation-build/StudyMain",directory/"preparation-history-build/StudyMain",
+      directory/"preparation-closure-build/StudyMain"].any
       (fun allowed => path == allowed.toString) &&
     selected.getObjValD "sha256" == toJson (← hash (.mk path)) &&
     selected.getObjValD "sourceAuditSha256" == toJson (← hash (.mk audit))) "preparation executor changed"
@@ -36,10 +37,16 @@ def preparationExecutor : IO String := do
 
 def stagePreparationTag (number : Nat) : IO String := do
   if number == 2 && (← (directory/"cohort/preparation-runner.json").pathExists) then
-    if (← preparationExecutor) == (directory/"preparation-history-build/StudyMain").toString then
+    if #[(directory/"preparation-history-build/StudyMain").toString,
+        (directory/"preparation-closure-build/StudyMain").toString].contains (← preparationExecutor) then
       return "fixed-sequence-stage-2-prepare-history"
     return "fixed-sequence-stage-2-prepare-resumed"
   return s!"fixed-sequence-stage-{number}-prepare"
+
+def stageClosureTag (number : Nat) : IO String := do
+  if number == 2 && (← preparationExecutor) == (directory/"preparation-closure-build/StudyMain").toString then
+    return "fixed-sequence-stage-2-close-delegated"
+  return s!"fixed-sequence-stage-{number}-close"
 
 def frozenImports : IO (Std.HashSet String) := do
   let inputs : Array (String × String) ← IO.ofExcept (fromJson? (← read
@@ -560,7 +567,7 @@ partial def main (args : List String) : IO Unit := do
     let some number := args[1]!.toNat? | throw (IO.userError "numeric stage required")
     check (1 ≤ number && number ≤ 6) "exactly six ordered stages are declared"
     let stage := directory/"cohort"/s!"stage-{number}"
-    guard s!"fixed-sequence-stage-{number}-close" #[(← preparationExecutor),
+    guard (← stageClosureTag number) #[(← preparationExecutor),
       "stage-close",(stage/"stage.json").toString,← hash (stage/"stage.json"),(stage/"closed").toString]
   else if args == ["complete-private-history"] then
     idle
@@ -712,7 +719,7 @@ partial def main (args : List String) : IO Unit := do
           (result.getObjValD "usage").getObjValD "protocolPassed" == toJson true)
           "model result is incomplete; preserve cost without retrying or advancing"
       mark number "closing-source-history"
-      let settings := base/s!"fixed-sequence-stage-{number}-close.guard-settings.json"
+      let settings := base/((← stageClosureTag number)++".guard-settings.json")
       if !(← settings.pathExists) then main ["close",toString number]
       runGuardOnce settings
       check ((← read (stage/"closed/closed.json")).getObjValD "completed" == toJson true)
