@@ -227,6 +227,10 @@ frontendのSession一覧は本文/ThreadStateを保持せず、検索要求に�
 
 CPU診断のraw stack・重複出力・終了session/台帳/receiptなど2,200項目・70,398,438論理bytesをarchiveせず削除した。現行実行体/制御器・原典全file・正本文のhashを前後照合し、使用中project cacheとモデルを保持した。観測器の修正版で同じ負荷を再試行していない。
 
+[不変な範囲対応を共有する候補](docs/candidates/factored-incidence/README.md)をLeanで隔離実装した。有限キーの単純転置はdense/wideで悪化したため接続せず、同じ構造の結果列を共有する形では6合成形状×3順序で全出力が一致した。さらに、有限の座標サンプルだけで将来の範囲を扱わないよう、scope付きの平衡範囲木、完全なraw rangeの共有class、任意の新座標に対する転置の一致を証明した。現在の隔離製品Handoffをimportし、baseの単一区間判定とbonusの和集合判定を分けて詳細化し、requestの重複・順序・payloadも保持する。標準公理のみで、sorry/native_decide/Z3なし。構築済みlookupを共有値に保持し、queryごとに木を作り直さない。
+
+これは実フック未接続・本体未採用であり、数秒/16並行/一般98%の達成ではない。次は実際のunit/range/cue分布で費用を確かめ、既存OwnerReady/imageへ静的catalogueと動的groupの差分を接続し、bundleと全Problemの一致を閉じる。query内family番号を永続scopeとして流用しない。製品bridgeをunitごとに呼んで木を作る使い方は禁止する。poolもアーキテクチャと実フック全体の性能が改善するなら候補にできるが、共有計算を減らした根拠なしに同じ大きなIRや待ち行列を追加しない。回答モデル0、本体採用0を維持し、同条件の反復した総token/品質比較の条件を保つ。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
