@@ -18,8 +18,10 @@ def hash (path : System.FilePath) : IO String :=
   return ((← command "/usr/bin/shasum" #["-a","256",path.toString]).splitOn " ").headD ""
 def idle : IO Unit := do
   let rows := (← command "/bin/ps" #["-axo","command="]).splitOn "\n"
-  check (!(rows.any fun row => row.trimAscii.toString.startsWith ((base/"controller/StudyMain").toString++" guard ") ||
-    row.trimAscii.toString.startsWith ((base/"resource-budget-guard-build/StudyMain").toString++" "))) "resource guard is live"
+  check (!(rows.any fun row =>
+    match row.trimAscii.toString.splitOn " " |>.filter (!·.isEmpty) with
+    | executable :: "guard" :: _ => executable.startsWith (base.toString++"/") && executable.endsWith "/StudyMain"
+    | _ => false)) "resource guard is live"
 def materialize (originBuild destination build : System.FilePath) (entry settings : String) : IO Unit := do
   check (!(← destination.pathExists) && !(← build.pathExists)) "fresh isolated build required"
   discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",

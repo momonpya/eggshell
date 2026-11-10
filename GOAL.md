@@ -14,6 +14,12 @@
 
 次は既存page cacheと出版済みroutingの準備を、byte境界付きの不変なproject imageとして再利用する経路を優先する。新たな同種cacheや無制限の世代保持を足さず、scope・完全なpage参照・検証済み型・read trace・破損拒否を保つ。poolはそのimageを借りる小さな要求からCPU処理を始め、I/O待ちを持ち込まない所有境界として条件付きで検討する。選択済みの大きいIRだけをpoolへ渡した旧案と、dense/wideで悪化した単純なcue bucketを再投入しない。本文・認定・3辺・ACKを保った同一snapshotの隔離比較で性能を確認するまで採用しない。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
 
+[不変page集合を共有する候補](docs/candidates/quiescent-page-base/README.md)をLeanで隔離実装した。利用中はbaseを固定し、親が検索actorと子taskをjoinした後だけfrontを返し、coordinatorが終了済みfrontを併合して無利用時に次baseを公開する。利用中base・更新待ちcache・既存image seedを元の128MiB公開page枠に収める等式、元image不変など6法則を標準公理だけで確認した。native部品ではowner mutex保持中のread、scope/full ref拒否、独立front、epoch更新、cancel/終了済み要求、元の値とread trace、出版後の新旧値を確認した。324 native objectと全変更source/埋込literalを照合し、製品変更は予定した4 module、追加は検査器1 module、既存module除去0である。
+
+ただし候補`19e6b870…`は不採用。同一snapshotのA1は4/16全件5.989/15.431秒で本文・意味検索・シナプス・ACKが成功したが、B1は最初のprimeが15.420秒・本文不一致・synaptic complete=falseで停止した。先頭pageを512枠に固定する新policyが後続のhot pageを入れられず、missが約1,700から38,557へ増えた。共有base hit106,936でも埋められていない。B2/A2・候補16並行・回答モデルは未実行。元DBは不変、候補の独立した原文配送率は未監査なので0%や98%とは報告しない。次は元の回転するhot frontを保つ構成へ修正し、同じ失敗policyを再投入しない。
+
+今回さらに不要な旧実行体3個・完了seed派生cache・未採用旧seed DB、計1,757項目/1,013,592,871論理bytesをarchiveせず削除した。現行製品・2制御器・比較元・受理seed原文・保持履歴・使用中snapshotのhashを維持した。研究用のguard受付が古い実行体pathしか見ていなかった点も修正し、実際に動いている現行guardに対する重複開始の拒否を確認した。5GB・RSS停止・2GiB空き・30秒の保護条件は維持する。
+
 終了した今回の補助native/source tree 2,374項目・349,886,010論理bytesもarchiveせず削除した。symlinkの参照先は辿らず、現行製品・2制御器・保持履歴・使用中の性能fixtureのSHAを前後照合した。冷えた再生とwarmでpublisherの5分idle期限を跨いだ初回診断、observerが遅れた2回目は正常な性能結果へ混ぜていない。修正したLean helperは型検査済みだがnative再実行はしておらず、正常な4/16試験には固定製品に既存のcontrollerを使った。完了済みのbuild修復・退役コマンドも計測制御コードから除いた。
 
 製品と[回答モデルの制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は固定している。制御器の実リンク327 objectと製品全モジュールを含む298共通moduleを照合済み。単なる新規compile件数の監査は使わない。空DB・新chatの[受理済みseed](docs/candidates/stable-source-rows/sequence/accepted-seed.json)は2,073,642総token、49フック失敗0、23コマンドの開始/終了/portable originが対応し、原文4,118行の内容不一致・座標矛盾0。配送前に全体が保存された必要証拠を題材1/2/3で3/5/5項目に凍結し、部分保存と完全不在も別に評価する。
