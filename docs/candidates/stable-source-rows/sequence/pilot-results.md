@@ -13,8 +13,9 @@ their own cost records; they are not rolled into a per-question saving.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | First / 1 | 4,888,585 | 1,306,474 | 73.275% | 3/3 | 4/4 |
 | First / 2 | 3,419,749 | 174,754 | 94.890% | 5/5 | 7/7 |
+| First / 3 | 4,382,725 | 904,479 | 79.363% | 5/5 | 5/5 |
 
-Four remaining paired stages are incomplete. No aggregate or second-round
+Three remaining paired stages are incomplete. No aggregate or second-round
 claim is available. This table includes cached input within input, and includes
 reasoning within output exactly once. Topic one has no failed model attempt.
 
@@ -61,5 +62,22 @@ discusses explicit option aliases, downstream callers and a duplicate legacy
 spelling test. This is an unblinded content observation, not a non-inferiority
 finding. No executable Clang/lit comparison has been performed.
 
-Topic-three preflight also passes 5/5 DB-present units. Its two unavailable
-requirements are excluded explicitly. The actual model comparison is pending.
+For topic three, fresh input/output is 4,362,050 / 20,675 and memory is
+893,334 / 11,145. Cached input is 4,173,312 / 700,928. The actual initial
+packet matches the preflight body containing 5/5 DB-present units. Its first
+prompt hook took 7,880 ms; all eleven hooks completed without failure. Both
+answering arms and source-history closure passed, with no model retries. The
+two unavailable requirements remain explicitly excluded. Both answers report
+no source change and describe the parse, target, input-language and syntax-only
+phase boundaries. Neither dynamically validates a compiler build; quality
+non-inferiority remains unestablished.
+
+The denominator concerns original bytes actually retained by the frozen DB.
+`SourceEvidence.capture` retains file locators and streamed content fingerprints;
+`ContentCapture.scanUsing` compares observed output with those files and
+`ContentMetadata.stage` persists correspondence aliases. These functions do
+not copy each complete input file into a historical content store. A file
+fingerprint alone is therefore not evidence that an unobserved range is in
+the DB. The audit reads the immutable workspace only to verify reference bytes
+against a saved dependency, then requires those bytes in a native original
+output. It never inserts live source bytes into the candidate packet.

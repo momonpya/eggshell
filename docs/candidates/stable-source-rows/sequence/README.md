@@ -2,7 +2,7 @@
 
 Product runtime: `dd53c89bc450b66b58dd57d104ccbc82f32ca6345fa9666125e7feb03017000e`.
 This remains an isolated, unadopted candidate. A new seed is accepted and the
-first paired stage is closed. Five paired stages are incomplete.
+first three paired stages are closed. Three second-round stages are incomplete.
 
 The controller preserves every source imported by the product, including
 helpers under `tools.research`. New research control is added separately.
@@ -120,15 +120,23 @@ referenced ledger is added. Native checks reject an explicitly incomplete,
 current-format fixture and accept the complete fork with a fresh session state.
 The older missing-field decoder failure is not counted as that closure test.
 
-Preparation executable `79ca7d6ec0f3580f362e6416b0f79e3bcf4de3bb2ef4eb5287ebc1df55f69132`
-passes 327 linked-object checks and all 298 common product modules are unchanged.
-It delegates the answering arms to the original `670aaf8e…` controller and uses
-the original `dd53c89b…` product. The first model pair is not rerun. Source/feedback
+The historical preparation executable `79ca7d6e…` passed 327 linked-object
+checks with all 298 common product modules unchanged. Current preparation uses
+`f0af9f3bb7c8af9292c6d470c19aff52d6153fd85f4e8731919d5dffb8102d91`,
+with the same complete native checks. Closure verifies the preparation helper's
+own identity separately from the unchanged answering-controller identity in
+the seed and model guards. Answering arms still use the original `670aaf8e…`
+controller and the original `dd53c89b…` product. No model pair is rerun. Source/feedback
 repair receipts and earlier failed preparation replies are retained; incomplete
 preparation DBs/caches and the positive fork probe are deleted without archives.
 
 Topic-two preparation now completes replay in two replies from one worker and
 delivers 5/5 fully stored units and 7/7 including partial stored evidence.
-Independent prompt hooks take 7,494 / 5,351 ms with identical bodies. The fresh
-model arm is running. These results establish neither a pool speedup nor team
-scale, and do not satisfy the adoption comparison.
+Independent prompt hooks take 7,494 / 5,351 ms with identical bodies. The actual
+model pair and history closure completed with 94.890% inclusive token saving.
+Topic three also closed with actual 5/5 delivery and 79.363% saving; its first
+hook took 7,880 ms. See [per-topic results and quality limits](pilot-results.md).
+The second round is in progress. These results establish neither a pool
+speedup nor team scale, and do not satisfy the adoption comparison. The two
+superseded preparation executables were deleted after checking that no live
+process used them; their compact audit records remain.
