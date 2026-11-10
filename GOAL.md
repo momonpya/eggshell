@@ -30,6 +30,14 @@
 
 終了したこの候補の実行体・source/build・私有cache・99session/受領記録・重複本文など15,375項目/1,198,260,263論理bytesをarchiveせず削除した。比較元と現行制御器・原DB・3正本本文・使用中cache/modelのhashを保ち、4690現行compiler入力に退役先への依存がないことを確認した。OSの並べ方だけで大幅に改善するという根拠は得られなかったため、新しいpoolやworker数の調整を重ねず、既存project imageから要求ごとに作り直す原文・引用の不変構造を減らす方向へ進む。
 
+[原文座標と引用構造の出版候補](docs/candidates/published-citations/README.md)も現在の表現は未採用。元の引用対応を下位moduleへ移し、既存geometryへ静的座標・読み取り範囲・親の引用構造を同じ出版差分で保存した。任意owner/来歴/順位に対する元関数との一致、保存・型付き復元、平坦な整数記録のpack/unpackをLeanで証明し、46所有者・7親・15陽性所有者・198対照が一致した。部品は約596〜597→16msだが、全hookへ外挿しない。初案は128MiBのquery budgetを超えて失敗したため、上限や32倍のchargeを緩めず、座標のJSON入れ子を減らした。原典・動的な来歴・質問・認定の条件は変えていない。
+
+候補`0e970a95…`は330 native objectと全sourceを照合し、事前確認7本文/ACKが基準と一致、4並行4.667秒、全要求で46所有者と7親の準備済み構造を再利用できた。固定ABBAの親A1は4/16並行4.937/12.784秒、23本文/ACKと測定wave20件の意味検索・シナプスが成功し、RSS標本最大3,877,312KiB。候補B1は4並行4.590秒で成功したが、16並行はaggregate-rssで停止（標本4,381,824KiB、exit137、所有PIDなし）。16中2件の完了記録だけを成功率や速度へ換算しない。B2/A2と有料モデルは未実行、上限緩和・同じ負荷の再試行もしない。原典は不変、本体採用0・有料比較0/18を維持する。
+
+4並行後の共有imageは1件・build1回・hit6回で、cache不在ではない。一方で、この件数やchargeは停止時のlive heapの証拠ではない。次は既存imageから要求へ渡す表現と寿命を調べ、不変データの復号・具象化回数が要求数に比例しない契約を先に検査する。metadataを既存の大きなwire viewへ足すだけの案や、同じJSONの小さな調整を主解決として再試行しない。一般98%、16並行で数秒、80人の日常利用、総token/品質の採用条件は未達/未検証のままである。
+
+終了した出版候補と部品の実行体/source/build/私有cache、試験session・受領記録・重複本文を段階合計15,701項目・1,714,143,988論理bytes削除した。archiveなし。4,690の現行compiler入力について両退役rootへの依存を検査し、現行実行体/制御器/原DB/正本本文のhashは不変、削除後の親326 native objectも整合した。使用中のproject cacheとMiniLMは保持する。退役候補は再開可能とは扱わない。
+
 [不変page集合を共有する候補](docs/candidates/quiescent-page-base/README.md)をLeanで隔離実装した。利用中はbaseを固定し、親が検索actorと子taskをjoinした後だけfrontを返し、coordinatorが終了済みfrontを併合して無利用時に次baseを公開する。利用中base・更新待ちcache・既存image seedを元の128MiB公開page枠に収める等式、元image不変など6法則を標準公理だけで確認した。native部品ではowner mutex保持中のread、scope/full ref拒否、独立front、epoch更新、cancel/終了済み要求、元の値とread trace、出版後の新旧値を確認した。324 native objectと全変更source/埋込literalを照合し、製品変更は予定した4 module、追加は検査器1 module、既存module除去0である。
 
 ただし候補`19e6b870…`は不採用。同一snapshotのA1は4/16全件5.989/15.431秒で本文・意味検索・シナプス・ACKが成功したが、B1は最初のprimeが15.420秒・本文不一致・synaptic complete=falseで停止した。先頭pageを512枠に固定する新policyが後続のhot pageを入れられず、missが約1,700から38,557へ増えた。共有base hit106,936でも埋められていない。B2/A2・候補16並行・回答モデルは未実行。元DBは不変、候補の独立した原文配送率は未監査なので0%や98%とは報告しない。次は元の回転するhot frontを保つ構成へ修正し、同じ失敗policyを再投入しない。

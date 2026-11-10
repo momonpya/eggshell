@@ -1,0 +1,45 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/canonical-decoder-runtime/source/Eggshell/ObservedRecordView.lean	2026-11-11 02:33:54
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/published-citation-runtime/source/Eggshell/ObservedRecordView.lean	2026-11-11 04:31:02
+@@ -4,0 +5 @@
++public import tools.research.PublishedCitations
+@@ -23,0 +25 @@
++  citations : String
+@@ -29,0 +32 @@
++  citations : Plugin.PublishedCitations.Metadata
+@@ -36,0 +40 @@
++  citations : Plugin.PublishedCitations.Metadata
+@@ -51,0 +56,2 @@
++def citationKey (digest : String) : String := "observed-view:citations:" ++ digest
++
+@@ -61,0 +68,2 @@
++  let citations := Plugin.PublishedCitations.metadata raw document.workText
++  let citationDigest := Sha256.hex (toJson citations).compress.toUTF8
+@@ -63,2 +71,2 @@
+-    document.occurrences,characters.size,blocks.size,spans.size⟩,spans,blocks,
+-      spans.map (Plugin.OriginalRecordPrice.prepare ⟨characters,rfl⟩)⟩
++    document.occurrences,characters.size,blocks.size,spans.size,citationDigest⟩,spans,blocks,
++      spans.map (Plugin.OriginalRecordPrice.prepare ⟨characters,rfl⟩),citations⟩
+@@ -70,0 +79,7 @@
++  let citationBytes := (toJson view.citations).compress.toUTF8
++  unless citationBytes.size ≤ 32*1024*1024 do throw (IO.userError "published citation geometry exceeds owner bound")
++  let name := citationKey view.header.citations
++  let pinned ← writer.snapshot
++  if (← pinned.get name).isSome then
++    unless (← pinned.readPayload name) == citationBytes do throw (IO.userError "conflicting published citation geometry")
++  else Persistence.Store.putPayload writer name citationBytes
+@@ -120 +135,11 @@
+-  return some ⟨header,spans,prices⟩
++  unless digest header.citations do throw (IO.userError "invalid published citation reference")
++  let name := citationKey header.citations
++  let descriptor ← index.get name
++  unless descriptor.isSome && (← IO.ofExcept (PageMap.payloadSize descriptor)) ≤ 32*1024*1024 do
++    throw (IO.userError "missing or oversized published citation geometry")
++  let citationBytes ← index.readPayload name
++  unless Sha256.hex citationBytes == header.citations do throw (IO.userError "published citation digest changed")
++  let citations ← ObservedRecords.decode (α := Plugin.PublishedCitations.Metadata) citationBytes
++  if let some coordinates := citations.coordinates then
++    unless coordinates.stored.characters == header.characters do throw (IO.userError "citation geometry crossed original scalar")
++  return some ⟨header,spans,prices,citations⟩
+@@ -140 +165 @@
+-  return some ⟨header,geometry.spans,blocks,geometry.prices⟩
++  return some ⟨header,geometry.spans,blocks,geometry.prices,geometry.citations⟩
