@@ -2,6 +2,7 @@ import Eggshell.SynapseBuild
 import tools.research.StudyRuntime
 
 open Lean Eggshell Eggshell.Synapses Eggshell.Synapses.Extraction Eggshell.Research
+namespace Eggshell.Research.ReadCoverageAudit
 
 private structure Requirement where
   name : String
@@ -28,7 +29,7 @@ private def sourceLines (workspace : System.FilePath) (file : File) : IO (Array 
 
 /-- Inspect every stored native read form before any topic handoff. Unsupported
 coordinates remain explicit; a saved response is not labelled absent. -/
-def main (args : List String) : IO Unit := do
+def cliMain (args : List String) : IO Unit := do
   let [database,workspace,definitions,report] := args |
     throw (IO.userError "ReadCoverageAudit DATABASE WORKSPACE TASK-DEFINITIONS NEW-REPORT")
   let output := System.FilePath.mk report
@@ -124,3 +125,5 @@ def main (args : List String) : IO Unit := do
     ("publicationUnchanged",toJson true),("handoffBodiesRead",toJson (0 : Nat)),
     ("answeringModelCalls",toJson (0 : Nat))]).compress ++ "\n")
   unless mismatches.isEmpty && conflicts == 0 do throw (IO.userError "source coordinate or payload disagreement")
+
+end Eggshell.Research.ReadCoverageAudit

@@ -2,6 +2,7 @@ import Eggshell.NativePublication
 import tools.research.StudyRuntime
 open Lean Eggshell Eggshell.Plugin Eggshell.Synapses
 open Eggshell.Persistence.Store Eggshell.Research
+namespace Eggshell.Research.SourceReadPostingReplay
 
 private def check (valid : Bool) (message : String) : IO Unit :=
   unless valid do throw (IO.userError message)
@@ -19,7 +20,7 @@ private def document (item : NativePublication.Item) : IO Extraction.Document :=
 
 /-- Replay the actual rejected source publication into a fresh clone. No
 handoff, embedding, ranking or manually reconstructed graph fact is involved. -/
-def main (args : List String) : IO Unit := do
+def cliMain (args : List String) : IO Unit := do
   let [database,checkpoints,output] := args |
     throw (IO.userError "SourceReadPostingReplay SOURCE CHECKPOINTS NEW-OUTPUT")
   let root := System.FilePath.mk output
@@ -101,3 +102,5 @@ def main (args : List String) : IO Unit := do
     ("terminalRecordsOutsideReadRowRegression",toJson terminalRecords),
     ("actualNativePublicationUsed",toJson true),("answeringModelCalls",toJson (0 : Nat)),
     ("acceptedAsSeed",toJson false),("adopted",toJson false)]).compress
+
+end Eggshell.Research.SourceReadPostingReplay

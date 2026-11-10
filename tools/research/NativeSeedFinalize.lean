@@ -1,5 +1,6 @@
 import tools.research.StudyAcquire
 import tools.research.StudyReadiness
+import tools.research.StudyRecordedRun
 
 open Lean Eggshell Eggshell.Research
 
@@ -27,29 +28,26 @@ def cliMain (args : List String) : IO UInt32 := do
     let (drainOnly,args) := match args with
       | "--drain-only" :: rest => (true,rest)
       | _ => (false,args)
+    let (kind,args) := if args.head? == some "--trial" then (StudyRecordedRun.Kind.memory,args.drop 1)
+      else (.seed,args)
     let [acquisition,directory] := args |
       throw (IO.userError "NativeSeedFinalize ACQUISITION NEW-REPORT-DIRECTORY")
     let root := System.FilePath.mk acquisition
     let output := System.FilePath.mk directory
     check (root.isAbsolute && output.isAbsolute && !(← output.pathExists)) "new absolute finalization output required"
-    let plan ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan)
-      (← StudyAdmission.readJson (root / "plan.json").toString))
-    let result ← StudyAdmission.readJson (root / "result.json").toString
-    check (plan.kind == "seed" && (result.getObjValAs? Bool "completed").toOption == some true)
-      "completed real seed acquisition required"
-    StudyAdmission.verifyArtifact plan.runtime
+    let plan ← StudyRecordedRun.read kind root
     for artifact in plan.pluginFiles do StudyAdmission.verifyArtifact artifact
     IO.FS.createDir output
     let thread ← StudyAdmission.readJson (root / "thread.json").toString
     let session ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
-    let data := root / "data"
+    let data := plan.data
     check ((← IO.getEnv "EGGSHELL_DATA_ROOT") == some data.toString)
       "finalization probes must use the seed's actual private root"
     let files := data / "sessions" / session
     let before ← queued files
     IO.FS.writeFile (output / "queued-before.json") ((toJson before).compress ++ "\n")
     let environment := replaceEnv plan.environment #[
-      ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some (root / "config.toml").toString),
+      ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some plan.configuration.toString),
       ("EGGSHELL_PROFILE",some "work"),("CODEX_THREAD_ID",some session),("CODEX_TURN_ID",none)]
     if !before.isEmpty then
       let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
@@ -70,23 +68,23 @@ def cliMain (args : List String) : IO UInt32 := do
         finally StudyRuntime.stopManaged publisher (output / "publisher-shutdown.json")
     let after ← queued files
     check after.isEmpty "queued source work remains after owned daemon exit"
-    let ancestry ← StudySource.inspect (root / "work.egg")
+    let ancestry ← StudySource.inspect plan.database
     IO.FS.writeFile (output / "source-ancestry.json") (toJson ancestry).compress
     StudySource.requireValid ancestry
     if drainOnly then
-      let publication ← StudyRuntime.checkpoint (root / "work.egg") (output / "drained.egg")
+      let publication ← StudyRuntime.checkpoint plan.database (output / "drained.egg")
       IO.FS.writeFile (output / "result.json") ((Json.mkObj [
         ("mode",toJson "drain-only"),("runtime",toJson plan.runtime),("sourceFiles",toJson publication),
         ("queuedBefore",toJson before.size),("queuedAfter",toJson after.size),
         ("answeringModelCalls",toJson (0 : Nat)),("numericalProviderStarted",toJson false)]).compress ++ "\n")
       return 0
     -- Warm after the save/index child has exited: there is only one writer.
-    let replay ← StudyReadiness.finishJournal plan.runtime.path (root/"work.egg") environment plan.workspace (output/"finish-replay")
+    let replay ← StudyReadiness.finishJournal plan.runtime.path plan.database environment plan.workspace (output/"finish-replay")
     let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment
       plan.workspace "" (output / "warm") 240000
     check (warm.exitCode == 0) "frozen runtime warm failed"
-    let coverage := (← StudyReadiness.warm warm (root / "work.egg")).coverage
-    let prepared ← DB.PageMap.pin (root / "work.egg")
+    let coverage := (← StudyReadiness.warm warm plan.database).coverage
+    let prepared ← DB.PageMap.pin plan.database
     let target : Eggshell.Plugin.IndexTarget := {
       owner := DB.Sidecar.Owner.ofSnapshot prepared
       command := [plan.runtime.path,"search-provider"]
@@ -104,7 +102,7 @@ def cliMain (args : List String) : IO UInt32 := do
     let doctor ← StudyCommand.run plan.runtime.path #["egg","doctor"] environment
       plan.workspace "" (output / "doctor") 60000
     check (doctor.exitCode == 0) "frozen runtime doctor failed"
-    let publication ← StudyRuntime.checkpoint (root / "work.egg") (output / "ready.egg")
+    let publication ← StudyRuntime.checkpoint plan.database (output / "ready.egg")
     StudyAdmission.verifyArtifact plan.runtime
     check ((← queued files).isEmpty) "source queue changed while finalizing the seed"
     IO.FS.writeFile (output / "result.json") ((Json.mkObj [

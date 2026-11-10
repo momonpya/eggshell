@@ -1,6 +1,7 @@
 import tools.research.StudyAcquire
 import Eggshell.SynapseLive
 import tools.research.OriginalEvidence
+import tools.research.StudyRecordedRun
 
 open Lean Eggshell Eggshell.Synapses Eggshell.Synapses.Extraction
 open Eggshell.Research
@@ -69,22 +70,20 @@ private def rpcCommands (path : System.FilePath) (session turn : String) : IO (A
 /-- Read only the saved seed, native event journal and source code. This
 auditor neither opens a handoff body nor calls Handoff, warm or a model. -/
 def cliMain (args : List String) : IO Unit := do
+  let (kind,args) := if args.head? == some "--trial" then (StudyRecordedRun.Kind.memory,args.drop 1)
+    else (.seed,args)
   let [acquisition,definitions,publication,output] := args |
     throw (IO.userError "NativeSeedAudit ACQUISITION TASK-DEFINITIONS PUBLICATION NEW-REPORT")
   let root := System.FilePath.mk acquisition
   check (root.isAbsolute && !(← (System.FilePath.mk output).pathExists)) "absolute acquisition and new output required"
-  check ((← IO.getEnv "EGGSHELL_DATA_ROOT") == some (root / "data").toString) "native seed private root required"
-  let plan ← IO.ofExcept (fromJson? (α := StudyAcquire.Plan) (← StudyAdmission.readJson (root / "plan.json").toString))
-  let result ← StudyAdmission.readJson (root / "result.json").toString
-  check (plan.kind == "seed" && (result.getObjValAs? Bool "completed").toOption == some true)
-    "completed seed acquisition required"
-  StudyAdmission.verifyArtifact plan.runtime
+  let plan ← StudyRecordedRun.read kind root
+  check ((← IO.getEnv "EGGSHELL_DATA_ROOT") == some plan.data.toString) "actual recorded private root required"
   let thread ← StudyAdmission.readJson (root / "thread.json").toString
   let session ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
   let started ← StudyAdmission.readJson (root / "turn-start.json").toString
   let turn ← IO.ofExcept ((← IO.ofExcept (started.getObjVal? "turn")).getObjValAs? String "id")
   let original ← DB.PageMap.pin (.mk publication)
-  let current ← DB.PageMap.pin (root / "work.egg")
+  let current ← DB.PageMap.pin plan.database
   check (← Index.sameSources current original.head) "seed source facts changed after acquisition"
   let files ← StudyRuntime.files original.directory
   let (documents,rows) ← originalRows original
@@ -187,7 +186,8 @@ def cliMain (args : List String) : IO Unit := do
     ("missingPortableOrigins",toJson missingPortableOrigins),
     ("nativeJournalComplete",toJson (missingNativeStarts == 0 && missingNativeFinishes == 0)),
     ("portableOriginsComplete",toJson (missingPortableOrigins == 0)),
-    ("seedAccepted",toJson (missingNativeStarts == 0 && missingNativeFinishes == 0 && missingPortableOrigins == 0)),
+    ("seedAccepted",toJson (kind == .seed && missingNativeStarts == 0 && missingNativeFinishes == 0 && missingPortableOrigins == 0)),
+    ("sourceAccepted",toJson (missingNativeStarts == 0 && missingNativeFinishes == 0 && missingPortableOrigins == 0)),
     ("ignoredOrigins",toJson derived.ignored),("reconstructedConsumption",toJson consumed.size),
     ("indexAvailable",toJson shared.isSome),("commandAudit",toJson commandAudit),("availability",toJson availability)]
   IO.FS.writeFile (.mk output) (report.compress ++ "\n")

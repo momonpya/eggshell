@@ -42,8 +42,14 @@ added or removed. The three proofs use no axioms beyond Lean's usual axioms.
 [Actual native replay](replay.json) passed both rejected tool checkpoints:
 295 old positions were preserved while publishing all 539 verified rows;
 the second checkpoint retained all 539 positions. Same-batch duplicates,
-duplicate later publication, old pinned reads and reopen all passed. The used
-product sources match the runtime and native dependency inspection passed.
+duplicate later publication, old pinned reads and reopen all passed. Native
+dependency inspection passed for 268 linked objects. The additional
+source-comparison helper counted only newly compiled modules and checked zero
+product modules. That additional check was vacuous and is not accepted as
+source-comparison evidence. The [unified controller](sequence/README.md) now
+passes the existing linker-based comparison: 327 native objects and all product
+modules within 298 unchanged common modules. It repeated the actual regression
+successfully before the new seed. The rejected zero-count helper was removed.
 The guard exited zero with no owned processes (peak 100,480 KiB). The full
 17.277 s test includes cloning, full source hashes, multiple publications and
 per-row verification; it is not a hook-latency or publication-throughput result.

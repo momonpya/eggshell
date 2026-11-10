@@ -19,6 +19,9 @@ import tools.research.StudyProfileChecks
 import tools.research.StudyPreparationChecks
 import tools.research.StudyStages
 import tools.research.StudyReadiness
+import tools.research.ReadCoverageAudit
+import tools.research.SourceReadPostingReplay
+import tools.research.StudyStageClose
 
 open Lean Eggshell.Research
 
@@ -75,12 +78,17 @@ def main (args : List String) : IO UInt32 := do
         return 0
     | ["preparation-check",directory] => StudyPreparationChecks.run directory; return 0
     | ["stage-prepare",input,digest] => StudyStages.run input digest; return 0
+    | ["stage-close",stage,digest,output] => StudyStageClose.run stage digest output; return 0
+    | ["stage-close-checks",exchange,failedRun,output] =>
+        StudyStageClose.checks exchange failedRun output; return 0
     | "seed-checks" :: rest => StudySeedChecks.cliMain rest
     | ["seed-checks-generic",input,directory] => do
         StudySeedChecks.run input directory (remote := true) (literal := true) (generic := true)
         return 0
     | "seed-audit" :: rest => NativeSeedAudit.cliMain rest; return 0
     | "seed-finalize" :: rest => NativeSeedFinalize.cliMain rest
+    | "read-coverage" :: rest => ReadCoverageAudit.cliMain rest; return 0
+    | "source-row-replay" :: rest => SourceReadPostingReplay.cliMain rest; return 0
     | "seal" :: rest => StudySeal.cliMain rest; return 0
     | "test-environment" :: rest => StudyEnvironmentChecks.cliMain rest; return 0
     | "test-command" :: rest => StudyCommandChecks.cliMain rest; return 0
