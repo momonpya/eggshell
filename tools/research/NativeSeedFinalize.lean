@@ -81,6 +81,7 @@ def cliMain (args : List String) : IO UInt32 := do
         ("answeringModelCalls",toJson (0 : Nat)),("numericalProviderStarted",toJson false)]).compress ++ "\n")
       return 0
     -- Warm after the save/index child has exited: there is only one writer.
+    let replay ← StudyReadiness.finishJournal plan.runtime.path (root/"work.egg") environment plan.workspace (output/"finish-replay")
     let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment
       plan.workspace "" (output / "warm") 240000
     check (warm.exitCode == 0) "frozen runtime warm failed"
@@ -93,11 +94,11 @@ def cliMain (args : List String) : IO UInt32 := do
     let numericalAndOriginalViews := !(← Eggshell.Warm.required target prepared)
     let sharedSynapses := !(← Synapses.Build.required prepared .database)
     let journalExists := (← Synapses.Journal.open? prepared).isSome
-    let journalReplayed := journalExists && !(← Synapses.Journal.required prepared .database)
+    let journalReplayed := replay.complete && replay.pending == 0
     IO.FS.writeFile (output / "view-readiness.json") (Json.mkObj [
       ("source",toJson prepared.head),("numericalAndOriginalViews",toJson numericalAndOriginalViews),
       ("sharedSynapses",toJson sharedSynapses),("privateJournalPresent",toJson journalExists),
-      ("privateJournalReplayed",toJson journalReplayed)]).compress
+      ("privateJournalReplayed",toJson journalReplayed),("freshnessCertifiedByReplay",toJson false)]).compress
     check (numericalAndOriginalViews && sharedSynapses && journalReplayed)
       "seed preparation debt remains; retain the durable seed and finish preparation before model trials"
     let doctor ← StudyCommand.run plan.runtime.path #["egg","doctor"] environment

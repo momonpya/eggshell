@@ -1,0 +1,71 @@
+--- a/tools/RetrievalIndex.lean
++++ b/tools/RetrievalIndex.lean
+@@ -50,7 +50,7 @@
+   index : Snapshot
+   expected : Stamp
+ 
+-def open? (source : Snapshot) : IO (Option (Reader source)) := do
++def openLocated? (source : Snapshot) : IO (Option (DB.Sidecar.Storage × Reader source)) := do
+   DB.Sidecar.observe source
+   let expected ← stamp source
+   for storage in [.database, .user] do
+@@ -60,10 +60,15 @@
+       let some index ← PreparedRoot.select? source workspace | continue
+       unless (← readStamp index) == some expected &&
+           (← getNat index.get "documents") == expected.candidates do continue
+-      return some ⟨index, expected⟩
++      return some (storage,⟨index, expected⟩)
+     catch _ => pure ()
+   pure none
+ 
++/-- Preserve the existing lookup and its order while allowing consumers to
++retain the actual storage of an already prepared immutable root. -/
++def open? (source : Snapshot) : IO (Option (Reader source)) := do
++  return (← openLocated? source).map Prod.snd
++
+ def Reader.posting (reader : Reader source) (unit : String) : IO (List Nat × Nat) := do
+   let some term ← findTerm? reader.index reader.index.get unit | return ([], 0)
+   let rows ← directory reader.index (key "posting" term.id)
+--- a/Eggshell/PreparedInputs.lean
++++ b/Eggshell/PreparedInputs.lean
+@@ -22,6 +22,16 @@
+   head : PageMap.Head
+   deriving BEq,ToJson,FromJson
+ 
++/-- The location belongs to the reader actually selected, independently of
++the requested cache lane. Keeping it prevents nonexistent private lookups. -/
++def Root.fromLexical {source : Snapshot} (located : Sidecar.Storage × RetrievalResearch.Index.Reader source) : Root :=
++  ⟨located.1,located.2.index.head⟩
++
++theorem Root.fromLexical_location {source : Snapshot}
++    (located : Sidecar.Storage × RetrievalResearch.Index.Reader source) :
++    (Root.fromLexical located).storage = located.1 ∧
++    (Root.fromLexical located).head = located.2.index.head := ⟨rfl,rfl⟩
++
+ structure Numeric where
+   storage : Sidecar.Storage
+   partition : PageMap.Head
+@@ -109,11 +119,10 @@
+   if population == 0 then return empty source model encoder
+   let some windows ← WindowOwners.open? source storage |
+     throw (IO.userError "window-owner input is not prepared")
+-  let lexicalPath ← RetrievalResearch.Index.path source storage
+-  let workspace ← PageMap.pin lexicalPath
+-  let some lexical ← PreparedRoot.select? source workspace |
++  let some locatedLexical ← RetrievalResearch.Index.openLocated? source |
+     throw (IO.userError "lexical input is not prepared")
+-  let expected ← RetrievalResearch.Index.stamp source
++  let lexical := locatedLexical.2.index
++  let expected := locatedLexical.2.expected
+   unless lexical.head.authority == RetrievalResearch.Index.authority source &&
+       (← RetrievalResearch.Index.readStamp lexical) == some expected &&
+       (← getNat lexical.get "documents") == population do
+@@ -135,7 +144,7 @@
+     | none => Synapses.Index.open? source storage .shared
+   return {
+     producer := implementation,source := source.head,model,encoder,population
+-    windows := some ⟨storage,windows.snapshot.head⟩,lexical := some ⟨storage,lexical.head⟩,numeric := numerical
++    windows := some ⟨storage,windows.snapshot.head⟩,lexical := some (Root.fromLexical locatedLexical),numeric := numerical
+     canonical := canonical.map (fun ready => (storage,ready.metadata))
+     shared := shared.map (fun ready => ⟨storage,ready.index.head⟩),usage := none}
+ 

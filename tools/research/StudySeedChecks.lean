@@ -39,9 +39,6 @@ private def save (path : System.FilePath) (value : Json) : IO Unit :=
 
 private def checkedWarm (output : StudyCommand.Result) (database : System.FilePath) : IO Unit := do
   discard <| StudyReadiness.warm output database
-  let snapshot ← DB.PageMap.pin database
-  check ((← Synapses.Journal.open? snapshot).isSome && !(← Synapses.Journal.required snapshot .database))
-    "native source journal is not completely prepared"
 
 private def config (binary database : String) (chars : Nat) : IO String := do
   return StudyProfile.render binary database (← IO.ofExcept (StudyProfile.checked chars))
@@ -144,6 +141,7 @@ def recall (plan : Input) (root source : System.FilePath)
   let environment := replaceEnv environment #[
     ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some configuration.toString),
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
+  discard <| StudyReadiness.finishJournal plan.runtime.path source environment workspace.toString (root/"recall-replay") .user
   let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment workspace.toString ""
     (root / "recall-warm") 60000
   check (warm.exitCode == 0) "readonly recall source was not warmed"
@@ -350,6 +348,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   finally
     try StudyRuntime.stopManaged managed (root / "shutdown.json")
     finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
+  discard <| StudyReadiness.finishJournal plan.runtime.path database environment root.toString (root/"finish-replay")
   let prepared ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
     (root / "final-warm") 60000
   checkedWarm prepared database
@@ -363,6 +362,7 @@ def run (templatePath directory : String) (remote : Bool := false)
   let recoveredEnvironment := replaceEnv environment #[
     ("EGGSHELL_DATA_ROOT",some recoveryData.toString),("EGGSHELL_CONFIG",some recoveryConfig.toString),
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
+  discard <| StudyReadiness.finishJournal plan.runtime.path copied recoveredEnvironment root.toString (root/"recover-replay")
   let warmed ← StudyCommand.run plan.runtime.path #["egg","warm","work"] recoveredEnvironment root.toString ""
     (root / "recover-warm") 60000
   check (warmed.exitCode == 0) "source-only seed could not be warmed without its old private state"

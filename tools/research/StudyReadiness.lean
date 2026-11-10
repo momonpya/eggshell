@@ -25,6 +25,42 @@ structure Checked where
 theorem Checked.same_source (checked : Checked) : checked.reference.source = checked.snapshot.head :=
   checked.reference.same_source checked.snapshot MiniLM.model SearchProvider.encoderContract checked.accepted.down
 
+/-- `Journal.Result` has defaults for internal construction. A transport must
+not interpret an error object or absent counters as a successful empty result. -/
+def replayReply (raw : Json) : Except String Synapses.Journal.Result := do
+  if (raw.getObjVal? "error").isOk then throw "sealed replay worker returned an error"
+  let _ ← raw.getObjValAs? Bool "complete"
+  for field in ["pending","importedEvents","dependencyRows","changeBlocks","finishedTurns"] do
+    let _ ← raw.getObjValAs? Nat field
+  fromJson? raw
+
+/-- Finish private derived replay outside hooks, using only the sealed product
+writer. Source-only recovery may have no private journal. A future freshness
+probe (`Journal.required`) is not a durable-input or completed-attempt test. -/
+def finishJournal (runtime : String) (database : System.FilePath)
+    (environment : Array (String × Option String)) (cwd : String)
+    (directory : System.FilePath) (storage : DB.Sidecar.Storage := .database) : IO Synapses.Journal.Result := do
+  check (!(← directory.pathExists)) "preserve derived preparation evidence"
+  IO.FS.createDir directory
+  let snapshot ← DB.PageMap.pin database
+  let target : Synapses.Journal.Target := ⟨DB.Sidecar.Owner.ofSnapshot snapshot,storage⟩
+  let request := directory/"request.json"
+  IO.FS.writeFile request (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)]).compress
+  let deadline := (← IO.monoMsNow)+240000
+  for step in [:32] do
+    let now ← IO.monoMsNow
+    check (now < deadline) "derived preparation exceeded its off-hook deadline; retain durable memory"
+    -- The regular file supplies EOF to the product's streaming worker. No
+    -- original text or user command is interpolated into this fixed script.
+    let result ← StudyCommand.run "/bin/sh"
+      #["-c","exec \"$1\" codex-worker index < \"$2\"","eggshell-native-index",runtime,request.toString]
+      environment cwd "" (directory/s!"step-{step}") (min 65000 (deadline-now))
+    check (result.exitCode == 0) "sealed replay worker failed"
+    let replay ← IO.ofExcept (Json.parse result.stdout >>= replayReply)
+    if replay.complete && replay.pending == 0 then return replay
+    check replay.advanced "derived replay has unresolved input; retain durable memory without repeated model calls"
+  throw (IO.userError "derived replay step bound reached; retain durable memory")
+
 /-- The experiment uses one source publication. Read the current per-source
 report, bind its typed prepared reference to the actual immutable head, and
 reject old/partial reports. This does not turn a CLI success into readiness. -/
@@ -44,10 +80,14 @@ def warm (output : StudyCommand.Result) (database : System.FilePath) : IO Checke
   let accepted : PLift (reference.accepts snapshot MiniLM.model SearchProvider.encoderContract = true) ←
     if h : reference.accepts snapshot MiniLM.model SearchProvider.encoderContract = true then pure ⟨h⟩
     else throw (IO.userError "warm reference belongs to another source, producer, model or encoder")
-  let some published ← PreparedInputs.load? snapshot MiniLM.model SearchProvider.encoderContract |
-    throw (IO.userError "warm report has no persisted prepared input")
-  check ({published with usage := none} == {reference with usage := none})
-    "warm report differs from the persisted immutable prepared roots"
+  let population ← Persistence.Store.getNat snapshot.get "candidates"
+  check (reference.population == population && after.getObjValD "model" == toJson MiniLM.model)
+    "warm report changed the source population or numerical mode"
+  check (population == 0 || (reference.windows.isSome && reference.lexical.isSome &&
+    reference.numeric.isSome && reference.canonical.isSome)) "warm report omits a required prepared root"
+  -- Each child carries an explicit private data root. Looking up a global
+  -- latest record here would select another valid backend/namespace. The real
+  -- native hook below restores these roots in the child's actual environment.
   check (after.getObjValD "revision" == toJson snapshot.head.revision) "warm coverage belongs to another revision"
   return ⟨snapshot,reference,accepted,after⟩
 
@@ -101,7 +141,15 @@ def checks (warmPath database reportPath : System.FilePath) : IO Unit := do
     rows := rows.push (Json.mkObj [("case",toJson label),("accepted",toJson accepted),("expected",toJson expected)])
   let after ← DB.PageMap.pin database
   check (before.head == after.head) "readiness checks changed the publication"
+  let mut replayChecks := #[]
+  for (label,value,expected) in #[ ("explicit-native-result",toJson ({} : Synapses.Journal.Result),true),
+      ("error-object",Json.mkObj [("error",toJson "failure")],false),
+      ("empty-object",Json.mkObj [],false),("boolean",toJson true,false),
+      ("missing-progress",Json.mkObj [("complete",toJson true),("pending",toJson (0 : Nat))],false)] do
+    let accepted := (replayReply value).isOk
+    check (accepted == expected) ("replay transport check failed: "++label)
+    replayChecks := replayChecks.push (Json.mkObj [("case",toJson label),("accepted",toJson accepted),("expected",toJson expected)])
   IO.FS.writeFile reportPath (Json.mkObj [("checks",toJson rows),("allPassed",toJson true),
-    ("publicationUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat))]).compress
+    ("replayChecks",toJson replayChecks),("publicationUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat))]).compress
 
 end Eggshell.Research.StudyReadiness

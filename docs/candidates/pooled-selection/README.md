@@ -40,8 +40,9 @@ Parent SHA: `36612afeda566b5bb93cdfaaaa1d2f766b5a2dfe4e45df86c5757b057aa9ecab`.
 Candidate SHA: `67040ab5c5c8cbcd20f04caa428c56f6b28409b620848683155d560434f79b91`.
 The base-cue bucket prototype was not connected to either arm. There were no
 answering-model calls and no token or answer-quality comparisons. Production,
-README claims and releases remain unchanged. The next real experiment uses
-the retained parent and a matching controller, not this rejected partial pool.
+README claims and releases remain unchanged. This rejected partial pool stays
+excluded. A later [storage-location repair](../located-lexical-input/README.md)
+evolves the retained parent for the new-seed experiment.
 
 Ended native builds, isolated sources, installation, results and stale fixture
 sessions/receipts were deleted after recording the scalar results: 16,742 files,

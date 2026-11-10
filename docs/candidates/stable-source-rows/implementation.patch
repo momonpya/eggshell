@@ -1,0 +1,128 @@
+--- a/Eggshell/SourceReadView.lean
++++ b/Eggshell/SourceReadView.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.ContentMetadata
+ public import Eggshell.SynapticTopology
+ public import Eggshell.ReadRangeIndex
++public import Std.Data.HashSet.Lemmas
+ @[expose] public section
+ 
+ namespace Eggshell.Synapses.SourceReadView
+@@ -60,6 +61,32 @@
+   blocks : Array String
+   deriving BEq,ToJson,FromJson
+ 
++/-- The observation is immutable. Its verified coordinate directory may grow
++without changing that observation or the positions already published. -/
++def Header.identity (header : Header) : String × String × String × String × Original × Array Occurrence :=
++  (header.database,header.authority,header.owner,header.work,header.original,header.occurrences)
++
++theorem Header.identity_original (a b : Header) (same : a.identity = b.identity) :
++    a.original = b.original :=
++  congrArg (fun identity => identity.2.2.2.2.1) same
++
++def addedRows (previous incoming : Array Read) : Array Read :=
++  let known : Std.HashSet Read := .ofList previous.toList
++  incoming.filter fun row => !known.contains row
++
++def extendRows (previous incoming : Array Read) : Array Read :=
++  previous ++ addedRows previous incoming
++
++theorem extendRows_position (previous incoming : Array Read) (i : Nat) (within : i < previous.size) :
++    (extendRows previous incoming)[i]'(by simp only [extendRows,Array.size_append]; omega) = previous[i] := by
++  exact Array.getElem_append_left within
++
++theorem extendRows_incoming (previous incoming : Array Read) (row : Read) (member : row ∈ incoming) :
++    row ∈ extendRows previous incoming := by
++  by_cases old : row ∈ previous
++  · simp [extendRows,old]
++  · simp [extendRows,addedRows,Std.HashSet.contains_ofList,old,member]
++
+ structure Posting where
+   owner : Nat
+   ordinal : Nat
+@@ -119,16 +146,42 @@
+     (prepared : Prepared writer.base.head.identity doc) : IO Bool := do
+   unless doc.native && doc.source == some raw && (← writer.get (key "member" id)).isSome do
+     throw (IO.userError "read view owner is not a staged native original")
++  let expected : Header := {
++    database := writer.base.head.identity,authority := writer.base.head.authority
++    owner := doc.owner,work := doc.work,original := ObservationContext.originalSubject doc.work raw
++    occurrences := doc.occurrences,producer := implementation,rows := 0,blocks := #[]}
++  let old ← (← MetadataBytes.pending? writer (ownerKey id)).mapM fun payload =>
++    ObservedRecords.decode (α := Header) payload.bytes
++  let mut previous : Array Read := #[]
++  if let some old := old then
++    unless digest old.producer && old.identity == expected.identity &&
++        old.blocks.size == (old.rows+blockRows-1)/blockRows do
++      throw (IO.userError "source read view changed its immutable original")
++    for page in [:old.blocks.size] do
++      let hash := old.blocks[page]!
++      unless digest hash do throw (IO.userError "invalid source read block address")
++      let some payload ← MetadataBytes.pending? writer (blockKey hash) |
++        throw (IO.userError "source read view lost its original block")
++      unless Sha256.hex payload.bytes == hash do throw (IO.userError "source read block checksum differs")
++      let rows ← ObservedRecords.decode (α := Array Read) payload.bytes
++      unless rows.size == min blockRows (old.rows-page*blockRows) && rows.all (bound writer.base.head.identity doc) do
++        throw (IO.userError "source read block changed its original or extent")
++      previous := previous ++ rows
++  let additions := addedRows previous prepared.rows
++  if old.isSome && additions.isEmpty then return false
++  let rows := previous ++ additions
+   let mut changed := false
+-  let mut blocks := #[]
+-  for page in [: (prepared.rows.size+blockRows-1)/blockRows] do
+-    let rows := prepared.rows.extract (page*blockRows) ((page+1)*blockRows)
+-    let bytes := (toJson rows).compress.toUTF8
++  -- Full old blocks remain physically unchanged. Only the partial tail and
++  -- new blocks are encoded; every old ordinal still names the same Read.
++  let mut blocks := old.map (fun header => header.blocks.extract 0 (previous.size/blockRows)) |>.getD #[]
++  for page in [previous.size/blockRows : (rows.size+blockRows-1)/blockRows] do
++    let block := rows.extract (page*blockRows) ((page+1)*blockRows)
++    let bytes := (toJson block).compress.toUTF8
+     let digest := Sha256.hex bytes
+     if ← MetadataBytes.put writer (blockKey digest) (← IO.ofExcept (MetadataBytes.checked bytes)) true then changed := true
+     blocks := blocks.push digest
+-  for ordinal in [:prepared.rows.size] do
+-    let row := prepared.rows[ordinal]!
++  for ordinal in [previous.size:rows.size] do
++    let row := rows[ordinal]!
+     let bytes := (toJson ({owner := id,ordinal} : Posting)).compress.toUTF8
+     let name := postingKey row
+     unless (← writer.get name).any (· == bytes) do
+@@ -139,8 +192,8 @@
+       throw (IO.userError "source read interval did not fit its checked coordinate cell")
+     let name := coordinateCell row.source.subject cell.level cell.bucket ++ ":" ++
+       row.binding.owner ++ ":" ++ Index.contentKey (Fact.read row)
+-    if let some previous ← writer.get name then
+-      unless previous == bytes do throw (IO.userError "source coordinate posting changed its immutable owner")
++    if let some priorPosting ← writer.get name then
++      unless priorPosting == bytes do throw (IO.userError "source coordinate posting changed its immutable owner")
+     else
+       let metadata ← match ← writer.get (coordinateMeta row.source.subject) with
+         | some raw => ObservedRecords.decode (α := Coordinates) raw
+@@ -150,19 +203,11 @@
+       writer.put (coordinateMeta row.source.subject) (some (toJson {metadata with
+         rows := metadata.rows+1,maximum := max metadata.maximum cell.level}).compress.toUTF8)
+       changed := true
+-  let header : Header := {
+-    database := writer.base.head.identity,authority := writer.base.head.authority
+-    owner := doc.owner,work := doc.work,original := ObservationContext.originalSubject doc.work raw
+-    occurrences := doc.occurrences,producer := implementation,rows := prepared.rows.size,blocks}
+-  if let some previous ← MetadataBytes.pending? writer (ownerKey id) then
+-    let old ← ObservedRecords.decode (α := Header) previous.bytes
+-    -- A producer is historical provenance. Re-publishing identical original
+-    -- rows does not replace it just because the running implementation changed.
+-    unless digest old.producer && {old with producer := implementation} == header do
+-      throw (IO.userError "source read view changed its immutable original")
+-  else
+-    let bytes := (toJson header).compress.toUTF8
+-    if ← MetadataBytes.put writer (ownerKey id) (← IO.ofExcept (MetadataBytes.checked bytes)) true then changed := true
++  let header := {expected with rows := rows.size,blocks}
++  let bytes := (toJson header).compress.toUTF8
++  -- This is a derived directory, published in the same transaction as its
++  -- new postings. Its immutable original identity was checked above.
++  if ← MetadataBytes.put writer (ownerKey id) (← IO.ofExcept (MetadataBytes.checked bytes)) then changed := true
+   return changed
+ 
+ structure Reader (source : PageMap.Snapshot) where

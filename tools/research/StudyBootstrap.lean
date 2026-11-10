@@ -24,6 +24,11 @@ def prepare (root previous runtime : String) : IO Unit := do
   ResourceGuard.requireGenerationSpace directory.parent.get!
   let runtime ← IO.FS.realPath runtime
   let sealedRuntime ← StudyPrepare.artifact runtime
+  let some authSource ← IO.getEnv "EGGSHELL_STUDY_AUTH_FILE"
+    | throw (IO.userError "an explicit live credential file is required; never copy historical refresh tokens")
+  let authSource := System.FilePath.mk authSource
+  check (authSource.isAbsolute && (← authSource.pathExists)) "absolute live credential file required"
+  let authSource ← IO.FS.realPath authSource
   let privateDir := fun (path : System.FilePath) => do
     IO.FS.createDirAll path
     IO.setAccessRights path {user := {read := true,write := true,execution := true}}
@@ -54,8 +59,9 @@ def prepare (root previous runtime : String) : IO Unit := do
   let account := directory / "account"
   privateDir account
   let auth := account / "auth.json"
-  IO.FS.writeBinFile auth (← IO.FS.readBinFile (previous / "account/auth.json"))
-  IO.setAccessRights auth {user := {read := true,write := true}}
+  -- Rotating refresh tokens have one owner. The CLI's file backend follows
+  -- the link for reads and writes; credentials never enter study artifacts.
+  link authSource auth
   let config ← IO.FS.readFile (previous / "account/config.toml")
   let base := ((config.splitOn "[hooks.state.").headD "").replace (previous / "prefix").toString installPrefix.toString
   let base := if base.contains "[plugins.\"eggshell@openai-curated-remote\"]" then base
