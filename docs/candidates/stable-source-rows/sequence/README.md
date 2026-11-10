@@ -95,3 +95,11 @@ stored evidence were delivered. Two independent chats produced byte-identical
 bodies in 7,086 / 5,048 ms. An absent warning is excluded from success. The
 fresh answering-model control has started; completed paired stages remain
 zero of six. This preflight is not the actual model-input comparison.
+
+The local metadata driver advances the declared fresh/candidate order for all
+six stages. It delegates every product operation and model trial to the same
+frozen native controller, verifies sealed plans/settings and requires known
+final usage before starting the next arm. It closes and audits the candidate's
+source history before preparing the next stage. An existing failed guard or
+incomplete result stops the sequence; it never retries a model trial or picks
+the best attempt. This driver adds no product behavior or adoption authority.

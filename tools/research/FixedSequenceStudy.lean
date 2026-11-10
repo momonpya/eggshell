@@ -94,7 +94,27 @@ partial def excludesLinks (root retired : System.FilePath) : IO Unit := do
       let target ← IO.FS.realPath entry.path
       check (!(target.toString.startsWith (retired.toString++"/"))) "current library depends on the ended cohort"
 
-def main (args : List String) : IO Unit := do
+def waitGuard (path : System.FilePath) : IO Unit := do
+  let deadline := (← IO.monoMsNow)+1200000
+  repeat
+    let record ← read path
+    if record.getObjValD "state" == toJson "finished" then
+      check (record.getObjValD "exitCode" == toJson (0 : Nat) &&
+        record.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+        ("recorded step failed; no automatic retry: "++path.toString)
+      return
+    check (record.getObjValD "state" == toJson "running" && (← IO.monoMsNow) < deadline)
+      "native monitor did not finish; inspect the owned process before any new step"
+    IO.sleep 1000
+
+def runGuardOnce (path : System.FilePath) : IO Unit := do
+  let settings ← read path
+  let record ← IO.ofExcept (settings.getObjValAs? String "record")
+  if !(← (System.FilePath.mk record).pathExists) then
+    discard <| command (directory/"controller-build/StudyMain").toString #["guard",path.toString]
+  waitGuard (.mk record)
+
+partial def main (args : List String) : IO Unit := do
   if args == ["controller"] then
     idle
     check ((← hash (runtimeBuild/"StudyMain")) == "dd53c89bc450b66b58dd57d104ccbc82f32ca6345fa9666125e7feb03017000e")
@@ -523,4 +543,45 @@ def main (args : List String) : IO Unit := do
     let stage := directory/"cohort"/s!"stage-{number}"
     guard s!"fixed-sequence-stage-{number}-close" #[(directory/"controller-build/StudyMain").toString,
       "stage-close",(stage/"stage.json").toString,← hash (stage/"stage.json"),(stage/"closed").toString]
+  else if args == ["run-six"] then
+    checkedController
+    let progress := reports/"sequence-progress.json"
+    let mark := fun (number : Nat) (phase : String) => write progress (Json.mkObj [
+      ("stage",toJson number),("phase",toJson phase),("model",toJson "gpt-5.6-luna"),
+      ("effort",toJson "xhigh"),("automaticRetries",toJson (0 : Nat)),("adopted",toJson false)])
+    for number in [1:7] do
+      let stage := directory/"cohort"/s!"stage-{number}"
+      mark number "preparing"
+      let settings := base/s!"fixed-sequence-stage-{number}-prepare.guard-settings.json"
+      if !(← settings.pathExists) then main ["stage",toString number]
+      runGuardOnce settings
+      let frozen ← read (stage/"stage.json")
+      let order ← IO.ofExcept (frozen.getObjValAs? (Array String) "order")
+      check (order == #["fresh","candidate"]) "pilot arm order changed"
+      let arms ← IO.ofExcept (frozen.getObjValAs? (Array Json) "arms")
+      for name in order do
+        mark number (name++":generation")
+        let some arm := arms.find? (fun row => row.getObjValD "arm" == toJson name) |
+          throw (IO.userError "declared pilot arm is missing")
+        let artifact := arm.getObjValD "settings"
+        let path ← IO.ofExcept (artifact.getObjValAs? String "path")
+        check (artifact.getObjValD "sha256" == toJson (← hash (.mk path))) "sealed guard settings changed"
+        runGuardOnce (.mk path)
+        let planArtifact := arm.getObjValD "plan"
+        let planPath ← IO.ofExcept (planArtifact.getObjValAs? String "path")
+        check (planArtifact.getObjValD "sha256" == toJson (← hash (.mk planPath))) "sealed model plan changed"
+        let plan ← read (.mk planPath)
+        let output ← IO.ofExcept (plan.getObjValAs? String "output")
+        let result ← read (.mk output/"result.json")
+        check (result.getObjValD "completed" == toJson true &&
+          (result.getObjValD "usage").getObjValD "unknownFinalUsage" == toJson false &&
+          (result.getObjValD "usage").getObjValD "protocolPassed" == toJson true)
+          "model result is incomplete; preserve cost without retrying or advancing"
+      mark number "closing-source-history"
+      let settings := base/s!"fixed-sequence-stage-{number}-close.guard-settings.json"
+      if !(← settings.pathExists) then main ["close",toString number]
+      runGuardOnce settings
+      check ((← read (stage/"closed/closed.json")).getObjValD "completed" == toJson true)
+        "source history closure is incomplete"
+      mark number "completed"
   else throw (IO.userError "controller/audit required")
