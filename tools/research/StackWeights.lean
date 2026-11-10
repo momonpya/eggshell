@@ -5,7 +5,10 @@ structure Frame where
   depth : Nat
   count : Nat
   name : String
+  image : String
   children : Nat := 0
+
+def Frame.key (frame : Frame) : String := frame.name++"  (in "++frame.image++")"
 
 def parseFrame (line : String) : Option Frame := do
   let chars := line.toList
@@ -15,8 +18,9 @@ def parseFrame (line : String) : Option Frame := do
   let digits := tail.takeWhile Char.isDigit
   let count ← (String.ofList digits).toNat?
   let rest := (String.ofList (tail.drop digits.length)).trimAscii.toString
-  let [name,_] := rest.splitOn "  (in " | none
-  return ⟨leader.length,count,name,0⟩
+  let [name,location] := rest.splitOn "  (in " | none
+  let image := (location.splitOn ")").head!
+  return ⟨leader.length,count,name,image,0⟩
 
 def add (values : Std.HashMap String Nat) (name : String) (count : Nat) : Std.HashMap String Nat :=
   values.insert name (values[name]?.getD 0+count)
@@ -36,7 +40,7 @@ def finish (state : Summary) : Summary := match state.stack with
       stack := match rest with
         | [] => []
         | parent :: rest => {parent with children := parent.children+top.count} :: rest
-      exclusive := add state.exclusive top.name (top.count-top.children)
+      exclusive := add state.exclusive top.key (top.count-top.children)
       inconsistent := state.inconsistent+(if top.children > top.count then 1 else 0)
       issues := if top.children > top.count && state.issues.size < 10 then
         state.issues.push (top.name,top.depth,top.count,top.children) else state.issues}
@@ -50,10 +54,10 @@ def insert (state : Summary) (frame : Frame) : Summary := Id.run do
     match state.stack with
     | [] => break
     | top :: _ => if top.depth ≥ frame.depth then state := finish state else break
-  let already := state.stack.any (·.name == frame.name)
+  let already := state.stack.any (·.key == frame.key)
   return {state with
     stack := frame :: state.stack
-    inclusive := if already then state.inclusive else add state.inclusive frame.name frame.count
+    inclusive := if already then state.inclusive else add state.inclusive frame.key frame.count
     frames := state.frames+1}
 
 def ranked (values : Std.HashMap String Nat) (predicate : String → Bool := fun _ => true) : Array Json :=
@@ -80,10 +84,12 @@ def main (args : List String) : IO Unit := do
   let [table,_] := footer.splitOn "Binary Images:" | throw (IO.userError "one summary boundary required")
   let mut compared := 0
   for line in table.splitOn "\n" do
-    let [name,_] := line.trimAscii.toString.splitOn "  (in " | continue
+    let [name,location] := line.trimAscii.toString.splitOn "  (in " | continue
+    let key := name++"  (in "++(location.splitOn ")").head!++")"
     let countText := String.ofList (line.trimAscii.toString.toList.reverse.takeWhile Char.isDigit).reverse
     let some count := countText.toNat? | throw (IO.userError "exclusive summary lacks its count")
-    check (state.exclusive[name]?.getD 0 == count) ("native exclusive summary differs: "++name)
+    check (state.exclusive[key]?.getD 0 == count) ("native exclusive summary differs: "++key++
+      "; calculated="++toString (state.exclusive[key]?.getD 0)++"; native="++toString count)
     compared := compared+1
   check (compared > 0) "non-vacuous comparison with native summary required"
   let relevant := fun name => name.contains "Synaptic" || name.contains "PageMap" || name.contains "Binding" ||
@@ -92,6 +98,7 @@ def main (args : List String) : IO Unit := do
   write path (Json.mkObj [("input",toJson input),("inputSha256",toJson (← hash (.mk input))),
     ("frames",toJson state.frames),("inconsistentParents",toJson state.inconsistent),
     ("nativeExclusiveSummaryEntriesCompared",toJson compared),
+    ("symbolIdentityIncludesImage",toJson true),
     ("exclusive",toJson (ranked state.exclusive)),("relevantInclusive",toJson (ranked state.inclusive relevant)),
     ("weightsAreCpuPercentagesOrDurations",toJson false),("waitingThreadsIncluded",toJson true),
     ("recursionCollapsedForInclusiveWeights",toJson true)])

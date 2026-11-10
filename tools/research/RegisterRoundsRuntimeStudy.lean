@@ -11,6 +11,8 @@ def installation := root/"prefix"
 def logs := project/"docs/candidates/register-rounds/runtime"
 def parentPrefix := base/"current-six/fixed-sequence/cohort/prefix"
 def order : Array String := #["a-first","b-first","b-second","a-second"]
+def observerSource := root/"observer-source"
+def observerBuild := root/"observer-build"
 def clean (tag : String) : IO Json := do
   let value ← finished tag
   check (value.getObjValD "guardTriggered" == toJson false && value.getObjValD "reason" == Json.null)
@@ -148,10 +150,52 @@ def main (args : List String) : IO Unit := do
     write (logs/"retired-component.json") (Json.mkObj [("deleted",toJson removed),
       ("activeCompilerInputsChecked",toJson checked),("retainedInputs",toJson (kept.zip digests)),
       ("protectedHashesUnchanged",toJson true),("archiveCreated",toJson false)])
+  else if args == ["observer-setup"] then
+    idle
+    let prior ← read (project/"docs/candidates/routing-leaf-image/runtime-observer-fixed.json")
+    let helpers : Array (String × String) ← IO.ofExcept (fromJson? (prior.getObjValD "helperSources"))
+    check (helpers.contains ("tools.research.PreparedRoutingObserver",← hash (project/"tools/research/PreparedRoutingObserver.lean")))
+      "observer differs from its native child-lifecycle controls"
+    check (toJson (← hash (out/"StudyMain")) == (← read (logs/"runtime.json")).getObjValD "candidateSha256")
+      "full product candidate changed"
+    materialize out observerSource observerBuild "tools.research.RequestPhaseSample" "register-rounds-observer-settings.json"
+    IO.FS.writeFile (observerSource/"tools/research/PreparedRoutingObserver.lean")
+      (← IO.FS.readFile (project/"tools/research/PreparedRoutingObserver.lean"))
+    write (logs/"profile-plan.json") (Json.mkObj [("reason",toJson "previous turn made verified progress:11.190% lower sixteen-client wall time;remaining execution is not explained by2-10ms admission waits"),
+      ("productSha256",toJson (← hash (out/"StudyMain"))),("sampleSeconds",toJson (3 : Nat)),
+      ("phaseDelayMs",toJson (2000 : Nat)),("clientCount",toJson (4 : Nat)),
+      ("observation",toJson "one late owned-publisher CPU sample;small query-stage timestamps enabled;canonical bodies and ACK required"),
+      ("unchanged",toJson "product source,model,ranking,three synapses,Exact,source snapshot,deadline,resource limits"),
+      ("interferencePossible",toJson true),("performanceComparison",toJson false),
+      ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+    guard "register-rounds-observer-build" #[(compiler/"bin/lean").toString,"-j1","-M1536","--run",
+      (project/"tools/research/StudyBuildMain.lean").toString,(base/"register-rounds-observer-settings.json").toString]
+  else if args == ["observer-audit"] then
+    discard <| clean "register-rounds-observer-build"
+    guard "register-rounds-observer-audit" #["/usr/bin/env","LEAN_PATH="++(base/"study-local-lib").toString,
+      (compiler/"bin/lean").toString,"-j1","-M1536","--run",(project/"tools/research/RegisterRoundsRuntimeStudy.lean").toString,"observer-audit-worker"]
+  else if args == ["observer-audit-worker"] then
+    discard <| command (compiler/"bin/lean").toString #["-j1","-M1536","--run",
+      (project/"tools/research/StudyBuildClosureAudit.lean").toString,"inspect",observerBuild.toString,(logs/"profile-observer-native.json").toString]
+    let names := #["tools.research.PreparedRoutingObserver","tools.research.RequestPhaseSample"]
+    let modules : Array Json ← IO.ofExcept ((← read (observerBuild/"build.json")).getObjValAs? (Array Json) "modules")
+    check (modules.size == names.size && modules.all (fun row => names.contains ((row.getObjValAs? String "module").toOption.getD "")))
+      "observer unexpectedly links a product implementation"
+    let mut witnesses := #[]
+    for name in names do
+      let (text,literals) : String × Array (String × String) ← IO.ofExcept
+        (fromJson? (← read (observerBuild/(name.replace "." "_"++".source"))))
+      let path := project/(name.replace "." "/"++".lean")
+      check (text == (← IO.FS.readFile path) && literals.isEmpty) "native observer source changed"
+      witnesses := witnesses.push (name,← hash path)
+    write (logs/"profile-observer.json") (Json.mkObj [("sha256",toJson (← hash (observerBuild/"StudyMain"))),
+      ("helperSources",toJson witnesses),("productSourceChanged",toJson false)])
   else if args.head? == some "prepare" then
     let [_,label] := args | throw (IO.userError "prepare <preflight|declared arm>")
     discard <| clean "register-rounds-runtime-audit"
-    let preflight := label == "preflight"
+    let profiling := label == "profile"
+    if profiling then discard <| clean "register-rounds-observer-audit"
+    let preflight := label == "preflight" || profiling
     let position ← if preflight then pure 0 else do
       let some n := order.findIdx? (· == label) | throw (IO.userError "undeclared arm")
       pure n
@@ -173,7 +217,9 @@ def main (args : List String) : IO Unit := do
     let environment : Array (String × Option String) ← IO.ofExcept (fromJson? (original.getObjValD "environment"))
     let environment := environment.map fun (key,value) => (key,match key with
       | "EGGSHELL_PREFIX" => some chosen.toString | "PLUGIN_ROOT" => some plugin
-      | "EGGSHELL_CONFIG" => some config.toString | _ => value)
+      | "EGGSHELL_CONFIG" => some config.toString
+      | "EGGSHELL_TRACE_QUERY_STAGES" => if profiling then some "1" else value
+      | _ => value)
     let input := original.setObjVal! "output" (toJson output.toString)
       |>.setObjVal! "config" (toJson config.toString) |>.setObjVal! "environment" (toJson environment)
       |>.setObjVal! "runtime" (toJson runtime.toString) |>.setObjVal! "runtimeSha256" digest
@@ -185,8 +231,12 @@ def main (args : List String) : IO Unit := do
     write path input
     let unset := environment.filterMap fun (key,value) => if value.isNone then some key else none
     let assignments := environment.filterMap fun (key,value) => value.map (key++"="++·)
-    guard ("register-rounds-runtime-"++label) (#["/usr/bin/env"]++unset.flatMap (fun key => #["-u",key])++assignments++
-      #[runtime.toString,"owned-selection-capacity",path.toString])
+    let operation ← if profiling then do
+      let observer := observerBuild/"StudyMain"
+      check ((← read (logs/"profile-observer.json")).getObjValD "sha256" == toJson (← hash observer)) "observer executable changed"
+      pure #[observer.toString,path.toString]
+    else pure #[runtime.toString,"owned-selection-capacity",path.toString]
+    guard ("register-rounds-runtime-"++label) (#["/usr/bin/env"]++unset.flatMap (fun key => #["-u",key])++assignments++operation)
   else if args.head? == some "collect" then
     let [_,label] := args | throw (IO.userError "collect <label>")
     let monitor ← clean ("register-rounds-runtime-"++label)
@@ -197,9 +247,46 @@ def main (args : List String) : IO Unit := do
     let expected : Array (String × String) ← IO.ofExcept (fromJson? (input.getObjValD "sourceFiles"))
     for (file,digest) in expected do check ((← hash (sourceRoot/file)) == digest) "source changed"
     check (report.getObjValD "allPhasesPassed" == toJson true ||
-      (label == "preflight" && (← read (root/label/"phase-4/result.json")).getObjValD "passed" == toJson true)) "workload failed"
+      ((label == "preflight" || label == "profile") &&
+        (← read (root/label/"phase-4/result.json")).getObjValD "passed" == toJson true)) "workload failed"
     write (logs/(label++".json")) (Json.mkObj [("guard",monitor),("report",report),("passed",toJson true),
       ("sourceFilesUnchanged",toJson true),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+    if label == "profile" then
+      let sampling ← read (root/label/"sampling.json")
+      check (sampling.getObjValD "sampleExitCode" == toJson (0 : Nat)) "native CPU sample failed"
+      let phases : Array Json ← IO.ofExcept (report.getObjValAs? (Array Json) "phases")
+      check (phases.size == 1 && phases[0]!.getObjValD "passed" == toJson true) "diagnostic wave failed"
+      let dataRoot : System.FilePath := .mk (← IO.ofExcept (input.getObjValAs? String "data"))
+      let mut actors := #[]
+      for client in ← IO.ofExcept (phases[0]!.getObjValAs? (Array Json) "rows") do
+        let id ← IO.ofExcept (client.getObjValAs? String "receipt")
+        let pages ← read (dataRoot/"receipts"/id/"request-pages.json")
+        let operation ← read (dataRoot/"receipts"/id/"operation-service.json")
+        check (pages.getObjValD "pid" == sampling.getObjValD "pid" &&
+          operation.getObjValD "pid" == sampling.getObjValD "pid") "stage record belongs to a different publisher"
+        let stages : Array (String × Nat) ← IO.ofExcept (fromJson? ((pages.getObjValD "data").getObjValD "queryStages"))
+        check (stages.size > 1) "query-stage observation is empty"
+        for i in [:stages.size-1] do check (stages[i]!.2 ≤ stages[i+1]!.2) "query-stage clock decreased"
+        let mut intervals := #[]
+        for (name,began) in stages do
+          if !name.endsWith ":start" then continue
+          let prefixName := (name.dropEnd 6).toString
+          if let some (_,ended) := stages.find? (·.1 == prefixName++":end") then
+            check (began ≤ ended) "query-stage interval decreased"
+            intervals := intervals.push (prefixName,ended-began)
+        let some (_,executeEnd) := stages.find? (·.1 == "execute:end") | throw (IO.userError "missing execute end")
+        let op := operation.getObjValD "data"
+        let finished ← IO.ofExcept (op.getObjValAs? Nat "finishedAt")
+        check (executeEnd ≤ finished) "operation finished before its execution"
+        let ready := (op.getObjValAs? Nat "readyMs").toOption
+        let work ← IO.ofExcept (op.getObjValAs? Nat "workMs")
+        actors := actors.push (Json.mkObj [("client",client),("pages",pages),("operation",operation),
+          ("intervalMs",toJson intervals),("postExecuteReplyMs",toJson (finished-executeEnd)),
+          ("afterReadyOperationMs",toJson (ready.map (work-·)))])
+      write (logs/"profile-result.json") (Json.mkObj [("sampling",sampling),("actors",toJson actors),
+        ("report",report),("guard",monitor),("sourceFilesUnchanged",toJson true),
+        ("sampleSha256",toJson (← hash (root/label/"publisher-late.sample.txt"))),
+        ("performanceComparison",toJson false),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   else if args.head? == some "retire-arm" then
     let [_,label] := args | throw (IO.userError "retire-arm <collected label>")
     idle
@@ -281,6 +368,46 @@ def main (args : List String) : IO Unit := do
       ("snapshotQuestionsBodiesAndHarnessSettingsMatch",toJson true),
       ("inclusiveTokenOrQualityBenefitEstablished",toJson false),("answeringModelCalls",toJson (0 : Nat)),
       ("adopted",toJson false)])
+  else if args == ["retire-observed-components"] then
+    idle
+    discard <| clean "register-rounds-runtime-profile"
+    discard <| clean "owned-buckets-component"
+    check ((← (logs/"profile-retired.json").pathExists) &&
+      !(← (logs/"retired-observed-components.json").pathExists)) "retire owned profile states and preserve cleanup evidence"
+    let component := (← read (project/"docs/candidates/owned-buckets/component.json")).getObjValD "guard"
+    check (component.getObjValD "exitCode" == toJson (0 : Nat))
+      "component result is not collected"
+    let targets := #[observerSource,observerBuild,base/"owned-buckets/source",base/"owned-buckets/build",base/"owned-buckets/run"]
+    let mut checked := 0
+    for target in targets do
+      for library in #[selected/"lib",out/"lib",base/"study-local-lib"] do
+        checked := checked+(← checkRetiredLinks library target)
+      let response ← IO.FS.readFile (out/"runtime.rsp")
+      check (!response.contains (target.toString++"/")) "current runtime links a retired component"
+    let kept := #[selected/"StudyMain",out/"StudyMain",base/"current-six/fixed-sequence/controller-build/StudyMain",
+      base/"current-six/fixed-sequence/preparation-closure-build/StudyMain",base/"byte-pages-prefix/libexec/eggshell",
+      base/"snapshot-scheduling/work/work.egg/head"]
+    let hashes ← kept.mapM hash
+    let mut metadata := [("input",← read (root/"profile-input.json"))]
+    for file in ← (root/"profile").readDir do
+      if (← file.path.symlinkMetadata).type == .file && file.fileName.endsWith ".json" &&
+          !["report.json","progress.json","sampling.json"].contains file.fileName then
+        metadata := metadata++[(file.fileName,← read file.path)]
+    write (logs/"profile-metadata.json") (Json.mkObj metadata)
+    let mut removed := #[]
+    for target in targets do
+      check ((← target.symlinkMetadata).type == .dir) "retired component root must be owned"
+      let deleted ← removeOwned target
+      removed := removed.push (target.toString,deleted.1,deleted.2)
+    for file in ← (root/"profile").readDir do
+      if ["publisher-late.sample.txt","sampling.json"].contains file.fileName then continue
+      let deleted ← removeOwned file.path
+      removed := removed.push (file.path.toString,deleted.1,deleted.2)
+    check ((← kept.mapM hash) == hashes) "protected runtime or head changed"
+    write (logs/"retired-observed-components.json") (Json.mkObj [("deleted",toJson removed),
+      ("activeCompilerInputsChecked",toJson checked),("protectedInputs",toJson (kept.zip hashes)),
+      ("protectedHashesUnchanged",toJson true),("archiveCreated",toJson false),
+      ("currentRawCpuSampleKept",toJson true),("componentResultsAndProofSourcesKept",toJson true)])
   else if args == ["retire-outputs"] then
     idle
     check ((← (logs/"comparison.json").pathExists) && !(← (logs/"retired-outputs.json").pathExists))

@@ -62,6 +62,16 @@
 
 この比較の99 session・台帳・receipt 7,542項目/240,543,420bytesと、終了済み重複出力298件/52,761,141bytesもarchiveせず削除した。3正本本文、scalar結果、prime/cache/終了metadata、実入力設定とhashを保持し、今回の終了済み生成物の削除は合計830,194,823論理bytesである。接続済み候補と現在必要なcompiler入力は次の調査に保持し、本体へは採用しない。
 
+[高速hash後の1回の観測](docs/candidates/register-rounds/runtime/profile.md)では、観測専用の2objectを検査し、製品`1153215e…`を変えず3prime+4並行の全7本文/ACK、意味検索/シナプス、原典不変と正常終了を確認した。4並行5.695秒は観測干渉ありの診断で、通常ABBAへ加えない。各operationのready markerは318〜358ms、そこから終了まで4,654〜4,837ms、reader borrowは3ms、synaptic acquireは22〜23msだった。execute終了からoperation内のreply値確定は38〜46msであり、client transport/stdout/ACK全体とは区別する。viewのmutexはcallback前に解放されていることを現在のsourceでも確認した。
+
+CPU集計器は同名symbolを別libraryでも合算していたため新標本を拒否した。name+imageへ直し、OSのnative exclusive77項目すべてと、旧標本76/80項目すべての一致、親子count不整合0を確認した。製品再試行で集計器を直していない。配列copyとbasePieceAcceptが目立つが、標本重みをCPU割合や秒へ換算せず、既に計測したcue範囲索引やselectorだけpoolを繰り返さない。
+
+[所有者別の配列更新](docs/candidates/owned-buckets/README.md)を汎用のLean部品で検証した。lookup/push/insertとmap内alterの間で、任意のlawful key/hash・値・初期table・row列・probeについて、欠けたkey/空bucket/順序/重複を含む全lookup等価を証明した。内部HashMap layoutの等式や全selector等式は主張しない。198 native対照と、sourceを保持してdedicated actorへ渡すAB/BA/ABで内容が一致した。8,192row・1ownerは85.732〜86.247→0.224〜0.240ms、46ownerは1.777〜1.831→0.279〜0.284msだった。native2objectと実specialization両経路を照合し、guard正常・RSS標本最大93,904KiB。合成部品であり、実queryのowner別range数やhook時間の占有率は未確認、製品へ未接続・未採用・回答モデル0である。
+
+次は、実際のownerReach/memberChoicesの利用側をlookupインターフェースとして扱い、一般等式を接続する。HashMap内部表現のEqであるかのように扱わない。出版時に保持できる不変の範囲索引とquery依存部分も分け、全体を毎回作り直す構成を完成としない。元の候補/順序/元本文と認定を維持した同一snapshotの実フック比較へ進め、部品の倍率を全フックや80人へ外挿しない。
+
+今回の終了済み観測器/部品のsource/build/runと重複出力3,865項目/224,510,625bytes、7session/台帳/receipt 534項目/17,016,801bytesをarchiveせず削除した。5対象の15,600件の参照先照合、現在の製品/比較元/制御器/headの前後hashを確認した。現在のCPU原標本、scalar結果・metadataと証明sourceを保持し、退役した実行体を再利用可能と扱わない。
+
 ## 目的と固定する境界
 
 最新の利用者指示：このMacでは80並列の負荷試験を行わない。関連process合計5GB以内、16並列で数秒をローカル性能の目標とし、企業向け80人の設計範囲とこの環境での実証範囲を区別する。80のRSS原因の完全解明を新seed/実モデル6段階の前提にしない。空DB・新規chatのseed→題材1/2/3→2周目1/2/3を同一runtime SHAで通し、各snapshotのDBにある必要証拠を配送前に凍結し、実際のモデル入力への全件配送とfresh比の総tokenを測ることを優先する。seed費用は別記、失敗/cached inputも総数へ含める。poolは排除せず、状態の所有・共有不変データ・CPU/I/Oの責任が整理され、性能が良くなる算段がある場合に採用を検討する。ただし直近の選択CPUだけをpoolへ移した隔離候補は、同じ10コアprofileの対照でRSS改善を確認できておらず未採用である。
