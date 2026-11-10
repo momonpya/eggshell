@@ -1,0 +1,27 @@
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/post-ready-attribution/ObserverDefault.lean:61:76: error: Tactic `decide` failed for proposition
+  toString 3 = "3"
+because its `Decidable` instance
+  instDecidableEqString (toString 3) "3"
+did not reduce to `isTrue` or `isFalse`.
+
+After unfolding the instances `instDecidableEqBool`, `instDecidableEqList`, `instDecidableEqString`, `instDecidableOr`, `Bool.decEq`, `Nat.decLe`, `Nat.decLt`, and `String.decEq`, reduction got stuck at the `Decidable` instance
+  match (Nat.repr 3).1.1.toList with
+  | [] =>
+    match #[].toList.concat (UInt8.ofNat '3'.val.toNat) with
+    | [] => isTrue ⋯
+    | head :: tail => isFalse ⋯
+  | a :: as =>
+    match #[].toList.concat (UInt8.ofNat '3'.val.toNat) with
+    | [] => isFalse ⋯
+    | b :: bs =>
+      match decEq a b with
+      | isTrue hab =>
+        match as.hasDecEq bs with
+        | isTrue habs => isTrue ⋯
+        | isFalse nabs => isFalse ⋯
+      | isFalse nab => isFalse ⋯
+/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/post-ready-attribution/ObserverDefault.lean:61:2: error: `simp` made no progress
+'Eggshell.Research.PreparedRoutingObserver.run_default_exact' depends on axioms: [propext,
+ sorryAx,
+ Classical.choice,
+ Quot.sound]

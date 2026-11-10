@@ -14,6 +14,10 @@
 
 利用者は、設計と性能の両方に根拠があるpoolを採用対象にしてよいと明示している。現在も検索は要求ごとのactorで並行実行されており、poolを新設すれば直ると仮定しない。今後の境界は、検証済みproject imageを借りる小さな要求からCPU処理を始め、I/O待ちを持ち込まない形にする。新たな同種cacheや無制限の世代保持を足さず、scope・完全なpage参照・検証済み型・read trace・破損拒否を保つ。選択済みの大きいIRだけをpoolへ渡して約2%しか変わらなかった旧案と、dense/wideで悪化した単純なcue bucketを再投入しない。本文・認定・3辺・ACKを保った同一snapshotの隔離比較で効果を確認する。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
 
+[共有view後の段階診断](docs/candidates/post-ready-attribution/README.md)を、製品`1153215e…`のまま3prime+4並行で3回行った。計21本文/ACKが正本と一致、測定waveの12件は意味検索・シナプス完了、guard正常・原典不変だった。4並行5.200/5.543/5.657秒は観測干渉ありの診断で、性能改善や16並行数秒の達成としない。初回以外のbinding scanは194〜254ms、描画の選択1242〜1453ms、automatic準備269〜325ms、監査0msである。単一のcache追加やpoolだけで数秒になるという根拠はない。早期標本で全owner語解析と引用座標の再構成、組み立てmarkerを待つ標本で出版済みbindingの復号・検証とPageMap経路を確認した。既存のsubset-rankやlock付きbinding cacheを主解決として再投入せず、不変な原文対応・引用構造を既存project imageで準備し、小さい質問固有の要求だけをCPU側へ渡す境界を次に詰める。pool候補は未実装・未採用で、モデル比較0/18を維持する。
+
+観測器は2objectだけをbuildし、既定IO actionが従来と同じことを標準公理で確認した。5件の観測器監査失敗を正常hookと分けて保持した。終了したsource/build/実行体、性能fixtureのsession・台帳・receiptなど3990項目・175,189,448論理bytesはarchiveせず削除し、現行実行体・head・正本本文/sourceと使用中project cache/モデルを保持した。現行compiler入力3120件に退役先への依存がないことも確認した。
+
 [不変page集合を共有する候補](docs/candidates/quiescent-page-base/README.md)をLeanで隔離実装した。利用中はbaseを固定し、親が検索actorと子taskをjoinした後だけfrontを返し、coordinatorが終了済みfrontを併合して無利用時に次baseを公開する。利用中base・更新待ちcache・既存image seedを元の128MiB公開page枠に収める等式、元image不変など6法則を標準公理だけで確認した。native部品ではowner mutex保持中のread、scope/full ref拒否、独立front、epoch更新、cancel/終了済み要求、元の値とread trace、出版後の新旧値を確認した。324 native objectと全変更source/埋込literalを照合し、製品変更は予定した4 module、追加は検査器1 module、既存module除去0である。
 
 ただし候補`19e6b870…`は不採用。同一snapshotのA1は4/16全件5.989/15.431秒で本文・意味検索・シナプス・ACKが成功したが、B1は最初のprimeが15.420秒・本文不一致・synaptic complete=falseで停止した。先頭pageを512枠に固定する新policyが後続のhot pageを入れられず、missが約1,700から38,557へ増えた。共有base hit106,936でも埋められていない。B2/A2・候補16並行・回答モデルは未実行。元DBは不変、候補の独立した原文配送率は未監査なので0%や98%とは報告しない。次は元の回転するhot frontを保つ構成へ修正し、同じ失敗policyを再投入しない。

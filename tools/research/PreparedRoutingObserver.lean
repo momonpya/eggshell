@@ -53,7 +53,8 @@ def controls (output : String) : IO Unit := do
   IO.FS.writeFile path (Json.mkObj [("successAndFailureExitPreservedAcrossFinally",toJson true),
     ("idempotentWaitAndClose",toJson true),("cancelledOwnedChildReaped",toJson true),
     ("productHookReplay",toJson false)]).compress
-def run (inputPath : String) : IO Unit := do
+def runAt (inputPath : String) (delayMs : UInt32) (sampleSeconds : String)
+    (afterPhase : Option (IO Unit) := none) : IO Unit := do
   let input ← read (.mk inputPath)
   check (input.getObjValD "counts" == toJson (#[(4 : Nat)]) &&
     input.getObjValD "diagnostic" == toJson true) "late sampling is a four-client diagnostic only"
@@ -89,11 +90,13 @@ def run (inputPath : String) : IO Unit := do
     check (process.exitCode == 0 && fields[0]? == some (toString child.pid.toNat) &&
       fields[1]? == some runtime && fields[2]? == some "codex-publication-daemon")
       "sample target is not the directly owned publisher"
-    IO.sleep 2000
+    match afterPhase with
+    | none => IO.sleep delayMs
+    | some action => do action; IO.sleep delayMs
     let started ← IO.monoMsNow
     let sample ← IO.Process.output {
       cmd := "/usr/bin/sample"
-      args := #[toString pid,"3","5","-file",(root/"publisher-late.sample.txt").toString] }
+      args := #[toString pid,sampleSeconds,"5","-file",(root/"publisher-late.sample.txt").toString] }
     let stopped ← IO.monoMsNow
     IO.FS.writeFile (root/"sampling.json") (Json.mkObj [("pid",toJson pid),
       ("ownedParentPid",toJson child.pid.toNat),("phaseObservedMs",toJson phaseObserved),
@@ -106,4 +109,5 @@ def run (inputPath : String) : IO Unit := do
     check (code == 0) "owned diagnostic workload failed"
   finally
     closeOwned child exit
+def run (inputPath : String) : IO Unit := runAt inputPath 2000 "3"
 end Eggshell.Research.PreparedRoutingObserver
