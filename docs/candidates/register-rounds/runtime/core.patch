@@ -1,0 +1,31 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/current-six/stable-source-rows/source/Eggshell/Blake3.lean	2026-11-10 08:28:59
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/register-rounds-runtime/source/Eggshell/Blake3.lean	2026-11-10 22:05:12
+@@ -2,6 +2,7 @@
+ 
+ import Std
+ public import tools.research.RegisterMix
++public import tools.research.RegisterRounds
+ 
+ @[expose] public section
+ 
+@@ -73,6 +74,20 @@
+   let sixth := round fifth sixthMessage
+   round sixth (permute sixthMessage)
+ 
++@[csimp] theorem seven_rounds_compiled : @sevenRounds = @Eggshell.Research.RegisterRounds.optimized := by
++  have lane : @Eggshell.Research.RegisterMix.reference = @g := by
++    rw [register_mix_compiled]
++    funext state a b c d mx my
++    exact (Eggshell.Research.RegisterMix.optimized_exact state a b c d mx my).symm
++  have one : @Eggshell.Research.RegisterRounds.referenceRound = @round := by
++    funext state message
++    simp only [Eggshell.Research.RegisterRounds.referenceRound,Eggshell.Research.RegisterRounds.referenceRoundState,round,lane]
++  have shuffle : @Eggshell.Research.RegisterRounds.referencePermute = @permute := by rfl
++  funext state message
++  have same : Eggshell.Research.RegisterRounds.referenceSeven state message = sevenRounds state message := by
++    simp only [Eggshell.Research.RegisterRounds.referenceSeven,sevenRounds,one,shuffle]
++  exact same.symm.trans (Eggshell.Research.RegisterRounds.optimized_exact state message).symm
++
+ structure Source where
+   segments : List ByteArray
+   size : Nat

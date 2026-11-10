@@ -1,0 +1,85 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/register-rounds/source/tools/research/RegisterRounds.lean	2026-11-10 21:14:02
++++ tools/research/RegisterRounds.lean	2026-11-10 21:35:32
+@@ -38,13 +38,13 @@
+     rcases cases with h|h|h|h|h|h|h|h|h|h|h|h|h|h|h|h <;> subst i <;>
+       simp_all [Words.array,Words.read]
+ 
+-@[inline] def Words.get (s : Words) (i : Fin 16) : UInt32 := match i.val with
++noncomputable def Words.get (s : Words) (i : Fin 16) : UInt32 := match i.val with
+   | 0 => s.v0 | 1 => s.v1 | 2 => s.v2 | 3 => s.v3
+   | 4 => s.v4 | 5 => s.v5 | 6 => s.v6 | 7 => s.v7
+   | 8 => s.v8 | 9 => s.v9 | 10 => s.v10 | 11 => s.v11
+   | 12 => s.v12 | 13 => s.v13 | 14 => s.v14 | _ => s.v15
+ 
+-@[inline] def Words.set (s : Words) (i : Fin 16) (v : UInt32) : Words := match i.val with
++noncomputable def Words.set (s : Words) (i : Fin 16) (v : UInt32) : Words := match i.val with
+   | 0 => {s with v0 := v} | 1 => {s with v1 := v}
+   | 2 => {s with v2 := v} | 3 => {s with v3 := v}
+   | 4 => {s with v4 := v} | 5 => {s with v5 := v}
+@@ -101,7 +101,7 @@
+   c : UInt32
+   d : UInt32
+ 
+-@[inline] def mix (a b c d mx my : UInt32) : Quad :=
++@[irreducible,inline] def mix (a b c d mx my : UInt32) : Quad :=
+   let a := a+b+mx
+   let d := RegisterMix.rotate (d ^^^ a) 16
+   let c := c+d
+@@ -112,7 +112,7 @@
+   let b := RegisterMix.rotate (b ^^^ c) 7
+   ⟨a,b,c,d⟩
+ 
+-@[inline] def step (s m : Words) (a b c d mx my : Fin 16) : Words :=
++noncomputable def step (s m : Words) (a b c d mx my : Fin 16) : Words :=
+   let q := mix (s.get a) (s.get b) (s.get c) (s.get d) (m.get mx) (m.get my)
+   (((s.set a q.a).set b q.b).set c q.c).set d q.d
+ 
+@@ -132,9 +132,10 @@
+     omega
+   rw [← RegisterMix.registers_exact _ _ _ _ _ _ _ safe]
+   simp only [step,RegisterMix.registers,joined_left,joined_right,← joined_set]
++  unfold mix
+   rfl
+ 
+-@[noinline] def round (s m : Words) : Words :=
++noncomputable def round (s m : Words) : Words :=
+   let s := step s m 0 4 8 12 0 1
+   let s := step s m 1 5 9 13 2 3
+   let s := step s m 2 6 10 14 4 5
+@@ -190,6 +191,27 @@
+ theorem permute_exact (m : Words) : (permute m).array = referencePermute m.array := by
+   simp [permute,Words.array,referencePermute]
+ 
++/-- Concrete lanes avoid the generic record setters in the executable.
++The step-by-step round above is used only as a proof specification. -/
++@[noinline] def packedRound (s m : Words) : Words :=
++  let c0 := mix s.v0 s.v4 s.v8 s.v12 m.v0 m.v1
++  let c1 := mix s.v1 s.v5 s.v9 s.v13 m.v2 m.v3
++  let c2 := mix s.v2 s.v6 s.v10 s.v14 m.v4 m.v5
++  let c3 := mix s.v3 s.v7 s.v11 s.v15 m.v6 m.v7
++  let d0 := mix c0.a c1.b c2.c c3.d m.v8 m.v9
++  let d1 := mix c1.a c2.b c3.c c0.d m.v10 m.v11
++  let d2 := mix c2.a c3.b c0.c c1.d m.v12 m.v13
++  let d3 := mix c3.a c0.b c1.c c2.d m.v14 m.v15
++  ⟨d0.a,d1.a,d2.a,d3.a,d3.b,d0.b,d1.b,d2.b,d2.c,d3.c,d0.c,d1.c,d1.d,d2.d,d3.d,d0.d⟩
++
++theorem packedRound_exact (s m : Words) : packedRound s m = round s m := by
++  simp only [packedRound,round,step,Words.get,Words.set]
++  rfl
++
++@[csimp] theorem round_packed_compiled : @round = @packedRound := by
++  funext s m
++  exact (packedRound_exact s m).symm
++
+ @[inline] def seven (s m : Words) : Words :=
+   let s := round s m
+   let m := permute m
+@@ -238,6 +260,8 @@
+   · rfl
+ 
+ #print axioms round_exact
++#print axioms packedRound_exact
++#print axioms round_packed_compiled
+ #print axioms seven_exact
+ #print axioms optimized_exact
+ end Eggshell.Research.RegisterRounds

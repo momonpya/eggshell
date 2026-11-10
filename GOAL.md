@@ -52,6 +52,16 @@
 
 失敗費用は隠さない。原文位置の再整列を直す前のseedは3,984,226総tokenで出版/keep失敗。容量不足の別seedは観測3,943,319総tokenが下限で最終使用量不明として[保持](docs/candidates/stable-source-rows/sequence/disk-stopped-seed.json)し、未完了DBは破棄した。終了済み43ビルドの40,266 file・3,749,619,584論理bytesと旧prefix7個をarchiveせず削除済み。2GiBのディスク停止線とRSS停止線は緩めない。混入pluginの7フックは実験accountだけで無効化し、選んだ8フックだけを使う。
 
+[固定16レーンによるBLAKE3候補](docs/candidates/register-rounds/README.md)をLeanで分離実装した。Appleの公開したexclusive標本76/80項目との一致を確認してから、繰り返す検証計算を対象にした。標本重みをCPU割合や秒へ換算しない。最初の汎用record setter版はnativeで約1.8倍遅く、失敗として保持した。直接レーン計算へのcompiler等式をconsumer前へ置く修正後は、18入力長・分割/field・148安全なlane対照で全出力が一致し、native部品の4KiB×128は15.545〜15.829→5.150〜5.166ms、256KiB×8は63.190〜63.914→20.731〜21.037msとなった。allocation heartbeatは高いままなのでメモリ改善とは扱わない。
+
+実フックへ接続した候補`1153215e…`は324実link入力・全322親module・変更1追加1・entry/literal不変・実compressorのcall先を照合した。3基準本文と追加4並行5.257秒が合格した後、同一snapshotの[事前固定ABBA](docs/candidates/register-rounds/runtime/comparison.json)を完了した。4並行は親6.061/6.103秒、候補5.216/5.198秒、16並行は親15.677/15.824秒、候補14.026/13.950秒で、16並行の記述的平均短縮は11.190%。全99本文・ACK、全waveの意味検索/シナプス、原典不変とguard正常終了を確認した。最終headの基準本文は全体保存18/18、部分を含め19/19を維持する。候補RSS最大3,865,584KiBで、メモリ削減は未確認。モデル・pool・cache・lock・選択規則は変更していない。採用0・回答モデル0・一般98%/p99/数秒/80人の未達は維持する。
+
+各armの検索actor最大は16、受付待ち最大2〜10ms、準備済みreader imageは構築1回・hit22だった。受付待ちの統計を全CPU/I/O/返信待ちの不在へ拡張しない。poolは検討対象のままだが、同じ仕事のselectorだけをpoolへ入れる再試行や、hash部品の3倍速から残る数秒達成を推測しない。準備済みproject情報を借りた後の処理を対象にする。
+
+実linkと解決済みsource/library参照から未使用生成物を再計算し、1,543件・413,679,504論理bytesを削除した。さらに接続済み実フックから独立した部品のbuild/source/run 1,933件・123,210,758bytesを削除し、archiveは作らない。保持する実行体・head・基準本文のhashは不変。元sourceと依存stamp、現在必要なinterface/model/DBは保持し、退役した入力を再build可能と扱わない。
+
+この比較の99 session・台帳・receipt 7,542項目/240,543,420bytesと、終了済み重複出力298件/52,761,141bytesもarchiveせず削除した。3正本本文、scalar結果、prime/cache/終了metadata、実入力設定とhashを保持し、今回の終了済み生成物の削除は合計830,194,823論理bytesである。接続済み候補と現在必要なcompiler入力は次の調査に保持し、本体へは採用しない。
+
 ## 目的と固定する境界
 
 最新の利用者指示：このMacでは80並列の負荷試験を行わない。関連process合計5GB以内、16並列で数秒をローカル性能の目標とし、企業向け80人の設計範囲とこの環境での実証範囲を区別する。80のRSS原因の完全解明を新seed/実モデル6段階の前提にしない。空DB・新規chatのseed→題材1/2/3→2周目1/2/3を同一runtime SHAで通し、各snapshotのDBにある必要証拠を配送前に凍結し、実際のモデル入力への全件配送とfresh比の総tokenを測ることを優先する。seed費用は別記、失敗/cached inputも総数へ含める。poolは排除せず、状態の所有・共有不変データ・CPU/I/Oの責任が整理され、性能が良くなる算段がある場合に採用を検討する。ただし直近の選択CPUだけをpoolへ移した隔離候補は、同じ10コアprofileの対照でRSS改善を確認できておらず未採用である。
