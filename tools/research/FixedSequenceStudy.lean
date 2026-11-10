@@ -12,6 +12,16 @@ def selectedSeed : IO String := do
   check (#["seed-2","seed-3"].contains name) "unexpected acquisition selection"
   return name
 
+def seedPreparation : IO (System.FilePath × String) := do
+  let path := directory/"cohort/selected-ready.json"
+  if !(← path.pathExists) then return (directory/"cohort/seed-ready","fixed-sequence-seed-finalize")
+  let selection ← read path
+  let name ← IO.ofExcept (selection.getObjValAs? String "directory")
+  let tag ← IO.ofExcept (selection.getObjValAs? String "guardTag")
+  check (name == (directory/"cohort/seed-ready-resumed").toString &&
+    tag == "fixed-sequence-seed-finalize-resumed") "unexpected seed preparation selection"
+  return (.mk name,tag)
+
 def frozenImports : IO (Std.HashSet String) := do
   let inputs : Array (String × String) ← IO.ofExcept (fromJson? (← read
     (runtimeBuild/"tools_research_OwnedSelectionRuntime.dependencies")))
@@ -377,8 +387,34 @@ def main (args : List String) : IO Unit := do
     write (reports/"seed-generation-guard.json") monitor
     guard "fixed-sequence-seed-finalize" #["/usr/bin/env","EGGSHELL_DATA_ROOT="++(acquired/"data").toString,
       (directory/"controller-build/StudyMain").toString,"seed-finalize",acquired.toString,(cohort/"seed-ready").toString]
+  else if args == ["finish-seed-after-replay"] then
+    idle
+    checkedController
+    let monitor ← finished "fixed-sequence-persistent-replay"
+    let cohort := directory/"cohort"
+    let replies := ((← IO.FS.readFile (cohort/"persistent-replay/stdout.jsonl")).splitOn "\n").filter (!·.isEmpty)
+    check (replies.length == 1) "record every replay response before continuing"
+    let replay ← IO.ofExcept (Json.parse replies.head!)
+    check (replay.getObjValD "complete" == toJson true && replay.getObjValD "pending" == toJson (0 : Nat))
+      "native replay is incomplete"
+    let failed ← read (base/"fixed-sequence-seed-finalize.guard.json")
+    check (failed.getObjValD "state" == toJson "finished" && failed.getObjValD "exitCode" == toJson (1 : Nat) &&
+      failed.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "previous finalization is not retired"
+    let previous ← IO.ofExcept (Json.parse (← IO.FS.readFile (cohort/"seed-ready/finish-replay/step-0/stdout")))
+    write (reports/"native-replay-recovery.json") (Json.mkObj [
+      ("previousGuard",failed),("previousReplay",previous),("replay",replay),("guard",monitor),
+      ("workerRequests",toJson replies.length),("continuationResumeDemonstrated",toJson false),
+      ("modelCalls",toJson (0 : Nat)),("runtimeChanged",toJson false),
+      ("earlierIncompleteReplyWasNotProofOfMissingInput",toJson true)])
+    let target := cohort/"seed-ready-resumed"
+    write (cohort/"selected-ready.json") (Json.mkObj [
+      ("directory",toJson target.toString),("guardTag",toJson "fixed-sequence-seed-finalize-resumed")])
+    let acquired := cohort/"study"/(← selectedSeed)
+    guard "fixed-sequence-seed-finalize-resumed" #["/usr/bin/env","EGGSHELL_DATA_ROOT="++(acquired/"data").toString,
+      (directory/"controller-build/StudyMain").toString,"seed-finalize",acquired.toString,target.toString]
   else if args == ["audit-seed"] then
-    discard <| finished "fixed-sequence-seed-finalize"
+    let (ready,tag) ← seedPreparation
+    discard <| finished tag
     let cohort := directory/"cohort"
     let acquired := cohort/"study"/(← selectedSeed)
     let definitions := reports/"task-definitions.json"
@@ -386,14 +422,15 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile definitions (← IO.FS.readFile (base.parent.get!/"task-definitions.json"))
     guard "fixed-sequence-seed-audit" #["/usr/bin/env","EGGSHELL_DATA_ROOT="++(acquired/"data").toString,
       (directory/"controller-build/StudyMain").toString,"seed-audit",acquired.toString,definitions.toString,
-      (cohort/"seed-ready/ready.egg").toString,(cohort/"seed-source-audit.json").toString]
+      (ready/"ready.egg").toString,(cohort/"seed-source-audit.json").toString]
   else if args == ["read-seed"] then
     discard <| finished "fixed-sequence-seed-audit"
     let cohort := directory/"cohort"
     let plan ← read (cohort/((← selectedSeed)++".plan.json"))
     let workspace ← IO.ofExcept (plan.getObjValAs? String "workspace")
+    let (ready,_) ← seedPreparation
     guard "fixed-sequence-seed-read" #[(directory/"controller-build/StudyMain").toString,"read-coverage",
-      (cohort/"seed-ready/ready.egg").toString,workspace,(reports/"task-definitions.json").toString,
+      (ready/"ready.egg").toString,workspace,(reports/"task-definitions.json").toString,
       (cohort/"seed-read-coverage.json").toString]
   else if args == ["history-seed"] then
     discard <| finished "fixed-sequence-seed-read"
@@ -401,6 +438,40 @@ def main (args : List String) : IO Unit := do
     guard "fixed-sequence-seed-history" #[(directory/"controller-build/StudyMain").toString,"history","freeze",
       (cohort/"study"/(← selectedSeed)/"work.egg").toString,
       (cohort/"study"/(← selectedSeed)/"data").toString,(cohort/"seed-history").toString]
+  else if args == ["record-accepted-seed"] then
+    let cohort := directory/"cohort"
+    let source ← read (cohort/"seed-source-audit.json")
+    let coverage ← read (cohort/"seed-read-coverage.json")
+    check (source.getObjValD "seedAccepted" == toJson true &&
+      source.getObjValD "nativeJournalComplete" == toJson true &&
+      coverage.getObjValD "publicationUnchanged" == toJson true &&
+      coverage.getObjValD "conflictingCanonicalRows" == toJson (0 : Nat) &&
+      coverage.getObjValD "payloadMismatches" == toJson (#[] : Array Json)) "source audit is incomplete"
+    let availability ← IO.ofExcept (source.getObjValAs? (Array Json) "availability")
+    let mut topics := #[]
+    for row in availability do
+      let frozen := row.getObjValD "frozenEvidence"
+      let units ← IO.ofExcept (frozen.getObjValAs? (Array Json) "units")
+      topics := topics.push (Json.mkObj [
+        ("topic",row.getObjValD "topic"),("fullyStoredUnits",toJson units.size),
+        ("fullRequirementNames",toJson (units.map (·.getObjValD "names"))),
+        ("notFullyStored",frozen.getObjValD "initiallyUnavailable")])
+    let (ready,_) ← seedPreparation
+    let path := reports/"accepted-seed.json"
+    check (!(← path.pathExists)) "keep the accepted-source record"
+    write path (Json.mkObj [
+      ("runtime",source.getObjValD "runtime"),("model",source.getObjValD "model"),
+      ("effort",source.getObjValD "effort"),("provider",source.getObjValD "provider"),
+      ("seedAccepted",toJson true),("sourceFiles",source.getObjValD "sourceFiles"),
+      ("nativeStarts",source.getObjValD "nativeStarts"),("nativeFinishes",source.getObjValD "nativeFinishes"),
+      ("originalDocuments",source.getObjValD "originalDocuments"),("originalRows",source.getObjValD "originalRows"),
+      ("sourceAuditSha256",toJson (← hash (cohort/"seed-source-audit.json"))),
+      ("readCoverageSha256",toJson (← hash (cohort/"seed-read-coverage.json"))),
+      ("readiness",← read (ready/"view-readiness.json")),("topics",toJson topics),
+      ("partialStoredEvidenceAssessedSeparatelyAtDelivery",toJson true),
+      ("seedUsage",(← read (reports/"seed-generation.json")).getObjValD "usage"),
+      ("sourceAuditReadHandoffBodies",source.getObjValD "handoffBodiesRead"),
+      ("productionAdoption",toJson false)])
   else if args == ["template"] then
     discard <| finished "fixed-sequence-seed-history"
     let cohort := directory/"cohort"

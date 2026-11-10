@@ -1,8 +1,8 @@
 # One frozen controller for seed and both rounds
 
 Product runtime: `dd53c89bc450b66b58dd57d104ccbc82f32ca6345fa9666125e7feb03017000e`.
-This remains an isolated, unadopted candidate. New seed and six actual model
-stages are not complete.
+This remains an isolated, unadopted candidate. A new seed is accepted; the six
+actual model stages are incomplete.
 
 The controller preserves every source imported by the product, including
 helpers under `tools.research`. New research control is added separately.
@@ -46,8 +46,8 @@ The predeclared contract was aligned before generation: 98% original delivery,
 5,000,000,000 bytes aggregate memory and sixteen local clients. The full matched
 comparison still requires three repetitions; a one-pass pilot cannot authorize
 adoption. Acquisition uses these fixed hashes, gpt-5.6-luna/xhigh and a
-presealed five-million-token/15-minute bound. No seed has yet been accepted;
-the six model stages remain incomplete.
+presealed five-million-token/15-minute bound. The accepted acquisition below
+is the first accepted seed; the six model stages remain incomplete.
 
 The first acquisition under this controller stopped at the 2 GiB disk floor
 after 384,863 ms. Its 70 completed hooks reported no failures, but there was no
@@ -72,3 +72,26 @@ selected product and no remaining owned processes. The next acquisition seals
 that corrected account-configuration hash. Runtime, controller, source, prompt,
 model, effort and token/time limits are unchanged. Each attempt has separate
 paths and receipts. Previous failure cost is separate from treatment comparisons.
+
+The next acquisition completed: **2,073,642 inclusive tokens**, 49 hooks with
+zero failures, exit zero and no owned processes. Native source audit accepts
+all 23 command start/finish/origin records. Independent stored-row inspection
+finds 4,118 rows, no payload mismatch and no conflicting canonical rows. Before
+delivery, DB-present required evidence is frozen to **3 / 5 / 5 units** for
+topics one through three. Each topic also has two requirements whose full
+range is not stored. Partially stored evidence is assessed separately from
+entirely absent evidence and must still be delivered.
+
+Off-hook replay initially returned incomplete after a sixty-second slice. The
+research controller rejected its zero committed-progress counter too early.
+The next request to the same frozen product completed replay; no answering
+model was called and no source DB was rebuilt. The worker was held open, but
+that request completed on its first reply, so this is **not** evidence of
+continuation resumption or a pool performance gain. The original finalization
+failure is retained. A new finalization directory passed with all source,
+shared-synaptic, private-journal and numerical views ready. Topic-one native
+preparation passed: all 3/3 fully stored units and 4/4 units including partial
+stored evidence were delivered. Two independent chats produced byte-identical
+bodies in 7,086 / 5,048 ms. An absent warning is excluded from success. The
+fresh answering-model control has started; completed paired stages remain
+zero of six. This preflight is not the actual model-input comparison.

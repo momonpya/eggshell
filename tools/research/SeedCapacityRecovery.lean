@@ -103,4 +103,23 @@ def main (args : List String) : IO Unit := do
     write path ((← read (cohort/"discovery.input.json"))
       |>.setObjVal! "output" (toJson (cohort/"discovery-isolated").toString))
     guard "fixed-sequence-isolated-hooks" #[controller.toString,"probe",path.toString]
-  else throw (IO.userError "account|retire|isolate-hooks|probe")
+  else if args == ["persistent-replay"] then
+    let acquired := cohort/"study/seed-3"
+    check ((← read (acquired/"result.json")).getObjValD "completed" == toJson true)
+      "completed durable acquisition required"
+    let directory := cohort/"persistent-replay"
+    check (!(← directory.pathExists)) "preserve replay evidence"
+    IO.FS.createDir directory
+    let plan ← read (cohort/"seed-3.plan.json")
+    let runtime ← IO.ofExcept ((← IO.ofExcept (plan.getObjVal? "runtime")).getObjValAs? String "path")
+    let thread ← read (acquired/"thread.json")
+    let session ← IO.ofExcept ((← IO.ofExcept (thread.getObjVal? "thread")).getObjValAs? String "id")
+    let request := cohort/"seed-ready/finish-replay/request.json"
+    IO.FS.writeFile (directory/"request.json") (← IO.FS.readFile request)
+    guard "fixed-sequence-persistent-replay" #["/usr/bin/env",
+      "EGGSHELL_DATA_ROOT="++(acquired/"data").toString,
+      "EGGSHELL_CONFIG="++(acquired/"config.toml").toString,
+      "CODEX_THREAD_ID="++session,"EGGSHELL_PROFILE=work","HF_HUB_OFFLINE=1","LEAN_NUM_THREADS=1",
+      "/bin/sh","-c","exec \"$1\" codex-worker index > \"$2\" 2> \"$3\"","eggshell-native-replay",
+      runtime,(directory/"stdout.jsonl").toString,(directory/"stderr").toString]
+  else throw (IO.userError "account|retire|isolate-hooks|probe|persistent-replay")
