@@ -17,7 +17,26 @@ their own cost records; they are not rolled into a per-question saving.
 
 Three remaining paired stages are incomplete. No aggregate or second-round
 claim is available. This table includes cached input within input, and includes
-reasoning within output exactly once. Topic one has no failed model attempt.
+reasoning within output exactly once. First-round topic one has no failed model attempt.
+
+The new second-round topic-one fresh control was interrupted by the presealed
+5,000,000-token limit. It observed **5,078,087 inclusive tokens** before
+interruption; final usage is unknown. This cost is retained as a lower bound,
+not discarded or counted as a completed fresh answer. No memory trial had
+started at that point. The complete independent six-pair pilot is therefore
+not achieved, and an exact campaign-wide token saving is unavailable.
+
+The [explicit continuation](reference-round.json) uses the completed first-round
+fresh control for each second-round topic, as previously permitted by the user.
+Every fresh plan field must match except its label and output/guard paths;
+source, prompt, model, account, environment and harness must be identical.
+These references are not three new independent repetitions. No model trial
+is retried, no token/time/resource limit is raised, and the answering controller
+and product stay fixed. Strict native source closure checks the selected
+completed reference and candidate. A separate history receipt marks reference
+reuse, the failed charged attempt, and comparison incompleteness explicitly.
+Any later reference-based reduction will be labelled as such, alongside this
+additional failed cost; it cannot authorize adoption.
 
 For topic one, fresh input/output is 4,867,798 / 20,787; memory is
 1,295,205 / 11,269. Cached input is 4,654,208 and 1,092,224 respectively.

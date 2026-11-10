@@ -3,6 +3,13 @@
 Product runtime: `dd53c89bc450b66b58dd57d104ccbc82f32ca6345fa9666125e7feb03017000e`.
 This remains an isolated, unadopted candidate. A new seed is accepted and the
 first three paired stages are closed. Three second-round stages are incomplete.
+The second-round fresh topic-one attempt hit its sealed token limit with
+5,078,087 observed tokens and unknown final usage. The [declared continuation](reference-round.json)
+reuses completed, identical-condition first-round fresh controls for the three
+remaining memory stages. It preserves the charged failure, calls no model
+retry, and marks comparison incompleteness separately from source-history
+closure. It is not an independently completed six-pair experiment. Native
+source closure, product checks and answering executable remain unchanged.
 
 The controller preserves every source imported by the product, including
 helpers under `tools.research`. New research control is added separately.

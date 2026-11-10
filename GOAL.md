@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-全体目標は未達。本体への採用0、現行/候補の有料比較0/18。現行の性能比較元はbyte-pages（SHA `534a92d6…`）、隔離した製品候補は[既存位置を保つ修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）。新seedからの単発pilotは3/6段階が保存監査まで完了し、2周目の題材1を準備中である。1周目の題材1/2/3は73.275%/94.890%/79.363%削減、実モデルへの全体保存根拠は3/3・5/5・5/5だった。16並行で数秒、80人の持続利用、全6段階の98%配送、反復した総token/品質の採用条件はまだ未達/未検証。
+全体目標は未達。本体への採用0、現行/候補の有料比較0/18。現行の性能比較元はbyte-pages（SHA `534a92d6…`）、隔離した製品候補は[既存位置を保つ修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）。新seedからの単発pilotは3段階が保存監査まで完了し、1周目の題材1/2/3は73.275%/94.890%/79.363%削減、実モデルへの全体保存根拠は3/3・5/5・5/5だった。2周目の題材1のfreshが500万token上限で中断し、観測5,078,087 tokenが下限・最終使用量不明である。独立した6対比較の完了とは数えない。[明示した継続手順](docs/candidates/stable-source-rows/sequence/reference-round.json)で1周目の同条件freshを参照し、記憶ありの2周目を進める。自動再試行と上限緩和はしない。16並行で数秒、80人の持続利用、全6段階の98%配送、反復した総token/品質の採用条件はまだ未達/未検証。
 
 製品と[回答モデルの制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は固定している。制御器の実リンク327 objectと製品全モジュールを含む298共通moduleを照合済み。単なる新規compile件数の監査は使わない。空DB・新chatの[受理済みseed](docs/candidates/stable-source-rows/sequence/accepted-seed.json)は2,073,642総token、49フック失敗0、23コマンドの開始/終了/portable originが対応し、原文4,118行の内容不一致・座標矛盾0。配送前に全体が保存された必要証拠を題材1/2/3で3/5/5項目に凍結し、部分保存と完全不在も別に評価する。
 

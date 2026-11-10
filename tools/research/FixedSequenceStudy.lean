@@ -140,6 +140,29 @@ def runGuardOnce (path : System.FilePath) : IO Unit := do
     discard <| command (directory/"controller-build/StudyMain").toString #["guard",path.toString]
   waitGuard (.mk record)
 
+def receipt (path : System.FilePath) : IO Json :=
+  return Json.mkObj [("path",toJson path.toString),("sha256",toJson (← hash path))]
+
+def sealedJson (path : System.FilePath) (value : Json) : IO Unit := do
+  if ← path.pathExists then check ((← read path) == value) "keep the existing continuation declaration"
+  else write path value
+
+/-- Reusing a completed fresh control does not create another independent
+repetition. Only labels and output/guard destinations may differ. -/
+def freshConditions (plan : Json) : Json :=
+  #["label","output","guardRecord"].foldl (fun row field => row.setObjVal! field Json.null) plan
+
+def freshArm (prepared : Json) : IO Json := do
+  let rows ← IO.ofExcept (prepared.getObjValAs? (Array Json) "arms")
+  let some row := rows.find? (fun row => row.getObjValD "arm" == toJson "fresh") |
+    throw (IO.userError "fresh control is absent")
+  return row
+
+def checkedJsonArtifact (value : Json) : IO Json := do
+  let path ← IO.ofExcept (value.getObjValAs? String "path")
+  check (value.getObjValD "sha256" == toJson (← hash (.mk path))) "sealed artifact changed"
+  read (.mk path)
+
 partial def main (args : List String) : IO Unit := do
   if args == ["controller"] then
     idle
@@ -684,6 +707,115 @@ partial def main (args : List String) : IO Unit := do
     check (!(← stage.pathExists)) "incomplete stage cleanup did not finish"
     write (reports/"stage-2-preparation-failure.json") failure
     guard (← stagePreparationTag 2) #[executor,"stage-prepare",input.toString,← hash input]
+  else if args == ["declare-reference-round"] then
+    idle
+    checkedController
+    let cohort := directory/"cohort"
+    let failed := cohort/"stage-4/fresh/trial"
+    let failure ← read (failed/"failure.json")
+    let monitor ← read (cohort/"stage-4/fresh/trial.guard.json")
+    check (failure.getObjValD "completed" == toJson false &&
+      failure.getObjValD "runError" == toJson "observed inclusive token limit reached; retain all charged usage" &&
+      monitor.getObjValD "state" == toJson "finished" && monitor.getObjValD "exitCode" == toJson (1 : Nat) &&
+      monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "inspect the stopped fresh control before continuation"
+    let mut controls := #[]
+    for topic in [1:4] do
+      let stage := cohort/s!"stage-{topic}"
+      check ((← read (stage/"closed/closed.json")).getObjValD "completed" == toJson true)
+        "only a completed original control may be reused"
+      let arm ← freshArm (← read (stage/"stage.json"))
+      let plan ← checkedJsonArtifact (arm.getObjValD "plan")
+      let output ← IO.ofExcept (plan.getObjValAs? String "output")
+      let result ← read (.mk output/"result.json")
+      check (result.getObjValD "completed" == toJson true &&
+        (result.getObjValD "usage").getObjValD "unknownFinalUsage" == toJson false &&
+        (result.getObjValD "usage").getObjValD "protocolPassed" == toJson true) "completed fresh usage required"
+      controls := controls.push (Json.mkObj [("topic",toJson topic),("arm",arm),
+        ("completedResult",← receipt (.mk output/"result.json"))])
+    let failedCost := Json.mkObj [("failure",← receipt (failed/"failure.json")),
+      ("usage",failure.getObjValD "usage"),("budgetStop",← receipt (failed/"budget-stop.json")),
+      ("guard",← receipt (cohort/"stage-4/fresh/trial.guard.json")),
+      ("finalUsageUnknown",toJson true),("notAnExactNetSaving",toJson true)]
+    let declaration := Json.mkObj [("purpose",toJson "pilot with reused first-round fresh references"),
+      ("stages",toJson #[4,5,6]),("controls",toJson controls),("failedAttempts",toJson #[failedCost]),
+      ("automaticModelRetries",toJson (0 : Nat)),("independentPairedRepetition",toJson false),
+      ("adoptionEligible",toJson false),("exactCampaignTokenTotalKnown",toJson false),
+      ("productRuntimeUnchanged",toJson true),("answeringRunnerUnchanged",toJson true)]
+    sealedJson (cohort/"reference-round.json") declaration
+    sealedJson (reports/"reference-round.json") declaration
+  else if args == ["continue-reference-round"] then
+    checkedController
+    let cohort := directory/"cohort"
+    let protocolPath := cohort/"reference-round.json"
+    let protocol ← read protocolPath
+    check (protocol == (← read (reports/"reference-round.json")) &&
+      protocol.getObjValD "adoptionEligible" == toJson false &&
+      protocol.getObjValD "automaticModelRetries" == toJson (0 : Nat)) "explicit pilot continuation required"
+    let controls ← IO.ofExcept (protocol.getObjValAs? (Array Json) "controls")
+    for number in [4:7] do
+      let stage := cohort/s!"stage-{number}"
+      let mark := fun phase => write (reports/"sequence-progress.json") (Json.mkObj [
+        ("stage",toJson number),("phase",toJson (phase : String)),
+        ("freshPolicy",toJson "reused first-round control"),("comparisonCompleted",toJson false),
+        ("automaticRetries",toJson (0 : Nat)),("adopted",toJson false)])
+      mark "preparing"
+      let settings := base/((← stagePreparationTag number)++".guard-settings.json")
+      if !(← settings.pathExists) then main ["stage",toString number]
+      runGuardOnce settings
+      let prepared ← read (stage/"stage.json")
+      let topic := (number-1)%3+1
+      let some control := controls.find? (fun row => row.getObjValD "topic" == toJson topic) |
+        throw (IO.userError "missing declared completed control")
+      let reference := control.getObjValD "arm"
+      let oldPlan ← checkedJsonArtifact (reference.getObjValD "plan")
+      discard <| checkedJsonArtifact (control.getObjValD "completedResult")
+      let intended ← freshArm prepared
+      let newPlan ← checkedJsonArtifact (intended.getObjValD "plan")
+      check (freshConditions oldPlan == freshConditions newPlan)
+        "source, question, model, account, harness or environment differs from the completed fresh reference"
+      let arms ← IO.ofExcept (prepared.getObjValAs? (Array Json) "arms")
+      let referenced := prepared.setObjVal! "arms" (toJson (arms.map fun row =>
+        if row.getObjValD "arm" == toJson "fresh" then reference else row))
+      let referenced := referenced.setObjVal! "freshIsReused" (toJson true)
+        |>.setObjVal! "comparisonCompleted" (toJson false)
+        |>.setObjVal! "continuationProtocol" (← receipt protocolPath)
+        |>.setObjVal! "derivedFrom" (← receipt (stage/"stage.json"))
+      let manifest := stage/"stage-reference.json"
+      sealedJson manifest referenced
+      let some candidate := arms.find? (fun row => row.getObjValD "arm" == toJson "candidate") |
+        throw (IO.userError "candidate arm is absent")
+      mark "candidate:generation"
+      let selected ← checkedJsonArtifact (candidate.getObjValD "settings")
+      let path ← IO.ofExcept ((candidate.getObjValD "settings").getObjValAs? String "path")
+      check (selected.getObjValD "record" == toJson (stage/"candidate/trial.guard.json").toString)
+        "candidate guard destination changed"
+      runGuardOnce (.mk path)
+      let plan ← checkedJsonArtifact (candidate.getObjValD "plan")
+      let output ← IO.ofExcept (plan.getObjValAs? String "output")
+      let result ← read (.mk output/"result.json")
+      check (result.getObjValD "completed" == toJson true &&
+        (result.getObjValD "usage").getObjValD "unknownFinalUsage" == toJson false &&
+        (result.getObjValD "usage").getObjValD "protocolPassed" == toJson true)
+        "candidate generation incomplete; keep costs without retrying"
+      mark "closing-source-history"
+      let tag := s!"fixed-sequence-stage-{number}-close-reference"
+      let closureSettings := base/(tag++".guard-settings.json")
+      if !(← closureSettings.pathExists) then
+        guard tag #[(← preparationExecutor),"stage-close",manifest.toString,← hash manifest,
+          (stage/"reference-closure").toString]
+      runGuardOnce closureSettings
+      let nativePath := stage/"reference-closure/closed.json"
+      let native ← read nativePath
+      check (native.getObjValD "completed" == toJson true) "native source history closure failed"
+      let closed := native.setObjVal! "comparisonCompleted" (toJson false)
+        |>.setObjVal! "oneRecordedAttemptPerArm" (toJson false)
+        |>.setObjVal! "freshIsReused" (toJson true)
+        |>.setObjVal! "nativeClosure" (← receipt nativePath)
+        |>.setObjVal! "continuationProtocol" (← receipt protocolPath)
+        |>.setObjVal! "failedAttempts" (protocol.getObjValD "failedAttempts")
+      IO.FS.createDirAll (stage/"closed")
+      sealedJson (stage/"closed/closed.json") closed
+      mark "history-completed-with-reference-control"
   else if args == ["run-six"] then
     checkedController
     let progress := reports/"sequence-progress.json"

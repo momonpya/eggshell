@@ -1,5 +1,13 @@
 # Fresh seed and two rounds
 
+Current execution is recorded in the [fixed-runtime sequence](../stable-source-rows/sequence/README.md)
+and its [per-topic results](../stable-source-rows/sequence/pilot-results.md).
+The accepted seed uses product `dd53c89b…`; the first three model pairs and
+their source-history audits have completed. The second round is running.
+This is an isolated single-repetition pilot, not an adopted token improvement.
+The acquisition failures below are earlier checkpoints retained for their
+failure costs and diagnosis, not the current execution state.
+
 The local target is sixteen parallel clients within 5 GB and a few seconds.
 Eighty-user sustained use remains the architectural goal; this Mac is not
 required to run an eighty-client load test.
@@ -11,14 +19,14 @@ Use `gpt-5.6-luna / xhigh` consistently for seed, memory and fresh arms.
 The initial isolated runtime was `36612afeda566b5bb93cdfaaaa1d2f766b5a2dfe4e45df86c5757b057aa9ecab`.
 Its source-only recovery passed, but the read-only stage exposed a product
 storage-location bug. The [located lexical input candidate](../located-lexical-input/README.md)
-is now selected for a fresh cohort. Its complete synthetic lifecycle, recovery
+was selected for the earlier cohort. Its complete synthetic lifecycle, recovery
 and read-only gate passed (2/2 originals, 2.321 s); this is not a real LLVM seed.
 The first seed request failed authentication, with unknown final usage retained.
 A new empty-DB retry used live credentials with the same frozen runtime and
 controller. It completed generation with 3,984,226 inclusive tokens and 65
 successful hooks, but original-read posting publication and `egg keep` failed.
-It is not an accepted seed. No successful new seed or six-stage token result is
-claimed; the native source writer is diagnosed before another model trial.
+It was not an accepted seed. The native source writer was diagnosed before
+the later accepted acquisition linked above.
 The unadopted partial pool is excluded. Build the controller against
 this runtime's exact product source closure before auditing or writing the new
 DB; an old controller's successful catalog request is not a codec audit.
@@ -38,7 +46,7 @@ omitted nine otherwise unused service modules. Explicit controller imports
 closed that coverage gap; product sources were unchanged. Both the initial
 failure and successful audit remain recorded.
 
-Current status: account catalog, matching product-source audits and the isolated
+Earlier checkpoint: account catalog, matching product-source audits and the isolated
 plugin lifecycle/recovery gate passed. Authenticated seed generation completed,
 but source finalization failed; actual six answering-model stages have not run.
 Eight reviewed hooks were registered in
