@@ -8,7 +8,13 @@
 
 終了済みのDB作業コピー・cache・中間snapshotを3回に分けて16,175 file・4,505,744,412論理bytes削除し、archiveは作っていない。最終履歴はnativeの独立forkで原文・利用履歴・受領台帳を検証済み。共通seed入力と次の性能調査用の最終snapshotだけを残し、現行3実行体と保持履歴のSHAを前後照合した。使用量・実入力・回答・監査記録は保持する。削除した作業DBや中間checkpointを再開できるとは扱わない。[結果](docs/candidates/stable-source-rows/sequence/pilot-results.md)。
 
-次はこの6本文を固定した回帰条件にし、16並行で数秒・5GB以内へ向けた性能調査へ戻る。poolは、共有不変snapshotを借りて小さい要求からCPU処理を始め、I/O待ちをCPU workerへ持ち込まない所有境界として検討する。選択済みの大きいIRを後からpoolへ渡した前案は小さい速度差しかなくRSS改善もなかったので再投入しない。各処理を移す前に実profileと読み書きの境界を確認し、本文・認定・3辺・ACKを保つ隔離比較で判断する。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
+最終snapshotによる[16並行の性能調査](docs/candidates/snapshot-scheduling/README.md)を実施した。旧6段階はDB headが異なるため、新しい最終headで配送前の必要根拠と3基準本文を凍結し、別chatで本文一致を確認した。このheadでは全体保存18/18・部分保存を含め19/19が基準本文にあり、製品core・回答モデルは変更していない。native計測器は331 object・製品全core・共通301 moduleのsource照合を通過した。
+
+所有publisherのCPU標本付き4並行は全件6.622秒。観測を外した事前固定4/16並行は全件5.942/15.639秒で、全20件が本文byte一致・意味検索・シナプス・ACK成功、原典不変、監督処理も正常終了した。関連RSS標本最大3,887,728KiB、40/80並行は実行していない。16並行で数秒は未達。各queryの既存private page frontで1,627〜1,905 missが同じ題材ごとに繰り返され、typed/検証済みpage cacheが存在する一方、満杯時の全消去と固定seedからの再生成がある。CPU標本はrouting/PageMap/codec/digestの経路を示すが、遅延全体の原因割合や修復効果は未確定である。検査2〜3ms・view0ms・追加準備約0.1秒を省くだけの修正には戻らない。
+
+次は既存page cacheと出版済みroutingの準備を、byte境界付きの不変なproject imageとして再利用する経路を優先する。新たな同種cacheや無制限の世代保持を足さず、scope・完全なpage参照・検証済み型・read trace・破損拒否を保つ。poolはそのimageを借りる小さな要求からCPU処理を始め、I/O待ちを持ち込まない所有境界として条件付きで検討する。選択済みの大きいIRだけをpoolへ渡した旧案と、dense/wideで悪化した単純なcue bucketを再投入しない。本文・認定・3辺・ACKを保った同一snapshotの隔離比較で性能を確認するまで採用しない。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
+
+終了した今回の補助native/source tree 2,374項目・349,886,010論理bytesもarchiveせず削除した。symlinkの参照先は辿らず、現行製品・2制御器・保持履歴・使用中の性能fixtureのSHAを前後照合した。冷えた再生とwarmでpublisherの5分idle期限を跨いだ初回診断、observerが遅れた2回目は正常な性能結果へ混ぜていない。修正したLean helperは型検査済みだがnative再実行はしておらず、正常な4/16試験には固定製品に既存のcontrollerを使った。完了済みのbuild修復・退役コマンドも計測制御コードから除いた。
 
 製品と[回答モデルの制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は固定している。制御器の実リンク327 objectと製品全モジュールを含む298共通moduleを照合済み。単なる新規compile件数の監査は使わない。空DB・新chatの[受理済みseed](docs/candidates/stable-source-rows/sequence/accepted-seed.json)は2,073,642総token、49フック失敗0、23コマンドの開始/終了/portable originが対応し、原文4,118行の内容不一致・座標矛盾0。配送前に全体が保存された必要証拠を題材1/2/3で3/5/5項目に凍結し、部分保存と完全不在も別に評価する。
 
