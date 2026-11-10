@@ -18,6 +18,12 @@
 
 観測器は2objectだけをbuildし、既定IO actionが従来と同じことを標準公理で確認した。5件の観測器監査失敗を正常hookと分けて保持した。終了したsource/build/実行体、性能fixtureのsession・台帳・receiptなど3990項目・175,189,448論理bytesはarchiveせず削除し、現行実行体・head・正本本文/sourceと使用中project cache/モデルを保持した。現行compiler入力3120件に退役先への依存がないことも確認した。
 
+[復号後の再符号化を除く候補](docs/candidates/canonical-codec/README.md)をLeanで分離実装した。実Wire.Codecについて成功した復号が入力全体を一意に復元することを、整数・UTF-8・blob・list等の合成で証明し、ページとbindingのエラー/IO/32KiB上限も元と等しいことを閉じた。標準3公理だけで、sorry/native_decide/Z3なし。実DBの128ページ/1024bindingと破損を含む1234対照が一致し、部品はページ635〜669→291〜313ms、binding281〜285→153〜155msだった。24反復の部品値をhookへ外挿しない。
+
+候補`7cc1432d…`は326実objectと全source/literalを検査し、Snapshot.loadとBindingPageScanが新復号器を実際に呼ぶことを確認した。変えたcoreはPageMap/SynapseIndexだけ。元`1153215e…`との同一最終snapshot・固定4/16のABBAは、16並行が元14.036/13.857秒、候補12.872/13.411秒で、平均5.772%短縮。全99本文/ACK、測定wave84/84の意味検索/シナプス、原典不変と正常終了が成立した。基準本文の全体保存18/18・部分込み19/19を保つが、モデル両周や一般98%へ拡張しない。候補RSS最大3,853,872KiBで削減は未確認。最初の専用cache再warm138.543秒、以後1.259〜1.261秒を別記する。pool・モデル・順位・認定は変更せず、採用0・モデル比較0/18のまま。16並行数秒/p99/80人継続/成長DB/NASは未達である。
+
+終了した部品と99clientの状態・重複本文・未使用prototypeなど10,187項目/438,162,719論理bytesをarchiveせず削除した。現行候補/比較元・2制御器・原DB/正本本文・使用中cache/modelを保持し、4701現行compiler入力と保護SHAを確認した。部品2倍が全体では約6%に留まるため、同じparser小修正を繰り返さず、選択と原文対応の質問固有IRを不変なproject情報から分ける境界へ進む。
+
 [不変page集合を共有する候補](docs/candidates/quiescent-page-base/README.md)をLeanで隔離実装した。利用中はbaseを固定し、親が検索actorと子taskをjoinした後だけfrontを返し、coordinatorが終了済みfrontを併合して無利用時に次baseを公開する。利用中base・更新待ちcache・既存image seedを元の128MiB公開page枠に収める等式、元image不変など6法則を標準公理だけで確認した。native部品ではowner mutex保持中のread、scope/full ref拒否、独立front、epoch更新、cancel/終了済み要求、元の値とread trace、出版後の新旧値を確認した。324 native objectと全変更source/埋込literalを照合し、製品変更は予定した4 module、追加は検査器1 module、既存module除去0である。
 
 ただし候補`19e6b870…`は不採用。同一snapshotのA1は4/16全件5.989/15.431秒で本文・意味検索・シナプス・ACKが成功したが、B1は最初のprimeが15.420秒・本文不一致・synaptic complete=falseで停止した。先頭pageを512枠に固定する新policyが後続のhot pageを入れられず、missが約1,700から38,557へ増えた。共有base hit106,936でも埋められていない。B2/A2・候補16並行・回答モデルは未実行。元DBは不変、候補の独立した原文配送率は未監査なので0%や98%とは報告しない。次は元の回転するhot frontを保つ構成へ修正し、同じ失敗policyを再投入しない。

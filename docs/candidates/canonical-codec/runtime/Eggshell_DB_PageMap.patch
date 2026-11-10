@@ -1,0 +1,39 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/register-rounds-runtime/source/Eggshell/DB/PageMap.lean	2026-11-10 22:05:11
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/canonical-decoder-runtime/source/Eggshell/DB/PageMap.lean	2026-11-11 02:33:54
+@@ -3,0 +4 @@
++public import tools.research.CanonicalCodec
+@@ -60,0 +62,34 @@
++
++namespace CanonicalDecoder
++open Wire
++
++theorem row_codec_canonical : rowCodec.Canonical :=
++  text_canonical.product byteBlob_canonical.optional
++
++theorem ref_codec_canonical : refCodec.Canonical := by
++  unfold refCodec
++  apply Codec.Canonical.iso
++  · exact natural_canonical.product (natural_canonical.product (text_canonical.product
++      (text_canonical.product (text_canonical.product (natural_canonical.product natural_canonical)))))
++  · rintro ⟨a,b,c,d,e,f,g⟩; rfl
++
++theorem page_codec_canonical : pageCodec.Canonical := by
++  unfold pageCodec
++  apply Codec.Canonical.iso
++  · exact row_codec_canonical.list.sum ref_codec_canonical.list
++  · intro value; cases value <;> rfl
++
++def decodeWithoutEncode (bytes : ByteArray) : Except String Page :=
++  pageCodec.payload bytes "trailing bytes in index page"
++
++theorem decode_without_encode_exact (bytes : ByteArray) : decodeWithoutEncode bytes = decode bytes :=
++  page_codec_canonical.payload_exact bytes "trailing bytes in index page" "noncanonical index page"
++
++#print axioms page_codec_canonical
++#print axioms decode_without_encode_exact
++
++@[csimp] theorem decode_compiled : @decode = @decodeWithoutEncode := by
++  funext bytes
++  exact (decode_without_encode_exact bytes).symm
++end CanonicalDecoder
++

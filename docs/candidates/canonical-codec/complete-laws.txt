@@ -1,0 +1,16 @@
+/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/CanonicalCodec.lean:238:31: error: unsolved goals
+case case1
+bytes : ByteArray
+index : Nat
+seen : List UInt8
+inside : index < bytes.size
+ih :
+  ByteArray.toList.loop bytes (index + 1) (bytes.get! index :: seen) =
+    (bytes.get! index :: seen).reverse ++ List.drop (index + 1) bytes.data.toList
+bound : index < bytes.data.toList.length
+inData : index < bytes.data.size
+⊢ bytes.data[index]! = bytes.data[index]
+'Eggshell.DB.Wire.natural_canonical' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.DB.Wire.text_canonical' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.DB.Wire.Codec.Canonical.list' depends on axioms: [propext, Quot.sound]
+'Eggshell.DB.Wire.Codec.Canonical.payload_exact' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]

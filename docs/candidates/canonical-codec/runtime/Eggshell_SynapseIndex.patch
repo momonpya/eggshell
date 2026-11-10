@@ -1,0 +1,51 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/register-rounds-runtime/source/Eggshell/SynapseIndex.lean	2026-11-10 22:05:11
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/canonical-decoder-runtime/source/Eggshell/SynapseIndex.lean	2026-11-11 02:33:54
+@@ -8,0 +9,3 @@
++public import tools.research.CanonicalBindings
++import all Init.System.IO
++import all Init.System.ST
+@@ -193,0 +197,44 @@
++
++namespace CanonicalDecoder
++open DB.Wire
++
++private theorem io_ok_bind (value : α) (next : α → IO β) :
++    ((pure value : IO α) >>= next) = next value := rfl
++private theorem io_error_bind (error : IO.Error) (next : α → IO β) :
++    ((throw error : IO α) >>= next) = (throw error : IO β) := rfl
++private theorem io_ok_map (value : α) (next : α → β) :
++    next <$> (pure value : IO α) = pure (next value) := rfl
++private theorem io_error_map (error : IO.Error) (next : α → β) :
++    next <$> (throw error : IO α) = (throw error : IO β) := rfl
++attribute [local simp] io_ok_bind io_error_bind io_ok_map io_error_map
++
++theorem binding_codec_canonical : bindingCodec.Canonical := by
++  unfold bindingCodec
++  apply Codec.Canonical.iso
++  · exact BindingValueCodec.entry_canonical
++  · rintro ⟨a,b⟩; rfl
++
++def decodeWithoutEncode (bytes : ByteArray) : IO StoredBinding := do
++  unless bytes.size ≤ 32768 do throw (IO.userError "stored binding exceeds its metadata bound")
++  let (stored,tail) ← IO.ofExcept (bindingCodec.decode bytes.toList)
++  unless tail.isEmpty do throw (IO.userError "noncanonical binary binding")
++  return stored
++
++theorem decode_without_encode_exact (bytes : ByteArray) : decodeWithoutEncode bytes = decodeBinding bytes := by
++  unfold decodeWithoutEncode decodeBinding
++  cases parsed : bindingCodec.decode bytes.toList with
++  | error message => simp [IO.ofExcept]
++  | ok pair =>
++    rcases pair with ⟨value,tail⟩
++    cases tail with
++    | nil =>
++      simp [IO.ofExcept,binding_codec_canonical.full bytes value parsed,byteArray_beq_self]
++    | cons byte rest => simp [IO.ofExcept]
++
++#print axioms decode_without_encode_exact
++
++@[csimp] theorem decode_compiled : @decodeBinding = @decodeWithoutEncode := by
++  funext bytes
++  exact (decode_without_encode_exact bytes).symm
++end CanonicalDecoder
++

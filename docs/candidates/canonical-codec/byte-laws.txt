@@ -1,0 +1,37 @@
+/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/CanonicalCodec.lean:238:31: error: unsolved goals
+case case1
+bytes : ByteArray
+index : Nat
+seen : List UInt8
+inside : index < bytes.size
+ih :
+  ByteArray.toList.loop bytes (index + 1) (bytes.get! index :: seen) =
+    (bytes.get! index :: seen).reverse ++ List.drop (index + 1) bytes.data.toList
+bound : index < bytes.data.toList.length
+⊢ bytes.data[index]! = bytes.data[index]
+/Users/ovm/.codex/worktrees/hook-deadline-baseline/eggshell/tools/research/CanonicalCodec.lean:283:21: error: unsolved goals
+case ok.cons
+α : Type
+codec : Codec α
+canonical : codec.Canonical
+bytes : ByteArray
+trailing noncanonical : String
+value : α
+byte : UInt8
+rest : List UInt8
+parsed : codec.decode bytes.toList = Except.ok (value, byte :: rest)
+⊢ (match MonadExceptOf.throw trailing with
+    | Except.error err => Except.error err
+    | Except.ok v => pure value) =
+    match MonadExceptOf.throw trailing with
+    | Except.error err => Except.error err
+    | Except.ok v =>
+      if ((codec.encode value).toByteArray == bytes) = true then pure value
+      else
+        match MonadExceptOf.throw noncanonical with
+        | Except.error err => Except.error err
+        | Except.ok v => pure value
+'Eggshell.DB.Wire.natural_canonical' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.DB.Wire.text_canonical' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Eggshell.DB.Wire.Codec.Canonical.list' depends on axioms: [propext, Quot.sound]
+'Eggshell.DB.Wire.Codec.Canonical.payload_exact' depends on axioms: [propext, sorryAx, Classical.choice, Quot.sound]
