@@ -108,3 +108,9 @@ source head, project read-cache and model assets are retained. Full raw symbol
 dumps are replaced by their digests and the checked compact native branch
 record. The retired executable is not available for replay; source helpers,
 the exact patch and audits remain available to regenerate it.
+
+The one-off source-copy cleanup, function-candidate rewrite and incident
+recovery commands are removed from the controller after completion. Commit
+`e11180b9` retains the exact executed controller for the recorded attempts.
+The current controller keeps the ordinary build/proof/audit/comparison and
+retirement commands; its Lean check passes without rerunning the product.

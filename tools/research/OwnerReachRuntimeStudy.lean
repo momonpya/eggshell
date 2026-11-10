@@ -37,55 +37,6 @@ partial def retainedLinks (path : System.FilePath) (retired : Array System.FileP
     for entry in ← path.readDir do total := total+(← retainedLinks entry.path retired)
     return total
   return 1
-def retireSources : IO Unit := do
-  idle
-  check (!(← (records/"retired-sources.json").pathExists)) "preserve retirement evidence"
-  let mut retired := #[]
-  for entry in ← base.readDir do
-    if entry.fileName.endsWith "-source" && (← entry.path.symlinkMetadata).type == .dir then
-      retired := retired.push entry.path
-  let kept := #[parentBuild/"StudyMain",base/"current-six/stable-source-rows/build/StudyMain",
-    base/"current-six/fixed-sequence/controller-build/StudyMain",base/"current-six/fixed-sequence/preparation-closure-build/StudyMain",
-    base/"byte-pages-prefix/libexec/eggshell"]
-  let before ← kept.mapM hash
-  let mut checked := 0
-  let mut libraries := #[]
-  for directory in #[parentBuild/"lib",base/"current-six/stable-source-rows/build/lib",
-      base/"current-six/fixed-sequence/controller-build/lib",base/"current-six/fixed-sequence/preparation-closure-build/lib",
-      base/"study-local-lib",base/"owner-reach-proof/lib"] do
-    if ← directory.pathExists then
-      checked := checked+(← retainedLinks directory retired)
-      libraries := libraries.push directory.toString
-  let mut deleted := #[]
-  for target in retired do
-    let count ← removeOwned target
-    deleted := deleted.push (target.toString,count.1,count.2)
-  check ((← kept.mapM hash) == before) "protected executable changed"
-  write (records/"retired-sources.json") (Json.mkObj [("deleted",toJson deleted),
-    ("activeInputsChecked",toJson checked),("activeLibraries",toJson libraries),("retainedInputs",toJson (kept.zip before)),
-    ("protectedHashesUnchanged",toJson true),("archiveCreated",toJson false)])
-def retireObsoleteWaves : IO Unit := do
-  idle
-  check (!(← (records/"retired-obsolete-waves.json").pathExists)) "preserve retirement evidence"
-  let common ← read (base/"snapshot-scheduling/capacity-16-input.json")
-  let topics : Array Json ← IO.ofExcept (common.getObjValAs? (Array Json) "topics")
-  let mut kept := #[parentBuild/"StudyMain",base/"current-six/stable-source-rows/build/StudyMain"]
-  for topic in topics do kept := kept.push (.mk (← IO.ofExcept (topic.getObjValAs? String "body")))
-  let before ← kept.mapM hash
-  let mut deleted := #[]
-  for label in #["preflight"]++order do
-    discard <| clean ("winner-width-runtime-"++label)
-    let old := base/"winner-width-runtime"/label
-    let input ← read (base/"winner-width-runtime"/(label++"-input.json"))
-    check (input.getObjValD "topics" == common.getObjValD "topics" &&
-      input.getObjValD "project" == common.getObjValD "project") "old output owns a required input"
-    let evidence ← read (project/"docs/candidates/winner-width/runtime"/(label++".json"))
-    check (evidence.getObjValD "passed" == toJson true) "old successful wave record absent"
-    let count ← removeOwned old
-    deleted := deleted.push (old.toString,count.1,count.2)
-  check ((← kept.mapM hash) == before) "protected input changed"
-  write (records/"retired-obsolete-waves.json") (Json.mkObj [("deleted",toJson deleted),
-    ("retainedInputs",toJson (kept.zip before)),("protectedHashesUnchanged",toJson true),("archiveCreated",toJson false)])
 def replaceCount (text before after : String) (expected : Nat) : IO String := do
   check ((text.splitOn before).length == expected+1) ("unexpected binding count: "++before)
   return text.replace before after
@@ -104,30 +55,6 @@ def boundSource (original : String) : IO String := do
     "let reach := ReachBuilder.referenceIndex keys shapes" 3
   replaceCount text "let choices := memberChoices keys shapes reach member"
     "let choices := ReachBuilder.fromIndex keys shapes reach member" 3
-def rewire : IO Unit := do
-  idle
-  discard <| cleanBuild
-  check (!(← (root/"preflight").pathExists)) "function-returning candidate must not have run a hook trial"
-  for (name,copy) in [("handoff.patch","function-handoff.patch"),("runtime.json","function-runtime.json"),
-      ("native-binding.json","function-native-binding.json"),("consumer-symbols.txt","function-consumer-symbols.txt"),
-      ("axioms.txt","function-axioms.txt"),("refactor-axioms.txt","function-refactor-axioms.txt")] do
-    check (!(← (records/copy).pathExists)) "preserve earlier native audit"
-    IO.FS.rename (records/name) (records/copy)
-  let assembly ← command "/usr/bin/otool" #["-tvV",(build/"Eggshell_Handoff.o").toString]
-  let marker := "_l_Eggshell_Plugin_SharedRangeAdapter_ReachBuilder_exclusiveChooser:\n"
-  check ((assembly.splitOn marker).length == 2) "old callback constructor is ambiguous"
-  IO.FS.writeFile (records/"function-native.txt") (marker++String.intercalate "\n"
-    (((assembly.splitOn marker)[1]!.splitOn "\n").take 90))
-  write (records/"function-rejection.json") (Json.mkObj [("runtimeSha256",toJson (← hash (build/"StudyMain"))),
-    ("reason",toJson "native chooser takes member argument and passes unevaluated key callback;building buckets can be repeated by each bound instead of once before member traversal"),
-    ("hookCalls",toJson (0 : Nat)),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
-  let original ← IO.FS.readFile (parentBuild.parent.get!/"source/Eggshell/Handoff.lean")
-  let path := source/"Eggshell/Handoff.lean"
-  IO.FS.writeFile path (← boundSource original)
-  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-u",
-    (parentBuild.parent.get!/"source/Eggshell/Handoff.lean").toString,path.toString]}
-  check (patch.exitCode == 1) "expected explicit data index binding"
-  IO.FS.writeFile (records/"handoff.patch") patch.stdout
 def refactorProof (label : String) : IO Unit := do
   discard <| cleanBuild
   check (!label.isEmpty && label.toList.all (fun c => c.isAlphanum || c == '-')) "fresh proof label required"
@@ -320,75 +247,6 @@ def retireFinished (label : String) : IO Unit := do
   check ((← kept.mapM hash) == hashes) "protected runtime or head changed"
   write (records/(label++"-retired.json")) (Json.mkObj [("clients",toJson clients.size),("deleted",toJson deleted),
     ("protectedInputs",toJson (kept.zip hashes)),("protectedHashesUnchanged",toJson true),("archiveCreated",toJson false)])
-def recoverSpace : IO Unit := do
-  idle
-  check (!(← (records/"a-first-attempt.json").pathExists)) "only one recorded space recovery is allowed"
-  let failed ← read (base/"owner-reach-runtime-b-second.guard.json")
-  check (failed.getObjValD "state" == toJson "finished" && failed.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
-    failed.getObjValD "reason" == toJson "disk-space" && failed.getObjValD "guardTriggered" == toJson true)
-    "unexpected failed attempt"
-  let pending := root/"b-second/phase-4"
-  let children ← pending.readDir
-  check (children.size == 5 && children.any (·.fileName == "initializations.json") &&
-    !(← (root/"b-second/phase-16").pathExists) && !(← (root/"b-second/report.json").pathExists))
-    "unexpected incomplete wave;preserve it for investigation"
-  for index in [:4] do
-    check ((← (pending/s!"client-{index}").readDir).isEmpty) "incomplete wave has outputs requiring separate analysis"
-  for label in ["preflight","a-first","b-first"] do
-    check (← (records/(label++"-retired.json")).pathExists) "retire completed duplicates first"
-  write (records/"aborted-comparison.json") (Json.mkObj [("guard",failed),
-    ("initializations",← read (pending/"initializations.json")),("primes",← read (root/"b-second/prime.json")),
-    ("completedWavesInStoppedArm",toJson (0 : Nat)),("inflightClientsWithoutOutputs",toJson (4 : Nat)),
-    ("actualInflightHookCountKnown",toJson false),("includedInFinalLatencyComparison",toJson false),
-    ("completedPilotArms",toJson (#[("a-first" : String),"b-first"])),("limitsRelaxed",toJson false)])
-  for label in ["a-first","b-first"] do
-    for suffix in [".json","-retired.json","-metadata.json"] do
-      check (!(← (records/("pilot-"++label++suffix)).pathExists)) "preserve pilot records"
-      IO.FS.rename (records/(label++suffix)) (records/("pilot-"++label++suffix))
-  let mut declared := #[]
-  for label in order do
-    let actual := label++"-after-space"
-    write (records/(label++"-attempt.json")) (toJson actual)
-    declared := declared.push (label,actual)
-  write (records/"recovery-plan.json") (Json.mkObj [("order",toJson declared),
-    ("newCompleteComparison",toJson true),("completedPilotArmsPooled",toJson false),
-    ("countsPerArm",toJson (#[(4 : Nat),16])),("limitsRelaxed",toJson false),
-    ("cleanupBetweenCompletedArms",toJson "retire acknowledged session/receipt duplicates after collection;keep current DB/head/models/cache")])
-def recoverDeadEndpoints : IO Unit := do
-  idle
-  check (!(← (records/"endpoint-recovery.json").pathExists)) "preserve endpoint recovery evidence"
-  let failed ← read (base/"owner-reach-runtime-b-second.guard.json")
-  let startup ← read (base/"owner-reach-runtime-a-first-after-space.guard.json")
-  check (startup.getObjValD "state" == toJson "finished" && startup.getObjValD "exitCode" == toJson (1 : Nat) &&
-    startup.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
-    !(← (root/"a-first-after-space/prime.json").pathExists)) "unexpected startup failure"
-  let processes : Array Json ← IO.ofExcept (failed.getObjValAs? (Array Json) "peakProcesses")
-  let owned ← processes.mapM fun process => IO.ofExcept (process.getObjValAs? Nat "pid")
-  let input ← read (root/"b-second-input.json")
-  let dataRoot : System.FilePath := .mk (← IO.ofExcept (input.getObjValAs? String "data"))
-  let origin : System.FilePath := .mk (← IO.ofExcept (input.getObjValAs? String "project"))
-  let expected : Array (String × String) ← IO.ofExcept (fromJson? (input.getObjValD "sourceFiles"))
-  for (file,digest) in expected do check ((← hash (origin/file)) == digest) "source publication changed after guard stop"
-  let mut targets := #[dataRoot/"publisher/endpoint.json",dataRoot/"publisher/operations.json",dataRoot/"daemon.json"]
-  for entry in ← (dataRoot/"numerical").readDir do
-    let endpoint := entry.path/"endpoint.json"
-    if ← endpoint.pathExists then targets := targets.push endpoint
-  let mut removed := #[]
-  for path in targets do
-    if !(← path.pathExists) then continue
-    check ((← path.symlinkMetadata).type == .file) "stale endpoint must be a regular file"
-    let endpoint ← read path
-    let pid ← IO.ofExcept (endpoint.getObjValAs? Nat "pid")
-    check (owned.contains pid) "endpoint was not owned by this stopped guard"
-    let probe ← IO.Process.output {cmd := "/bin/ps",args := #["-p",toString pid,"-o","pid="]}
-    check (probe.exitCode == 1 && probe.stdout.trimAscii.isEmpty) "do not remove a live or reused PID endpoint"
-    let digest ← hash path
-    IO.FS.removeFile path
-    removed := removed.push (path.toString,pid,digest)
-  write (records/"endpoint-recovery.json") (Json.mkObj [("deadOwnedEndpointsRemoved",toJson removed),
-    ("sourceFilesUnchanged",toJson true),("startupFailure",startup),("liveProcessesKilled",toJson (0 : Nat)),
-    ("completedWavesInStartupAttempt",toJson (0 : Nat)),("resumedFirstArm",toJson "a-first-recovered")])
-  write (records/"a-first-attempt.json") (toJson "a-first-recovered")
 def prepare (label : String) : IO Unit := do
   discard <| clean (← IO.ofExcept ((← read (records/"current-audit.json")).getStr?))
   let preflight := label == "preflight"
@@ -544,10 +402,7 @@ def retireGenerated : IO Unit := do
     ("projectReadCacheRetained",toJson true),("archiveCreated",toJson false)])
 def main (args : List String) : IO Unit := do
   match args with
-  | ["retire-sources"] => retireSources
-  | ["retire-obsolete-waves"] => retireObsoleteWaves
   | ["setup"] => setup
-  | ["rewire"] => rewire
   | ["build",label] => do
       check (!label.isEmpty && label.toList.all (fun c => c.isAlphanum || c == '-')) "fresh build label required"
       let tag := "owner-reach-runtime-build-"++label
@@ -566,10 +421,8 @@ def main (args : List String) : IO Unit := do
   | ["prepare",label] => prepare label
   | ["collect",label] => collect label
   | ["retire",label] => retireFinished label
-  | ["recover-space"] => recoverSpace
-  | ["recover-dead-endpoints"] => recoverDeadEndpoints
   | ["compare"] => compare
   | ["retire-generated"] => retireGenerated
-  | _ => throw (IO.userError "setup|build|audit|install|prepare <label>|collect <label>")
+  | _ => throw (IO.userError "setup | build <label> | refactor-proof <label> | audit <label> | install | prepare <arm> | collect <arm> | retire <arm> | compare | retire-generated")
 end OwnerReachStudy
 def main := OwnerReachStudy.main
