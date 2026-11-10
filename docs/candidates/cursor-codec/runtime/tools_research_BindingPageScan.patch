@@ -1,0 +1,8 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/canonical-decoder-runtime/source/tools/research/BindingPageScan.lean	2026-11-11 02:33:54
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/cursor-reader-runtime/source/tools/research/BindingPageScan.lean	2026-11-11 06:39:02
+@@ -2,0 +3,2 @@
++public import tools.research.CursorBinding
++public import tools.research.CursorPage
+@@ -79 +81 @@
+-      let stored ← Index.decodeBinding bytes
++      let stored ← CursorBinding.decode bytes

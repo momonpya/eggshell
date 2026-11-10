@@ -211,6 +211,14 @@ frontendのSession一覧は本文/ThreadStateを保持せず、検索要求に�
 - [local-completion](docs/candidates/local-completion/README.md)：数値80/80と、全フック80の失敗は別。推論全体のmutexは既に除去し、共有モデルで並行実行するが、score gate等は残る。
 - その他の実装・失敗・未達はdocs/candidatesとGit履歴に残る。終了したDB/cache/実行体/不要compiler cache・重複receiptはarchiveせず削除し、原典・現在のproject cache・モデル・必要native入力は保持する。
 
+[byte listを作らないdecoder候補](docs/candidates/cursor-codec/README.md)をLeanで隔離実装した。任意の入力について、値とerror、bindingのIO decoder、page loadまで元と一致を閉じ、標準公理のみで確認した。実46,985 bindingは約329〜333→82〜86ms、128 raw page×4は約33〜35→4.3〜4.8msで、全値/errorが一致した。allocation eventの減少をbytesやRSSへ換算しない。329 native object、producer/harness不変、実際のscan consumerが新readerを呼ぶことを照合した。候補preflightは3 prime+4 clientの7本文/ACKが正本と一致、4並列4.823秒、関連RSS標本最大2,618,496KiB、元DB不変・残存process0だった。本体採用0・回答モデル0であり、部品の短縮を全体の改善としない。
+
+ただし事前固定ABBAの最初の親A1で、4並列は4/4・4.952秒、16並列は15/16成功・1件30秒超過となり停止した。意味検索/シナプスは16/16で完了し、失敗clientも約11.9秒で正本493,123bytesを出力済みだったが、受領ACKまで正常完了していない。guardの資源停止はなく、関連RSS標本最大3,332,192KiB、正常shutdown・ownedPids=[]だった。B1/B2/A2は未実行、短縮率や候補16並列の無観測での成功を報告しない。無観測の同じ失敗loadを繰り返さず、後の診断を元の比較へ混ぜない。codec候補は認定・選択・3辺・deadline・cache・poolを変更していない。
+
+段階marker付きの別診断では、親4/16は5.044/13.115秒、候補は5.515/13.362秒で、46本文/ACK、waveの40件の意味検索/シナプスが完了した。関連RSS標本最大は親3,626,208KiB、候補3,956,368KiB。各1回の診断であり、改善やメモリ削減を支持しない。元の受領超過は再現せず、原因特定・修正済みとはしない。候補を親用診断器で起動した最初の試行は実装一致検査がwarm/フック前に拒否し、期待protocolをendpointから推測せず、候補の製品sourceから診断器をcompileして検査を保った。親327/候補330 objectと全製品source/literalを照合した。部品decoderの改善を主解決として再試行せず、16並列で残る実経路のCPU/生存IRと、超過時のclient段階を区別して調べる。poolを追加するだけで直るとはしない。
+
+退役した候補4つ、診断器2つのsource/build/実行体/cache、一時状態21,654項目・2,518,942,644論理bytesをarchiveせず削除した。9,313の現行native/compiler入力を検査し、原典全file・現行実行体/制御器・正本文のhashを維持した。現在のproject cacheとMiniLMは保持する。退役候補は再開可能とは扱わない。本体採用0、有料比較0/18、数秒/一般98%/80人の実証と、受領期限超過の修正は未達/未検証のままである。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
