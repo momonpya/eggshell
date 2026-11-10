@@ -1,0 +1,202 @@
+diff --git a/Eggshell/DB/PageMap.lean b/Eggshell/DB/PageMap.lean
+index ab385c4c..e00092f8 100644
+--- a/Eggshell/DB/PageMap.lean
++++ b/Eggshell/DB/PageMap.lean
+@@ -208 +208 @@ def sharedGenerationBytes : Nat :=
+-  (sharedPageCapacity-(AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes)/2
++  (sharedPageCapacity-(AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes)/4
+@@ -239 +239 @@ theorem SharedPageCache.touch_bounded (cache : SharedPageCache) (key : SharedPag
+-  change (cache.touch key page).retainedCharge ≤ 2*32505856 at bounded
++  change (cache.touch key page).retainedCharge ≤ 2*16252928 at bounded
+@@ -246 +246 @@ theorem SharedPageCache.reader_seed_budget (cache : SharedPageCache) :
+-  change cache.retainedCharge ≤ 2*32505856 at bounded
++  change cache.retainedCharge ≤ 2*16252928 at bounded
+@@ -249,0 +250,12 @@ theorem SharedPageCache.reader_seed_budget (cache : SharedPageCache) :
++/-- One immutable live base plus the owner's changing pending cache and the
++existing image/builder seeds share the original public-page allowance. -/
++theorem SharedPageCache.epoch_budget (current pending : SharedPageCache) :
++    current.retainedCharge+pending.retainedCharge+
++      (AdmissionLimits.publicImages+1)*AdmissionLimits.readerPageBytes ≤ capacity := by
++  have a := current.retained_bounded
++  have b := pending.retained_bounded
++  change current.retainedCharge ≤ 2*16252928 at a
++  change pending.retainedCharge ≤ 2*16252928 at b
++  change _+_+69206016 ≤ 134217728
++  omega
++
+@@ -313 +325,11 @@ structure Front where
+-def Front.new (seed : State := State.empty) : IO Front := return ⟨← IO.mkRef seed,← IO.mkRef 0,← IO.mkRef 0⟩
++  base : SharedPageCache
++  baseHits : IO.Ref Nat
++
++/-- A seed already present in the immutable base must not consume the new
++request's admission slots. Every retained value is still the original entry. -/
++def State.overlay (seed : State) (base : SharedPageCache) : State :=
++  seed.entries.foldl (fun state (key,page) =>
++    if (base.find key page.ref).isSome then state else state.insert key page) State.empty
++
++def Front.new (seed : State := State.empty) (base : SharedPageCache := {}) : IO Front :=
++  return ⟨← IO.mkRef (seed.overlay base),← IO.mkRef 0,← IO.mkRef 0,base,← IO.mkRef 0⟩
+@@ -326,0 +349,4 @@ def Front.find (front : Front) (key : SharedPageKey) (ref : Ref) : IO (Option (L
++  if let some loaded := front.base.find key ref then
++    front.hits.modify (·+1)
++    front.baseHits.modify (·+1)
++    return some loaded
+@@ -347,0 +374,17 @@ def PagePool.captureSeed : PagePool → IO LocalPages.State
++/-- Only the coordinator calls the owner case, once at a quiescent boundary.
++The returned value is persistent data, not a mutable cache capability. -/
++def PagePool.captureBase : PagePool → IO SharedPageCache
++  | .reader front => pure front.base
++  | .owner state => state.atomically do return (← get).cache
++
++/-- Retirement is outside the query's read path. A cache entry still carries
++the same complete descriptor and verified page; duplicate returns add no slot. -/
++def PagePool.mergeRetired (pool : PagePool) (retired : LocalPages.State) : IO Unit := do
++  let .owner stateMutex := pool | throw (IO.userError "a reader cannot publish cache entries")
++  stateMutex.atomically do
++    let mut state ← get
++    for (key,page) in retired.entries do
++      if (state.cache.find key page.ref).isNone then
++        state := {state with cache := state.cache.touch key page}
++    set state
++
+@@ -381,0 +425,2 @@ def PagePool.frontStats (front : Option LocalPages.Front) : IO Json := do
++        ("immutableBaseHits",toJson (← front.baseHits.get)),
++        ("immutableBaseEncodedCharge",toJson front.base.retainedCharge),
+diff --git a/Eggshell/PreparedReaders.lean b/Eggshell/PreparedReaders.lean
+index 9a48c1d5..8cd83b60 100644
+--- a/Eggshell/PreparedReaders.lean
++++ b/Eggshell/PreparedReaders.lean
+@@ -433 +433,2 @@ no catalogue owner, so assembling a reader cannot lock or update that owner. -/
+-@[no_expose] def localSession (image : Image) (scopes : Array String) : IO Session := do
++@[no_expose] def localSession (image : Image) (scopes : Array String)
++    (base : PageMap.SharedPageCache := {}) : IO Session := do
+@@ -435 +436 @@ no catalogue owner, so assembling a reader cannot lock or update that owner. -/
+-  let front ← PageMap.LocalPages.Front.new image.pageSeed
++  let front ← PageMap.LocalPages.Front.new image.pageSeed base
+@@ -484,0 +486 @@ structure CheckedFrame where
++  pageBase : PageMap.SharedPageCache
+@@ -490 +492 @@ structure CheckedFrame where
+-      return ⟨image,frame.scopes,frame.key,_,keyExact,originalExact⟩
++      return ⟨image,frame.scopes,frame.key,_,keyExact,originalExact,{}⟩
+@@ -501,0 +504,7 @@ def CheckedFrame.publicImage (checked : CheckedFrame) : Image := checked.image
++@[no_expose] def CheckedFrame.withBase (checked : CheckedFrame) (base : PageMap.SharedPageCache) :
++    {result : CheckedFrame // result.publicImage = checked.publicImage} :=
++  ⟨{checked with pageBase := base},rfl⟩
++
++theorem CheckedFrame.withBase_image (checked : CheckedFrame) (base : PageMap.SharedPageCache) :
++    (checked.withBase base).val.publicImage = checked.publicImage := (checked.withBase base).property
++
+@@ -505 +514 @@ def CheckedFrame.fork (checked : CheckedFrame) : IO Session :=
+-  localSession checked.image checked.scopes
++  localSession checked.image checked.scopes checked.pageBase
+@@ -508 +517 @@ theorem CheckedFrame.local_fork (checked : CheckedFrame) :
+-    checked.fork = localSession checked.image checked.scopes := rfl
++    checked.fork = localSession checked.image checked.scopes checked.pageBase := rfl
+diff --git a/Eggshell/SearchReaders.lean b/Eggshell/SearchReaders.lean
+index 10a956df..f691ab5a 100644
+--- a/Eggshell/SearchReaders.lean
++++ b/Eggshell/SearchReaders.lean
+@@ -14,0 +15,22 @@ structure Request where
++  retired : IO.Promise (Option DB.PageMap.LocalPages.State)
++
++abbrev Retirement := IO.Promise (Option DB.PageMap.LocalPages.State)
++
++/-- Completion is single-writer. Returning a front never waits for this owner.
++Only the owner consumes completed fronts and changes its pending cache. -/
++def collectRetired (pool : PreparedReaders.Pool) (leases : Array Retirement) : IO (Array Retirement) := do
++  let mut live := #[]
++  for lease in leases do
++    if ← lease.isResolved then
++      if let some (some pages) := lease.result?.get then pool.pages.mergeRetired pages
++    else live := live.push lease
++  return live
++
++def baseAtBoundary (current pending : DB.PageMap.SharedPageCache) (live : Nat) : DB.PageMap.SharedPageCache :=
++  if live = 0 then pending else current
++
++theorem baseAtBoundary_live (current pending : DB.PageMap.SharedPageCache) (live : Nat) (busy : live ≠ 0) :
++    baseAtBoundary current pending live = current := by simp [baseAtBoundary,busy]
++
++theorem baseAtBoundary_quiescent (current pending : DB.PageMap.SharedPageCache) :
++    baseAtBoundary current pending 0 = pending := rfl
+@@ -19,0 +42,2 @@ partial def serve (queue : Std.CloseableChannel Request) (stats : IO.Ref Json) :
++  let mut leases : Array Retirement := #[]
++  let mut pageBase : DB.PageMap.SharedPageCache := {}
+@@ -23,0 +48 @@ partial def serve (queue : Std.CloseableChannel Request) (stats : IO.Ref Json) :
++        leases ← collectRetired pool leases
+@@ -25,0 +51,2 @@ partial def serve (queue : Std.CloseableChannel Request) (stats : IO.Ref Json) :
++        unless !(← request.retired.isResolved) do throw (IO.userError "reader borrower already retired")
++        unless leases.size < AdmissionLimits.operations do throw (IO.userError "reader lease bound exceeded")
+@@ -27,2 +54,7 @@ partial def serve (queue : Std.CloseableChannel Request) (stats : IO.Ref Json) :
+-        stats.set (← pool.stats)
+-        pure (.ok checked)
++        unless !(← request.retired.isResolved) do throw (IO.userError "reader borrower retired during capture")
++        let pending ← if leases.isEmpty then pool.pages.captureBase else pure pageBase
++        pageBase := baseAtBoundary pageBase pending leases.size
++        leases := leases.push request.retired
++        stats.set ((← pool.stats).setObjVal! "trackedRetirements" (toJson leases.size)
++          |>.setObjVal! "immutableBaseEncodedCharge" (toJson pageBase.retainedCharge))
++        pure (.ok (checked.withBase pageBase).val)
+@@ -48 +80 @@ def Coordinator.borrow (coordinator : Coordinator) (frame : PreparedReaders.Fram
+-    (deadline : Nat) (cancelled : IO.Ref Bool) : IO PreparedReaders.Session := do
++    (deadline : Nat) (cancelled : IO.Ref Bool) (retired : Retirement) : IO PreparedReaders.Session := do
+@@ -50 +82 @@ def Coordinator.borrow (coordinator : Coordinator) (frame : PreparedReaders.Fram
+-  unless ← coordinator.queue.trySend ⟨frame,deadline,cancelled,reply⟩ do
++  unless ← coordinator.queue.trySend ⟨frame,deadline,cancelled,reply,retired⟩ do
+diff --git a/Eggshell/OperationPool.lean b/Eggshell/OperationPool.lean
+index a98de8ef..25afd796 100644
+--- a/Eggshell/OperationPool.lean
++++ b/Eggshell/OperationPool.lean
+@@ -265 +265,3 @@ def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref
+-    (ready : Nat → IO Unit) (originalReads : Option Synapses.SourceViewBatch.ReadAccess := none) : IO Worker.SearchReply := do
++    (ready : Nat → IO Unit) (retired : SearchReaders.Retirement)
++    (returnedFront : IO.Ref (Option PageMap.LocalPages.State))
++    (originalReads : Option Synapses.SourceViewBatch.ReadAccess := none) : IO Worker.SearchReply := do
+@@ -291 +293 @@ def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref
+-        let session ← pool.readers.borrow frame request.deadline cancelled
++        let session ← pool.readers.borrow frame request.deadline cancelled retired
+@@ -307,13 +309,19 @@ def Pool.searchActor (pool : Pool) (request : Worker.Search) (cancelled : IO.Ref
+-    let stats ← match finalReaders with
+-      | some readers => readers.pages.stats
+-      | none => pure Json.null
+-    if finalReaders.isSome || times.isSome || heaps.isSome then
+-      let stats ← match times with
+-        | none => pure stats
+-        | some times => do
+-          mark "actor-finalized"
+-          pure ((if stats == Json.null then Json.mkObj [] else stats).setObjVal! "queryStages" (toJson (← times.get)))
+-      let stats ← match heaps with
+-        | none => pure stats
+-        | some heaps => pure (stats.setObjVal! "ownerHeapStages" (toJson (← heaps.get)))
+-      Receipt.observe request.receipt "request-pages" stats
++    try
++      let stats ← match finalReaders with
++        | some readers => readers.pages.stats
++        | none => pure Json.null
++      if finalReaders.isSome || times.isSome || heaps.isSome then
++        let stats ← match times with
++          | none => pure stats
++          | some times => do
++            mark "actor-finalized"
++            pure ((if stats == Json.null then Json.mkObj [] else stats).setObjVal! "queryStages" (toJson (← times.get)))
++        let stats ← match heaps with
++          | none => pure stats
++          | some heaps => pure (stats.setObjVal! "ownerHeapStages" (toJson (← heaps.get)))
++        Receipt.observe request.receipt "request-pages" stats
++    finally
++      let pages ← match finalReaders with
++        | some readers => some <$> readers.pages.captureSeed
++        | none => pure none
++      returnedFront.set pages
+@@ -337,0 +346,2 @@ def Pool.runSearchBody (pool : Pool) (active : OperationPlan.Active) (job : Job)
++  let retired : SearchReaders.Retirement ← IO.Promise.new
++  let returnedFront ← IO.mkRef (none : Option PageMap.LocalPages.State)
+@@ -343 +353 @@ def Pool.runSearchBody (pool : Pool) (active : OperationPlan.Active) (job : Job)
+-      pool.searchActor request job.cancelled (fun now => job.ready.set (some now)) originalReads) .dedicated
++      pool.searchActor request job.cancelled (fun now => job.ready.set (some now)) retired returnedFront originalReads) .dedicated
+@@ -356,0 +367,4 @@ def Pool.runSearchBody (pool : Pool) (active : OperationPlan.Active) (job : Job)
++    finally
++      -- The actor and every nested search task have been joined. The return
++      -- value contains private entries only, never its immutable base/image.
++      retired.resolve (← returnedFront.get)

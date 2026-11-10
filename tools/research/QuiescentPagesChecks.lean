@@ -4,7 +4,7 @@ import Eggshell.SearchReaders
 open Lean Eggshell Eggshell.DB
 
 #print axioms PageMap.SharedPageCache.epoch_budget
-#print axioms PageMap.LocalPages.State.full_preserved
+#print axioms PageMap.LocalPages.encoded_bytes_bounded
 #print axioms PageMap.LocalPages.readView_valid
 #print axioms SearchReaders.baseAtBoundary_live
 #print axioms SearchReaders.baseAtBoundary_quiescent
@@ -56,8 +56,8 @@ def run (root : System.FilePath) : IO Unit := do
   let mut pressure := PageMap.LocalPages.State.empty
   for i in [:513] do pressure := pressure.insert (toString i,key.2) ⟨ref,loaded⟩
   check (pressure.entries.size ≤ 512 && pressure.bytes ≤ 2097152) "front bound exceeded"
-  check ((pressure.find ("0",key.2) ref).isSome && (pressure.find ("512",key.2) ref).isNone)
-    "pressure discarded the initial validated pages"
+  check ((pressure.find ("0",key.2) ref).isNone && (pressure.find ("512",key.2) ref).isSome)
+    "pressure prevented the new hot page from entering"
 
   let coordinator ← SearchReaders.Coordinator.new
   try
@@ -111,7 +111,7 @@ def run (root : System.FilePath) : IO Unit := do
     "old page cache crossed a publication boundary"
   IO.FS.writeFile (root/"report.json") (Json.mkObj [
     ("immutableReadsWhileOwnerLocked",toJson true),("completeRefAndScopeRejection",toJson true),
-    ("independentFronts",toJson true),("frontPressureRetainsPrefix",toJson true),
+    ("independentFronts",toJson true),("frontPressureRotatesWithinBudget",toJson true),
     ("liveEpochFrozen",toJson true),("retiredPagesPromotedAtQuiescence",toJson true),
     ("cancelledAndAlreadyRetiredRejected",toJson true),("originalLookupAndTraceEqual",toJson true),
     ("changedPublicationUsesChangedBytes",toJson true),("notWholeHeapOrDistributedProof",toJson true),

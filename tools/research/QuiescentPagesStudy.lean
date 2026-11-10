@@ -8,8 +8,11 @@ def selectedBuild := base/"current-six/stable-source-rows/build"
 def selected := base/"current-six/fixed-sequence/cohort/prefix"
 def records := project/"docs/candidates/quiescent-page-base"
 def entryModule := "tools.research.OwnedSelectionRuntime"
-def installation := trial/"prefix"
-def armOrder : Array String := #["a1","b1","b2","a2"]
+def installation := trial/"rotating-prefix"
+def runtimeRecord := records/"rotating-runtime.json"
+def armOrder : Array String := #["a-rotating","b-rotating","b-rotating-repeat","a-rotating-repeat"]
+def completedOrder : Array String := #["a-rotating","b-rotating","b-rotating-repeat","a-rotating-drained"]
+def smokeLabels : Array String := #["rotating-smoke","rotating-smoke-recovered"]
 
 def clean (tag : String) : IO Json := do
   let value ← finished tag
@@ -18,7 +21,9 @@ def clean (tag : String) : IO Json := do
   return value
 
 def collectArm (label : String) : IO Json := do
-  check (armOrder.contains label) "arm outside fixed ABBA"
+  check (armOrder.contains label || completedOrder.contains label || label == "a-rotating-recovered" || smokeLabels.contains label)
+    "arm outside fixed ABBA or declared resource recovery"
+  check (!(← (records/"arms"/(label++".json")).pathExists)) "preserve the collected arm before retiring its session state"
   let monitor ← read (base/("quiescent-pages-arm-"++label++".guard.json"))
   check (monitor.getObjValD "state" == toJson "finished" &&
     monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "arm is not terminal and drained"
@@ -42,7 +47,11 @@ def collectArm (label : String) : IO Json := do
       pages := pages.push (Json.mkObj [("clients",toJson count),("client",row),("pageRecord",pageRecord)])
   let normal := monitor.getObjValD "exitCode" == toJson (0 : Nat) &&
     monitor.getObjValD "guardTriggered" == toJson false && monitor.getObjValD "reason" == Json.null
-  if normal then check (report.getObjValD "allPhasesPassed" == toJson true) "normal arm lacks its successful final report"
+  if normal then
+    check (report.getObjValD "allPhasesPassed" == toJson true ||
+      (input.getObjValD "diagnostic" == toJson true && phases.size == 1 &&
+        phases.all (fun phase => phase.getObjValD "passed" == toJson true)))
+      "normal arm lacks its successful final report"
   let sourceRoot : System.FilePath := .mk (← IO.ofExcept (input.getObjValAs? String "project"))
   let files : Array (String × String) ← IO.ofExcept (fromJson? (input.getObjValD "sourceFiles"))
   let mut unchanged := true
@@ -95,7 +104,8 @@ def main (args : List String) : IO Unit := do
     let auditTag := "quiescent-pages-audit-"++label
     guard auditTag #["/usr/bin/env","LEAN_PATH="++(base/"study-local-lib").toString,
       (compiler/"bin/lean").toString,"-j1","-M1536","--run",(project/"tools/research/QuiescentPagesStudy.lean").toString,"audit-worker",label]
-    write (records/"current-audit.json") (Json.mkObj [("tag",toJson auditTag)])
+    write (records/"current-audit.json") (Json.mkObj [("tag",toJson auditTag),
+      ("sourceReport",toJson ("sources-"++label++".json"))])
   else if args.head? == some "audit-worker" then
     let [_,label] := args | throw (IO.userError "audit-worker <label>")
     let call := fun arguments => command (compiler/"bin/lean").toString
@@ -109,17 +119,32 @@ def main (args : List String) : IO Unit := do
     let expected := "import tools.research.QuiescentPagesChecks\n"++oldEntry.replace marker
       (marker++"  | [\"quiescent-page-check\",root] => QuiescentPagesChecks.run (.mk root); return 0\n")
     check (newEntry == expected && oldLiterals == newLiterals) "native entry changed beyond the explicit checker command"
-    write (records/"entry-verified.json") (Json.mkObj [("nativeEntryOnlyAddsChecker",toJson true),
+    write (records/("entry-"++label++".json")) (Json.mkObj [("nativeEntryOnlyAddsChecker",toJson true),
       ("candidateSha256",toJson (← hash (candidateBuild/"StudyMain")))])
-    discard <| call #["compare-sources",selectedBuild.toString,candidateBuild.toString,(records/"sources.json").toString,
+    discard <| call #["compare-sources",selectedBuild.toString,candidateBuild.toString,(records/("sources-"++label++".json")).toString,
       "Eggshell.DB.PageMap","Eggshell.PreparedReaders","Eggshell.SearchReaders","Eggshell.OperationPool",
       "+tools.research.QuiescentPagesChecks"]
-  else if args == ["check"] then
-    let tag ← IO.ofExcept ((← read (records/"current-audit.json")).getObjValAs? String "tag")
+  else if args.head? == some "check" then
+    let [_,label] := args | throw (IO.userError "check <unique-label>")
+    check (!label.isEmpty && label.toList.all (fun c => c.isAlphanum || c == '-')) "invalid check label"
+    let audited ← read (records/"current-audit.json")
+    let tag ← IO.ofExcept (audited.getObjValAs? String "tag")
     discard <| clean tag
-    guard "quiescent-pages-check" #[(candidateBuild/"StudyMain").toString,"quiescent-page-check",(trial/"checks").toString]
+    let reportName ← IO.ofExcept (audited.getObjValAs? String "sourceReport")
+    let digest ← hash (candidateBuild/"StudyMain")
+    check ((← read (records/reportName)).getObjValD "candidateRuntimeSha256" == toJson digest)
+      "native source audit belongs to a different binary"
+    let checkTag := "quiescent-pages-check-"++label
+    let output := trial/("checks-"++label)
+    guard checkTag #[(candidateBuild/"StudyMain").toString,"quiescent-page-check",output.toString]
+    write (records/"current-check.json") (Json.mkObj [("tag",toJson checkTag),("runtimeSha256",toJson digest),
+      ("output",toJson output.toString),("sourceReport",toJson reportName)])
   else if args == ["install"] then
-    discard <| clean "quiescent-pages-check"
+    let checked ← read (records/"current-check.json")
+    let tag ← IO.ofExcept (checked.getObjValAs? String "tag")
+    discard <| clean tag
+    check (checked.getObjValD "runtimeSha256" == toJson (← hash (candidateBuild/"StudyMain")))
+      "native checks belong to a different binary"
     check (!(← installation.pathExists)) "fresh isolated installation required"
     let original ← read (base/"snapshot-scheduling/capacity-16-input.json")
     let oldPlugin : System.FilePath := .mk (← IO.ofExcept (original.getObjValAs? String "plugin"))
@@ -135,7 +160,8 @@ def main (args : List String) : IO Unit := do
       discard <| command "/bin/chmod" #["755",(plugin/"bin"/name).toString]
     check ((← IO.FS.realPath (selected/"share/eggshell/minilm")) ==
       (← IO.FS.realPath (installation/"share/eggshell/minilm"))) "model/runtime assets differ"
-    write (records/"runtime.json") (Json.mkObj [("candidateSha256",toJson (← hash (candidateBuild/"StudyMain"))),
+    check (!(← runtimeRecord.pathExists)) "preserve the comparison seal"
+    write runtimeRecord (Json.mkObj [("candidateSha256",toJson (← hash (candidateBuild/"StudyMain"))),
       ("parentSha256",toJson (← hash (selected/"libexec/eggshell"))),("orderedArms",toJson armOrder),
       ("countsPerArm",toJson (#[(4 : Nat),16])),("fewSecondTargetWaveMs",toJson (5000 : Nat)),
       ("referenceInputSha256",toJson (← hash (base/"snapshot-scheduling/capacity-16-input.json"))),
@@ -144,11 +170,26 @@ def main (args : List String) : IO Unit := do
     let [_,label] := args | throw (IO.userError "collect-arm <label>")
     discard <| collectArm label
   else if args == ["report"] then
+    let checked ← read (records/"current-check.json")
+    let checkTag ← IO.ofExcept (checked.getObjValAs? String "tag")
+    let checkGuard ← clean checkTag
+    let digest ← hash (candidateBuild/"StudyMain")
+    check (checked.getObjValD "runtimeSha256" == toJson digest) "native checks belong to a different executable"
+    let checkRoot : System.FilePath := .mk (← IO.ofExcept (checked.getObjValAs? String "output"))
+    let checkSource := "tools/research/QuiescentPagesChecks.lean"
+    let sourceDigest ← hash (candidateSource/checkSource)
+    check ((← hash (project/checkSource)) == sourceDigest) "checker source changed after native compilation"
+    let componentChecks ← read (checkRoot/"report.json")
+    write (records/"checks-rotating.json") (Json.mkObj [("checks",componentChecks),
+      ("guard",checkGuard),("sourceSha256",toJson sourceDigest),("runtimeSha256",toJson digest),
+      ("sourceAudit",checked.getObjValD "sourceReport"),
+      ("nativeSourceAudit",toJson "native-rotating.json"),
+      ("compilerDiagnosticsNotSeparatelyArchived",toJson true)])
     let mut all := #[]
     let mut parentTimes := #[]
     let mut candidateTimes := #[]
-    for label in armOrder do
-      let row ← collectArm label
+    for label in completedOrder do
+      let row ← read (records/"arms"/(label++".json"))
       check (row.getObjValD "normalExit" == toJson true && row.getObjValD "sourceFilesUnchanged" == toJson true)
         "incomplete or changed-source arm cannot become a performance comparison"
       let phases : Array Json ← IO.ofExcept (fromJson? (row.getObjValD "completedPhases"))
@@ -157,35 +198,101 @@ def main (args : List String) : IO Unit := do
       check (phase.getObjValD "passed" == toJson true) "failed phase"
       let time ← IO.ofExcept (phase.getObjValAs? Nat "wallMs")
       if label.startsWith "b" then candidateTimes := candidateTimes.push time else parentTimes := parentTimes.push time
-      all := all.push row
+      all := all.push (Json.mkObj [("label",toJson label),
+        ("record",toJson ("arms/"++label++".json")),
+        ("recordSha256",toJson (← hash (records/"arms"/(label++".json")))),
+        ("phases",toJson (phases.map fun phase => Json.mkObj [
+          ("clients",phase.getObjValD "clients"),("wallMs",phase.getObjValD "wallMs"),
+          ("passed",phase.getObjValD "passed")])),
+        ("sampledPeakRssKiB",(row.getObjValD "guard").getObjValD "sampledPeakRssKiB")])
     check (parentTimes.size == 2 && candidateTimes.size == 2) "non-vacuous same-count replication required"
     let parentTotal := parentTimes.foldl Nat.add 0
     let candidateTotal := candidateTimes.foldl Nat.add 0
     check (parentTotal > 0) "invalid clock"
     let reduction := 100.0*(Float.ofNat parentTotal - Float.ofNat candidateTotal)/Float.ofNat parentTotal
-    write (records/"comparison.json") (Json.mkObj [("orderedArms",toJson armOrder),("arms",toJson all),
+    write (records/"rotating-comparison.json") (Json.mkObj [("originalOrderedArms",toJson armOrder),
+      ("orderedArms",toJson completedOrder),("arms",toJson all),
+      ("resourceRecoveryPlan",toJson "drained-recovery.json"),
+      ("resourceStoppedArm",toJson "arms/a-rotating-repeat.json"),
       ("parent16WallMs",toJson parentTimes),("candidate16WallMs",toJson candidateTimes),
       ("descriptiveMeanLatencyReductionPercent",toJson reduction),
       ("fewSecond16ClientTargetMet",toJson (candidateTimes.all (· ≤ 5000))),
       ("p99Established",toJson false),("eightyConcurrentTest",toJson false),("answeringModelCalls",toJson (0 : Nat)),
       ("inclusiveTokenOrQualityBenefitEstablished",toJson false),("adopted",toJson false)])
-  else if args.head? == some "prepare-arm" then
-    let [_,label] := args | throw (IO.userError "prepare-arm a1|b1|b2|a2")
-    let some position := armOrder.findIdx? (· == label) | throw (IO.userError "arm outside fixed ABBA")
-    let declared ← read (records/"runtime.json")
+    write (records/"hot-repair.json") (Json.mkObj [
+      ("rejectedRuntimeSha256",toJson "19e6b870c6ec35688e5da1abc629be5bceb169f2ae15f1f5ce418d5c13e50930"),
+      ("candidateRuntimeSha256",toJson digest),
+      ("repair",toJson "restore State.insert byte-for-byte from selected product;retain immutable base and quiescent retirement"),
+      ("hotPolicyMatchesParent",toJson true),("componentChecksPassed",toJson true),
+      ("fixedSnapshotBodiesAndSemanticSynapticAckPassed",toJson true),
+      ("completedFourArmComparison",toJson true),
+      ("fewSecond16ClientTargetMet",toJson (candidateTimes.all (· ≤ 5000))),
+      ("oldRuntimeAndCheckReceiptsMustNotBeReused",toJson true),
+      ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+  else if args.head? == some "prepare-arm" || args.head? == some "prepare-smoke" then
+    let smoke := args.head? == some "prepare-smoke"
+    let label ← if smoke then do
+      let label := args[1]?.getD "rotating-smoke"
+      check (smokeLabels.contains label) "preflight outside declared recovery labels"
+      pure label
+    else do
+      let [_,label] := args | throw (IO.userError "prepare-arm <predeclared-label>")
+      pure label
+    let position ← if smoke then pure 0 else do
+      let some index := completedOrder.findIdx? (· == label) | throw (IO.userError "arm outside fixed ABBA")
+      pure index
+    let declared ← read runtimeRecord
+    if label == "a-rotating-drained" then
+      let stopped ← read (records/"arms/a-rotating-repeat.json")
+      let monitor := stopped.getObjValD "guard"
+      check (stopped.getObjValD "normalExit" == toJson false &&
+        stopped.getObjValD "sourceFilesUnchanged" == toJson true &&
+        stopped.getObjValD "completedPhases" == toJson (#[] : Array Json) &&
+        monitor.getObjValD "reason" == toJson "disk-space" &&
+        monitor.getObjValD "guardTriggered" == toJson true &&
+        monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+        "only the disk-stopped, pre-wave final parent arm may be recovered"
+      check ((← read (records/"retired-capacity-state.json")).getObjValD "retainedHashesUnchanged" == toJson true)
+        "capacity-state retirement has not completed"
+      let startup ← read (records/"arms/a-rotating-recovered.json")
+      check ((startup.getObjValD "guard").getObjValD "exitCode" == toJson (1 : Nat) &&
+        startup.getObjValD "completedPhases" == toJson (#[] : Array Json))
+        "the first recovery did not stop before a measured wave"
+      let priorPids : Array Json ← IO.ofExcept (monitor.getObjValAs? (Array Json) "peakProcesses")
+      let dataRoot := base/"snapshot-scheduling/work/data"
+      let mut removed := #[]
+      for (path,session) in #[(dataRoot/"publisher/endpoint.json","publisher"),(dataRoot/"daemon.json","")] do
+        check ((← path.symlinkMetadata).type == .file) "stale endpoint is not a regular file"
+        let endpoint ← read path
+        let pid ← IO.ofExcept (endpoint.getObjValAs? Nat "pid")
+        check (pid > 1 && endpoint.getObjValD "session" == toJson session &&
+          priorPids.any (fun row => row.getObjValD "pid" == toJson pid)) "endpoint owner is outside the stopped study"
+        let alive ← IO.Process.output {cmd := "/bin/kill",args := #["-0",toString pid]}
+        check (alive.exitCode != 0) "refusing to recover a live endpoint"
+        removed := removed.push (Json.mkObj [("path",toJson path.toString),("pid",toJson pid),
+          ("sha256",toJson (← hash path)),("deadOwnerFromStoppedGuard",toJson true)])
+        IO.FS.removeFile path
+      write (records/"drained-recovery.json") (Json.mkObj [("originalArm",toJson "a-rotating-repeat"),
+        ("recoveryArm",toJson label),("originalStoppedBeforeMeasuredWave",toJson true),
+        ("reason",toJson "disk-space"),("sameSeal",toJson "rotating-runtime.json"),
+        ("sameSourcesBodiesConfigurationAndGuardLimits",toJson true),("noAdditionalReplicate",toJson true),
+        ("startupOnlyFailedRecovery",toJson "arms/a-rotating-recovered.json"),
+        ("removedDeadEndpoints",toJson removed),
+        ("cleanup",toJson "retired-capacity-state.json"),("newOrderedArms",toJson completedOrder)])
     if position > 0 then
-      let some prior := armOrder[position-1]? | throw (IO.userError "missing prior arm")
+      let some prior := completedOrder[position-1]? | throw (IO.userError "missing prior arm")
       discard <| clean ("quiescent-pages-arm-"++prior)
       let report ← read (trial/"arms"/prior/"report.json")
       check (report.getObjValD "allPhasesPassed" == toJson true) "stop after a failed arm"
-    let chosenPrefix := if label.startsWith "b" then installation else selected
+    let isCandidate := smoke || label.startsWith "b"
+    let chosenPrefix := if isCandidate then installation else selected
     let runtime := chosenPrefix/"libexec/eggshell"
-    let expected := declared.getObjValD (if label.startsWith "b" then "candidateSha256" else "parentSha256")
+    let expected := declared.getObjValD (if isCandidate then "candidateSha256" else "parentSha256")
     check (expected == toJson (← hash runtime)) "sealed runtime changed"
     let original ← read (base/"snapshot-scheduling/capacity-16-input.json")
     let output := trial/"arms"/label
     let config := output/"config.toml"
-    let plugin ← if label.startsWith "b" then pure (installation/"share/eggshell/codex-plugin").toString
+    let plugin ← if isCandidate then pure (installation/"share/eggshell/codex-plugin").toString
       else IO.ofExcept (original.getObjValAs? String "plugin")
     let environment : Array (String × Option String) ← IO.ofExcept (fromJson? (original.getObjValD "environment"))
     let environment := environment.map fun (key,value) => (key,match key with
@@ -197,6 +304,8 @@ def main (args : List String) : IO Unit := do
       |>.setObjVal! "config" (toJson config.toString) |>.setObjVal! "environment" (toJson environment)
       |>.setObjVal! "runtime" (toJson runtime.toString) |>.setObjVal! "runtimeSha256" expected
       |>.setObjVal! "plugin" (toJson plugin)
+    let input := if smoke then input.setObjVal! "counts" (toJson (#[(4 : Nat)]))
+      |>.setObjVal! "diagnostic" (toJson true) else input
     let inputPath := trial/(label++"-input.json")
     check (!(← inputPath.pathExists)) "never overwrite or automatically retry an arm"
     write inputPath input
@@ -204,4 +313,4 @@ def main (args : List String) : IO Unit := do
     let assignments := environment.filterMap fun (key,value) => value.map (key++"="++·)
     guard ("quiescent-pages-arm-"++label) (#["/usr/bin/env"]++unset.flatMap (fun key => #["-u",key])++assignments++
       #[runtime.toString,"owned-selection-capacity",inputPath.toString])
-  else throw (IO.userError "setup|build|audit|audit-worker|check")
+  else throw (IO.userError "setup|build|audit|audit-worker|check|install|prepare-arm|prepare-smoke|collect-arm|report")
