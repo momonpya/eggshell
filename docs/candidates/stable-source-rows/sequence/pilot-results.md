@@ -14,9 +14,11 @@ their own cost records; they are not rolled into a per-question saving.
 | First / 1 | 4,888,585 | 1,306,474 | 73.275% | 3/3 | 4/4 |
 | First / 2 | 3,419,749 | 174,754 | 94.890% | 5/5 | 7/7 |
 | First / 3 | 4,382,725 | 904,479 | 79.363% | 5/5 | 5/5 |
+| Second / 1, reused fresh reference | 4,888,585 | 697,687 | 85.728% reference only | 5/5 | 5/5 |
 
-Three remaining paired stages are incomplete. No aggregate or second-round
-claim is available. This table includes cached input within input, and includes
+Two memory stages remain incomplete. The independent six-pair comparison is
+incomplete; second-round reductions refer to reused first-round controls and
+are not an exact campaign-wide saving. This table includes cached input within input, and includes
 reasoning within output exactly once. First-round topic one has no failed model attempt.
 
 The new second-round topic-one fresh control was interrupted by the presealed
@@ -37,6 +39,14 @@ completed reference and candidate. A separate history receipt marks reference
 reuse, the failed charged attempt, and comparison incompleteness explicitly.
 Any later reference-based reduction will be labelled as such, alongside this
 additional failed cost; it cannot authorize adoption.
+
+Second-round topic one completed with input/output 688,226 / 9,461 and cached
+input 510,848. All 5/5 fully stored originals are in the actual initial packet,
+matching the preflight body hash. Its initial hook took 9,026 ms with no hook
+failure. Native source audit, read coverage and standalone next-history closure
+passed. The answer reports `UNRESOLVED` because the workspace lacks the built
+Clang/lit configuration; quality non-inferiority is not established. The new
+failed fresh control and its unknown final usage remain charged separately.
 
 For topic one, fresh input/output is 4,867,798 / 20,787; memory is
 1,295,205 / 11,269. Cached input is 4,654,208 and 1,092,224 respectively.
@@ -100,3 +110,11 @@ fingerprint alone is therefore not evidence that an unobserved range is in
 the DB. The audit reads the immutable workspace only to verify reference bytes
 against a saved dependency, then requires those bytes in a native original
 output. It never inserts live source bytes into the candidate packet.
+
+Ended working DBs/caches for topics one through three were deleted without an
+archive: 7,809 files / 1,670,646,626 logical bytes. The active next stage uses
+the independent fourth-stage history; every source/private/ACK checkpoint file
+and all three selected executable hashes were checked before and after removal.
+Raw usage, RPC, answers, audited packets and compact source-audit receipts remain.
+Deleted working DBs cannot be re-audited in place. Logical bytes are not physical
+APFS savings. See [cleanup receipt](closed-stage-cache-cleanup.json).

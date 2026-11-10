@@ -5,10 +5,82 @@ def cohort := base/"current-six/fixed-sequence/cohort"
 def reports := project/"docs/candidates/stable-source-rows/sequence"
 def controller := base/"current-six/fixed-sequence/controller-build/StudyMain"
 
+def historyBytes (manifest : System.FilePath) : IO (Array (String × String)) := do
+  let snapshot ← read manifest
+  let root := manifest.parent.get!
+  let verify := fun (directory : System.FilePath) (rows : Json) => do
+    let rows : Array (String × String) ← IO.ofExcept (fromJson? rows)
+    rows.mapM fun (name,expected) => do
+      check (!name.isEmpty && !name.contains '/' && name != "." && name != "..") "invalid checkpoint filename"
+      let path := directory/name
+      check ((← path.symlinkMetadata).type == .file && (← hash path) == expected)
+        "standalone history bytes changed"
+      return (path.toString,expected)
+  let mut files ← verify (root/"source.egg") (snapshot.getObjValD "sourceFiles")
+  for field in #["privateFamilies","confirmedDelivery"] do
+    for family in ← IO.ofExcept (snapshot.getObjValAs? (Array Json) field) do
+      let name ← IO.ofExcept (family.getObjValAs? String "name")
+      check (!name.isEmpty && !name.contains '/' && name != "." && name != "..") "invalid history family"
+      let parent := if field == "privateFamilies" then "private" else "confirmed-delivery"
+      files := files ++ (← verify (root/parent/name) (family.getObjValD "files"))
+  return files
+
+partial def fileSizes (root : System.FilePath) : IO (Nat × Nat) := do
+  let info ← root.symlinkMetadata
+  check (info.type != .symlink) "retired cache unexpectedly contains a symlink"
+  if info.type == .dir then
+    let mut files := 0
+    let mut bytes := 0
+    for entry in ← root.readDir do
+      let (count,size) ← fileSizes entry.path
+      files := files+count
+      bytes := bytes+size
+    return (files,bytes)
+  check (info.type == .file) "unexpected retained device"
+  return (1,info.byteSize.toNat)
+
 def main (args : List String) : IO Unit := do
   idle
   let run := cohort/"study/seed-1"
-  if args == ["account"] then
+  if args == ["retire-closed-stage-caches"] then
+    let target := reports/"closed-stage-cache-cleanup.json"
+    check (!(← target.pathExists)) "keep the completed cleanup receipt"
+    let latest := cohort/"stage-4/reference-closure/history/history.json"
+    let declared ← read (cohort/"stage-5.input.json")
+    check ((declared.getObjValD "history").getObjValD "path" == toJson latest.toString &&
+      (declared.getObjValD "history").getObjValD "sha256" == toJson (← hash latest))
+      "active preparation is not using the independent retained history"
+    let before ← historyBytes latest
+    let runtime := #[controller,base/"current-six/stable-source-rows/build/StudyMain",
+      base/"current-six/fixed-sequence/preparation-closure-build/StudyMain"]
+    let runtimeBefore ← runtime.mapM fun path => return (path.toString,← hash path)
+    let commands := (← command "/bin/ps" #["-axo","command="]).splitOn "\n"
+    let mut removed := #[]
+    for number in [1:4] do
+      let stage := cohort/s!"stage-{number}"
+      check ((← read (stage/"closed/closed.json")).getObjValD "completed" == toJson true)
+        "only closed source histories may retire their working copies"
+      let ended ← read (stage/"candidate/trial.guard.json")
+      check (ended.getObjValD "state" == toJson "finished" &&
+        ended.getObjValD "exitCode" == toJson (0 : Nat) &&
+        ended.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "candidate still owns processes"
+      for name in #["candidate/work.egg","candidate/data","candidate/trial/input.egg","candidate/trial/output.egg"] do
+        let path := stage/name
+        check (!(commands.any (·.contains path.toString))) "a process still references the retired working copy"
+        if ← path.pathExists then
+          let (count,size) ← fileSizes path
+          IO.FS.removeDirAll path
+          check (!(← path.pathExists)) "cache removal incomplete"
+          removed := removed.push (Json.mkObj [("path",toJson path.toString),
+            ("files",toJson count),("logicalBytes",toJson size)])
+    let after ← historyBytes latest
+    let runtimeAfter ← runtime.mapM fun path => return (path.toString,← hash path)
+    check (before == after && runtimeBefore == runtimeAfter) "retained history or runtime changed during cleanup"
+    write target (Json.mkObj [("removed",toJson removed),("retainedHistoryFiles",toJson after),
+      ("retainedExecutables",toJson runtimeAfter),("archiveCreated",toJson false),
+      ("sourceHistoryStandalone",toJson true),("recordedResultsRetained",toJson true),
+      ("physicalFreedBytes",Json.null)])
+  else if args == ["account"] then
     let monitor ← read (cohort/"seed-1.guard.json")
     check (monitor.getObjValD "state" == toJson "finished" &&
       monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "seed still owns processes"
