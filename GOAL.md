@@ -1,12 +1,14 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-全体目標は未達。現在の性能比較元はbyte-pages（SHA `534a92d6f93fb253819cfbdcb32eea0643606e70c6e3c52eeae6e78bbdaee552`）。本体への採用0、有料比較0/18。最初の新seedは3,984,226総token、65フック失敗0で回答を生成したが、原文索引の出版・keep失敗のため不合格だった。同じ原文の対応行が295→539件へ増えた際、既存行を再整列して位置変更を所有者変更と誤判定していた。[既存位置を保つ隔離修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）は3つのLean証明、Native323 objectと1ファイル差分、実際に拒否された2件のnative出版・重複・旧pin・再openに合格した。これはseedやモデル6段階の合格ではない。認証失敗の使用量不明もゼロ扱いしない。
+全体目標は未達。本体への採用0、現行/候補の有料比較0/18。現行の性能比較元はbyte-pages（SHA `534a92d6…`）、隔離した製品候補は[既存位置を保つ修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）。新seedからの単発pilotは1/6段階が完了し、題材2のfreshを実行中である。16並行で数秒、80人の持続利用、全6段階の98%配送、反復した総token/品質の採用条件はまだ未達/未検証。
 
-次の[固定制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は実リンク327 object、製品全モジュールを含む298共通moduleの照合に合格した。新規compileだけを数えた旧追加監査は無効と訂正し、実リンクの照合へ統一した。この制御器で元の拒否2件、実RPCの順序/欠落/重複/失敗拒否、完全native取得/終了/復元/read-only配送2/2を確認した。小さな合成gateでありLLVMの98%達成ではない。
+製品と[回答モデルの制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は固定している。制御器の実リンク327 objectと製品全モジュールを含む298共通moduleを照合済み。単なる新規compile件数の監査は使わない。空DB・新chatの[受理済みseed](docs/candidates/stable-source-rows/sequence/accepted-seed.json)は2,073,642総token、49フック失敗0、23コマンドの開始/終了/portable originが対応し、原文4,118行の内容不一致・座標矛盾0。配送前に全体が保存された必要証拠を題材1/2/3で3/5/5項目に凍結し、部分保存と完全不在も別に評価する。
 
-固定した実装での次のseedは約6分25秒でディスク空きが2GiB未満となり保護停止した。70フックの失敗は0だったが、`turn/completed`も最終回答もない。観測3,943,319総tokenは失敗費用の下限、最終使用量は不明として[記録](docs/candidates/stable-source-rows/sequence/disk-stopped-seed.json)し、未完了DBは破棄した。終了済み43ビルドの未参照40,266 file・3,749,619,584論理bytes、旧prefix7個をarchiveせず削除した。現行実行体・制御器・比較元のSHAは不変。再取得は別のEggshell pluginの混入を事前検査で拒否し、モデル生成は要求していない。実験用accountだけでその7フックを無効化し、選んだ承認済み8フックだけであることをnative検査した。空き約6GiB、開始前5GiB以上・実行中2GiB以上・RSS停止線を維持し、同じ`dd53c89b…`/`670aaf8e…`、gpt-5.6-luna/xhighで別の空DB・新chatの取得を再開した。seed受理とモデル6段階は未完了である。
+[1周目・題材1](docs/candidates/stable-source-rows/sequence/pilot-results.md)はfresh 4,888,585 → 記憶あり1,306,474総token、73.275%削減。実際の初回入力は監査済み本文とbyte一致し、全体保存3/3・部分保存を含む4/4、初回フック7.918秒、15フック失敗0。保存監査と次履歴の凍結も完了した。freshが言語指定の位置依存性を指摘する一方、記憶ありは通常ケースから修正不要と結論しており、品質維持は未確認。単発の削減率で採用しない。
 
-その取得は[2,073,642総tokenの受理済みseed](docs/candidates/stable-source-rows/sequence/accepted-seed.json)となった。49フック失敗0、終了0・残存process0で、23コマンドすべての開始/終了/portable originが対応する。原文4,118行の内容不一致と座標矛盾は0。配送前に、要求範囲全体の保存が確認できた必要証拠を題材1/2/3で3/5/5項目に凍結した。全体が揃わない各2項目は、部分保存と完全不在も分けて配送時に調べる。初回のoff-hook再生は60秒で未完了となり、実験側は進捗なしを未解決入力と断定したが、既存runtimeへの次の1要求で完了できた。元記録・共有シナプス・私有日誌・数値準備も通過した。worker継続の実証やpoolの性能改善ではない。題材1のモデル前配送検査は、全体保存の3/3、部分保存も含む4/4を2独立chatで配送し、本文byte一致・フック7.086/5.048秒。DBにない警告は成功に数えない。freshの実モデル比較を開始したが、6段階0/6、採用0、有料比較0/18である。
+題材2の準備停止は、実験側が区切りごとに再生workerを閉じていたことと、履歴コピーが参照先の受領台帳を落としていたことが原因だった。準備専用のnative実行体`79ca7d6e…`は327 object・共通298moduleを照合し、製品core不変。参照される不変の受領台帳だけを保持し、欠けた依存を持つ現行形式の履歴の拒否・完全な履歴のfork・新chat状態をコピーしないことを実データで確認した。原文と学習済み利用情報のbytesは不変。修正後は同一workerの2応答で再生が完了し、題材2の事前配送は全体保存5/5・部分保存を含む7/7、2独立chatで7.494/5.351秒・本文byte一致。製品と課金されるモデル制御器を替えず、題材1のモデルも再実行していない。これはpoolの性能改善や80人対応の実証ではない。
+
+失敗費用は隠さない。原文位置の再整列を直す前のseedは3,984,226総tokenで出版/keep失敗。容量不足の別seedは観測3,943,319総tokenが下限で最終使用量不明として[保持](docs/candidates/stable-source-rows/sequence/disk-stopped-seed.json)し、未完了DBは破棄した。終了済み43ビルドの40,266 file・3,749,619,584論理bytesと旧prefix7個をarchiveせず削除済み。2GiBのディスク停止線とRSS停止線は緩めない。混入pluginの7フックは実験accountだけで無効化し、選んだ8フックだけを使う。
 
 ## 目的と固定する境界
 

@@ -40,7 +40,7 @@ private def interval (path : System.FilePath) : IO (Nat × Nat) := do
 private def replaceEnv (base updates : Array (String × Option String)) :=
   base.filter (fun row => !updates.any (·.1 == row.1)) ++ updates
 
-def run (stage digest destination : String) : IO Unit := do
+def run (stage digest destination : String) (preparationRunner : Option String := none) : IO Unit := do
   StudyAdmission.verifyArtifact ⟨stage,digest⟩
   let stagePath := System.FilePath.mk stage
   let root := System.FilePath.mk destination
@@ -111,7 +111,7 @@ def run (stage digest destination : String) : IO Unit := do
   let environment := replaceEnv candidate.environment #[
     ("EGGSHELL_DATA_ROOT",some candidate.data.toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
   let invoke := fun (args : Array String) (directory : System.FilePath) (timeout : Nat) => do
-    let result ← StudyCommand.run seed.runner.path args environment candidate.workspace "" directory timeout
+    let result ← StudyCommand.run (preparationRunner.getD seed.runner.path) args environment candidate.workspace "" directory timeout
     check (result.exitCode == 0) ("native stage closure failed: "++String.intercalate " " args.toList)
   let ready := root/"ready"
   invoke #["seed-finalize","--trial",candidate.root.toString,ready.toString] (root/"finalization") 720000

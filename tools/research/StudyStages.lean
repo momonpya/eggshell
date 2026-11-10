@@ -75,7 +75,7 @@ private def sourceReport (artifact : StudyAdmission.Artifact) (definitions : Str
 frozen StudyMain performs warm, real hook preflight and model admission;
 this program never dispatches an answering turn. Reference code is used only
 by the post-handoff auditor, never as an input to the selector. -/
-def run (input digest : String) : IO Unit := do
+def run (input digest : String) (preparationRunner : Option String := none) : IO Unit := do
   StudyAdmission.verifyArtifact ⟨input,digest⟩
   let request ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson input))
   StudyAdmission.verifyArtifact request.limits
@@ -200,7 +200,7 @@ def run (input digest : String) : IO Unit := do
     let preparationGuard := armRoot / "preparation.guard.json"
     let preparationSettings ← save (armRoot / "preparation.settings.json") (toJson ({
       record := preparationGuard.toString,cwd := controller.workspace
-      command := #[controller.runner.path,"prepare-live",draftFile.path,(armRoot / "preparation").toString]
+      command := #[preparationRunner.getD controller.runner.path,"prepare-live",draftFile.path,(armRoot / "preparation").toString]
       ownedPrefixes := #[armRoot.toString,(prefixOf template.runtime).toString,controller.runner.path]
       limitRssKiB := ResourceGuard.maximumStopRssKiB,minFreeKiB := 2097152} : ResourceGuard.Settings))
     let prepared ← IO.Process.output {cmd := controller.runner.path,args := #["guard",preparationSettings.path]}

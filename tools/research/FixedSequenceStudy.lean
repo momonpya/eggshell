@@ -22,6 +22,25 @@ def seedPreparation : IO (System.FilePath × String) := do
     tag == "fixed-sequence-seed-finalize-resumed") "unexpected seed preparation selection"
   return (.mk name,tag)
 
+def preparationExecutor : IO String := do
+  let selection := directory/"cohort/preparation-runner.json"
+  if !(← selection.pathExists) then return (directory/"controller-build/StudyMain").toString
+  let selected ← read selection
+  let path ← IO.ofExcept (selected.getObjValAs? String "path")
+  let audit ← IO.ofExcept (selected.getObjValAs? String "sourceAudit")
+  check (#[directory/"preparation-build/StudyMain",directory/"preparation-history-build/StudyMain"].any
+      (fun allowed => path == allowed.toString) &&
+    selected.getObjValD "sha256" == toJson (← hash (.mk path)) &&
+    selected.getObjValD "sourceAuditSha256" == toJson (← hash (.mk audit))) "preparation executor changed"
+  return path
+
+def stagePreparationTag (number : Nat) : IO String := do
+  if number == 2 && (← (directory/"cohort/preparation-runner.json").pathExists) then
+    if (← preparationExecutor) == (directory/"preparation-history-build/StudyMain").toString then
+      return "fixed-sequence-stage-2-prepare-history"
+    return "fixed-sequence-stage-2-prepare-resumed"
+  return s!"fixed-sequence-stage-{number}-prepare"
+
 def frozenImports : IO (Std.HashSet String) := do
   let inputs : Array (String × String) ← IO.ofExcept (fromJson? (← read
     (runtimeBuild/"tools_research_OwnedSelectionRuntime.dependencies")))
@@ -533,7 +552,7 @@ partial def main (args : List String) : IO Unit := do
       ("controllerSeedPlan",← makeArtifact (cohort/((← selectedSeed)++".plan.json"))),
       ("limits",← makeArtifact (cohort/"seed-1.limits.json")),("previousStage",previous),
       ("output",toJson (cohort/s!"stage-{number}").toString)])
-    guard s!"fixed-sequence-stage-{number}-prepare" #[(directory/"controller-build/StudyMain").toString,
+    guard (← stagePreparationTag number) #[(← preparationExecutor),
       "stage-prepare",input.toString,← hash input]
   else if args.length == 2 && args.head? == some "close" then
     idle
@@ -541,8 +560,123 @@ partial def main (args : List String) : IO Unit := do
     let some number := args[1]!.toNat? | throw (IO.userError "numeric stage required")
     check (1 ≤ number && number ≤ 6) "exactly six ordered stages are declared"
     let stage := directory/"cohort"/s!"stage-{number}"
-    guard s!"fixed-sequence-stage-{number}-close" #[(directory/"controller-build/StudyMain").toString,
+    guard s!"fixed-sequence-stage-{number}-close" #[(← preparationExecutor),
       "stage-close",(stage/"stage.json").toString,← hash (stage/"stage.json"),(stage/"closed").toString]
+  else if args == ["complete-private-history"] then
+    idle
+    let executor ← preparationExecutor
+    check (executor == (directory/"preparation-history-build/StudyMain").toString) "audited history repair required"
+    let stage := directory/"cohort/stage-1"
+    check ((← read (stage/"closed/closed.json")).getObjValD "completed" == toJson true) "first stage is not closed"
+    let plan ← read (stage/"candidate/trial/plan.json")
+    let database ← IO.ofExcept (plan.getObjValAs? String "database")
+    let data ← IO.ofExcept (plan.getObjValAs? String "dataRoot")
+    guard "fixed-sequence-complete-private-history" #["/usr/bin/env","EGGSHELL_DATA_ROOT="++data,
+      executor,"history","freeze",database,data,(stage/"closed/history-complete").toString]
+  else if args == ["check-missing-history"] || args == ["check-history-closure"] then
+    discard <| finished "fixed-sequence-complete-private-history"
+    let stage := directory/"cohort/stage-1"
+    let original := stage/"closed/history/history.json"
+    let manifest ← if args == ["check-history-closure"] then do
+      let fixture := stage/"closed/history/history-missing-delivery.json"
+      check (!(← fixture.pathExists)) "keep the explicitly incomplete dependency fixture"
+      write fixture ((← read original).setObjVal! "confirmedDelivery" (toJson (#[] : Array Json)))
+      pure fixture
+      else pure original
+    let plan ← read (stage/"candidate/trial/plan.json")
+    let data ← IO.ofExcept (plan.getObjValAs? String "dataRoot")
+    guard (if args == ["check-history-closure"] then "fixed-sequence-history-unclosed-input" else "fixed-sequence-history-missing-ledger")
+      #["/usr/bin/env","EGGSHELL_DATA_ROOT="++data,
+      (← preparationExecutor),"history","fork",manifest.toString,← hash manifest,
+      (directory/"cohort/history-negative").toString]
+  else if args == ["check-complete-history"] then
+    let negative ← read (base/"fixed-sequence-history-unclosed-input.guard.json")
+    check (negative.getObjValD "state" == toJson "finished" && negative.getObjValD "exitCode" == toJson (1 : Nat) &&
+      negative.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "missing-history rejection did not retire"
+    check ((← IO.FS.readFile (base/"fixed-sequence-history-unclosed-input.stderr")).contains
+      "private history omitted or duplicated referenced delivery evidence") "negative check failed for another reason"
+    check (!(← (directory/"cohort/history-negative").pathExists)) "incomplete history was forked"
+    let stage := directory/"cohort/stage-1"
+    let manifest := stage/"closed/history-complete/history.json"
+    let plan ← read (stage/"candidate/trial/plan.json")
+    let data ← IO.ofExcept (plan.getObjValAs? String "dataRoot")
+    guard "fixed-sequence-history-complete-fork" #["/usr/bin/env","EGGSHELL_DATA_ROOT="++data,
+      (← preparationExecutor),"history","fork",manifest.toString,← hash manifest,
+      (directory/"cohort/history-positive").toString]
+  else if args == ["seal-complete-history"] then
+    discard <| finished "fixed-sequence-history-complete-fork"
+    let stage := directory/"cohort/stage-1"
+    let old ← read (stage/"closed/history/history.json")
+    let manifest := stage/"closed/history-complete/history.json"
+    let repaired ← read manifest
+    for field in #["database","sourceFiles","privateFamilies"] do
+      check (old.getObjValD field == repaired.getObjValD field) "history repair changed source or learned feedback"
+    check (!(← IO.ofExcept (repaired.getObjValAs? (Array Json) "confirmedDelivery")).isEmpty)
+      "historical delivery dependencies were not retained"
+    let positive := directory/"cohort/history-positive"
+    let receipt ← read (positive/"history-input.json")
+    check (receipt.getObjValD "sessionStateCopied" == toJson false &&
+      !(← (positive/"data/sessions").pathExists)) "new chat inherited live delivery state"
+    let oldClosure := stage/"closed/closed.json"
+    let closure := stage/"closed/closed-complete-history.json"
+    check (!(← closure.pathExists)) "keep the original closure and its repair"
+    let next := Json.mkObj [("path",toJson manifest.toString),("sha256",toJson (← hash manifest))]
+    write closure ((← read oldClosure).setObjVal! "nextHistory" next
+      |>.setObjVal! "originalClosureSha256" (toJson (← hash oldClosure)))
+    write (reports/"private-history-repair.json") (Json.mkObj [
+      ("sourceAndLearnedFeedbackUnchanged",toJson true),("copiedHistoricalDeliveryLedgers",repaired.getObjValD "confirmedDelivery"),
+      ("missingLedgerRejected",toJson true),("sessionStateCopied",toJson false),("modelCalls",toJson (0 : Nat))])
+    let input := directory/"cohort/stage-2.complete-history.input.json"
+    check (!(← input.pathExists)) "preserve the repaired stage input"
+    write input ((← read (directory/"cohort/stage-2.input.json")).setObjVal! "history" next
+      |>.setObjVal! "previousStage" (Json.mkObj [("path",toJson closure.toString),("sha256",toJson (← hash closure))]))
+    let failedStage := directory/"cohort/stage-2"
+    check (!(← (failedStage/"stage.json").pathExists) && !(← (failedStage/"candidate/trial.guard.json").pathExists))
+      "do not remove a prepared or charged stage"
+    let monitor ← read (base/"fixed-sequence-stage-2-prepare-resumed.guard.json")
+    check (monitor.getObjValD "state" == toJson "finished" && monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat))
+      "failed preparation still owns processes"
+    let replies := failedStage/"candidate/preparation/finish-replay"
+    let first ← read (replies/"step-0.json")
+    let second ← read (replies/"step-1.json")
+    check (second.getObjValD "error" == toJson "confirmed delivery ledger disappeared") "unexpected replay error"
+    write (reports/"stage-2-missing-ledger.json") (Json.mkObj [
+      ("guard",monitor),("firstReply",first),("secondReply",second),("worker",← read (replies/"worker.json")),
+      ("modelAttempts",toJson (0 : Nat)),("archiveCreated",toJson false)])
+    IO.FS.removeDirAll failedStage
+    IO.FS.removeDirAll positive
+    guard (← stagePreparationTag 2) #[(← preparationExecutor),"stage-prepare",input.toString,← hash input]
+  else if args == ["resume-stage-two-preparation"] then
+    idle
+    checkedController
+    let executor ← preparationExecutor
+    check (executor != (directory/"controller-build/StudyMain").toString) "select the audited preparation repair first"
+    let stage := directory/"cohort/stage-2"
+    let guardRecord ← read (base/"fixed-sequence-stage-2-prepare.guard.json")
+    let childRecord ← read (stage/"candidate/preparation.guard.json")
+    check (guardRecord.getObjValD "state" == toJson "finished" &&
+      guardRecord.getObjValD "exitCode" == toJson (1 : Nat) &&
+      guardRecord.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+      childRecord.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "old preparation still owns processes"
+    check ((← IO.FS.readFile (stage/"candidate/preparation.stderr")).trimAscii.toString ==
+      "derived replay has unresolved input; retain durable memory without repeated model calls")
+      "unexpected preparation failure"
+    for arm in #["fresh","candidate"] do
+      check (!(← (stage/arm/"trial.guard.json").pathExists) && !(← (stage/arm/"trial").pathExists))
+        "do not discard any answering-model attempt"
+    let replay ← read (stage/"candidate/preparation/finish-replay/step-0/stdout")
+    check (replay.getObjValD "complete" == toJson false && replay.getObjValD "pending" == toJson (0 : Nat))
+      "failure was not an incomplete bounded replay slice"
+    let input := directory/"cohort/stage-2.input.json"
+    let failure := Json.mkObj [
+      ("guard",guardRecord),("preparationGuard",childRecord),("replay",replay),
+      ("inputSha256",toJson (← hash input)),("modelAttempts",toJson (0 : Nat)),
+      ("availableEvidenceSha256",toJson (← hash (stage/"candidate/preparation/available-evidence.json"))),
+      ("removedIncompleteDatabaseAndCache",toJson true),("archiveCreated",toJson false)]
+    IO.FS.removeDirAll stage
+    check (!(← stage.pathExists)) "incomplete stage cleanup did not finish"
+    write (reports/"stage-2-preparation-failure.json") failure
+    guard (← stagePreparationTag 2) #[executor,"stage-prepare",input.toString,← hash input]
   else if args == ["run-six"] then
     checkedController
     let progress := reports/"sequence-progress.json"
@@ -552,7 +686,7 @@ partial def main (args : List String) : IO Unit := do
     for number in [1:7] do
       let stage := directory/"cohort"/s!"stage-{number}"
       mark number "preparing"
-      let settings := base/s!"fixed-sequence-stage-{number}-prepare.guard-settings.json"
+      let settings := base/((← stagePreparationTag number)++".guard-settings.json")
       if !(← settings.pathExists) then main ["stage",toString number]
       runGuardOnce settings
       let frozen ← read (stage/"stage.json")

@@ -1,8 +1,8 @@
-# One frozen controller for seed and both rounds
+# Fixed answering controller and native preparation
 
 Product runtime: `dd53c89bc450b66b58dd57d104ccbc82f32ca6345fa9666125e7feb03017000e`.
-This remains an isolated, unadopted candidate. A new seed is accepted; the six
-actual model stages are incomplete.
+This remains an isolated, unadopted candidate. A new seed is accepted and the
+first paired stage is closed. Five paired stages are incomplete.
 
 The controller preserves every source imported by the product, including
 helpers under `tools.research`. New research control is added separately.
@@ -10,8 +10,9 @@ Before model dispatch, the existing linker-based audit must verify the native
 dependencies, every product module and unchanged common source stamps. Counting
 only freshly compiled modules is insufficient and is no longer used.
 
-One executable handles acquisition, memory trials, publication finalization,
-original-source audit, read coverage and history. Recorded seed and memory
+The frozen answering executable handles acquisition and memory trials.
+Independently audited native preparation shares the unchanged product core.
+Recorded seed and memory
 plans have distinct path projections: a memory trial uses its actual arm DB,
 private data root and configuration, rather than a guessed transcript child.
 The actual model, provider, effort and completed protocol are checked.
@@ -93,8 +94,9 @@ shared-synaptic, private-journal and numerical views ready. Topic-one native
 preparation passed: all 3/3 fully stored units and 4/4 units including partial
 stored evidence were delivered. Two independent chats produced byte-identical
 bodies in 7,086 / 5,048 ms. An absent warning is excluded from success. The
-fresh answering-model control has started; completed paired stages remain
-zero of six. This preflight is not the actual model-input comparison.
+first paired stage subsequently completed with 73.275% inclusive token saving;
+see [results and quality limits](pilot-results.md). Preflight alone is not the
+actual model-input comparison.
 
 The local metadata driver advances the declared fresh/candidate order for all
 six stages. It delegates every product operation and model trial to the same
@@ -103,3 +105,30 @@ final usage before starting the next arm. It closes and audits the candidate's
 source history before preparing the next stage. An existing failed guard or
 incomplete result stops the sequence; it never retries a model trial or picks
 the best attempt. This driver adds no product behavior or adoption authority.
+
+Topic-two preparation exposed two harness defects before any model dispatch.
+The first replay slice returned incomplete with zero committed counters; the
+native worker must remain alive across bounded slices. Once retained, its next
+reply exposed a genuinely missing input: private history copied the native
+journal and usage rows but omitted a referenced confirmed-delivery ledger.
+
+History now carries only the immutable ledgers referenced by native start/answer
+events, checks their historical ACK heads and rejects an incomplete dependency
+set before forking. It copies no session delivery state or derived vectors.
+The actual first-stage source and learned-feedback bytes remain unchanged; one
+referenced ledger is added. Native checks reject an explicitly incomplete,
+current-format fixture and accept the complete fork with a fresh session state.
+The older missing-field decoder failure is not counted as that closure test.
+
+Preparation executable `79ca7d6ec0f3580f362e6416b0f79e3bcf4de3bb2ef4eb5287ebc1df55f69132`
+passes 327 linked-object checks and all 298 common product modules are unchanged.
+It delegates the answering arms to the original `670aaf8e…` controller and uses
+the original `dd53c89b…` product. The first model pair is not rerun. Source/feedback
+repair receipts and earlier failed preparation replies are retained; incomplete
+preparation DBs/caches and the positive fork probe are deleted without archives.
+
+Topic-two preparation now completes replay in two replies from one worker and
+delivers 5/5 fully stored units and 7/7 including partial stored evidence.
+Independent prompt hooks take 7,494 / 5,351 ms with identical bodies. The fresh
+model arm is running. These results establish neither a pool speedup nor team
+scale, and do not satisfy the adoption comparison.

@@ -44,22 +44,29 @@ def finishJournal (runtime : String) (database : System.FilePath)
   IO.FS.createDir directory
   let snapshot ← DB.PageMap.pin database
   let target : Synapses.Journal.Target := ⟨DB.Sidecar.Owner.ofSnapshot snapshot,storage⟩
-  let request := directory/"request.json"
-  IO.FS.writeFile request (Json.mkObj [("kind",toJson "synapses"),("target",toJson target)]).compress
+  let payload := Json.mkObj [("kind",toJson "synapses"),("target",toJson target)]
+  IO.FS.writeFile (directory/"request.json") payload.compress
   let deadline := (← IO.monoMsNow)+240000
-  for step in [:32] do
-    let now ← IO.monoMsNow
-    check (now < deadline) "derived preparation exceeded its off-hook deadline; retain durable memory"
-    -- The regular file supplies EOF to the product's streaming worker. No
-    -- original text or user command is interpolated into this fixed script.
-    let result ← StudyCommand.run "/bin/sh"
-      #["-c","exec \"$1\" codex-worker index < \"$2\"","eggshell-native-index",runtime,request.toString]
-      environment cwd "" (directory/s!"step-{step}") (min 65000 (deadline-now))
-    check (result.exitCode == 0) "sealed replay worker failed"
-    let replay ← IO.ofExcept (Json.parse result.stdout >>= replayReply)
-    if replay.complete && replay.pending == 0 then return replay
-    check replay.advanced "derived replay has unresolved input; retain durable memory without repeated model calls"
-  throw (IO.userError "derived replay step bound reached; retain durable memory")
+  -- Keep private continuations in one owned native worker. No committed
+  -- output within a slice is not evidence that its cursor made no progress.
+  let child : Plugin.Worker.Child ← IO.Process.spawn {
+    cmd := runtime,args := #["codex-worker","index"],env := environment,cwd := some (.mk cwd),
+    stdin := .piped,stdout := .piped,stderr := .null,setsid := true}
+  let slot : Plugin.Worker.Slot := {
+    gate := ← Std.Mutex.new (),child := ← Std.Mutex.new (.open (some child))}
+  try
+    IO.FS.writeFile (directory/"worker.json") (Json.mkObj [
+      ("pid",toJson child.pid.toNat),("runtime",toJson runtime),("retainedAcrossSlices",toJson true)]).compress
+    for step in [:32] do
+      let now ← IO.monoMsNow
+      check (now < deadline) "derived preparation exceeded its off-hook deadline; retain durable memory"
+      let some raw ← Plugin.Worker.exchangeOwnedIndex slot payload deadline |
+        throw (IO.userError "owned replay worker did not reply within its remaining preparation budget")
+      IO.FS.writeFile (directory/s!"step-{step}.json") raw.compress
+      let replay ← IO.ofExcept (replayReply raw)
+      if replay.complete && replay.pending == 0 then return replay
+    throw (IO.userError "derived replay step bound reached; retain durable memory")
+  finally Plugin.Worker.closeSlot slot
 
 /-- The experiment uses one source publication. Read the current per-source
 report, bind its typed prepared reference to the actual immutable head, and

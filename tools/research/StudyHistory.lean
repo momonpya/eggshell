@@ -46,7 +46,36 @@ structure Snapshot where
   database : String
   sourceFiles : Array (String × String)
   privateFamilies : Array Private
+  confirmedDelivery : Array Private := #[]
   deriving FromJson, ToJson
+
+/-- Historical ACK evidence is an input to usage replay. Copy only the
+referenced immutable ledgers, never a live session's delivery claims. -/
+private def deliveryReferences (events : System.FilePath) : IO (Array Synapses.DeliveryLedger.Reference) := do
+  if !(← events.pathExists) then return #[]
+  let journal ← DB.PageMap.pin events
+  let count ← Persistence.Store.getNat journal.get "count"
+  let mut references := #[]
+  for ordinal in [:count] do
+    if (← Synapses.Journal.entryDescription journal ordinal).kind == "finish" then continue
+    let value ← Synapses.Journal.entry journal ordinal
+    let known := match value.payload with
+      | .start _ _ _ known | .answer _ _ _ known => some known
+      | _ => none
+    if let some reference := known.bind (·.delivery) then
+      if reference.producer == Synapses.DeliveryLedger.implementation && !references.contains reference then
+        references := references.push reference
+  return references
+
+private def validateDelivery (path : System.FilePath) (name : String)
+    (references : Array Synapses.DeliveryLedger.Reference) : IO Unit := do
+  check (Synapses.digest name) "invalid historical delivery context"
+  let ledger ← DB.PageMap.pin path
+  check (ledger.head.authority == "confirmed-delivery:"++name) "foreign historical delivery authority"
+  for reference in references do
+    if reference.context == name then
+      check ((← DB.PageMap.HistoryReader.make? ledger reference.head).isSome)
+        "historical delivery evidence lost its referenced ACK head"
 
 private def save (path : System.FilePath) (value : Json) : IO Unit := do
   check (!(← path.pathExists)) "keep the existing history evidence"
@@ -108,6 +137,14 @@ def freeze (source data target : System.FilePath) : IO Snapshot := do
     validatePrivate sourceHead name path
     let files ← StudyRuntime.checkpoint path (target / "private" / name)
     privateFamilies := privateFamilies.push ⟨name,files⟩
+  let references ← deliveryReferences (privateRoot/"events")
+  let names := (references.map (·.context)).toList.eraseDups.toArray.qsort (· < ·)
+  let mut confirmedDelivery := #[]
+  for name in names do
+    let path := data/"confirmed-delivery"/name
+    validateDelivery path name references
+    let files ← StudyRuntime.checkpoint path (target/"confirmed-delivery"/name)
+    confirmedDelivery := confirmedDelivery.push ⟨name,files⟩
   requireQuiescent data
   check ((← familyNames privateRoot) == privateFamilies.map (·.name))
     "private feedback family set changed during history freeze"
@@ -115,7 +152,10 @@ def freeze (source data target : System.FilePath) : IO Snapshot := do
   for family in privateFamilies do
     check ((← StudyRuntime.files (privateRoot / family.name)) == family.files)
       "private learning changed during history freeze"
-  let snapshot : Snapshot := ⟨sourceHead.head.identity, sourceFiles, privateFamilies⟩
+  for ledger in confirmedDelivery do
+    check ((← StudyRuntime.files (data/"confirmed-delivery"/ledger.name)) == ledger.files)
+      "historical delivery evidence changed during freeze"
+  let snapshot : Snapshot := ⟨sourceHead.head.identity, sourceFiles, privateFamilies,confirmedDelivery⟩
   save (target / "history.json") (toJson snapshot)
   return snapshot
 
@@ -135,6 +175,14 @@ def verify (manifest : StudyAdmission.Artifact) : IO (System.FilePath × Snapsho
     validatePrivate source family.name (root / "private" / family.name)
     check ((← StudyRuntime.files (root / "private" / family.name)) == family.files)
       "common private learning changed"
+  let references ← deliveryReferences (root/"private/events")
+  let names := (references.map (·.context)).toList.eraseDups.toArray.qsort (· < ·)
+  check (snapshot.confirmedDelivery.map (·.name) == names)
+    "private history omitted or duplicated referenced delivery evidence"
+  for ledger in snapshot.confirmedDelivery do
+    validateDelivery (root/"confirmed-delivery"/ledger.name) ledger.name references
+    check ((← StudyRuntime.files (root/"confirmed-delivery"/ledger.name)) == ledger.files)
+      "common historical delivery evidence changed"
   return (root, snapshot)
 
 /-- Fork only from the sealed common input. Each arm gets private writable
@@ -148,10 +196,15 @@ def fork (manifest : StudyAdmission.Artifact) (target : System.FilePath) : IO Sn
     let destination := target / "data/read-cache" / snapshot.database / "synapses" / family.name
     let _ ← StudyRuntime.checkpoint (root / "private" / family.name) destination
     pure ()
+  for ledger in snapshot.confirmedDelivery do
+    let _ ← StudyRuntime.checkpoint (root/"confirmed-delivery"/ledger.name)
+      (target/"data/confirmed-delivery"/ledger.name)
+    pure ()
   let _ ← verify manifest
   save (target / "history-input.json") (Json.mkObj [
     ("manifest",toJson manifest),("snapshot",toJson snapshot),
     ("sessionStateCopied",toJson false),("derivedVectorsCopied",toJson false),
+    ("confirmedDeliveryLedgersCopied",toJson snapshot.confirmedDelivery.size),
     ("answeringModelCalls",toJson (0 : Nat))])
   return snapshot
 
