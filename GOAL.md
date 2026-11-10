@@ -219,6 +219,14 @@ frontendのSession一覧は本文/ThreadStateを保持せず、検索要求に�
 
 退役した候補4つ、診断器2つのsource/build/実行体/cache、一時状態21,654項目・2,518,942,644論理bytesをarchiveせず削除した。9,313の現行native/compiler入力を検査し、原典全file・現行実行体/制御器・正本文のhashを維持した。現在のproject cacheとMiniLMは保持する。退役候補は再開可能とは扱わない。本体採用0、有料比較0/18、数秒/一般98%/80人の実証と、受領期限超過の修正は未達/未検証のままである。
 
+[現行16並列のCPU診断](docs/candidates/native-cpu-attribution/README.md)を一度実施した。製品`7cc1432d…`・snapshot・質問・500,000文字を固定し、新build/回答モデル/採用0。全23本文/ACK、wave20件の意味検索/シナプスが成功し、4/16は観測付き5.451/14.151秒。資源停止なし・関連RSS標本最大3,787,696KiB・native child/両service exit0だったが、観測器が終了記録後に終了済みchildをkillしてguard exit1となった。try内の可変flagをfinallyの終了記録に使った誤りをIO.Refへ直し、最小再現・正常/異常exit・反復close・例外時回収を検査した。実フックを再実行していない。背景maintenanceの保留警告も残す。
+
+受付待ち最大2ms、検索actor最大16、共有image構築1回/hit22であった。実16要求の開始〜ACK完了に収まる同じpublisherの累積CPU差から、表示丸め20msを引いて少なくとも79.69 CPU秒を確認した。取得区間の壁時計上限12.872秒で、このCPU量を変えず10 coreで処理するだけなら部分区間だけで最低7.969秒必要になる。全待機の不在や、計算量自体を減らすpoolの不可能性は主張しない。100ms要求のobserverは親子探索が遅く実際には0.3〜2.8秒/37標本で、修正後の再測定はしていない。製品/inputの固定と、実行前未封印のobserver sourceを区別する。
+
+全23要求で46 owner/10,637 unit/17,414 cue/6,605原文rowを扱い、16 waveの問題組立〜選択は3.678〜4.770秒だった。OSのexclusive表70/6項目と一致したstackは、選択中のcue対応・範囲計算・割当てと、その後の待機を区別する。次は出版済みunit catalogueとcanonical row keyにより、不変な被覆関係を質問固有のcue重みから分離し、Leanで元の関係・順序との一致を示して既存imageへ接続する。複数DB/MCPのscopeと動的groupを保つ。同じcue bucket、winner tree微調整、同じ大きいIRのpool化を繰り返さない。速度や採用の完了、元のACK超過の修正、80人/一般98%を今回の診断で達成したとはしない。
+
+CPU診断のraw stack・重複出力・終了session/台帳/receiptなど2,200項目・70,398,438論理bytesをarchiveせず削除した。現行実行体/制御器・原典全file・正本文のhashを前後照合し、使用中project cacheとモデルを保持した。観測器の修正版で同じ負荷を再試行していない。
+
 ## 共有実用化までの契約
 
 ### A：終了・再開と耐久契約
