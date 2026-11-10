@@ -1,0 +1,22 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/current-six/stable-source-rows/source/tools/WinnerUpdates.lean	2026-11-10 08:28:59
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/winner-width-runtime/source/tools/WinnerUpdates.lean	2026-11-10 20:08:31
+@@ -1,5 +1,6 @@
+ module
+ public import tools.WinnerCache
++public import tools.research.WinnerWidthReplacement
+ @[expose] public section
+ 
+ namespace SharedCoverage.Deferred.VerifiedWinner
+@@ -11,6 +12,12 @@
+     (replacement : Nat → Option (Rating.Key p.offers.size)) : Cache (Rating.preference p.offers.size) depth :=
+   indices.foldl (fun cache index => cache.tree.updated index.val (replacement index.val)) cache
+ 
++@[csimp] theorem updateMany_width : @updateMany = @updateManyWidth := by
++  funext p depth capacity cache indices replacement
++  simp only [updateMany,updateManyWidth,StableWinnerIndex.Width.updated_exact]
++
++#print axioms updateMany_width
++
+ theorem updateMany_lookup (capacity : p.offers.size ≤ 2^depth)
+     (cache : Cache (Rating.preference p.offers.size) depth) (indices : List (Fin p.offers.size))
+     (replacement : Nat → Option (Rating.Key p.offers.size)) (query : Nat) :

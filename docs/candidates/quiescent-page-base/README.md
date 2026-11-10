@@ -155,10 +155,18 @@ bytes), and ended capacity sessions/ledgers/receipts (335,728,050 bytes).
 After collecting the replacement parent, its 23 clients' duplicate state and
 receipts are also removed (55,882,659 bytes); actual stdout and collected
 measurements remain. `retired-final-arm-state.json` records that cleanup.
-Current native executables, original DBs, reference bodies, project read-cache
-and model assets are preserved. No archive is made. Recompiling the isolated
-candidate now requires rebuilding its removed interfaces. See the corresponding
-`retired-*.json` receipts.
+The selected product, original DBs, reference bodies, project read-cache
+and model assets are preserved. No archive is made. At that stage, the isolated
+native executable remained while its compiler interfaces required rebuilding.
+See the corresponding `retired-*.json` receipts.
+
+The ended unadopted candidate's build/source, installation and component-check
+directories have subsequently been [removed](retired-runtime.json): 1,910 file
+entries and 223,232,884 logical bytes, without following symlinks. The saved
+patch, proof sources, actual stdout, scalar results and native/source audits
+remain; this candidate's former executable path is retired. Protected product,
+controllers and comparator hashes were unchanged. Later diagnostic helpers have
+their own retirement receipts and are not protected merely by an old path name.
 
 The candidate's sixteen-client cache misses fall to 423–489 per request, but
 the wall-time improvement remains about 8%. This experiment does not justify

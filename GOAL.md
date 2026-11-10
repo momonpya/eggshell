@@ -12,7 +12,7 @@
 
 所有publisherのCPU標本付き4並行は全件6.622秒。観測を外した事前固定4/16並行は全件5.942/15.639秒で、全20件が本文byte一致・意味検索・シナプス・ACK成功、原典不変、監督処理も正常終了した。関連RSS標本最大3,887,728KiB、40/80並行は実行していない。16並行で数秒は未達。各queryの既存private page frontで1,627〜1,905 missが同じ題材ごとに繰り返され、typed/検証済みpage cacheが存在する一方、満杯時の全消去と固定seedからの再生成がある。CPU標本はrouting/PageMap/codec/digestの経路を示すが、遅延全体の原因割合や修復効果は未確定である。検査2〜3ms・view0ms・追加準備約0.1秒を省くだけの修正には戻らない。
 
-次は既存page cacheと出版済みroutingの準備を、byte境界付きの不変なproject imageとして再利用する経路を優先する。新たな同種cacheや無制限の世代保持を足さず、scope・完全なpage参照・検証済み型・read trace・破損拒否を保つ。poolはそのimageを借りる小さな要求からCPU処理を始め、I/O待ちを持ち込まない所有境界として条件付きで検討する。選択済みの大きいIRだけをpoolへ渡した旧案と、dense/wideで悪化した単純なcue bucketを再投入しない。本文・認定・3辺・ACKを保った同一snapshotの隔離比較で性能を確認するまで採用しない。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
+利用者は、設計と性能の両方に根拠があるpoolを採用対象にしてよいと明示している。現在も検索は要求ごとのactorで並行実行されており、poolを新設すれば直ると仮定しない。今後の境界は、検証済みproject imageを借りる小さな要求からCPU処理を始め、I/O待ちを持ち込まない形にする。新たな同種cacheや無制限の世代保持を足さず、scope・完全なpage参照・検証済み型・read trace・破損拒否を保つ。選択済みの大きいIRだけをpoolへ渡して約2%しか変わらなかった旧案と、dense/wideで悪化した単純なcue bucketを再投入しない。本文・認定・3辺・ACKを保った同一snapshotの隔離比較で効果を確認する。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
 
 [不変page集合を共有する候補](docs/candidates/quiescent-page-base/README.md)をLeanで隔離実装した。利用中はbaseを固定し、親が検索actorと子taskをjoinした後だけfrontを返し、coordinatorが終了済みfrontを併合して無利用時に次baseを公開する。利用中base・更新待ちcache・既存image seedを元の128MiB公開page枠に収める等式、元image不変など6法則を標準公理だけで確認した。native部品ではowner mutex保持中のread、scope/full ref拒否、独立front、epoch更新、cancel/終了済み要求、元の値とread trace、出版後の新旧値を確認した。324 native objectと全変更source/埋込literalを照合し、製品変更は予定した4 module、追加は検査器1 module、既存module除去0である。
 
@@ -23,6 +23,16 @@
 最後の親試行はdisk保護線でprime中に停止し、続く再開は強制終了後のstale endpointを回収し忘れて入口で失敗した。ともに4/16の測定前で、性能の平均から除外して記録を保持した。終了したcapacity状態を削除し、停止guardに属したPIDが消滅済みであることを照合してendpointだけを除去し、同じ入力/保護条件の最後の親を1回完了した。停止線を緩和せず、追加の良い反復を選んでいない。`rotating-comparison.json`と回復計画/停止記録で区別する。
 
 共有baseで16並行のmissは423〜489まで減る一方、時間差は約8%に留まった。同じpage cache政策を繰り返して数秒達成と扱わない。次は既存CPU標本が示すrouting/codecを、検証済みの型付きwork graph準備を共有する境界で追う。全候補や全起点閉包を新たに作らず、出版差分・scope/full ref・read依存・3辺・元本文を保つ。
+
+その後の[型付きrouting leafの部品診断](docs/candidates/routing-leaf-image/README.md)は、全5,237 node・20,796 arcで元75.24〜77.53ms、候補11.92〜12.51ms、準備353.21msだった。値・順序・原payload bytes・依存page・完了が一致したが、通常のwarm 4,096-page snapshot cacheによる部品計測で、製品private front経路の全体時間上界ではない。小さな絶対時間だけで新cacheを製品へ足さず、未接続・未採用とした。単独helperに全製品closureを要求した最初の監査拒否も残し、既存component監査で実際の63/64 object・61共通module・helper source/literalとSHAを照合した。
+
+所有publisherの遅い段階を追加観測し、4要求の選択1.354〜1.417秒と、既存winner tree配下の反復した`lean_nat_pow`を確認した。sampleはidle threadも含み、CPU割合や要求別の完全な帰属は示さない。4実フックと3primeは本文・意味検索・シナプス・ACK成功だが、観測器が終了済みchildを二度waitしてguardがexit1となったため、6.543秒を正常な性能比較へ混ぜない。観測器を所有した終了値の共有へ修正し、成功/失敗/cancel/反復closeのnative対照を正常guardで確認した。無変更4フックの観測は再実行していない。
+
+[木の幅を一度だけ計算する候補](docs/candidates/winner-width/README.md)は、逐次更新の順序を保った全cache等価をLeanで証明し、296対照と3反復のnative部品で全leaf/勝者が一致した。部品は約20〜24%短縮したが、最初の測定はoracleのCSE再利用で無効とし、clock後に入力を読む修正後の値だけを採用した。実フック接続も、同一module内のconsumerより後に置いたcompiler証明では生成コードが旧関数のままだった点を検出し、呼び出し前へ移して再buildした。325実object、全322親module、変更1追加2、entry/literal不変と実call先を照合した。
+
+同一最終snapshotの[事前固定ABBA比較](docs/candidates/winner-width/runtime/comparison.json)は全4armで本文・意味検索・シナプス・ACKと原典不変を維持した。4並行は親6.817/6.773秒、候補6.666/6.697秒。16並行は親16.919/17.088秒、候補16.518/16.826秒で、記述的な平均短縮1.950%に留まる。候補RSS標本最大4,113,488KiB、メモリ改善は未確認。数秒・p99・一般98%・総token/品質・80人の実証ではなく、未採用・回答モデル0のままである。純粋な木更新の小修正やselectorだけのpoolを主解決として繰り返さず、準備済みproject情報を借りた後に残る実経路を対象にする。親arm終了時のmaintenance/queued work保留警告は配送合格と区別し、完了したと扱わない。
+
+採取後、終了した不変page候補・routing補助・部品候補のbuild/source、不要な制御器compiler interface、今回の99 clientのsession/台帳/receiptと未採用の全runtimeをarchiveせず削除した。削除対象の所有範囲を確認し、symlinkの参照先を辿らず、前後のhash検査を行った記録は各研究のretirement記録に残す。今回の木更新の全runtime/source等は293,007,445論理bytes、99 client状態は240,542,589bytes、部品build/sourceは111,080,516bytesである。現行製品・制御器・比較元・原典全file・現在必要なproject cache/モデルを維持した。終了済みの候補実行体や削除したcompiler interfaceを再利用可能とは扱わない。
 
 今回さらに不要な旧実行体3個・完了seed派生cache・未採用旧seed DB、計1,757項目/1,013,592,871論理bytesをarchiveせず削除した。現行製品・2制御器・比較元・受理seed原文・保持履歴・使用中snapshotのhashを維持した。研究用のguard受付が古い実行体pathしか見ていなかった点も修正し、実際に動いている現行guardに対する重複開始の拒否を確認した。5GB・RSS停止・2GiB空き・30秒の保護条件は維持する。
 
