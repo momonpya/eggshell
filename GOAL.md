@@ -1,8 +1,10 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-全体目標は未達。現在の性能比較元はbyte-pages（SHA `534a92d6f93fb253819cfbdcb32eea0643606e70c6e3c52eeae6e78bbdaee552`）。本体への採用0、有料比較0/18。新seedは回答生成を3,984,226総token、65フック失敗0で完了したが、原文索引の出版が拒否され、keep失敗のため不合格。原因は同じ原文の対応行が295→539件へ増えた際に既存295件まで再整列し、位置の変化を所有者の変更と誤判定したことだった。[既存位置を保つ隔離修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）は、3つのLean証明、Native323 objectと1ファイル差分の照合、実際に拒否された2件のnative出版・同一バッチ重複・再保存・旧pin・再openに合格した。終了記録だけの1件は行索引の試験外で、seedの合格には数えない。新runtimeの完全な取得/終了/復元gateと新seed/6段階はこれからである。初回の認証失敗は使用量不明として保持し、ゼロ扱いしない。
+全体目標は未達。現在の性能比較元はbyte-pages（SHA `534a92d6f93fb253819cfbdcb32eea0643606e70c6e3c52eeae6e78bbdaee552`）。本体への採用0、有料比較0/18。最初の新seedは3,984,226総token、65フック失敗0で回答を生成したが、原文索引の出版・keep失敗のため不合格だった。同じ原文の対応行が295→539件へ増えた際、既存行を再整列して位置変更を所有者変更と誤判定していた。[既存位置を保つ隔離修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）は3つのLean証明、Native323 objectと1ファイル差分、実際に拒否された2件のnative出版・重複・旧pin・再openに合格した。これはseedやモデル6段階の合格ではない。認証失敗の使用量不明もゼロ扱いしない。
 
-次の[固定制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は、実リンク327 object、製品全モジュールを含む298共通moduleの照合に合格した。旧再生補助検査は新規compileだけを数えて0件でもtrueとなっていたため、その追加照合は無効と訂正し、既存の実リンク照合器へ統一した。固定制御器で元の拒否2件も再生し直し、既存位置・同一バッチ重複・再保存・再openに再合格した。実RPCによる順序/欠落/重複/失敗拒否検査と、新cohortの完全native取得/終了/復元/read-only配送2/2も合格した。これはLLVMの98%達成ではない。旧失敗DB・cache・古い制御器は必要な現行libraryへの参照がないことを確認して削除し、archiveしていない。runtime `dd53c89b…`、制御器 `670aaf8e…`、gpt-5.6-luna/xhighを固定した新しい空DB・新chatのseed取得を開始した。新seedの合格と実モデル6段階はまだ未完了。
+次の[固定制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は実リンク327 object、製品全モジュールを含む298共通moduleの照合に合格した。新規compileだけを数えた旧追加監査は無効と訂正し、実リンクの照合へ統一した。この制御器で元の拒否2件、実RPCの順序/欠落/重複/失敗拒否、完全native取得/終了/復元/read-only配送2/2を確認した。小さな合成gateでありLLVMの98%達成ではない。
+
+固定した実装での次のseedは約6分25秒でディスク空きが2GiB未満となり保護停止した。70フックの失敗は0だったが、`turn/completed`も最終回答もない。観測3,943,319総tokenは失敗費用の下限、最終使用量は不明として[記録](docs/candidates/stable-source-rows/sequence/disk-stopped-seed.json)し、未完了DBは破棄した。終了済み43ビルドの未参照40,266 file・3,749,619,584論理bytes、旧prefix7個をarchiveせず削除した。現行実行体・制御器・比較元のSHAは不変。再取得は別のEggshell pluginの混入を事前検査で拒否し、モデル生成は要求していない。実験用accountだけでその7フックを無効化し、選んだ承認済み8フックだけであることをnative検査した。空き約6GiB、開始前5GiB以上・実行中2GiB以上・RSS停止線を維持し、同じ`dd53c89b…`/`670aaf8e…`、gpt-5.6-luna/xhighで別の空DB・新chatの取得を再開した。seed受理とモデル6段階は未完了である。
 
 ## 目的と固定する境界
 

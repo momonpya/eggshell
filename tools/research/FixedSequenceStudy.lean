@@ -4,6 +4,14 @@ def runtimeBuild := base/"current-six/stable-source-rows/build"
 def directory := base/"current-six/fixed-sequence"
 def reports := project/"docs/candidates/stable-source-rows/sequence"
 
+def selectedSeed : IO String := do
+  let path := directory/"cohort/selected-seed.json"
+  if !(← path.pathExists) then return "seed-1"
+  let selection ← read path
+  let name ← IO.ofExcept (selection.getObjValAs? String "name")
+  check (#["seed-2","seed-3"].contains name) "unexpected acquisition selection"
+  return name
+
 def frozenImports : IO (Std.HashSet String) := do
   let inputs : Array (String × String) ← IO.ofExcept (fromJson? (← read
     (runtimeBuild/"tools_research_OwnedSelectionRuntime.dependencies")))
@@ -275,12 +283,92 @@ def main (args : List String) : IO Unit := do
       ("previousPlanSha256",toJson oldDigest),("planSha256",toJson (← hash path)),
       ("contractSha256",toJson digest),("beforeGeneration",toJson true),
       ("runtimeAndControllerChanged",toJson false),("pilotAuthorizesAdoption",toJson false)])
+  else if args == ["retry-disk-stopped-seed"] then
+    idle
+    checkedController
+    let cohort := directory/"cohort"
+    let failed ← read (reports/"disk-stopped-seed.json")
+    check (failed.getObjValD "accepted" == toJson false &&
+      failed.getObjValD "reason" == toJson "disk-space") "account for the previous attempt first"
+    discard <| read (reports/"capacity-cleanup.json")
+    let fields := ((← command "/bin/df" #["-k",base.toString]).splitOn "\n")[1]!
+      |>.splitOn " " |>.filter (!·.isEmpty)
+    let some available := fields[3]!.toNat? | throw (IO.userError "cannot read available capacity")
+    check (available ≥ 5242880) "at least 5 GiB free is required before repeating this acquisition"
+    let planPath := cohort/"seed-2.plan.json"
+    check (!(← planPath.pathExists) && !(← (cohort/"study/seed-2").pathExists)) "preserve the next acquisition"
+    let plan := (← read (cohort/"seed-1.plan.json"))
+      |>.setObjVal! "label" (toJson "new-native-seed-2")
+      |>.setObjVal! "output" (toJson (cohort/"study/seed-2").toString)
+      |>.setObjVal! "guardRecord" (toJson (cohort/"seed-2.guard.json").toString)
+    write planPath plan
+    let limits := cohort/"seed-1.limits.json"
+    write (cohort/"seed-2.settings.json") (Json.mkObj [
+      ("command",toJson #[(directory/"controller-build/StudyMain").toString,"acquire-bounded",
+        planPath.toString,← hash planPath,limits.toString,← hash limits]),
+      ("cwd",toJson cohort.toString),("record",toJson (cohort/"seed-2.guard.json").toString),
+      ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (4358524 : Nat)),
+      ("minFreeKiB",toJson (2097152 : Nat))])
+    write (cohort/"selected-seed.json") (Json.mkObj [
+      ("name",toJson "seed-2"),("failedAttempt",toJson (reports/"disk-stopped-seed.json").toString),
+      ("sameRuntimeAndHarness",toJson true),("availableKiBBeforeRetry",toJson available),
+      ("runtime",plan.getObjValD "runtime"),("runner",plan.getObjValD "runner"),
+      ("planSha256",toJson (← hash planPath)),("adopted",toJson false)])
+  else if args == ["retry-isolated-seed"] then
+    idle
+    checkedController
+    discard <| finished "fixed-sequence-isolated-hooks"
+    let cohort := directory/"cohort"
+    let groups ← IO.ofExcept ((← read (cohort/"discovery-isolated/hooks.json")).getObjValAs? (Array Json) "data")
+    let mut count := 0
+    for group in groups do
+      for hook in ← IO.ofExcept (group.getObjValAs? (Array Json) "hooks") do
+        check (hook.getObjValD "pluginId" == toJson "eggshell@eggshell" &&
+          hook.getObjValD "enabled" == toJson true && hook.getObjValD "trustStatus" == toJson "trusted")
+          "only the selected native hooks may run"
+        count := count+1
+    check (count == 8) "expected eight selected hooks"
+    let config := cohort/"account/config.toml"
+    let correction ← read (reports/"duplicate-hook-admission.json")
+    check (correction.getObjValD "generationRequests" == toJson (0 : Nat) &&
+      correction.getObjValD "configurationSha256" == toJson (← hash config))
+      "unsealed plugin-isolation correction"
+    let planPath := cohort/"seed-3.plan.json"
+    check (!(← planPath.pathExists)) "keep previous acquisition attempts"
+    let plan := (← read (cohort/"seed-2.plan.json"))
+      |>.setObjVal! "label" (toJson "new-native-seed-3")
+      |>.setObjVal! "output" (toJson (cohort/"study/seed-3").toString)
+      |>.setObjVal! "guardRecord" (toJson (cohort/"seed-3.guard.json").toString)
+      |>.setObjVal! "accountConfiguration" (Json.mkObj [
+        ("path",toJson config.toString),("sha256",toJson (← hash config))])
+    let fields := ((← command "/bin/df" #["-k",base.toString]).splitOn "\n")[1]!
+      |>.splitOn " " |>.filter (!·.isEmpty)
+    let some available := fields[3]!.toNat? | throw (IO.userError "cannot read available capacity")
+    check (available ≥ 5242880) "at least 5 GiB free is required before this acquisition"
+    write planPath plan
+    let limits := cohort/"seed-1.limits.json"
+    write (cohort/"seed-3.settings.json") (Json.mkObj [
+      ("command",toJson #[(directory/"controller-build/StudyMain").toString,"acquire-bounded",
+        planPath.toString,← hash planPath,limits.toString,← hash limits]),
+      ("cwd",toJson cohort.toString),("record",toJson (cohort/"seed-3.guard.json").toString),
+      ("ownedPrefixes",toJson #[base.toString]),("limitRssKiB",toJson (4358524 : Nat)),
+      ("minFreeKiB",toJson (2097152 : Nat))])
+    write (reports/"selected-seed-disk-retry.json") (← read (cohort/"selected-seed.json"))
+    let selection := Json.mkObj [
+      ("name",toJson "seed-3"),("unselectedHooksDisabledBeforeGeneration",toJson true),
+      ("modelRuntimePromptEffortLimitsUnchanged",toJson true),
+      ("runtime",plan.getObjValD "runtime"),("runner",plan.getObjValD "runner"),
+      ("availableKiBBeforeRetry",toJson available),("planSha256",toJson (← hash planPath)),
+      ("adopted",toJson false)]
+    write (cohort/"selected-seed.json") selection
+    write (reports/"selected-seed.json") selection
   else if args == ["finish-seed"] then
     idle
     checkedController
     let cohort := directory/"cohort"
-    let acquired := cohort/"study/seed-1"
-    let monitor ← read (cohort/"seed-1.guard.json")
+    let name ← selectedSeed
+    let acquired := cohort/"study"/name
+    let monitor ← read (cohort/(name++".guard.json"))
     let result ← read (acquired/"result.json")
     check (monitor.getObjValD "state" == toJson "finished" && monitor.getObjValD "exitCode" == toJson (0 : Nat) &&
       monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat) && result.getObjValD "completed" == toJson true)
@@ -292,7 +380,7 @@ def main (args : List String) : IO Unit := do
   else if args == ["audit-seed"] then
     discard <| finished "fixed-sequence-seed-finalize"
     let cohort := directory/"cohort"
-    let acquired := cohort/"study/seed-1"
+    let acquired := cohort/"study"/(← selectedSeed)
     let definitions := reports/"task-definitions.json"
     check (!(← definitions.pathExists)) "keep the frozen task definitions"
     IO.FS.writeFile definitions (← IO.FS.readFile (base.parent.get!/"task-definitions.json"))
@@ -302,7 +390,7 @@ def main (args : List String) : IO Unit := do
   else if args == ["read-seed"] then
     discard <| finished "fixed-sequence-seed-audit"
     let cohort := directory/"cohort"
-    let plan ← read (cohort/"seed-1.plan.json")
+    let plan ← read (cohort/((← selectedSeed)++".plan.json"))
     let workspace ← IO.ofExcept (plan.getObjValAs? String "workspace")
     guard "fixed-sequence-seed-read" #[(directory/"controller-build/StudyMain").toString,"read-coverage",
       (cohort/"seed-ready/ready.egg").toString,workspace,(reports/"task-definitions.json").toString,
@@ -311,5 +399,57 @@ def main (args : List String) : IO Unit := do
     discard <| finished "fixed-sequence-seed-read"
     let cohort := directory/"cohort"
     guard "fixed-sequence-seed-history" #[(directory/"controller-build/StudyMain").toString,"history","freeze",
-      (cohort/"study/seed-1/work.egg").toString,(cohort/"study/seed-1/data").toString,(cohort/"seed-history").toString]
+      (cohort/"study"/(← selectedSeed)/"work.egg").toString,
+      (cohort/"study"/(← selectedSeed)/"data").toString,(cohort/"seed-history").toString]
+  else if args == ["template"] then
+    discard <| finished "fixed-sequence-seed-history"
+    let cohort := directory/"cohort"
+    let target := cohort/"candidate-template.json"
+    check (!(← target.pathExists)) "preserve the fixed candidate template"
+    let seed ← read (cohort/((← selectedSeed)++".plan.json"))
+    let mut template ← read (base/"candidate-template.json")
+    for name in #["runtime","runner","accountConfiguration","pluginRoot","pluginFiles","harness",
+        "model","effort","workspace","sourceCommit","cliWrapper","nativeCli","handoffChars","environment"] do
+      template := template.setObjVal! name (seed.getObjValD name)
+    write target (template.setObjVal! "purpose" (toJson "pilot"))
+  else if args.length == 2 && args.head? == some "stage" then
+    idle
+    checkedController
+    let some number := args[1]!.toNat? | throw (IO.userError "numeric stage required")
+    check (1 ≤ number && number ≤ 6) "exactly six ordered stages are declared"
+    let cohort := directory/"cohort"
+    let makeArtifact := fun (path : System.FilePath) => do
+      check (← path.pathExists) ("missing stage input: "++path.toString)
+      pure (Json.mkObj [("path",toJson path.toString),("sha256",toJson (← hash path))])
+    let initial := cohort/"seed-source-audit.json"
+    let (history,sourceAudit,readCoverage,previous) ← if number == 1 then
+      pure (← makeArtifact (cohort/"seed-history/history.json"),← makeArtifact initial,
+        ← makeArtifact (cohort/"seed-read-coverage.json"),Json.null)
+    else do
+      let path := cohort/s!"stage-{number-1}/closed/closed.json"
+      let completed ← read path
+      check (completed.getObjValD "completed" == toJson true) "preceding stage is not closed"
+      pure (completed.getObjValD "nextHistory",completed.getObjValD "sourceAudit",
+        completed.getObjValD "readCoverage",← makeArtifact path)
+    let input := cohort/s!"stage-{number}.input.json"
+    check (!(← input.pathExists)) "do not replace an earlier stage preparation"
+    let template ← makeArtifact (cohort/"candidate-template.json")
+    write input (Json.mkObj [
+      ("block",toJson (1 : Nat)),("stage",toJson number),("purpose",toJson "pilot"),
+      ("history",history),("sourceAudit",sourceAudit),("readCoverage",readCoverage),
+      ("initialSeedAudits",toJson #[← makeArtifact initial]),("definitions",← makeArtifact (reports/"task-definitions.json")),
+      ("currentTemplate",template),("candidateTemplate",template),
+      ("controllerSeedPlan",← makeArtifact (cohort/((← selectedSeed)++".plan.json"))),
+      ("limits",← makeArtifact (cohort/"seed-1.limits.json")),("previousStage",previous),
+      ("output",toJson (cohort/s!"stage-{number}").toString)])
+    guard s!"fixed-sequence-stage-{number}-prepare" #[(directory/"controller-build/StudyMain").toString,
+      "stage-prepare",input.toString,← hash input]
+  else if args.length == 2 && args.head? == some "close" then
+    idle
+    checkedController
+    let some number := args[1]!.toNat? | throw (IO.userError "numeric stage required")
+    check (1 ≤ number && number ≤ 6) "exactly six ordered stages are declared"
+    let stage := directory/"cohort"/s!"stage-{number}"
+    guard s!"fixed-sequence-stage-{number}-close" #[(directory/"controller-build/StudyMain").toString,
+      "stage-close",(stage/"stage.json").toString,← hash (stage/"stage.json"),(stage/"closed").toString]
   else throw (IO.userError "controller/audit required")

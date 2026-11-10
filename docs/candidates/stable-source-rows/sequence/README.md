@@ -45,6 +45,30 @@ selected executable hashes were checked. No archive was created.
 The predeclared contract was aligned before generation: 98% original delivery,
 5,000,000,000 bytes aggregate memory and sixteen local clients. The full matched
 comparison still requires three repetitions; a one-pass pilot cannot authorize
-adoption. The new empty-DB/new-chat seed is running under these fixed hashes,
-gpt-5.6-luna/xhigh, with a presealed five-million-token/15-minute bound. It has
-not yet been accepted and the six model stages remain incomplete.
+adoption. Acquisition uses these fixed hashes, gpt-5.6-luna/xhigh and a
+presealed five-million-token/15-minute bound. No seed has yet been accepted;
+the six model stages remain incomplete.
+
+The first acquisition under this controller stopped at the 2 GiB disk floor
+after 384,863 ms. Its 70 completed hooks reported no failures, but there was no
+completed model turn or final answer. Native accounting records 3,943,319
+observed inclusive tokens as a lower bound, with final usage unknown. The
+ephemeral chat has no saved rollout from which to recover a completed turn.
+This is a failed seed, not a successful generation with delayed warm.
+
+The failed seed's DB/cache and seven ended installations were deleted, without
+an archive, after retaining the compact failure and accounting receipts.
+Unreferenced outputs in 43 ended compiler builds were also removed: 40,266
+files and 3,749,619,584 logical bytes. Current native inputs and executable
+hashes were protected; logical bytes are not a claim about APFS space freed.
+The replacement empty-DB/new-chat attempt requires at least 5 GiB free before
+launch and retains the original 2 GiB disk and 4,358,524 KiB RSS stop limits.
+The replacement was rejected before any `thread/start` or `turn/start`: after
+background plugin synchronization, an unselected remote Eggshell installation
+was also exposed by hook discovery. No answering generation was dispatched.
+Its seven hooks are now explicitly disabled in this experiment account only.
+A new native inspection confirms exactly eight enabled, trusted hooks from the
+selected product and no remaining owned processes. The next acquisition seals
+that corrected account-configuration hash. Runtime, controller, source, prompt,
+model, effort and token/time limits are unchanged. Each attempt has separate
+paths and receipts. Previous failure cost is separate from treatment comparisons.
