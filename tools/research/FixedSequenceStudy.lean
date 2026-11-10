@@ -163,6 +163,18 @@ def checkedJsonArtifact (value : Json) : IO Json := do
   check (value.getObjValD "sha256" == toJson (← hash (.mk path))) "sealed artifact changed"
   read (.mk path)
 
+def knownTokens (usage : Json) : IO Nat := do
+  check (usage.getObjValD "protocolPassed" == toJson true &&
+    usage.getObjValD "finalUsageKnown" == toJson true &&
+    usage.getObjValD "unknownFinalUsage" == toJson false) "final model usage is unknown"
+  let total := usage.getObjValD "total"
+  let input ← IO.ofExcept (total.getObjValAs? Nat "inputTokens")
+  let output ← IO.ofExcept (total.getObjValAs? Nat "outputTokens")
+  let tokens ← IO.ofExcept (usage.getObjValAs? Nat "observedInclusiveTokens")
+  check (input+output == tokens && total.getObjValD "totalTokens" == toJson tokens)
+    "inclusive token accounting differs"
+  return tokens
+
 partial def main (args : List String) : IO Unit := do
   if args == ["controller"] then
     idle
@@ -707,6 +719,97 @@ partial def main (args : List String) : IO Unit := do
     check (!(← stage.pathExists)) "incomplete stage cleanup did not finish"
     write (reports/"stage-2-preparation-failure.json") failure
     guard (← stagePreparationTag 2) #[executor,"stage-prepare",input.toString,← hash input]
+  else if args == ["report-six"] then
+    checkedController
+    let cohort := directory/"cohort"
+    let protocol ← read (cohort/"reference-round.json")
+    check (protocol == (← read (reports/"reference-round.json"))) "continuation declaration changed"
+    let mut rows := #[]
+    let mut memoryTokens := 0
+    let mut freshTokens := 0
+    let mut fullEligible := 0
+    let mut fullDelivered := 0
+    let mut availableEligible := 0
+    let mut availableDelivered := 0
+    let mut hookCount := 0
+    for number in [1:7] do
+      let stage := cohort/s!"stage-{number}"
+      let actual ← read (stage/"candidate/trial/result.json")
+      let usage := actual.getObjValD "usage"
+      let tokens ← knownTokens usage
+      check (actual.getObjValD "completed" == toJson true) "unfinished memory generation"
+      let monitor ← read (stage/"candidate/trial.guard.json")
+      check (monitor.getObjValD "state" == toJson "finished" && monitor.getObjValD "exitCode" == toJson (0 : Nat) &&
+        monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "memory trial still owns work or failed"
+      let closed ← read (stage/"closed/closed.json")
+      check (closed.getObjValD "completed" == toJson true) "source history not closed"
+      let source ← checkedJsonArtifact (closed.getObjValD "sourceAudit")
+      check (source.getObjValD "sourceAccepted" == toJson true && source.getObjValD "handoffBodiesRead" == toJson (0 : Nat))
+        "source-only publication audit failed"
+      let audit ← read (stage/"candidate/preparation/audit-report.json")
+      let packets ← IO.ofExcept (usage.getObjValAs? (Array Json) "packets")
+      let some packet := packets[0]? | throw (IO.userError "actual initial memory packet absent")
+      check (usage.getObjValD "initialBodyMatched" == toJson true &&
+        usage.getObjValD "hookFailures" == toJson (#[] : Array Json) &&
+        packet.getObjValD "status" == toJson "completed" &&
+        packet.getObjValD "sha256" == audit.getObjValD "bodySha256" &&
+        packet.getObjValD "sha256" == toJson (← hash (stage/"candidate/trial/packet-0.txt")))
+        "actual delivered body differs from the audited packet"
+      let elapsed ← IO.ofExcept (packet.getObjValAs? Nat "elapsedMs")
+      check (elapsed < 30000) "initial hook exceeded its deadline"
+      let full := audit.getObjValD "requiredDelivery"
+      let available := audit.getObjValD "availableDelivery"
+      let counted := fun (value : Json) => do
+        let eligible ← IO.ofExcept (value.getObjValAs? Nat "eligible")
+        let delivered ← IO.ofExcept (value.getObjValAs? Nat "delivered")
+        check (eligible > 0 && delivered == eligible && value.getObjValD "missing" == toJson (#[] : Array Json))
+          "frozen DB-present evidence is missing"
+        pure (eligible,delivered)
+      let (eligible,delivered) ← counted full
+      fullEligible := fullEligible+eligible
+      fullDelivered := fullDelivered+delivered
+      let (eligible,delivered) ← counted available
+      availableEligible := availableEligible+eligible
+      availableDelivered := availableDelivered+delivered
+      let topic := (number-1)%3+1
+      let freshPath := cohort/s!"stage-{topic}/fresh/trial/result.json"
+      let fresh ← read freshPath
+      check (fresh.getObjValD "completed" == toJson true) "fresh reference incomplete"
+      let baseline ← knownTokens (fresh.getObjValD "usage")
+      if number ≤ 3 then freshTokens := freshTokens+baseline
+      memoryTokens := memoryTokens+tokens
+      hookCount := hookCount+(← IO.ofExcept (usage.getObjValAs? Nat "hookCount"))
+      rows := rows.push (Json.mkObj [("stage",toJson number),("topic",toJson topic),
+        ("round",toJson ((number-1)/3+1)),("actualUsage",usage),("initialHookMs",toJson elapsed),
+        ("fullyStoredDelivery",full),("availableDelivery",available),
+        ("freshReferenceTokens",toJson baseline),("freshIsReused",toJson (decide (number > 3))),
+        ("referenceSavingNumerator",toJson ((Int.ofNat baseline)-(Int.ofNat tokens))),
+        ("referenceSavingDenominator",toJson baseline),("freshResult",← receipt freshPath),
+        ("modelResult",← receipt (stage/"candidate/trial/result.json")),
+        ("sourceClosure",← receipt (stage/"closed/closed.json")),
+        ("preflightAudit",← receipt (stage/"candidate/preparation/audit-report.json"))])
+    let failed ← read (cohort/"stage-4/fresh/trial/failure.json")
+    let failedTokens ← IO.ofExcept ((failed.getObjValD "usage").getObjValAs? Nat "observedInclusiveTokens")
+    check ((failed.getObjValD "usage").getObjValD "unknownFinalUsage" == toJson true)
+      "inspect changed failed usage before reporting"
+    let seed ← knownTokens ((← read (reports/"seed-generation.json")).getObjValD "usage")
+    sealedJson (reports/"six-stage-results.json") (Json.mkObj [
+      ("runtimeSha256",toJson (← hash (runtimeBuild/"StudyMain"))),
+      ("answeringControllerSha256",toJson (← hash (directory/"controller-build/StudyMain"))),
+      ("model",toJson "gpt-5.6-luna"),("effort",toJson "xhigh"),("stages",toJson rows),
+      ("memoryStagesCompleted",toJson (6 : Nat)),("independentPairedStages",toJson (3 : Nat)),
+      ("fullyStoredInstances",toJson (fullDelivered,fullEligible)),
+      ("availableInstances",toJson (availableDelivered,availableEligible)),
+      ("actualMemoryHookCount",toJson hookCount),("actualMemoryHookFailures",toJson (0 : Nat)),
+      ("memoryInclusiveTokens",toJson memoryTokens),("uniqueCompletedFreshTokens",toJson freshTokens),
+      ("knownCompletedStudyTokens",toJson (memoryTokens+freshTokens)),
+      ("failedFreshTokensLowerBound",toJson failedTokens),("failedFreshFinalUsageKnown",toJson false),
+      ("observedStudyTokensLowerBoundIncludingFailed",toJson (memoryTokens+freshTokens+failedTokens)),
+      ("acceptedSeedTokensSeparately",toJson seed),("campaignTotalExactlyKnown",toJson false),
+      ("reusedFreshTokensBilledAgain",toJson false),("continuation",← receipt (cohort/"reference-round.json")),
+      ("qualityNonInferiorityEstablished",toJson false),("sixteenClientTargetEstablished",toJson false),
+      ("eightyPersonReadinessEstablished",toJson false),("adoptionComparisonComplete",toJson false),
+      ("productionAdoption",toJson false)])
   else if args == ["declare-reference-round"] then
     idle
     checkedController

@@ -1,10 +1,14 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-全体目標は未達。本体への採用0、現行/候補の有料比較0/18。現行の性能比較元はbyte-pages（SHA `534a92d6…`）、隔離した製品候補は[既存位置を保つ修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）。新seedから実モデル4/6段階が保存監査まで完了した。1周目の題材1/2/3は73.275%/94.890%/79.363%削減、全体保存根拠3/3・5/5・5/5。2周目の題材1は697,687総token、同条件の1周目freshを参照すると85.728%削減、実入力5/5・初回フック9.026秒である。2周目の題材2を準備中。
+全体目標は未達。本体への採用0、現行/候補の有料比較0/18。現行の性能比較元はbyte-pages（SHA `534a92d6…`）、隔離した製品候補は[既存位置を保つ修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）。新seed→題材1/2/3→2周目1/2/3の実モデル6/6段階が保存監査まで完了した。[凍結したDB内根拠](docs/candidates/stable-source-rows/sequence/six-stage-results.json)は全体保存31/31、部分保存を含め35/35が実際の初回入力に存在し、44フック失敗0、初回7.880〜9.204秒。1周目の題材1/2/3はfresh比73.275%/94.890%/79.363%削減、2周目は同条件の1周目fresh参照比85.728%/94.865%/96.010%である。
 
-2周目の題材1の新freshは500万token上限で中断し、観測5,078,087 tokenが下限・最終使用量不明である。独立した6対比較の完了や、失敗費用を含む正確な総削減率とは数えない。[継続手順](docs/candidates/stable-source-rows/sequence/reference-round.json)で完了済みの同条件freshを再利用し、自動再試行と上限緩和はしない。16並行で数秒、80人の持続利用、全6段階の98%配送、反復した総token/品質の採用条件はまだ未達/未検証。
+2周目の題材1の新freshは500万token上限で中断し、観測5,078,087 tokenが下限・最終使用量不明である。独立した6対比較の完了や、失敗費用を含む正確な総削減率とは数えない。[継続手順](docs/candidates/stable-source-rows/sequence/reference-round.json)で完了済みの同条件freshを再利用し、自動再試行と上限緩和はしない。この凍結対象の6段階配送は通過したが、16並行で数秒、80人の持続利用、一般的な98%配送率、反復した総token/品質の採用条件は未達/未検証である。
 
-終了済みの題材1〜3のDB作業コピー・cache 7,809 file・1,670,646,626論理bytesをarchiveせず削除した。進行中の題材2が使う独立した履歴snapshotの全ファイルと現行3実行体のSHAを前後照合し、実入力・使用量・回答・監査の記録は保持した。削除済み作業DBを再監査できるとは扱わない。[結果](docs/candidates/stable-source-rows/sequence/pilot-results.md)。
+完了した6モデルの総tokenは3,433,845、実際に完了したfresh3件は12,691,059。再利用したfreshを二重課金として足さない。中断分を含む実験費用は21,202,991 token以上で最終値不明、受理seed2,073,642は別記する。これより前の失敗seed費用も既存の別記録に残す。品質維持・独立した反復比較・16並行数秒・80人の持続利用は未実証であり、今回の31/31を一般的な98%保証に読み替えない。
+
+終了済みのDB作業コピー・cache・中間snapshotを3回に分けて16,175 file・4,505,744,412論理bytes削除し、archiveは作っていない。最終履歴はnativeの独立forkで原文・利用履歴・受領台帳を検証済み。共通seed入力と次の性能調査用の最終snapshotだけを残し、現行3実行体と保持履歴のSHAを前後照合した。使用量・実入力・回答・監査記録は保持する。削除した作業DBや中間checkpointを再開できるとは扱わない。[結果](docs/candidates/stable-source-rows/sequence/pilot-results.md)。
+
+次はこの6本文を固定した回帰条件にし、16並行で数秒・5GB以内へ向けた性能調査へ戻る。poolは、共有不変snapshotを借りて小さい要求からCPU処理を始め、I/O待ちをCPU workerへ持ち込まない所有境界として検討する。選択済みの大きいIRを後からpoolへ渡した前案は小さい速度差しかなくRSS改善もなかったので再投入しない。各処理を移す前に実profileと読み書きの境界を確認し、本文・認定・3辺・ACKを保つ隔離比較で判断する。製品を変えた実モデル評価は、利用者の条件どおりseedから固定して行う。
 
 製品と[回答モデルの制御器](docs/candidates/stable-source-rows/sequence/README.md)（SHA `670aaf8e…`）は固定している。制御器の実リンク327 objectと製品全モジュールを含む298共通moduleを照合済み。単なる新規compile件数の監査は使わない。空DB・新chatの[受理済みseed](docs/candidates/stable-source-rows/sequence/accepted-seed.json)は2,073,642総token、49フック失敗0、23コマンドの開始/終了/portable originが対応し、原文4,118行の内容不一致・座標矛盾0。配送前に全体が保存された必要証拠を題材1/2/3で3/5/5項目に凍結し、部分保存と完全不在も別に評価する。
 

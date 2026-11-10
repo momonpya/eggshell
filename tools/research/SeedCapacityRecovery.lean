@@ -42,11 +42,73 @@ partial def fileSizes (root : System.FilePath) : IO (Nat × Nat) := do
 def main (args : List String) : IO Unit := do
   idle
   let run := cohort/"study/seed-1"
-  if args == ["retire-closed-stage-caches"] then
-    let target := reports/"closed-stage-cache-cleanup.json"
+  if args == ["probe-final-history"] then
+    let closed ← read (cohort/"stage-6/closed/closed.json")
+    check (closed.getObjValD "completed" == toJson true) "last source history is incomplete"
+    let manifest := closed.getObjValD "nextHistory"
+    let path ← IO.ofExcept (manifest.getObjValAs? String "path")
+    let digest ← IO.ofExcept (manifest.getObjValAs? String "sha256")
+    check ((← hash (.mk path)) == digest) "final history manifest changed"
+    guard "fixed-sequence-final-history-probe" #[
+      (base/"current-six/fixed-sequence/preparation-closure-build/StudyMain").toString,
+      "history","fork",path,digest,(cohort/"final-history-probe").toString]
+  else if args == ["retire-final-intermediates"] then
+    discard <| finished "fixed-sequence-final-history-probe"
+    let target := reports/"final-intermediate-cleanup.json"
     check (!(← target.pathExists)) "keep the completed cleanup receipt"
-    let latest := cohort/"stage-4/reference-closure/history/history.json"
-    let declared ← read (cohort/"stage-5.input.json")
+    let closed ← read (cohort/"stage-6/closed/closed.json")
+    let latest : System.FilePath := .mk (← IO.ofExcept ((closed.getObjValD "nextHistory").getObjValAs? String "path"))
+    let before ← historyBytes latest
+    let runtime := #[controller,base/"current-six/stable-source-rows/build/StudyMain",
+      base/"current-six/fixed-sequence/preparation-closure-build/StudyMain"]
+    let runtimeBefore ← runtime.mapM fun path => return (path.toString,← hash path)
+    let probe ← read (cohort/"final-history-probe/history-input.json")
+    check (probe.getObjValD "sessionStateCopied" == toJson false &&
+      probe.getObjValD "derivedVectorsCopied" == toJson false &&
+      (probe.getObjValD "snapshot").getObjValD "database" == (← read latest).getObjValD "database")
+      "final native fork did not validate an independent original/feedback history"
+    let commands := (← command "/bin/ps" #["-axo","command="]).splitOn "\n"
+    let mut targets := #[cohort/"final-history-probe"]
+    for number in [1:7] do
+      let stage := cohort/s!"stage-{number}"
+      let ended ← read (stage/"candidate/trial.guard.json")
+      check (ended.getObjValD "state" == toJson "finished" &&
+        ended.getObjValD "exitCode" == toJson (0 : Nat) &&
+        ended.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "candidate still owns work"
+      for name in #["candidate/work.egg","candidate/data","candidate/trial/input.egg","candidate/trial/output.egg",
+          "closed/ready","reference-closure/ready"] do
+        targets := targets.push (stage/name)
+      if number < 6 then
+        for family in #["closed/history","closed/history-complete","reference-closure/history"] do
+          for name in #["source.egg","private","confirmed-delivery"] do
+            targets := targets.push (stage/family/name)
+    let mut removed := #[]
+    for path in targets do
+      check (!(commands.any (·.contains path.toString))) "a process still references an ended intermediate"
+      check (!(latest.toString.startsWith (path.toString++"/"))) "never retire the final standalone history"
+      if ← path.pathExists then
+        let (count,size) ← fileSizes path
+        IO.FS.removeDirAll path
+        removed := removed.push (Json.mkObj [("path",toJson path.toString),
+          ("files",toJson count),("logicalBytes",toJson size)])
+    let after ← historyBytes latest
+    let runtimeAfter ← runtime.mapM fun path => return (path.toString,← hash path)
+    check (before == after && runtimeBefore == runtimeAfter) "selected history or executable changed during cleanup"
+    write target (Json.mkObj [("removed",toJson removed),("retainedHistoryFiles",toJson after),
+      ("retainedExecutables",toJson runtimeAfter),("nativeForkCheck",probe),
+      ("nativeForkGuard",← finished "fixed-sequence-final-history-probe"),
+      ("archiveCreated",toJson false),("sourceHistoryStandalone",toJson true),
+      ("retainedSeedForMatchedComparison",toJson true),("recordedResultsRetained",toJson true),
+      ("historicalWorkingDatabasesReauditable",toJson false)])
+  else if args == ["retire-closed-stage-caches"] || args == ["retire-next-working-copies"] then
+    let nextBatch := args == ["retire-next-working-copies"]
+    let target := reports/(if nextBatch then "finished-second-round-cache-cleanup.json" else "closed-stage-cache-cleanup.json")
+    check (!(← target.pathExists)) "keep the completed cleanup receipt"
+    let previousStage := if nextBatch then 5 else 4
+    let closure ← read (cohort/s!"stage-{previousStage}/closed/closed.json")
+    check (closure.getObjValD "completed" == toJson true) "retain an audited independent history"
+    let latest : System.FilePath := .mk (← IO.ofExcept ((closure.getObjValD "nextHistory").getObjValAs? String "path"))
+    let declared ← read (cohort/s!"stage-{previousStage+1}.input.json")
     check ((declared.getObjValD "history").getObjValD "path" == toJson latest.toString &&
       (declared.getObjValD "history").getObjValD "sha256" == toJson (← hash latest))
       "active preparation is not using the independent retained history"
@@ -56,7 +118,7 @@ def main (args : List String) : IO Unit := do
     let runtimeBefore ← runtime.mapM fun path => return (path.toString,← hash path)
     let commands := (← command "/bin/ps" #["-axo","command="]).splitOn "\n"
     let mut removed := #[]
-    for number in [1:4] do
+    for number in [1:(if nextBatch then 6 else 4)] do
       let stage := cohort/s!"stage-{number}"
       check ((← read (stage/"closed/closed.json")).getObjValD "completed" == toJson true)
         "only closed source histories may retire their working copies"

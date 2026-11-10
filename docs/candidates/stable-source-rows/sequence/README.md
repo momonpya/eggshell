@@ -2,8 +2,13 @@
 
 Product runtime: `dd53c89bc450b66b58dd57d104ccbc82f32ca6345fa9666125e7feb03017000e`.
 This remains an isolated, unadopted candidate. A new seed is accepted and the
-first three paired stages and the second-round topic-one history are closed.
-Two memory stages are incomplete.
+first three paired stages and all three second-round memory histories are closed.
+All six actual initial packets contain the frozen DB-present evidence: 31/31
+fully stored instances and 35/35 including partial stored evidence. Forty-four
+memory hooks passed; initial hooks took 7.880–9.204 seconds. See the
+[complete per-stage results and accounting limits](pilot-results.md) and
+[structured receipts](six-stage-results.json). This is not a sixteen-client
+performance or quality non-inferiority result.
 The second-round fresh topic-one attempt hit its sealed token limit with
 5,078,087 observed tokens and unknown final usage. The [declared continuation](reference-round.json)
 reuses completed, identical-condition first-round fresh controls for the three
@@ -56,7 +61,8 @@ The predeclared contract was aligned before generation: 98% original delivery,
 comparison still requires three repetitions; a one-pass pilot cannot authorize
 adoption. Acquisition uses these fixed hashes, gpt-5.6-luna/xhigh and a
 presealed five-million-token/15-minute bound. The accepted acquisition below
-is the first accepted seed; the six model stages remain incomplete.
+is the first accepted seed; its six memory stages subsequently completed as
+reported above.
 
 The first acquisition under this controller stopped at the 2 GiB disk floor
 after 384,863 ms. Its 70 completed hooks reported no failures, but there was no
@@ -144,7 +150,10 @@ Independent prompt hooks take 7,494 / 5,351 ms with identical bodies. The actual
 model pair and history closure completed with 94.890% inclusive token saving.
 Topic three also closed with actual 5/5 delivery and 79.363% saving; its first
 hook took 7,880 ms. See [per-topic results and quality limits](pilot-results.md).
-The second round is in progress. These results establish neither a pool
+The second round subsequently completed with reused fresh references, and the
+final source/private/ACK snapshot passed a standalone native fork. Ended working
+DBs, caches and intermediate checkpoints were deleted after protecting that
+snapshot and the required common seed. These results establish neither a pool
 speedup nor team scale, and do not satisfy the adoption comparison. The two
 superseded preparation executables were deleted after checking that no live
 process used them; their compact audit records remain.

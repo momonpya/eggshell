@@ -3,9 +3,10 @@
 Current execution is recorded in the [fixed-runtime sequence](../stable-source-rows/sequence/README.md)
 and its [per-topic results](../stable-source-rows/sequence/pilot-results.md).
 The accepted seed uses product `dd53c89b…`; the first three model pairs and
-their source-history audits have completed. Second-round topic one also
-completed with a reused fresh reference; the remaining two memory stages are
-running. A stopped second-round fresh generation has unknown final usage,
+their source-history audits have completed. All three second-round memory
+stages also completed with reused fresh references. All six actual packets
+contain the frozen DB-present evidence; see the linked structured result.
+A stopped second-round fresh generation has unknown final usage,
 so this is not a completed independent six-pair experiment.
 This is an isolated single-repetition pilot, not an adopted token improvement.
 The acquisition failures below are earlier checkpoints retained for their

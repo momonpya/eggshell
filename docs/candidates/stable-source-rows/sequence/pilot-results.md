@@ -15,8 +15,11 @@ their own cost records; they are not rolled into a per-question saving.
 | First / 2 | 3,419,749 | 174,754 | 94.890% | 5/5 | 7/7 |
 | First / 3 | 4,382,725 | 904,479 | 79.363% | 5/5 | 5/5 |
 | Second / 1, reused fresh reference | 4,888,585 | 697,687 | 85.728% reference only | 5/5 | 5/5 |
+| Second / 2, reused fresh reference | 3,419,749 | 175,591 | 94.865% reference only | 6/6 | 7/7 |
+| Second / 3, reused fresh reference | 4,382,725 | 174,860 | 96.010% reference only | 7/7 | 7/7 |
 
-Two memory stages remain incomplete. The independent six-pair comparison is
+All six memory stages and their source-history audits completed. The
+independent six-pair comparison is
 incomplete; second-round reductions refer to reused first-round controls and
 are not an exact campaign-wide saving. This table includes cached input within input, and includes
 reasoning within output exactly once. First-round topic one has no failed model attempt.
@@ -47,6 +50,40 @@ failure. Native source audit, read coverage and standalone next-history closure
 passed. The answer reports `UNRESOLVED` because the workspace lacks the built
 Clang/lit configuration; quality non-inferiority is not established. The new
 failed fresh control and its unknown final usage remain charged separately.
+
+Second-round topic two completed with input/output 167,166 / 8,425, cached
+input zero, and no tool calls. The actual initial packet matches the preflight
+body: 6/6 fully stored units and 7/7 when including the partially stored
+`dumpmachine` evidence. The initial hook took 9,204 ms; all three hooks passed.
+Native source audit and history closure completed. Its answer describes the
+driver/config/target/toolchain chain and downstream caller assumptions, but
+this unblinded observation does not establish quality non-inferiority.
+
+Second-round topic three completed with input/output 166,977 / 7,883 and cached
+input 13,568. No tools were called. All 7/7 fully stored originals are in the
+actual initial packet, matching the audited preflight body. Its first hook took
+9,106 ms; all three hooks passed, as did native source audit and history closure.
+The answer describes target, input-language, final-phase and no-output
+boundaries, while noting that the matching built compiler is unavailable.
+
+Across the six stages, **31/31 fully stored requirement instances** and
+**35/35 instances including partial stored evidence** occur in the actual
+initial model packets. All 44 memory hooks passed. Initial prompt hooks range
+from 7,880 to 9,204 ms. These are six single-request observations, not a p99,
+a sixteen-client result, evidence about all possible required history, or
+eighty-person readiness. The [structured result](six-stage-results.json)
+checks the actual packet hashes, final token arithmetic, completed guards,
+frozen delivery audits and source-closure receipts. Product and answering
+controller hashes stayed fixed; no model trial was retried.
+
+The six memory runs consumed 3,433,845 inclusive tokens. The three completed
+fresh controls consumed 12,691,059; reusing them does not bill those tokens a
+second time. Completed study runs therefore cost 16,124,904 tokens. Including
+the interrupted fresh attempt gives an observed lower bound of **21,202,991**,
+with final failed usage unknown. Accepted seed acquisition adds 2,073,642
+separately (at least 23,276,633 including that seed). Earlier failed seed
+acquisitions retain their separate receipts. No exact net campaign reduction,
+quality non-inferiority, adoption comparison or production adoption is claimed.
 
 For topic one, fresh input/output is 4,867,798 / 20,787; memory is
 1,295,205 / 11,269. Cached input is 4,654,208 and 1,092,224 respectively.
@@ -118,3 +155,15 @@ and all three selected executable hashes were checked before and after removal.
 Raw usage, RPC, answers, audited packets and compact source-audit receipts remain.
 Deleted working DBs cannot be re-audited in place. Logical bytes are not physical
 APFS savings. See [cleanup receipt](closed-stage-cache-cleanup.json).
+
+The [next cleanup](finished-second-round-cache-cleanup.json) retired another
+5,467 files / 1,193,786,370 logical bytes. After all six stages, the final
+source/private/ACK snapshot passed a native standalone fork in 20,583 ms with
+no model calls, copied session state or copied derived vectors. The
+[final cleanup](final-intermediate-cleanup.json) then deleted the remaining
+ended working DBs, intermediate checkpoints, ready caches and that verification
+fork: 2,899 files / 1,641,311,416 logical bytes. The three cleanup batches total
+16,175 files / 4,505,744,412 logical bytes, with no archive. Common seed inputs
+for the required matched comparison and the final standalone snapshot for the
+next performance investigation remain; all selected executable and retained
+history hashes are unchanged. Older working snapshots cannot be reopened.
