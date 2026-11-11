@@ -2,7 +2,7 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
-追加指示のeggコマンド整理は、現行製品を変更せず隔離候補で行う。確認系をsessionの書き込みロックから分離し、保存先は取得時に記録したproject DBへ固定する。全件走査や手動Unionなどの低水準操作はdebug配下へ移す。構文確認は通ったが、nativeでの動作確認と採用条件はまだ満たしていない。
+追加指示の[eggコマンド整理](docs/candidates/egg-commands/README.md)は隔離候補でnative28件を通した。確認系はsessionの書き込みロック保持中でも207～212msで完了し、ファイルを変更しない。取得時のproject DBへの保存先固定、共有projectのinspect/diff、不正なstate/pendingの非変更、既存init設定の保護を確認した。全件走査・手動Unionなどはdebug配下へ移した。326 native objectが整合し、製品coreの変更はPluginCliだけ。現在製品・通常インストールは不変、フック改善や総token改善としては数えず、AGENTS.mdの採用条件は未達のまま。
 
 復旧・packageの終了済み作業DB/cacheは、本文・stdout・監査結果を保存後に5,326項目・601,353,304論理bytesを削除した。archiveなし。元の実セッションDBと現行native・必要なモデル入力は保持し、削除後も保護対象のhashを確認した。削除済みの試験DBを再開点にはしない。
 
