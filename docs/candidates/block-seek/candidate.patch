@@ -1,0 +1,67 @@
+--- a/Eggshell/Blake3.lean
++++ b/Eggshell/Blake3.lean
+@@ -106,6 +106,27 @@
+ def getD (source : Source) (offset : Nat) : UInt8 :=
+   if offset < source.size then byteAt source.segments offset else 0
+ 
++/-- Locate a block once. The suffix shares the original byte arrays; seeking
++does not flatten or copy a potentially large framed input. -/
++def seek : List ByteArray → Nat → List ByteArray × Nat
++  | [], offset => ([],offset)
++  | head::tail, offset =>
++      if offset < head.size then (head::tail,offset)
++      else seek tail (offset-head.size)
++
++theorem seek_byteAt (segments : List ByteArray) (offset position : Nat) :
++    byteAt (seek segments offset).1 ((seek segments offset).2+position) =
++      byteAt segments (offset+position) := by
++  induction segments generalizing offset with
++  | nil => simp [seek,byteAt]
++  | cons head tail next =>
++      by_cases inside : offset < head.size
++      · simp only [seek,if_pos inside]
++      · have outside : ¬ offset+position < head.size := by omega
++        simp only [seek,if_neg inside,byteAt,if_neg outside]
++        rw [show offset+position-head.size = offset-head.size+position by omega]
++        exact next (offset-head.size)
++
+ end Source
+ 
+ def wordAt (source : Source) (offset : Nat) : UInt32 :=
+@@ -114,7 +135,36 @@
+ 
+ def blockWords (source : Source) (offset : Nat) : Array UInt32 :=
+   (Array.range 16).map fun index => wordAt source (offset + index * 4)
++
++def preparedByte (source : Source) (offset : Nat) (cursor : List ByteArray × Nat)
++    (position : Nat) : UInt8 :=
++  if offset+position < source.size then Source.byteAt cursor.1 (cursor.2+position) else 0
++
++theorem prepared_byte_exact (source : Source) (offset position : Nat) :
++    preparedByte source offset (Source.seek source.segments offset) position =
++      source.getD (offset+position) := by
++  simp only [preparedByte,Source.getD,Source.seek_byteAt]
+ 
++def preparedWord (source : Source) (offset : Nat) (cursor : List ByteArray × Nat)
++    (index : Nat) : UInt32 :=
++  let byte position := (preparedByte source offset cursor (index*4+position)).toUInt32
++  byte 0 ||| (byte 1 <<< 8) ||| (byte 2 <<< 16) ||| (byte 3 <<< 24)
++
++theorem prepared_word_exact (source : Source) (offset index : Nat) :
++    preparedWord source offset (Source.seek source.segments offset) index =
++      wordAt source (offset+index*4) := by
++  simp only [preparedWord,wordAt,prepared_byte_exact,Nat.add_assoc]
++
++def preparedBlockWords (source : Source) (offset : Nat) : Array UInt32 :=
++  let cursor := Source.seek source.segments offset
++  (Array.range 16).map fun index => preparedWord source offset cursor index
++
++/-- Replace only native block reading. The original digest definition and all
++framing, tree, truncation and zero-padding semantics remain the specification. -/
++@[csimp] theorem prepared_block_words_compiled : @blockWords = @preparedBlockWords := by
++  funext source offset
++  simp only [preparedBlockWords,prepared_word_exact,blockWords]
++
+ def counterLow (counter : UInt64) : UInt32 := counter.toUInt32
+ def counterHigh (counter : UInt64) : UInt32 := (counter >>> 32).toUInt32
+ 

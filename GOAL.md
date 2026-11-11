@@ -2,6 +2,25 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[blockごとに入力片を位置決めする候補](docs/candidates/block-seek/README.md)をLeanで隔離実装した。
+起動時の実stackで、実装digestの各byteが同じsegmentsの接頭部を再走査することを確認した。
+64byte blockの始点でseekを1回行いsuffixを共有し、任意のSource・offsetに対する元のblockWordsとの関数一致を証明して`@[csimp]`でnativeへ適用した。
+全入力の連結コピー・新lock・worker・ranking・モデルは追加せず、製品coreの変更はBlake3だけ。215 moduleを再buildし、336 objectと335 moduleの一致・単一変更を確認した。
+候補製品は`73376c69…`。部品の全digestと独立scalarの308比較×8呼出しが一致し、256片の4hashは161〜164ms→16〜17msだった。単一片に明確な改善はない。
+起動ABBAの温まった状態は約0.20→0.10秒だが、候補初回1.397秒も含む全平均は206.25→263.375msなので、全体の改善率とはしない。
+登録済み実フックの4 writer＋6 readerの3組は7.109 / 6.887 / 6.741秒で、全18意味検索と必要原文42/42（部分保存込み48/48）、48観測・16最終回答、3種の辺、88件の終了応答を確認した。
+全LLVM本文・stdoutは同じsnapshotの既存bytesと一致。混合負荷の10秒条件は満たしたが、以下の検索だけ10件の成功へ転用しない。
+
+新data root・同一Unix利用者/ホストで、warmなし・共有DB読取専用の10検索×3組も試した。
+1組目は8.067秒、意味検索10/10・必要原文45/45（部分保存込み52/52）、終了10件も完了したが、2組目の同時prompt中にRSS4,372,592KiBで保護線4,358,524KiBを超え、終了137で停止した。
+2組目は9件が終了137、1件は終了記録なし、3組目は未実施。モデル0であり、全3組や80人の達成とはしない。
+停止後は再起動/再送せずnative監査だけを行い、完了10件の原文とbytes一致、元DBの出版不変を確認した。guardと実processは全てterminal・ownedPids空。
+peakには読取専用のsave worker2本・115,904KiBも含まれ、captured writeがnullのqueue9件と、チャット別observed-files594項目・355,916論理bytesが残った。これだけをOOMの原因と断定しない。
+次は、captured targetがない記録にもsource workerと関連file観測を起動する経路を、既存SaveReply.noWrite・鮮度検査・私有記録から分けて監査する。以前write targetを持ったqueueを現profileで捨てない。必要な観測と認定を省く変更や、同じ10検索の再試行・上限緩和はしない。
+未使用queue処理の省略で足りるとはまだ主張せず、publisher/frontend/model/hook親子の保持量も分ける。
+終了済みDB/cache/比較用source/controller等17,791項目・2,060,944,362論理bytesをarchiveせず削除し、原典・現行候補と必要inputs/interfaces/modelを保護した。
+受理seed・実モデル両周・品質と反復総token比較は未完。本体採用0・有料比較0/18、成長DB・MCP/NAS・長期80人・一般98%の目標を維持する。
+
 [起動先を固定した実フック試験](docs/practical-runtime/bound-product/README.md)を追加した。
 前の所有権候補はfrontend/publisherが`bd9096c4…`、コピーしたlauncherからのhook親子が`0411e492…`だった。
 前の結果を単一runtimeの製品検証とする解釈を訂正した。artifact hashや環境値だけでなく、製品のlauncher生成関数との完全一致を起動前に検査する。
@@ -11,8 +30,7 @@
 関連RSS標本最大3,970,464KiB、サービスとguardは終了0・ownedPids空。MCP/NAS/長期80人/一般98%と、現在runtimeの実モデルseed・両周、反復した総token・品質の採用条件は未達のまま残す。
 終了済みDB/cache/helperと不採用入口の実行体など13,345項目・794,287,731論理bytesをarchiveせず削除した。実本文は既存bytesと照合して重複6ファイルも除いた。
 [Mainだけの入口](docs/candidates/product-entry/README.md)も同じcoreで比較したが、16回のhelp起動で高速化を確認できず、不採用にした。実行体サイズの減少を改善として扱わない。
-次は正しく固定したprefixを使い、約0.2秒のprocess初期化と、Pre dispatch 437〜626ms / Post 172〜240msをそれぞれ調べる。
-PublicationWireが起動時に実装全体のdigestを初期化していることは確認したが、寄与は未測定。Lean compilerの`never_extract`等で必要な役割へ計算を遅らせるなら、同じdigestを返す証明と実フックの測定を先に行う。
+起動費の直接観測と、block単位で再走査を除く証明・実フック検査は上の最新記録へ進めた。runtime identity自体の計算は省略していない。
 無関係な入口削除の負荷試験や、選択の重みの再調整を反復しない。本体採用0・有料比較0/18。
 
 [保存と準備の所有権を分ける候補](docs/candidates/independent-maintenance/README.md)を隔離実装した。
