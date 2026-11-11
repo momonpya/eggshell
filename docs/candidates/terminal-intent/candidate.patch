@@ -1,0 +1,305 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -249,7 +249,133 @@
+   let directory := files.directory/"unbound-answers"
+   Persistence.privateDirectory directory
+   FileSystem.immutableBytes (directory/(key++".json")) bytes
++
++structure TerminalContext where
++  state : ThreadState
++  clock : Option String
++  uncertain : Bool
++  deriving ToJson, FromJson
++
++structure TerminalIntent where
++  pending : PendingTurn
++  context : TerminalContext
++  nanos : Nat
++  receivedUnixMs : Option Nat
++  deriving ToJson, FromJson
++
++def TerminalIntent.valid (intent : TerminalIntent) (session : String) : Bool :=
++  intent.pending.sessionId == session && intent.pending.closed &&
++    intent.pending.finalMessage.isSome && intent.context.clock.all Synapses.digest &&
++    (intent.context.clock.isNone || intent.nanos > 0)
++
++def TerminalIntent.clock (intent : TerminalIntent) : Option Synapses.Journal.Clock :=
++  intent.context.clock.map fun domain => ⟨domain,intent.nanos⟩
++
++theorem terminal_clock_keeps_observed_time (intent : TerminalIntent) (clock : Synapses.Journal.Clock)
++    (observed : intent.clock = some clock) : clock.nanos = intent.nanos := by
++  cases saved : intent.context.clock with
++  | none => simp [TerminalIntent.clock,saved] at observed
++  | some domain =>
++      simp only [TerminalIntent.clock,saved,Option.map_some,Option.some.injEq] at observed
++      rw [← observed]
++
++def terminalScope (a b : PendingTurn) : Bool :=
++  (a.sessionId,a.turnId,a.cwd,a.prompt,a.read,a.write) ==
++    (b.sessionId,b.turnId,b.cwd,b.prompt,b.read,b.write)
++
++theorem terminal_scope_keeps_target (a b : PendingTurn) (same : terminalScope a b = true) :
++    a.write = b.write := by
++  have values : (a.sessionId,a.turnId,a.cwd,a.prompt,a.read,a.write) =
++      (b.sessionId,b.turnId,b.cwd,b.prompt,b.read,b.write) := by
++    simpa only [terminalScope,beq_iff_eq] using same
++  exact congrArg (fun value => value.2.2.2.2.2) values
++
++def terminalSeal (pending : PendingTurn) (message : Option String) : PendingTurn :=
++  {pending with finalMessage := pending.finalMessage.or message,closed := true,inFlight := []}
++
++def terminalCloseState (state : ThreadState) (pending : PendingTurn) : ThreadState :=
++  if pending.closed then state else {state with epoch := state.epoch+1,offers := []}
++
++theorem terminal_replay_does_not_advance_epoch (state : ThreadState) (pending : PendingTurn)
++    (message : Option String) :
++    terminalCloseState (terminalCloseState state pending) (terminalSeal pending message) =
++      terminalCloseState state pending := by
++  simp [terminalCloseState,terminalSeal]
++
++theorem terminal_replay_keeps_first_answer (pending : PendingTurn) (a b : Option String)
++    (answer : pending.finalMessage.isSome = true) :
++    (terminalSeal (terminalSeal pending a) b).finalMessage = pending.finalMessage := by
++  cases stored : pending.finalMessage <;> simp_all [terminalSeal]
++
++def terminalContextPath (files : SessionFiles) (turn : String) : System.FilePath :=
++  files.directory/"closed-context"/(SemanticMatcher.contentKey (.text turn)++".json")
++
++def terminalInput (intent : TerminalIntent) : Json :=
++  Json.mkObj ([("_eggshell_synapse_nanos",toJson intent.nanos)] ++
++    intent.context.clock.toList.map ("_eggshell_synapse_clock",toJson ·) ++
++    intent.receivedUnixMs.toList.map ("_eggshell_received_unix_ms",toJson ·))
++
++def terminalIdentity (intent : TerminalIntent) : Json :=
++  Json.mkObj [("session",toJson intent.pending.sessionId),("turn",toJson intent.pending.turnId),
++    ("message",toJson (intent.pending.finalMessage.map fun text => Sha256.hex text.toUTF8))]
++
++def terminalKey (input : Json) (captured : PendingTurn) : String :=
++  match (optionalString input "_eggshell_receipt").filter Receipt.validId with
++  | some key => key
++  | none => Blake3.hex (Blake3.digest "eggshell.terminal-intent".toUTF8
++      [(terminalIdentity ⟨captured,⟨{profile := captured.profile},none,true⟩,0,none⟩).compress.toUTF8])
++
++def rememberTerminalContext (files : SessionFiles) (pending : PendingTurn)
++    (context : TerminalContext) : IO Unit := do
++  let path := terminalContextPath files pending.turnId
++  if ← path.pathExists then return
++  if let some parent := path.parent then Persistence.privateDirectory parent
++  FileSystem.immutableBytes path (toJson context |>.compress |>.toUTF8)
++
++/-- Metadata is changed only under the existing session owner. Journal IO is
++outside this critical section and always uses the captured context. -/
++def closeTerminalMetadata (files : SessionFiles) (intent : TerminalIntent) : IO Bool := do
++  let some state ← readState? files | throw (IO.userError "terminal context has no private lifecycle state")
++  rememberTerminalContext files intent.pending intent.context
++  let active ← readPendingBase? files
++  if let some active := active then
++    if terminalScope active intent.pending then
++      let sealed := terminalSeal active intent.pending.finalMessage
++      writeJson files.pending sealed
++      if !active.closed then writeJson files.state (terminalCloseState state active)
++      writeJson (closedTurnPath files active.turnId) sealed
++      return true
++  let old ← readClosedTurn? files intent.pending.turnId
++  if let some old := old then
++    unless terminalScope old intent.pending do throw (IO.userError "terminal recovery found a different captured writer scope")
++    writeJson (closedTurnPath files old.turnId) (terminalSeal old intent.pending.finalMessage)
++  else writeJson (closedTurnPath files intent.pending.turnId) intent.pending
++  return false
+ 
++def terminalMatchesInput (identity input : Json) (session : String) : Bool :=
++  identity.getObjValD "session" == toJson session &&
++    (optionalString input "turn_id").all (fun turn => identity.getObjValD "turn" == toJson turn) &&
++    identity.getObjValD "message" == toJson ((optionalString input "last_assistant_message").map fun text => Sha256.hex text.toUTF8)
++
++/-- Processed by one session save owner. Journal append preserves first
++observation/time on retries; a missing clock is never filled from the new chat. -/
++def reconcileTerminalIntents (session : String) (files : SessionFiles) (deadline : Nat) : IO Unit := do
++  let directory := files.directory/"terminal-intents"
++  if !(← directory.pathExists) then return
++  for entry in (← directory.readDir).toList.take 8 do
++    if (← IO.monoMsNow) ≥ deadline then return
++    if !entry.fileName.endsWith ".json" then continue
++    let some intent ← (readJson? entry.path [] : IO (Option TerminalIntent)) | continue
++    unless intent.valid session do throw (IO.userError "invalid captured terminal intent")
++    queueCheckpoint files intent.pending
++    if intent.context.clock.isSome then
++      Synapses.Live.answer (terminalInput intent) files intent.pending intent.context.state (some intent.context.uncertain)
++    discard <| withSession session (fun _ => closeTerminalMetadata files intent)
++    let target := files.directory/(if intent.context.clock.isSome then "terminal-done" else "terminal-unresolved")/entry.fileName
++    if intent.context.clock.isSome then writeJson target (terminalIdentity intent)
++    else writeJson target intent
++    removeIfExists entry.path
++
+ /-- Capture an answer before frontend readiness, RPC, state-lock contention or
+ synaptic preparation can consume the hook's deadline. Only atomic private
+ metadata is read; lifecycle changes and ordinary synaptic ingress stay in Stop. -/
+@@ -262,12 +388,27 @@
+     let state ← (readJson? files.state stateJsonDefaults : IO (Option ThreadState))
+     if state.any (! ·.enabled) then return
+     let active ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn))
++    let nanos := (input.getObjValAs? Nat "_eggshell_synapse_nanos").toOption.getD 0
++    let clock := (optionalString input "_eggshell_synapse_clock").filter fun clock => Synapses.digest clock && nanos > 0
+     let captured ← match active.bind (capturedFinal? · session turn message) with
+-      | some captured => pure (some captured)
++      | some captured =>
++          let contextState := state.getD {profile := captured.profile}
++          let unknown ← try Synapses.Live.uncertain files contextState catch _ => pure true
++          pure (some (captured,⟨contextState,if state.isSome then clock else none,unknown || state.isNone⟩))
+       | none => do
+           let closed ← turn.mapM (readClosedTurn? files)
+-          pure (closed.join.bind (capturedFinal? · session turn message))
+-    if let some captured := captured then
++          match closed.join.bind (capturedFinal? · session turn message) with
++          | none => pure none
++          | some captured =>
++              let saved ← (readJson? (terminalContextPath files captured.turnId) [] : IO (Option TerminalContext))
++              let prior := saved.getD ⟨{profile := captured.profile},none,true⟩
++              let clock := if prior.clock == clock then clock else none
++              pure (some (captured,{prior with clock := clock}))
++    if let some (captured,context) := captured then
++      let intent : TerminalIntent := ⟨captured,context,nanos,Synapses.Live.receivedUnixMs? input⟩
++      let path := files.directory/"terminal-intents"/(terminalKey input captured++".json")
++      if let some parent := path.parent then Persistence.privateDirectory parent
++      FileSystem.immutableBytes path (toJson intent |>.compress |>.toUTF8)
+       queueCheckpoint files captured
+       Receipt.observe (optionalString input "_eggshell_receipt") "final-capture" (Json.mkObj [
+         ("status",toJson (if captured.write.isSome then "checkpoint" else "read-only")),
+@@ -283,10 +424,13 @@
+ /-- Archive only metadata while holding the session lock. Receipts stay in place.
+ Retain the original turn capability before removing its active slot: SessionEnd
+ may arrive before Stop, or an already running result may finish after closure. -/
+-def deferPending (files : SessionFiles) (pending : PendingTurn) : IO Unit := do
++def deferPending (files : SessionFiles) (pending : PendingTurn) (clock : Option String := none) : IO Unit := do
+   -- Keep unresolved reservations as diagnostic/recovery state. They never
+   -- become observed roots; Stop separately clears them when sealing an answer.
+   let pending := { pending with closed := true }
++  if let some state ← readState? files then
++    let unknown ← try Synapses.Live.uncertain files state catch _ => pure true
++    rememberTerminalContext files pending ⟨state,clock,unknown⟩
+   writeJson (closedTurnPath files pending.turnId) pending
+   if pending.write.isSome then
+     let key := SemanticMatcher.contentKey (.text pending.turnId)
+@@ -324,6 +468,7 @@
+     (cursor : Option (IO.Ref (String × List String)) := none) : IO Unit := do
+   let files ← sessionFiles session
+   try Persistence.withLockWithin (files.directory / "save") 0 do
++    reconcileTerminalIntents session files deadline
+     if let some cursor := cursor then reconcileToolReceipts session files cursor
+     let mut entries := []
+     for name in ["deferred", "checkpoints"] do
+@@ -769,7 +914,7 @@
+     if !state.enabled then return none
+     if let some pending ← readPendingBase? files then
+       if pending.turnId == turn then return none
+-      deferPending files pending
++      deferPending files pending (optionalString input "_eggshell_synapse_clock")
+     let selection ← IO.ofExcept (Config.resolve config (state.nextProfile.getD state.profile))
+     let pending : PendingTurn := {
+       sessionId := session, turnId := turn, cwd := cwd.toString, prompt,
+@@ -1045,6 +1190,28 @@
+ 
+ def stop (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
++  if let some key := (optionalString input "_eggshell_receipt").filter Receipt.validId then
++    let files ← sessionFiles session
++    let done ← (readJson? (files.directory/"terminal-done"/(key++".json")) [] : IO (Option Json))
++    if let some done := done then
++      unless terminalMatchesInput done input session do throw (IO.userError "terminal retry changed its original message")
++      return emptyHook
++    let pendingIntent ← (readJson? (files.directory/"terminal-intents"/(key++".json")) [] : IO (Option TerminalIntent))
++    let captured ← match pendingIntent with
++      | some captured => pure (some captured)
++      | none => (readJson? (files.directory/"terminal-unresolved"/(key++".json")) [] : IO (Option TerminalIntent))
++    if let some captured := captured then
++      unless captured.valid session && terminalMatchesInput (terminalIdentity captured) input session do
++        throw (IO.userError "terminal request changed its captured context")
++      discard <| withHookSession input session fun files => closeTerminalMetadata files captured
++      return emptyHook
++    -- Completion is published before the intent is removed. Recheck after
++    -- the point reads so concurrent background completion cannot fall through
++    -- to the current context or advance its epoch a second time.
++    let completed ← (readJson? (files.directory/"terminal-done"/(key++".json")) [] : IO (Option Json))
++    if let some completed := completed then
++      unless terminalMatchesInput completed input session do throw (IO.userError "terminal retry changed its original message")
++      return emptyHook
+   let turn := optionalString input "turn_id"
+   let finalMessage := optionalString input "last_assistant_message"
+   let current ← withHookSession input session fun files => do
+@@ -1080,7 +1247,8 @@
+ def sessionEnd (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+   withHookSession input session fun files => do
+-    if let some pending ← readPendingBase? files then deferPending files pending
++    if let some pending ← readPendingBase? files then
++      deferPending files pending (optionalString input "_eggshell_synapse_clock")
+     if let some state ← readState? files then
+       writeJson files.state { state with epoch := state.epoch + 1, offers := [] }
+   Worker.cancel session "search"
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -333,11 +333,20 @@
+     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
+       |>.setObjVal! "_eggshell_received_unix_ms" (toJson receivedUnixMs)
+       |>.setObjVal! "_eggshell_receipt" receipt
++      |>.setObjVal! "_eggshell_synapse_nanos" (toJson observedNanos)
++    let session ← IO.ofExcept (requiredString input "session_id")
++    -- A compatible live endpoint gives its existing clock identity without
++    -- startup, an RPC or a state lock. Absence is explicitly unknown.
++    let input ← if event == "Stop" then do
++        try
++          let existing ← readyEndpoint session
++          pure (input.setObjVal! "_eggshell_synapse_clock" (toJson (chatClock existing.secret session)))
++        catch _ => pure input
++      else pure input
+     let captureStarted ← IO.monoMsNow
+     captureTerminal input
+     let captureMs := (← IO.monoMsNow) - captureStarted
+     let input := input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250))
+-    let session ← IO.ofExcept (requiredString input "session_id")
+     let ensureStarted ← IO.monoMsNow
+     let endpoint ← ensureBefore session (deadline - 250)
+     let input := (input.setObjVal! "_eggshell_synapse_clock" (toJson (chatClock endpoint.secret session)))
+--- a/Eggshell/SynapseLive.lean
++++ b/Eggshell/SynapseLive.lean
+@@ -107,13 +107,15 @@
+ /-- Stop supplies final text, not a native agent-message id. Its observed
+ origin is the hook's session/turn, explicitly distinct from a tool occurrence. -/
+ def answer (input : Json) (files : Plugin.SessionFiles) (pending : Plugin.PendingTurn)
+-    (state : Plugin.ThreadState) : IO Unit := do
++    (state : Plugin.ThreadState) (capturedUnknown : Option Bool := none) : IO Unit := do
+   let some clock := clock? input | return
+   let clock := contextClock clock state.epoch
+   let some text := pending.finalMessage | return
+   let occurrence : Occurrence := ⟨pending.sessionId, pending.turnId, "hook-stop:" ++ pending.turnId⟩
+   let query := Sha256.hex pending.prompt.toUTF8
+-  let unknown ← uncertain files state
++  let unknown ← match capturedUnknown with
++    | some unknown => pure unknown
++    | none => uncertain files state
+   let confirmed := state.confirmedDelivery
+   observe pending fun source archive => do
+     let known ← Journal.knowledge source state.deliveredGraphs unknown archive confirmed
+--- a/Eggshell/HookFrontend.lean
++++ b/Eggshell/HookFrontend.lean
+@@ -67,7 +67,7 @@
+ queued their final checkpoint; durable work must be empty after the ACK path.
+ Malformed pending state is not evidence that the turn is absent. -/
+ def Session.closedAndDrained (files : SessionFiles) : IO Bool := do
+-  for name in ["deferred","checkpoints"] do
++  for name in ["deferred","checkpoints","terminal-intents"] do
+     let directory := files.directory/name
+     if ← directory.pathExists then
+       Persistence.rejectSymlinkAncestors directory
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -547,6 +547,9 @@
+         #[``Eggshell.Plugin.queueCheckpoint, ``Eggshell.Plugin.recordUnboundFinal],
+         #[``Eggshell.Plugin.withHookSession, ``Eggshell.Plugin.withSession,
+           ``Eggshell.Plugin.Worker.exchange, ``Eggshell.Synapses.Live.answer]),
++      (``Eggshell.Plugin.reconcileTerminalIntents,
++        #[``Eggshell.Plugin.queueCheckpoint, ``Eggshell.Synapses.Live.answer,
++          ``Eggshell.Plugin.closeTerminalMetadata], #[]),
+       (``Eggshell.Plugin.sealRecordedRead, #[``Eggshell.SourceEvidence.sealCapture], #[]),
+       (``Eggshell.Plugin.preToolUse,
+         #[``Eggshell.Plugin.nativeSourceInput?, ``Eggshell.SourceEvidence.capture,

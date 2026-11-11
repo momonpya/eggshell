@@ -2,22 +2,26 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
-[最終回答をfrontend RPC前に捕捉する候補](docs/candidates/terminal-capture/README.md)を隔離実装した。
-元のturn・保存先・依存境界を保持すること、明示turnの一致、readonlyでsource jobを作らないことをLeanで証明した。
-捕捉に状態ロックやworker RPCを使わないContractAuditも通った。製品`92328c0d…`は336 object / 335 moduleが整合し、core差分はPluginHooks / Daemon / ContractAuditだけ。
-状態ロック保持下の捕捉は1ms。古いclosed turn、重複、turn省略、未知turn、readonly、off、壊れたmetadata、別sessionの拒否をnativeで確認した。
-実登録Stopを状態ロックで期限切れにし、通信前checkpointを確認後、frontend/publisherを停止・再起動して回答を自動保存できた。
-hook再生・keep・warmによるsource修復はなく、元の未完了通知を成功へ変更していない。
-通常writerはjournal 7件と消費1・支持4・共引用4を維持した。
-ただし故障したturnはjournal 6件のままで、Stopのsynaptic answer entryと私有lifecycleの閉鎖は未回復。
-次は、回答だけでなく捕捉済みterminal intentからその終了処理も回復し、元のclock / context / 保存権限を保つ経路を検証する。
-NativeSynapticの記録を現在のcontextへ付け替えたり、未完了通知を空応答に偽装したりしない。
+[終了要求の時点を保持して回復する候補](docs/candidates/terminal-intent/README.md)をLeanで隔離実装した。
+親[terminal-capture](docs/candidates/terminal-capture/README.md)で残った、故障時journal 6件・私有lifecycle未閉鎖に対処する。
+RPC前に元のturn・保存先・clock/context・観測時刻を保持し、保存workerがその文脈から終了処理を再開する。
+元clock不明の要求を現在のclockへ付け替えず、処理済み受領IDの異なる回答は拒否する。
+製品`cc3c0435…`は336 object / 335 moduleが整合し、core差分は5 moduleと対応する埋込literalだけ。
+捕捉時のstate lock / worker RPC / synaptic IOを禁止するContractAuditを維持し、scope・観測時刻・反復sealの純粋な法則を証明した。
 
-同じ候補の通常4保存＋6検索×3組は7.587 / 7.112 / 7.004秒で完了し、全18意味検索、必要原文42/42（部分保存込み48/48）、共有定義8件、48観測・16回答の自動保存を確認した。
-LLVM本文/返送bytesは既存の同一snapshotと一致。終了系88件は正常な空JSON、client警告0。
-readonly readerの背景state guard待ち警告1件は残す。関連RSS最大3,458,432KiB、service/guard終了0・ownedPids空。
-10検索だけの現在runtimeの試験、80人・8時間・一般98%・MCP/NAS・成長DBは未検証。
-終了済みDB/cache/制御器等15,022項目・1,293,690,664論理bytesをarchiveせず削除し、原典・現行候補・必要入力とモデルを保護した。
+nativeの境界試験でロック保持中の捕捉1ms、反復でepochを二重に進めないこと、古い終了要求が新turn・別保存先・新epochを閉じないことを確認した。
+実登録Stopをsave/state所有者の保持で期限切れにし、両serviceの停止・再起動後、回答・7件目のsynaptic answer entry・元turnの終了状態が自動回復した。
+元clock/context/受領時刻も一致し、hook再生・keep・warmで原文を修復していない。元の未完了応答は失敗のまま保持する。
+正常系のjournal 7件と消費1・支持4・共引用4を維持した。個々のfile IO全境界でのcrash試験や、IO全体のexactly-once証明とは扱わない。
+
+通常4保存＋6検索×3組は6.786 / 6.537 / 6.537秒、全18意味検索、必要原文42/42（部分保存込み48/48）、48観測・16回答の自動保存、正常な終了系応答88件を確認した。
+全LLVM本文/返送bytesは同じsnapshotの既存bytesと一致。client警告0・service stderr空、関連RSS標本最大4,176,592KiB、全service/guard終了0・ownedPids空。
+新しい私有data rootからの10同時検索×3組は7.885 / 5.037 / 5.046秒で完了した。
+全30意味検索と必要原文135/135（部分保存込み156/156）、同じsnapshotの本文/返送bytes一致、元publication不変、readonlyの30終了状態をnativeで確認した。
+source queue / observed-filesは0、client警告0、関連RSS標本最大3,779,824KiB、service/guard正常終了・ownedPids空。
+既存数値runtimeのpooling警告1件は保存し、モデルやpoolingを今回変更したとは扱わない。全9法則のaxiom検査は標準公理だけだった。
+終了済みDB/cache・専用制御器等19,967項目・1,971,992,039論理bytesをarchiveせず削除し、原典・現行runtime・モデル・必要native入力を保護した。削除後も現行336 objectが整合した。
+80人・8時間・一般98%・MCP/NAS・成長DBは未検証で、Macの小試行を代用しない。
 現在runtimeの受理seed・モデル両周0/6・品質・反復総token比較は未完。本体採用0・有料比較0/18。
 
 [保存先なしのturnで出版作業を作らない候補](docs/candidates/readonly-save/README.md)を隔離実装した。
