@@ -62,3 +62,5 @@ shutdown時に一つのsession guard待ちによるqueued work保持警告が出
 終了した候補のsource/build/実行体、前のpool試験の残り、試験状態と重複出力4,931 file・475,515,815論理bytesを[archiveせず削除した](retirement.json)。原DB、現行親、モデル、回答制御器と正本文のhashを前後で照合し、必要なnative入力とlibraryの参照先も保護した。候補の実行体は再利用できず、再生には生成し直す必要がある。
 
 削除後は[現行親の実フック7件](parent-after-retirement.json)を確認し、本文/出版SHA/意味検索/シナプス/ACKが全て一致した。原DB不変、guard終了0・ownedPids空、RSS標本最大2,583,248KiB。4 clientの5.570秒は削除後の機能検査で、性能比較へ足していない。ファイルhashの確認だけで、派生cache内に捕捉された参照先も無事と推測することは避けた。
+
+この確認の試験状態も[削除](parent-check-retirement.json)した。一度限りの制御器はcommit `4b27f78c`に記録し、現行treeから除いた。証明と汎用の部品対照は残す。終了したguardや削除済みrootを未実行の次段階として再起動しない。

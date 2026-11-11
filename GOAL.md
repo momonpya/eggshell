@@ -6,6 +6,8 @@
 
 次は固定した実入力と中間値を使い、被覆問題の組立・bundle/recipe・scope・greedy・描画を個別に区切る。合成形状だけで選んだ部品や同じ範囲索引/poolを再試行しない。複数projectを異なる所有者集合で同時に扱う保持量、出版の差分と持続処理、一般98%と16並列数秒/80人の日常利用も未検証のままである。既に通ったseed→題材1/2/3→2周目の配送・token値を、この候補の成果に足さない。
 
+残存する`selection-profile-inputs/selector-fixture.json`は旧identity `2a1ab576…`・revision 43・40所有者の入力であり、現在の`4cef1ca4…`・revision 47・46所有者とは違う。これを現在の実入力として再利用しない。現行のchecked viewから、capabilityを含まないquery・unit・row/domainを採り、原関数と同じ結果になるnativeの段階計測へつなぐ。
+
 終了した候補のcompiler/source/実行体、前のpool候補の残り、重複出力と試験状態4,931 file・475,515,815論理bytesはarchiveせず削除した。現行の親、モデル、制御器、原DBと正本文のSHA不変と必要native入力/libraryの参照先を確認し、削除後の親の実フック7本文/出版SHA/意味検索/シナプス/ACKも全件確認した。候補の古い実行体や削除済みcompiler rootは再開点として使わない。
 
 前段では[共有viewの固定8枠](docs/candidates/view-admission/README.md)を、同じ128MiBのbyte予算から導く上限へ変更した隔離native候補を検証した。異なる小さい準備を同時保持する合成試行は、旧8/16・1,004msから新16/16・23msへ進んだ。準備前のread・異なるscope・予算超過の拒否と、readerの寿命/byte/lease境界をLeanで確認した。既存の操作上限160、予約式、短い状態mutex、待機方式は変えていない。
