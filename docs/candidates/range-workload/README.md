@@ -59,3 +59,19 @@ bundle側では、元の受理述語を「この範囲を覆うunitが選択集�
 factoryは準備済みresolverを引数に取り、factory自身は木を構築しない。追加分のresolverと既存resolverの合成も、全範囲を作り直した場合と同じ照合になることを証明した。重複する構造の証人があってもcueの票は増えず、request順も変わらない。append-onlyの契約であり、削除・書換え・compactionの証明ではない。
 
 全9つの公理監査は標準3公理以内で、sorry/native_decide/Z3/unsafeは使っていない。[監査](prepared-selector-axioms.txt)。Lean 4.33.0、768MiB上限で警告なし・終了0。製品DBのinterpreter操作、新しいDB/cache、native実行体の生成はしていない。これは一致性の実装であり、準備全体の実費用・保持量の改善や、選択器全体への接続を実証したものではない。ディスク空きが2GiBの保護線を下回っている間は重いnative試験を開始しない。
+
+## 選択器全体と借用の入口
+
+`PreparedViewSelector.lean`は、前のProblem/recipeの一致を`selectView`全体へつないだ。`selectUsing`の本体は、元の製品と2つの型付き入口以外が完全に同じであることをsource witnessと照合した。元のfactoryを渡す`reference`は、元の`selectView`と定義的に等しい。準備済みfactoryを渡しても、generic/source key・receipt・診断入力を含む`ServiceChoice`全体が等しいことを証明した。証明の対象を選択順の一部へ狭めていない。[sourceと境界](selector-connection-resident-boundary.json)。
+
+`chooseWith`は、このviewのgeometryを借りて質問のpostingsだけを作り、構造の木は作らない。どの有効な準備済みgeometryを借りても元と等しい。scope、元のunit、source key、費用、認定をgeometryの共有で同一視しない。既存のproject imageへこの入口を接続する作業はまだ残る。
+
+単独入口`choose`はgeometryを1回作るので、現時点で「出版済みの構造を全queryで再利用した」とは扱わない。Leanの`@[csimp]`へ登録する等式も証明した。隔離した呼出し元のsource変更は、この証明付き置換のimportだけで、IO本体は不変である。実際のnative呼出し先・保持量・速度は、リンク後の監査が必要である。
+
+5つの公理監査はすべて標準3公理だけで、768MiBの型検査が終了0だった。[公理](selector-connection-proof.txt)。最初に選択器全体を展開した証明は、大きい継続式を複製してkernelのメモリ制限に達した。共通の組立関数へ分け、同じ上限で閉じた。失敗を成功の記録へ数えていない。
+
+呼出し元の全moduleを768MiBで検査する試行は候補・親とも`takeGroup`の同じ式で制限に達した。元のbuilderはこのmoduleに3,072MiBを設定しており、これを候補のruntime回帰や、呼出し元の検査成功とは判定しない。[候補](selector-caller-check.txt)、[親](selector-parent-caller-check.txt)、[検査の範囲](selector-checks.json)。同じ低メモリ試行を繰り返さない。
+
+次の[隔離native sourceとbuild設定](selector-native-plan.json)は準備済みだが、guardは開始していない。現行runtime、モデル、DB、project cacheは保持した。空き容量の2GiB条件を満たしてから通常の資源監視下でビルドし、native呼出し先、全source閉包、3題材の本文/ACK、16並行を確認する。その後も、resident imageへの接続と差分更新、モデル両周、反復した総token・品質、成長DB、共有利用の実証が残る。
+
+参照がない旧性能試験用cache 2,389項目・348,446,835論理bytesを削除し、6,300 interface参照・現行実行体・原DBのhashを照合した。現行cacheとモデルは保持している。[削除](superseded-capacity-cache-removed.json)。論理削除量に相当する空き容量の増加は確認していない。終了済みの採取/退役コマンドは制御器から取り除き、現在の操作だけを117行へ整理した。過去コマンドは当時のGit revisionに属し、今の制御器で再実行しない。新しいDB/cacheやarchiveは作っていない。
