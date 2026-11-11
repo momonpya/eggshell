@@ -104,8 +104,9 @@ def gather (settings : InputRetirement) : IO Json := do
   let mut targets := #[]
   let mut bytes := 0
   for path in ← regularFiles (.mk settings.root) do
-    if keptPaths.contains (← IO.FS.realPath path).toString then continue
     let name := path.toString
+    if settings.closedDirectories.any (fun closed => name == closed || name.startsWith (closed++"/")) then continue
+    if keptPaths.contains (← IO.FS.realPath path).toString then continue
     let object ← if name.endsWith ".o" then pure path else do
       let parts := name.splitOn "/lib/"
       if parts.length != 2 then continue
