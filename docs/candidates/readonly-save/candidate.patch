@@ -1,0 +1,97 @@
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -428,12 +428,31 @@
+ def readPending? (files : SessionFiles) : IO (Option PendingTurn) := do
+   (← readPendingBase? files).mapM (loadToolReceipts files)
+ 
+-/-- Immutable queue entries are removed only after the .egg commit succeeds. -/
++/-- A turn without a captured write target has no source publication to queue.
++Native receipts and advisory usage remain private session records. Existing
++writable queue entries keep their own target independently of the active turn. -/
+ def queueCheckpoint (files : SessionFiles) (pending : PendingTurn) : IO Unit := do
++  if pending.write.isNone then return
+   let key := Blake3.hex (Blake3.digest "eggshell.checkpoint".toUTF8
+     [(toJson pending).compress.toUTF8])
+   writeJson (files.directory / "checkpoints" / (key ++ ".json")) pending
++
++theorem readonly_checkpoint_has_no_effect (files : SessionFiles) (pending : PendingTurn)
++    (readonly : pending.write = none) : queueCheckpoint files pending = pure () := by
++  simp [queueCheckpoint, readonly]
+ 
++/-- Receipt loading serves publication only. Its immutable captured target,
++not the current profile, decides whether this work is necessary. -/
++def pendingForSave (files : SessionFiles) (pending : PendingTurn) (checkpoint : Bool) :
++    IO PendingTurn :=
++  if pending.write.isNone || checkpoint && pending.finalMessage.isNone then pure pending
++  else loadToolReceipts files pending
++
++theorem readonly_save_needs_no_receipt_loading (files : SessionFiles) (pending : PendingTurn)
++    (checkpoint : Bool) (readonly : pending.write = none) :
++    pendingForSave files pending checkpoint = pure pending := by
++  simp [pendingForSave, readonly]
++
+ /-- Independent observations have their own immutable identity. No native
+ result or earlier source certificate is refreshed or attributed a later state. -/
+ def observationTool (observation : SourceObservation.Observation limit) : ToolEvent :=
+@@ -453,6 +472,9 @@
+ which command, program, editor or local provider changed them. The hook never
+ calls it. Pending scans retain their queue entry and resume at a page cursor. -/
+ def observeRelatedFiles (files : SessionFiles) (pending : PendingTurn) (deadline : Nat) : IO Bool := do
++  -- This produces new saved observations; it is not delivery freshness or a
++  -- native read certificate. No target means none of these scans can publish.
++  if pending.write.isNone then return true
+   let workspace := System.FilePath.mk pending.cwd
+   let dependencies := (pending.tools.flatMap
+     (fun tool => tool.source.map (·.record.files) |>.getD []) ++ pending.sources).eraseDups
+@@ -476,6 +498,11 @@
+           queueCheckpoint files {pending with tools := [tool], sources := [], inFlight := [], finalMessage := none, closed := false}
+         SourceObservation.acknowledge path snapshot
+   pure finished
++
++theorem readonly_observer_has_no_effect (files : SessionFiles) (pending : PendingTurn)
++    (deadline : Nat) (readonly : pending.write = none) :
++    observeRelatedFiles files pending deadline = pure true := by
++  simp [observeRelatedFiles, readonly]
+ 
+ def pendingSelection (pending : PendingTurn) : Config.Selection := {
+   label := pending.profile
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -187,8 +187,9 @@
+   -- become observed roots; Stop separately clears them when sealing an answer.
+   let pending := { pending with closed := true }
+   writeJson (closedTurnPath files pending.turnId) pending
+-  let key := SemanticMatcher.contentKey (.text pending.turnId)
+-  writeJson (files.directory / "deferred" / (key ++ ".json")) pending
++  if pending.write.isSome then
++    let key := SemanticMatcher.contentKey (.text pending.turnId)
++    writeJson (files.directory / "deferred" / (key ++ ".json")) pending
+   removeIfExists files.pending
+ 
+ /-- The journal is authoritative for observed events even if the native hook
+@@ -232,6 +233,13 @@
+       if !entry.fileName.endsWith ".json" then continue
+       let state ← withSession session fun files => readState? files
+       if state.any (! ·.enabled) then return
++      let some queued ← (readJson? entry.path pendingJsonDefaults : IO (Option PendingTurn)) | continue
++      unless queued.sessionId == session do throw (IO.userError "queued turn belongs to another chat")
++      -- Retire only a validated immutable no-write entry. A current read-only
++      -- profile must never discard an older entry with its own writer target.
++      if queued.write.isNone then
++        removeIfExists entry.path
++        continue
+       let payload := Json.mkObj [("session", session), ("path", entry.path.toString)]
+       let some result ← Worker.exchange session "save" payload deadline | return
+       let .ok _saved := NativePublication.SaveReply.check? result |
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -1148,8 +1148,7 @@
+         let some base ← (readJson? path pendingJsonDefaults : IO (Option PendingTurn)) |
+           throw (IO.userError "queued turn disappeared")
+         let checkpoint := path.parent.bind (·.fileName) == some "checkpoints"
+-        let pending ← if checkpoint && base.finalMessage.isNone then pure base
+-          else loadToolReceipts files base
++        let pending ← pendingForSave files base checkpoint
+         let saved ← if let some target := pending.write then do
+           if pending.finalMessage.isNone && pending.tools.isEmpty then pure none
+           else

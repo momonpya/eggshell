@@ -2,6 +2,30 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[保存先なしのturnで出版作業を作らない候補](docs/candidates/readonly-save/README.md)を隔離実装した。
+取得時のPendingTurn.writeがnoneなら、checkpoint / deferred job / 関連ファイル観測と保存用receipt復元を省く。
+現在のprofileで古いwriter grantを捨てず、古いqueue自体の保存先とsessionを検査する。
+native receipt、遅いStop、私有の利用記録、配送時の鮮度検査は保持した。
+任意の保存先なしturnで上の処理に副作用がないことをLeanで証明し、変更原文の拒否・古い保存待ちの出版・私有結果の非混入をnativeで確認した。
+製品は`04476843…`、336 object / 335 moduleが整合し、製品coreの差分はPluginModel / PluginHooks / Workerだけ。
+
+新しいdata rootから共有DBを読む10同時検索×3組は7.596 / 7.049 / 5.059秒で完了した。
+全30意味検索、凍結した必要原文135/135（部分保存込み156/156）、実本文・stdoutの既存bytes一致、原publication不変をnativeで確認した。
+readonlyの30 closed-turnを保持し、source queue / observed-filesは0。client警告0、関連RSS最大3,927,888KiBで保護線以内。
+全service / guardが正常終了しownedPids空。これはMacでの10検索の暫定条件を通した結果で、一般98%や80人の長期利用へ拡張しない。
+
+同じ候補の混合4保存＋6検索は1組目のStop 1件が2.047秒で未完了となり失敗した。
+失敗したreceiptにdispatch / transportの完了記録はなく、1,615msでrequest期限超過。ほかの7 Stopのservice内処理は55〜71msだった。
+停止後のnative監査でツール観測24/24・最終回答7/8、そのsessionのpending.finalMessage=null / queue空を確認した。
+単なる通知の問題ではなく、1件の最終回答が保存されていない。DB破損や今回の変更への因果は、この記録だけで断定しない。
+混合seriesは失敗のまま保存し、hook / keep / warmの再生や同じ混合試験の再試行はしない。
+次は、frontend RPCの前に最終回答を元のturnと保存先へ結び付けて耐久的に捕捉し、通信失敗後に回復する経路をLeanで検証する。
+不用なqueue処理の省略だけを、保存を含む実用品全体の合格としない。
+現在runtimeの受理seed・モデル両周0/6・品質・反復総token比較は未完。本体採用0・有料比較0/18。
+80人×8時間・複数project DB・MCP/NAS・成長DB・一般98%と30秒の目標は継続する。
+終了済みの混合/readonly試験DB・cache・専用制御器等16,208項目・2,372,260,593論理bytesをarchiveせず削除した。
+原典・現行候補・比較対象の実行体hashと必要inputs/interfaces/modelを保護し、削除後も現行336 objectが整合した。
+
 [blockごとに入力片を位置決めする候補](docs/candidates/block-seek/README.md)をLeanで隔離実装した。
 起動時の実stackで、実装digestの各byteが同じsegmentsの接頭部を再走査することを確認した。
 64byte blockの始点でseekを1回行いsuffixを共有し、任意のSource・offsetに対する元のblockWordsとの関数一致を証明して`@[csimp]`でnativeへ適用した。
