@@ -1,0 +1,17 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/view-admission/ParentSharedReadViews.lean	2026-11-11 14:30:52
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/record-groups/source/tools/research/SharedReadViews.lean	2026-11-11 14:20:22
+@@ -12 +11,0 @@
+-def maxImages : Nat := 8
+@@ -14,0 +14,9 @@
++
++/-- Every image reserves at least charge 0. The byte budget determines
++the structural ceiling; an unrelated small slot count cannot block it. -/
++def maxImages : Nat := capacity / charge 0
++
++theorem image_count_from_bytes : maxImages * charge 0 ≤ capacity := by decide
++theorem image_count_covers_operations : AdmissionLimits.operations ≤ maxImages := by decide
++#print axioms image_count_from_bytes
++#print axioms image_count_covers_operations
+@@ -222 +230 @@
+-theorem Checked.image_bound (state : Checked) : state.value.images.size+state.value.building ≤ 8 := state.valid.2.1
++theorem Checked.image_bound (state : Checked) : state.value.images.size+state.value.building ≤ maxImages := state.valid.2.1
