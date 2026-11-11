@@ -1,5 +1,25 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
+## 実用品を先に仕上げる（最新の指示）
+
+当面のこのMacの並列合格条件は、10並列以上で、全件がその並列数以下の秒数に完了すること。16並列まで、関連RSS 5GBの上限と保護停止線は維持する。現行の固定native `7cc1432d…` は16並列12.872秒を既に記録しているため、この条件を理由に追加の微小高速化を繰り返さない。全体の80人・プロジェクト別共有DB・一般98%・30秒期限の目標は変えない。
+
+新seed→題材1/2/3→2周目1/2/3の既存の実モデル結果は、固定した `dd53c89b…` の6/6段階で、DB内に全体保存された必要根拠31/31（部分保存込み35/35）を実際の初回入力へ配送し、44フックの失敗0。総token削減率は1周目73.275/94.890/79.363%、2周目は1周目fresh参照比85.728/94.865/96.010%。2周目の独立fresh比較と品質維持は未完了であり、現在の固定nativeの測定へ転用しない。[実験結果](docs/candidates/stable-source-rows/sequence/pilot-results.md)。
+
+次は[実用経路の検査](docs/practical-runtime/plan.json)を進める。製品を `7cc1432d…` に固定し、その製品sourceでnativeの取得・監査制御器を用意する。保存→Stop→耐久状態→終了→原DBだけからの復旧→新規チャットの配送を確認してから、同じ製品の新seedと6段階へ進む。既存の実モデル結果、今のnative単体試験、実際のCodexでの利用、製品への採用を分ける。候補の本体への採用にはAGENTS.mdの同条件・複数反復・inclusive総token・品質・期限の条件を残し、現在は採用0・有料比較0/18。
+
+この経路は[小さいnative実試験](docs/practical-runtime/lifecycle.json)が完了した。8観測・17日誌、消費1・支持16・共引用4、一般出力の内容対応15行が保存され、元DBだけをコピーし、新しい私有状態で復旧した後の別sessionに必要原文2/2を配送、hook 2.029秒。原DB不変、4つのservice終了0・guard終了0・ownedPids空。実MCPサーバー、一般98%、モデル6段階、p99の実証ではない。同じ製品sourceの新しい制御器は330 objectが整合し、全製品coreと共通sourceが一致した。
+
+実Codexの新しい隔離環境は、設定コピーだけではフック0件だったためモデル前に拒否し、既存の正規プラグイン登録手順を通した。[再確認](docs/practical-runtime/codex-discovery.json)では8つの正確なフックを検出・信頼し、この環境でもnative保存/復旧/2原文配送が完了した。[新しい実験](docs/practical-runtime/sequence-plan.json)はgpt-5.6-luna/xhigh・同じ製品SHAで空DBのseed取得を開始し、実際のターン開始と保存を確認した。seedは未完了、現在版のモデル6段階は0/6。保存中の冷たい数値差分についてforeground repair pending警告が出ており、索引完了の監査は取得後に行う。hook失敗やseedの不成立と今の時点で断定せず、警告も無視しない。live guardは `practical-runtime/cohort/seed-1.guard.json`、PID 64039。終了・ownedPids空を確認するまで次のguardやnative入力の変更をしない。
+
+空き容量の問い合わせは解消済み。旧実行体3件390,348,832論理bytesと、終了済みDB/cache/compiler/source等32,358項目548,583,821論理bytesを削除し、archiveなし。実際の現行nativeと必要入力を残し、削除後も7本文・出版SHA・意味検索・シナプス・ACKの全件一致と原DB不変を確認した。Macの空きは約19GiB。空き容量増加の全量をこの削除の効果とは扱わない。
+
+[親facts候補](docs/candidates/parent-facts/README.md)の実検査は完了。native 301 objectと意図したsource差分を確認し、23本文/意味検索/シナプス/ACKが全件一致、4並列5.511秒・16並列14.406秒、RSS標本最大3,237,920KiB、guard/両service終了0・ownedPids空。元の事前gateである16並列11秒未満は未達で、改善の確認もないためABBA/モデルへ進めず未採用。今回緩和された実用時間基準は満たすが、それを事後の速度改善や採用の証拠にしない。
+
+この終了済み候補と旧guard/回答制御器をさらに3,914項目・678,283,228論理bytes削除した。今回の整理の合計は1,617,215,881論理bytes、archiveなし。新制御器のnative応答には旧制御器の参照0、削除後も330 objectが整合し、不足入力0。現在は新制御器がguardと取得を担当する。旧guard、旧6段階の作業DB、終了済み候補を再開点として使わない。
+
+以下は過去の診断・実験の経過。最新の優先順位と容量状態は上記を使う。
+
 最新turnは進捗あり。[既存nativeの内部時系列](docs/candidates/query-stage-isolation/README.md)で、検索後の空白を分けた。最初の`queryStages`は単一DBの`indexedDiscovery`へcallbackが届かず、必要な内訳を取れていなかった。製品を変更せず既存の直接traceへ切り替え、要求IDのない並列traceを各clientへ推測で割り当てず、順番の固定された3 primeだけを使った。温まった題材2/3は、focus後の処理199/203ms、引用対応290/296ms、シナプス565/572ms、automaticの準備498/510ms、選択を含む描画1381/1378ms。単独のfetchや引用だけに遅延が集中しているという説明を改める。2つの診断は合計14本文/出版SHA/意味検索/シナプス/ACKが一致、原典不変、両service/guard終了0・ownedPids空、4並列5.069/5.018秒。候補の速度比較・p99ではない。
 
 [親の共通factsを一度だけ作る候補](docs/candidates/parent-facts/README.md)を隔離sourceで実装した。親のneighborhoodと引用構造を要求内で一度作り、各所有者に再利用する。任意のgraph/親列の到達判定と、任意のowner/来歴/順位を含む引用結果全体の一致をLeanで確認し、標準公理のみ。DB/wire metadata・永続cache・pool・queue・ランキング重みは増減しない。前にメモリ停止した出版候補の再投入ではない。2回の証明elaboration失敗は記録し、修正したHandoff全体の3回目はwarning-as-error・guard終了0・ownedPids空。候補native build/候補hookは0で、速度改善は未確認・未採用。事前gateは4/16 nativeで全本文/ACK等を保持し、16 waveが11秒未満でなければ同じ候補のABBA/モデルへ進めない。最終の総token/品質条件も残す。
