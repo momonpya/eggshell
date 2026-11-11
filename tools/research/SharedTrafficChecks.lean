@@ -1,4 +1,5 @@
 import tools.research.SharedProjectLifecycle
+import tools.research.RegisteredHook
 
 open Lean Eggshell Eggshell.Plugin
 open Eggshell.Research
@@ -22,6 +23,7 @@ structure Input where
   preparedReference : Option String := none
   activeReaders : Nat := 6
   llvmReaders : Nat := 6
+  registered : Bool := false
   deriving FromJson
 
 def route (item : Case) (slot : Nat) : IO Case := do
@@ -43,9 +45,12 @@ def config (runtime : String) (database : System.FilePath) (write : Bool) : Stri
   (if write then "write = \"work\"\n" else "")
 
 def beginWriter (plan : StudySeedChecks.Input) (root data configuration : System.FilePath)
-    (item : Case) : IO Unit := do
-  discard <| hook plan root data configuration item.session "start" "SessionStart"
-  discard <| hook plan root data configuration item.session "prompt" "UserPromptSubmit"
+    (item : Case) (registered : Bool := false) : IO Unit := do
+  let invoke := fun session label event fields =>
+    if registered then RegisteredHook.invoke plan root root data configuration session label event fields
+    else hook plan root data configuration session label event fields
+  discard <| invoke item.session "start" "SessionStart" []
+  discard <| invoke item.session "prompt" "UserPromptSubmit"
     [("prompt",toJson "Inspect this new source investigation and record its evidence.")]
 
 def settle (tasks : Array (Task (Except IO.Error Json))) : IO (Array Json × Bool) := do
@@ -56,7 +61,9 @@ def settle (tasks : Array (Task (Except IO.Error Json))) : IO (Array Json × Boo
   return (rows,settled.all (·.isOk))
 
 def readerHook (plan : StudySeedChecks.Input) (root workspace data configuration : System.FilePath)
-    (session label event : String) (prompt : String := "") : IO StudyCommand.Result := do
+    (session label event : String) (prompt : String := "") (registered : Bool := false) : IO StudyCommand.Result := do
+  if registered then
+    return ← RegisteredHook.invoke plan root workspace data configuration session label event [("prompt",toJson prompt)]
   let environment := replaceEnv plan.environment #[("EGGSHELL_DATA_ROOT",some data.toString),
     ("EGGSHELL_CONFIG",some configuration.toString),("EGGSHELL_PROFILE",some "work"),
     ("CODEX_THREAD_ID",some session),("CODEX_TURN_ID",some "recorded-turn"),
@@ -72,9 +79,9 @@ def readerHook (plan : StudySeedChecks.Input) (root workspace data configuration
   return output
 
 def read (plan : StudySeedChecks.Input) (root workspace data configuration : System.FilePath)
-    (session prompt : String) (required : Array String) : IO Json := do
+    (session prompt : String) (required : Array String) (registered : Bool := false) : IO Json := do
   let started ← IO.monoMsNow
-  let output ← readerHook plan root workspace data configuration session "prompt" "UserPromptSubmit" prompt
+  let output ← readerHook plan root workspace data configuration session "prompt" "UserPromptSubmit" prompt registered
   let finished ← IO.monoMsNow
   let parsed ← IO.ofExcept (Json.parse output.stdout)
   let body ← IO.ofExcept ((parsed.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext")
@@ -98,6 +105,107 @@ def auditTopic (topic : Topic) (database root : System.FilePath) (row : Json) : 
   check (audit.getObjValD "availableEvidence" == topic.frozen) "mixed-load denominator changed after delivery"
   return Json.mkObj [("topic",toJson topic.number),("delivery",row),
     ("requiredDelivery",audit.getObjValD "requiredDelivery"),("availableDelivery",audit.getObjValD "availableDelivery")]
+
+def waitAnswers (project : ProjectStore.Project) (items : Array Case) : IO Json := do
+  let started ← IO.monoMsNow
+  let wanted := items.map answer
+  repeat
+    let mut present : Array String := #[]
+    for slot in [:project.manifest.owners.size] do
+      let source ← project.current slot
+      let reader ← Persistence.Store.NodeReader.new source
+      for candidate in ← Persistence.Store.searchDocuments source do
+        let doc ← Synapses.Build.document reader candidate.owner
+        for message in wanted do
+          if doc.source.any (·.contains message) then present := present.push message
+    let missing := wanted.filter (!present.contains ·)
+    if missing.isEmpty then return Json.mkObj [("expected",toJson wanted.size),
+      ("persisted",toJson wanted.size),("elapsedMs",toJson ((← IO.monoMsNow)-started)),("manualKeepUsed",toJson false)]
+    check ((← IO.monoMsNow) < started+20000) "automatic Stop checkpoint did not publish every final answer"
+    IO.sleep 25
+  throw (IO.userError "unreachable automatic answer wait")
+
+def extraEvents (plan : StudySeedChecks.Input) (root workspace data config : System.FilePath)
+    (session : String) : IO Json := do
+  let mut rows := #[]
+  for (label,event,fields) in [
+      ("compact-start","SessionStart",[("source",toJson "compact")]),
+      ("post-compact","PostCompact",[]),("interrupt","Interrupt",[]),("end","SessionEnd",[])] do
+    let result ← RegisteredHook.invoke plan root workspace data config session label event fields
+    rows := rows.push (Json.mkObj [("event",toJson event),("elapsedMs",toJson result.elapsedMs)])
+  return Json.mkObj [("session",toJson session),("events",toJson rows)]
+
+/-- Read-only postmortem of the actual project. It never resumes publishing,
+warms an index, or turns a failed timed census into a passing traffic run. -/
+def inspect (directory report : String) : IO Unit := do
+  let root := System.FilePath.mk directory
+  let project ← ProjectStore.openProject (root/"active.egg")
+  let mut wanted : Array Case := #[]
+  for wave in [:3] do
+    for slot in [:4] do wanted := wanted.push (← activeCase wave slot)
+  let mut sources := #[]
+  let mut count := 0
+  let mut answers : Array String := #[]
+  for slot in [:project.manifest.owners.size] do
+    let source ← project.current slot
+    let before ← StudyRuntime.files source.directory
+    let records ← Synapses.Provenance.records source
+    count := count+records.size
+    let reader ← Persistence.Store.NodeReader.new source
+    for candidate in ← Persistence.Store.searchDocuments source do
+      let document ← Synapses.Build.document reader candidate.owner
+      for item in wanted do
+        if document.source.any (·.contains (answer item)) && !answers.contains item.session then
+          answers := answers.push item.session
+    check ((← StudyRuntime.files source.directory) == before) "inspection changed the saved project"
+    sources := sources.push (Json.mkObj [("slot",toJson slot),("head",toJson source.head),
+      ("origins",toJson (records.map (·.origin))),("files",toJson before)])
+  check (!(← (System.FilePath.mk report).pathExists)) "preserve previous native inspection"
+  save (.mk report) (Json.mkObj [("observations",toJson count),("sources",toJson sources),
+    ("answerSessions",toJson answers),("readOnly",toJson true),("warmOrSaveResumed",toJson false)])
+
+/-- Resume durable work after the failed traffic run, without replaying a hook,
+issuing keep/warm, or relabeling the original timeout as success. -/
+def resume (inputPath directory report : String) : IO Unit := do
+  let input ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson inputPath))
+  let plan := input.installation
+  StudyAdmission.verifyArtifact plan.runtime
+  let root := System.FilePath.mk directory
+  let data := root/"data"
+  let mut waiting : Array String := #[]
+  for entry in ← (data/"sessions").readDir do
+    let queue := entry.path/"checkpoints"
+    if !(← queue.pathExists) then continue
+    if (← queue.readDir).any (·.fileName.endsWith ".json") then
+      waiting := waiting.push entry.fileName
+  check (!waiting.isEmpty) "recovery must start with actual retained work"
+  let project ← ProjectStore.openProject (root/"active.egg")
+  let before ← originals project
+  let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data plan.environment
+  let frontend ← try
+      StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) waiting[0]! (data/"daemon.json") plan.environment
+    catch error =>
+      StudyRuntime.stopManaged publisher (root/"resume-publisher-startup-stop.json")
+      throw error
+  let started ← IO.monoMsNow
+  let result ← try
+      let endpoint ← Daemon.loadEndpoint waiting[0]!
+      for session in waiting do
+        discard <| Daemon.exchangeBefore endpoint "register" (Json.mkObj [("session_id",toJson session)]) ((← IO.monoMsNow)+2000)
+      let observed ← census project 36
+      let items ← (List.range 4).toArray.mapM (activeCase 2)
+      let answers ← waitAnswers project items
+      pure (Json.mkObj [("census",observed),("answers",answers),
+        ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("success",toJson true)])
+    catch error => pure (Json.mkObj [("error",toJson error.toString),
+      ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("success",toJson false)])
+    finally
+      try StudyRuntime.stopManaged frontend (root/"resume-frontend-stop.json")
+      finally StudyRuntime.stopManaged publisher (root/"resume-publisher-stop.json")
+  save (.mk report) (Json.mkObj [("result",result),("waitingSessions",toJson waiting),("before",before),
+    ("after",← originals project),("manualKeepOrWarmUsed",toJson false),
+    ("originalTrafficPassed",toJson false),("product",toJson plan.runtime)])
+  check (result.getObjValD "success" == toJson true) "retained work did not resume within its original census bounds"
 
 def run (inputPath directory : String) : IO Unit := do
   let input ← IO.ofExcept (fromJson? (α := Input) (← StudyAdmission.readJson inputPath))
@@ -148,6 +256,9 @@ def run (inputPath directory : String) : IO Unit := do
   let readerConfig := root/"active-read.toml"
   let llvmWarm := root/"llvm-warm.toml"
   let llvmRead := root/"llvm-read.toml"
+  let invokeWriter := fun session label event fields =>
+    if input.registered then RegisteredHook.invoke plan root root data writerConfig session label event fields
+    else hook plan root data writerConfig session label event fields
   for (path,db,writable) in [(writerConfig,active.directory,true),(readerConfig,active.directory,false),
       (llvmWarm,database,true),(llvmRead,database,false)] do
     IO.FS.writeFile path (config plan.runtime.path db writable)
@@ -165,11 +276,15 @@ def run (inputPath directory : String) : IO Unit := do
     save (root/"llvm-warm.json") (← warm plan root data llvmWarm "llvm-ready")
     let baseline ← (List.range 4).toArray.mapM (activeCase 0)
     for item in baseline do IO.FS.writeFile (root/item.path) (item.first++"\n"++item.second++"\n")
-    let tasks ← baseline.mapM fun item => IO.asTask (writer plan root data writerConfig active.directory item true 1) .dedicated
+    let tasks ← baseline.mapM fun item => IO.asTask
+      (writer plan root data writerConfig active.directory item true 1 invokeWriter (!input.registered)) .dedicated
     let (recorded,ok) ← settle tasks
     save (root/"baseline-writers.json") (toJson recorded)
     check ok "baseline actual writer failed"
+    if input.registered then
+      save (root/"baseline-auto-answers.json") (← waitAnswers active baseline)
     save (root/"baseline-warm.json") (← warm plan root data writerConfig "baseline-ready")
+    if input.registered then save (root/"baseline-facts.json") (← graphFacts active)
     let required := baseline.flatMap fun item => #[item.first,item.second]
     save (root/"active-before-delivery.json") (Json.mkObj [("originals",← originals active),
       ("census",← census active 12),("required",toJson required)])
@@ -179,12 +294,12 @@ def run (inputPath directory : String) : IO Unit := do
       let mut beginTasks := #[]
       for item in writers do
         IO.FS.writeFile (root/item.path) (item.first++"\n"++item.second++"\n")
-        beginTasks := beginTasks.push (← IO.asTask (beginWriter plan root data writerConfig item) .dedicated)
+        beginTasks := beginTasks.push (← IO.asTask (beginWriter plan root data writerConfig item input.registered) .dedicated)
       for result in beginTasks.map (·.get) do discard <| IO.ofExcept (result.mapError IO.Error.toString)
       for index in [:readerCount] do
         let configuration := if index < input.activeReaders then readerConfig else llvmRead
         let workspace := if index < input.activeReaders then root else .mk input.workspace
-        discard <| readerHook plan root workspace data configuration s!"reader-{wave}-{index}" "start" "SessionStart"
+        discard <| readerHook plan root workspace data configuration s!"reader-{wave}-{index}" "start" "SessionStart" "" input.registered
       let gate ← IO.mkRef false
       let started ← IO.monoMsNow
       let mut tasks := #[]
@@ -192,7 +307,7 @@ def run (inputPath directory : String) : IO Unit := do
         tasks := tasks.push (← IO.asTask (do
           while !(← gate.get) do IO.sleep 1
           let begin ← IO.monoMsNow
-          let output ← writer plan root data writerConfig active.directory item false 1
+          let output ← writer plan root data writerConfig active.directory item false 1 invokeWriter (!input.registered)
           return Json.mkObj [("kind",toJson "writer"),("startedMs",toJson begin),
             ("finishedMs",toJson (← IO.monoMsNow)),("output",output)]) .dedicated)
       for index in [:readerCount] do
@@ -201,10 +316,10 @@ def run (inputPath directory : String) : IO Unit := do
           let session := s!"reader-{wave}-{index}"
           if index < input.activeReaders then
             return Json.mkObj [("kind",toJson "active-reader"),("delivery",← read plan root root data readerConfig session
-              "Show the original TRAFFIC_0 BASE and DETAIL source definitions from the baseline shared investigations." required)]
+              "Show the original TRAFFIC_0 BASE and DETAIL source definitions from the baseline shared investigations." required input.registered)]
           let topic := topics[(index-input.activeReaders)%3]!
           return Json.mkObj [("kind",toJson "llvm-reader"),("topic",toJson topic.number),
-            ("delivery",← read plan root (.mk input.workspace) data llvmRead session topic.prompt #[])]) .dedicated)
+            ("delivery",← read plan root (.mk input.workspace) data llvmRead session topic.prompt #[] input.registered)]) .dedicated)
       gate.set true
       let (outcomes,ok) ← settle tasks
       let elapsed := (← IO.monoMsNow)-started
@@ -220,7 +335,19 @@ def run (inputPath directory : String) : IO Unit := do
           check (delivery.getObjValD "missing" == toJson (#[] : Array String) &&
             delivery.getObjValD "completeBody" == toJson true) "active publication caused lost baseline evidence"
       save (root/s!"wave-{wave}-census.json") (← census active (12+wave*12))
+      if input.registered then
+        save (root/s!"wave-{wave}-auto-answers.json") (← waitAnswers active writers)
       save (root/s!"wave-{wave}-drain.json") (← warm plan root data writerConfig s!"wave-{wave}-ready")
+      if input.registered then
+        save (root/s!"wave-{wave}-facts.json") (← graphFacts active)
+        let mut fast := #[]
+        for index in [:readerCount] do
+          let configuration := if index < input.activeReaders then readerConfig else llvmRead
+          let workspace := if index < input.activeReaders then root else .mk input.workspace
+          fast := fast.push (← IO.asTask (extraEvents plan root workspace data configuration s!"reader-{wave}-{index}") .dedicated)
+        let (events,ok) ← settle fast
+        save (root/s!"wave-{wave}-fast-events.json") (toJson events)
+        check ok "a registered fast lifecycle event failed"
       check ((← StudyRuntime.files database) == llvmBefore) "active project wrote into the LLVM reference DB"
       waves := waves.push (Json.mkObj [("wave",toJson wave),("elapsedMs",toJson elapsed),
         ("outcomes",toJson outcomes)])
@@ -247,6 +374,7 @@ def run (inputPath directory : String) : IO Unit := do
   save (root/"result.json") (Json.mkObj [("runtime",toJson plan.runtime),("waves",toJson checkedWaves),
     ("clientsPerWave",toJson (readerCount+4)),("answeringModelCalls",toJson (0 : Nat)),
     ("fullOriginalAuditAfterServicesStopped",toJson true),
+    ("registeredCommands",toJson input.registered),("explicitKeepUsed",toJson (!input.registered)),
     ("seedAccepted",toJson false),("adopted",toJson false)])
 
 end Eggshell.Research.SharedTrafficChecks

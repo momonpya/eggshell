@@ -17,7 +17,8 @@ SessionStartとwriterの最初のUserPromptSubmitを済ませてから、10操�
 登録済みpluginのUserPromptSubmit / Pre / Postと通常のSessionStartも同じ通常モードである。
 Stop / SessionEnd / PostCompact / Interruptは `fast` で、native側の予算が2秒・pluginの上限が3秒。
 compact時のSessionStartもnative側は `fast` 2秒だが、pluginの上限は30秒である。
-これらの短いnative予算で同じ混在負荷が完走するかは未確認。
+この試験では、これらの短いnative予算を使っていない。
+後続の[登録済みcommand検査](../registered-hooks/README.md)では、fast Stopは正常な空応答を返したものの、手動keepなしの自動保存が2回目で不合格になった。
 通常モードの成功を、そのまま登録済みpluginの全ライフサイクルの合格にはしない。
 
 | 回 | 全10操作の完了 | 最長UserPromptSubmit | 意味検索 | 追加保存後の観測数 | 後続warm |
@@ -64,7 +65,8 @@ Preは1,463〜1,797ms、Postは1,026〜1,261msだった。
 [72件の既存受領記録](hook-profiles.json)では、サービス内dispatchはPre 372〜604ms、Post 148〜223ms。
 差をDBの書込み時間と決め付けず、クライアントの起動・転送・stdout/receipt処理を含む残りの範囲として扱う。
 この内訳を得るための追加負荷試験は行っていない。
-次は、新しい高速化候補を作る前に、実際に登録したfastイベントの予算でも保存が完了することを検査する。
+後続の登録済みcommand検査では、保存待ちが日誌に残ることと、再起動後に自動復旧できることを確認した。
+次は、稼働中に保存処理が進まなかった理由を派生準備の待ちと区別する。
 
 [334 native object](native-local.json)が整合し、[差分](sources-local.json)は研究用制御器だけだった。
 vector、3辺、e-class/認定、選択、モデル、期限、製品実行体は変更していない。

@@ -21,6 +21,9 @@ structure Case where
   second : String
   deriving Inhabited, ToJson
 
+def answer (item : Case) : String :=
+  s!"The two fields are supported by [base]({item.path}:1) and [detail]({item.path}:2)."
+
 def cases : Array Case := #[
   ⟨"reference-writer","src/reference.cpp","REFERENCE_BASE","int REFERENCE_BASE = 731;","int REFERENCE_DETAIL = 947;"⟩] ++
   (List.range 4).toArray.map (fun i => ⟨s!"project-writer-{i}",s!"src/shared_{i}.cpp",
@@ -80,10 +83,13 @@ def hook (plan : StudySeedChecks.Input) (root data config : System.FilePath)
   call plan root data config session label #["codex-hook"] (input.compress++"\n")
 
 def writer (plan : StudySeedChecks.Input) (root data config target : System.FilePath)
-    (item : Case) (begin : Bool := true) (projects : Nat := 2) : IO Json := do
+    (item : Case) (begin : Bool := true) (projects : Nat := 2)
+    (invoke : String → String → String → List (String × Json) → IO StudyCommand.Result :=
+      fun session label event fields => hook plan root data config session label event fields)
+    (keep : Bool := true) : IO Json := do
   if begin then
-    discard <| hook plan root data config item.session "start" "SessionStart"
-    discard <| hook plan root data config item.session "prompt" "UserPromptSubmit"
+    discard <| invoke item.session "start" "SessionStart" []
+    discard <| invoke item.session "prompt" "UserPromptSubmit"
       [("prompt",toJson "Inspect the shared source evidence and explain its two recorded fields.")]
   let pendingPath := data/"sessions"/item.session/"pending.json"
   let some pending ← (readJson? pendingPath pendingJsonDefaults : IO (Option PendingTurn)) |
@@ -96,15 +102,15 @@ def writer (plan : StudySeedChecks.Input) (root data config target : System.File
       ("detail",s!"nl -ba {item.path} | sed -n '2p'")] do
     let input := Json.mkObj [("command",toJson command)]
     let fields := [("tool_name",toJson "shell"),("tool_use_id",toJson id),("tool_input",input)]
-    discard <| hook plan root data config item.session (id++"-pre") "PreToolUse" fields
+    discard <| invoke item.session (id++"-pre") "PreToolUse" fields
     let directory := root/"calls"/item.session/(id++"-actual")
     let actual ← StudyCommand.run "/bin/sh" #["-c",command] #[] root.toString "" directory 5000
     check (actual.exitCode == 0) "actual source operation failed"
-    discard <| hook plan root data config item.session (id++"-post") "PostToolUse"
+    discard <| invoke item.session (id++"-post") "PostToolUse"
       (fields++[("tool_response",Json.mkObj [("output",toJson actual.stdout),("exitCode",toJson actual.exitCode)])])
-  discard <| hook plan root data config item.session "stop" "Stop" [
-    ("last_assistant_message",toJson s!"The two fields are supported by [base]({item.path}:1) and [detail]({item.path}:2).")]
-  discard <| call plan root data config item.session "keep" #["egg","keep"]
+  discard <| invoke item.session "stop" "Stop" [
+    ("last_assistant_message",toJson (answer item))]
+  if keep then discard <| call plan root data config item.session "keep" #["egg","keep"]
   return Json.mkObj [("session",toJson item.session),("target",toJson target.toString),
     ("capturedInputs",toJson pending.projectInputs),("toolCalls",toJson (3 : Nat))]
 
