@@ -1,0 +1,153 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -178,7 +178,108 @@
+ theorem terminal_close_never_reopens (pending : PendingTurn) (message : Option String) :
+     (sealPending pending message).closed = true ∧
+       (sealPending pending message).inFlight = [] := ⟨rfl, rfl⟩
++
++/-- Native ingress may retain only the turn and writer capability it observed.
++The optional turn convention is the same as the serialized terminal handler;
++an explicitly named older turn must never borrow the active turn's target. -/
++def capturedFinal? (pending : PendingTurn) (session : String) (turn : Option String)
++    (message : String) : Option PendingTurn :=
++  if pending.sessionId == session && matchesHookTurn pending turn then
++    some (sealPending pending (some message))
++  else none
++
++theorem final_capture_preserves_scope (pending captured : PendingTurn) (session : String)
++    (turn : Option String) (message : String)
++    (accepted : capturedFinal? pending session turn message = some captured) :
++    captured.write = pending.write ∧ captured.read = pending.read ∧
++      captured.cwd = pending.cwd ∧ captured.prompt = pending.prompt ∧
++      captured.projectInputs = pending.projectInputs ∧
++      captured.inputBoundary = pending.inputBoundary ∧ captured.turnId = pending.turnId := by
++  unfold capturedFinal? at accepted
++  split at accepted
++  · cases accepted
++    exact ⟨rfl,rfl,rfl,rfl,rfl,rfl,rfl⟩
++  · simp at accepted
++
++theorem final_capture_seals_answer (pending captured : PendingTurn) (session : String)
++    (turn : Option String) (message : String)
++    (accepted : capturedFinal? pending session turn message = some captured) :
++    captured.finalMessage = some message ∧ captured.closed = true ∧
++      captured.inFlight = [] ∧ observedRoots captured = observedRoots pending := by
++  unfold capturedFinal? at accepted
++  split at accepted
++  · cases accepted
++    exact ⟨rfl,rfl,rfl,rfl⟩
++  · simp at accepted
++
++theorem final_capture_checks_identity (pending captured : PendingTurn) (session : String)
++    (turn : Option String) (message : String)
++    (accepted : capturedFinal? pending session turn message = some captured) :
++    pending.sessionId = session ∧ matchesHookTurn pending turn = true := by
++  unfold capturedFinal? at accepted
++  split at accepted
++  · rename_i bound
++    simpa only [Bool.and_eq_true,beq_iff_eq] using bound
++  · simp at accepted
++
++theorem final_capture_named_turn (pending captured : PendingTurn) (session turn message : String)
++    (accepted : capturedFinal? pending session (some turn) message = some captured) :
++    captured.turnId = turn := by
++  have identity := (final_capture_checks_identity pending captured session (some turn) message accepted).2
++  have scope := (final_capture_preserves_scope pending captured session (some turn) message accepted).2.2.2.2.2.2
++  have specified : turn = pending.turnId := by
++    simpa only [matchesHookTurn,beq_iff_eq] using identity
++  exact scope.trans specified.symm
++
++theorem readonly_final_capture_has_no_source_job (files : SessionFiles)
++    (pending captured : PendingTurn) (session : String) (turn : Option String) (message : String)
++    (readonly : pending.write = none)
++    (accepted : capturedFinal? pending session turn message = some captured) :
++    queueCheckpoint files captured = pure () := by
++  have scope := (final_capture_preserves_scope pending captured session turn message accepted).1
++  exact readonly_checkpoint_has_no_effect files captured (scope.trans readonly)
+ 
++/-- An unbound native answer is private recovery evidence, never a source job
++or a certificate. No current project/profile may assign it a writer target. -/
++def recordUnboundFinal (files : SessionFiles) (session : String) (turn : Option String)
++    (message : String) : IO Unit := do
++  let bytes := (Json.mkObj [("session",toJson session),("turn",toJson turn),
++    ("message",toJson message)]).compress.toUTF8
++  let key := Blake3.hex (Blake3.digest "eggshell.unbound-final".toUTF8 [bytes])
++  let directory := files.directory/"unbound-answers"
++  Persistence.privateDirectory directory
++  FileSystem.immutableBytes (directory/(key++".json")) bytes
++
++/-- Capture an answer before frontend readiness, RPC, state-lock contention or
++synaptic preparation can consume the hook's deadline. Only atomic private
++metadata is read; lifecycle changes and ordinary synaptic ingress stay in Stop. -/
++def captureFinalAnswer (input : Json) : IO Unit := do
++  let some message := optionalString input "last_assistant_message" | return
++  let session ← IO.ofExcept (requiredString input "session_id")
++  let turn := optionalString input "turn_id"
++  let files ← sessionFiles session
++  try
++    let state ← (readJson? files.state stateJsonDefaults : IO (Option ThreadState))
++    if state.any (! ·.enabled) then return
++    let active ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn))
++    let captured ← match active.bind (capturedFinal? · session turn message) with
++      | some captured => pure (some captured)
++      | none => do
++          let closed ← turn.mapM (readClosedTurn? files)
++          pure (closed.join.bind (capturedFinal? · session turn message))
++    if let some captured := captured then
++      queueCheckpoint files captured
++      Receipt.observe (optionalString input "_eggshell_receipt") "final-capture" (Json.mkObj [
++        ("status",toJson (if captured.write.isSome then "checkpoint" else "read-only")),
++        ("turn",toJson captured.turnId),("writeTarget",toJson captured.write)])
++    else
++      recordUnboundFinal files session turn message
++      Receipt.observe (optionalString input "_eggshell_receipt") "final-capture"
++        (Json.mkObj [("status",toJson "unbound")])
++  catch error =>
++    recordUnboundFinal files session turn message
++    throw error
++
+ /-- Archive only metadata while holding the session lock. Receipts stay in place.
+ Retain the original turn capability before removing its active slot: SessionEnd
+ may arrive before Stop, or an already running result may finish after closure. -/
+@@ -851,6 +952,9 @@
+ 
+ /-- Journal native results before contacting the manager or doing any search. -/
+ def captureTerminal (input : Json) : IO Unit := do
++  if optionalString input "hook_event_name" == some "Stop" then
++    captureFinalAnswer input
++    return
+   if optionalString input "hook_event_name" != some "PostToolUse" then return
+   let session ← IO.ofExcept (requiredString input "session_id")
+   let turn ← IO.ofExcept (requiredString input "turn_id")
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -332,11 +332,11 @@
+   try
+     let input := attachClientConfig input (← IO.getEnv "EGGSHELL_CONFIG")
+       |>.setObjVal! "_eggshell_received_unix_ms" (toJson receivedUnixMs)
++      |>.setObjVal! "_eggshell_receipt" receipt
+     let captureStarted ← IO.monoMsNow
+     captureTerminal input
+     let captureMs := (← IO.monoMsNow) - captureStarted
+-    let input := (input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250)))
+-      |>.setObjVal! "_eggshell_receipt" receipt
++    let input := input.setObjVal! "_eggshell_deadline" (toJson (deadline - 250))
+     let session ← IO.ofExcept (requiredString input "session_id")
+     let ensureStarted ← IO.monoMsNow
+     let endpoint ← ensureBefore session (deadline - 250)
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -541,8 +541,12 @@
+         #[]),
+       (``Eggshell.Plugin.captureTerminal,
+         #[``Eggshell.Plugin.recordTool, ``Eggshell.Plugin.sealRecordedRead,
+-          ``Eggshell.Plugin.queueCheckpoint],
++          ``Eggshell.Plugin.queueCheckpoint, ``Eggshell.Plugin.captureFinalAnswer],
+         #[``Eggshell.SourceObservation.step, ``Eggshell.Plugin.observeRelatedFiles]),
++      (``Eggshell.Plugin.captureFinalAnswer,
++        #[``Eggshell.Plugin.queueCheckpoint, ``Eggshell.Plugin.recordUnboundFinal],
++        #[``Eggshell.Plugin.withHookSession, ``Eggshell.Plugin.withSession,
++          ``Eggshell.Plugin.Worker.exchange, ``Eggshell.Synapses.Live.answer]),
+       (``Eggshell.Plugin.sealRecordedRead, #[``Eggshell.SourceEvidence.sealCapture], #[]),
+       (``Eggshell.Plugin.preToolUse,
+         #[``Eggshell.Plugin.nativeSourceInput?, ``Eggshell.SourceEvidence.capture,

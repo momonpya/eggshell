@@ -4,6 +4,13 @@
 のまま維持する。下記の候補は隔離し、保存・終了・復旧・新規チャットを通して検査する。
 制御器の追加で製品を変更しない。実行する製品sourceと制御器が読むsourceの一致をnativeで監査する。
 
+[通信前に最終回答を捕捉する候補](../candidates/terminal-capture/README.md)をLeanで隔離検証した。
+状態ロック下でも捕捉は1msで、実Stopの期限切れとservice再起動後に、hook再送・keep・warmなしで回答を保存した。
+通常の4保存＋6検索×3組は7.587 / 7.112 / 7.004秒、原文42/42（部分保存込み48/48）、48観測・16回答、終了応答88件が完了した。
+背景state guard待ち1件と、故障turnのsynaptic answer entry / lifecycle閉鎖の未回復は残る。
+次はcaptured terminal intentに元のclock/contextを保持して、その終了処理まで回復する経路を検査する。
+終了済みDB/cache等約1.29GBをarchiveせず削除した。採用0・有料比較0/18、現在runtimeのモデル両周は未実施。
+
 [保存先なしのturnで出版作業を作らない候補](../candidates/readonly-save/README.md)をLeanで隔離検査した。
 現在profileではなく、各queueが保持する元の保存先で判断し、古いwriterの保存待ちを保持する。
 10同時検索×3組は7.596 / 7.049 / 5.059秒、意味検索30/30・必要原文135/135（部分保存込み156/156）、全本文/返送bytes一致だった。

@@ -2,6 +2,24 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[最終回答をfrontend RPC前に捕捉する候補](docs/candidates/terminal-capture/README.md)を隔離実装した。
+元のturn・保存先・依存境界を保持すること、明示turnの一致、readonlyでsource jobを作らないことをLeanで証明した。
+捕捉に状態ロックやworker RPCを使わないContractAuditも通った。製品`92328c0d…`は336 object / 335 moduleが整合し、core差分はPluginHooks / Daemon / ContractAuditだけ。
+状態ロック保持下の捕捉は1ms。古いclosed turn、重複、turn省略、未知turn、readonly、off、壊れたmetadata、別sessionの拒否をnativeで確認した。
+実登録Stopを状態ロックで期限切れにし、通信前checkpointを確認後、frontend/publisherを停止・再起動して回答を自動保存できた。
+hook再生・keep・warmによるsource修復はなく、元の未完了通知を成功へ変更していない。
+通常writerはjournal 7件と消費1・支持4・共引用4を維持した。
+ただし故障したturnはjournal 6件のままで、Stopのsynaptic answer entryと私有lifecycleの閉鎖は未回復。
+次は、回答だけでなく捕捉済みterminal intentからその終了処理も回復し、元のclock / context / 保存権限を保つ経路を検証する。
+NativeSynapticの記録を現在のcontextへ付け替えたり、未完了通知を空応答に偽装したりしない。
+
+同じ候補の通常4保存＋6検索×3組は7.587 / 7.112 / 7.004秒で完了し、全18意味検索、必要原文42/42（部分保存込み48/48）、共有定義8件、48観測・16回答の自動保存を確認した。
+LLVM本文/返送bytesは既存の同一snapshotと一致。終了系88件は正常な空JSON、client警告0。
+readonly readerの背景state guard待ち警告1件は残す。関連RSS最大3,458,432KiB、service/guard終了0・ownedPids空。
+10検索だけの現在runtimeの試験、80人・8時間・一般98%・MCP/NAS・成長DBは未検証。
+終了済みDB/cache/制御器等15,022項目・1,293,690,664論理bytesをarchiveせず削除し、原典・現行候補・必要入力とモデルを保護した。
+現在runtimeの受理seed・モデル両周0/6・品質・反復総token比較は未完。本体採用0・有料比較0/18。
+
 [保存先なしのturnで出版作業を作らない候補](docs/candidates/readonly-save/README.md)を隔離実装した。
 取得時のPendingTurn.writeがnoneなら、checkpoint / deferred job / 関連ファイル観測と保存用receipt復元を省く。
 現在のprofileで古いwriter grantを捨てず、古いqueue自体の保存先とsessionを検査する。
