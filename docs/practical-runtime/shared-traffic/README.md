@@ -14,8 +14,10 @@ SessionStartとwriterの最初のUserPromptSubmitを済ませてから、10操�
 原文監査は元DBから配送前に分母を凍結し、配送後の重い検証はサービス終了後に実行した。
 
 この制御器は各イベントを通常の `codex-hook` で呼んだ。
-登録済みpluginのUserPromptSubmit / Pre / Postも同じ通常モードだが、SessionStart / Stop等は `fast` で、
-native側の予算が2秒・pluginの上限が3秒である。その短い予算で同じ混在負荷が完走するかは未確認。
+登録済みpluginのUserPromptSubmit / Pre / Postと通常のSessionStartも同じ通常モードである。
+Stop / SessionEnd / PostCompact / Interruptは `fast` で、native側の予算が2秒・pluginの上限が3秒。
+compact時のSessionStartもnative側は `fast` 2秒だが、pluginの上限は30秒である。
+これらの短いnative予算で同じ混在負荷が完走するかは未確認。
 通常モードの成功を、そのまま登録済みpluginの全ライフサイクルの合格にはしない。
 
 | 回 | 全10操作の完了 | 最長UserPromptSubmit | 意味検索 | 追加保存後の観測数 | 後続warm |
