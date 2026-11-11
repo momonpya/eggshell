@@ -1,6 +1,6 @@
 # 親の解析と到達判定を一度だけ行う候補
 
-**純粋な一致は証明済み。native build・候補hook・速度測定は未実施。未採用。**
+**証明とnativeの検査は完了。16並列14.406秒で事前gate未達、未採用。**
 回答モデル0、有料比較0/18を維持する。
 現在動いている製品`7cc1432d…`や元DBを変更していない。
 
@@ -36,23 +36,24 @@ publicationのmetadata、wire、永続cache、pool、queueを増やさない。
 [1回目](proof-first-rejected.json)と[2回目](proof-second-rejected.json)を成功へ混ぜない。
 mapとfunction compositionを展開する証明を直し、[3回目](proof-result.json)は
 Handoff全体をwarning-as-errorで検査し、exit0・ownedPids空・RSS標本最大はguardに記録した。
-候補のruntimeやhookは一度も起動していない。
+その後、native候補を構築し、実フックまで検査した。
 
-## 残っている検査
+## 実フックの結果と判断
 
-nativeの実source/link/callerの監査、同じsnapshotの4/16並列で全本文・意味検索・
-シナプス・ACK・原典不変を確認する。[実行前の計画](plan.json)では、
-16並列が11秒未満にならなければ、同じ候補でABBA/モデル比較へ進めない。
-この絶対gate自体を改善率や採用の証拠にしない。
-nativeで有望でも、最終採用には同条件の反復した総token・品質・期限の条件が残る。
+[native監査](native.json)で301 objectの整合を確認し、[source判断](source-decision.json)で
+直接の製品変更がHandoffのみ、その実bytesを埋め込む3 moduleを区別した。
+最初のentry namespaceのbuild失敗は[別記録](build-first-rejected.json)に残し、成功へ混ぜない。
 
-現在はMacの空きが約2.06GiBで、nativeの比較用実行体と一時出力を安全に作る余裕がない。
-保護下限2GiBを変えず、compilerの準備前にも3GiB以上の空きを要求する。
-今まで使っていた空き下限を緩めたものではない。
-使用中の原DB・モデル・現行実行体を容量のために削除しない。
-追加の保存先または削除してよい場所を問い合わせている。
+[同じsnapshotの結果](hooks.json)は、prime込み23本文/意味検索/シナプス/ACKが全件一致。
+4並列5.511秒、16並列14.406秒、RSS標本最大3,237,920KiB。
+原DB不変、両serviceとguardが終了0、ownedPids空。
+[実行前の計画](plan.json)の16並列11秒未満を満たさず、全体の速度改善も確認できないため、
+この候補のABBA/モデル比較は進めない。利用者が後から指定した当面の16秒基準は満たすが、
+事後の採用条件の書き換えはしない。回答モデル0、採用0。
+
+空き容量の問題は解消済み。現行の `7cc1432d…` で実用の保存・再起動・新規チャットの検査を優先する。
 
 再buildで使えない古いprivate cloneは[先に削除](pruned-changed-clones.json)し、
 残った未使用buildも[削除](old-clones-retirement.json)した。
 元実行体・原DB・正本本文等の保護hashと必要入力を確認した。
-sourceと実行前の設定は保持するが、`parent-facts-build`は未起動であり、live handleとして扱わない。
+これらは初期準備時の削除記録であり、その後のbuild2と実フックは上記のとおり完了した。

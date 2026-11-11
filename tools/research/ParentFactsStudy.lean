@@ -224,6 +224,153 @@ def resumeCache : IO Unit := do
   requireCompilerSpace
   cloneArtifacts
 
+def prepareRun (baseline : Bool) : IO Unit := do
+  idle
+  let area := root/(if baseline then "baseline-cleanup" else "hooks")
+  let runtime := if baseline then parent/"prefix/libexec/eggshell" else root/"prefix/libexec/eggshell"
+  let installation := if baseline then parent/"prefix" else root/"prefix"
+  if !baseline then
+    discard <| finished "parent-facts-build2"
+    let auditor := (project/"tools/research/StudyBuildClosureAudit.lean").toString
+    if !(← (records/"native.json").pathExists) then
+      discard <| command (compiler/"bin/lean").toString #["-j1","-M768","--run",auditor,
+        "inspect",build.toString,(records/"native.json").toString]
+    check ((← read (records/"native.json")).getObjValD "consistent" == toJson true) "native inputs inconsistent"
+    let compared ← IO.Process.output {
+      cmd := (compiler/"bin/lean").toString
+      args := #["-j1","-M768","--run",auditor,"compare-sources",(parent/"build").toString,
+        build.toString,(records/"runtime-sources.json").toString,"Eggshell.Handoff"]
+      cwd := some project }
+    let common ← read (records/"runtime-sources.json")
+    let removed ← IO.ofExcept (common.getObjValAs? (Array String) "removed")
+    check (compared.exitCode ≤ 1 &&
+      common.getObjValD "directSourceChanges" == toJson #["Eggshell.Handoff"] &&
+      common.getObjValD "literalChangesExactlyMatchDeclaredSourceBytes" == toJson true &&
+      common.getObjValD "added" == toJson (#[] : Array String) &&
+      removed.all (fun name => name.startsWith "tools.research." || name.startsWith "tests."))
+      "native source or literal changed beyond Handoff and unused research CLI removal"
+    write (records/"source-decision.json") (Json.mkObj [("nativeCorePresent",toJson true),
+      ("onlyDirectProductSourceChange",toJson "Eggshell.Handoff"),
+      ("embeddedLiteralsMatchDeclaredHandoffBytes",toJson true),
+      ("removedResearchOnly",toJson removed),
+      ("minimalEntryRetainsSameMemoryCapacityHarness",toJson true),
+      ("candidateRuntimeSha256",common.getObjValD "candidateRuntimeSha256")])
+    let actual ← read (build/"Eggshell_Handoff.source")
+    let (text,_) : String × Array (String × String) ← IO.ofExcept (fromJson? actual)
+    let expectedObject := (toJson (build/"Eggshell_Handoff.o").toString).compress
+    check (text == (← IO.FS.readFile (source/"Eggshell/Handoff.lean")) &&
+      ((← IO.FS.readFile (build/"runtime.rsp")).splitOn "\n").contains expectedObject)
+      "the actual linked Handoff is not the source checked by Lean"
+    check ((← read (records/"proof-result.json")).getObjValD "candidateHandoffSourceSha256" ==
+      toJson (← hash (source/"Eggshell/Handoff.lean"))) "candidate source changed after proof"
+    let proof ← IO.FS.readFile (build/"Eggshell_Handoff-lean.stdout")
+    check (!proof.contains "sorryAx" && !proof.contains "error:" && !proof.contains "warning:") "native proof failed"
+    IO.FS.writeFile (records/"native-proof.txt") proof
+    IO.FS.createDirAll (installation/"libexec")
+    discard <| command "/bin/ln" #["-s",(build/"StudyMain").toString,runtime.toString]
+    discard <| command "/bin/ln" #["-s",(parent/"prefix/share").toString,(installation/"share").toString]
+  check (!(← area.pathExists)) "preserve native hook results"
+  IO.FS.createDirAll area
+  let output := area/"run"
+  let config := output/"config.toml"
+  let input ← read (parent/"preflight-input.json")
+  let environment : Array (String × Option String) ← IO.ofExcept (fromJson? (input.getObjValD "environment"))
+  let environment := environment.map fun (key,value) => (key,
+    if key == "EGGSHELL_PREFIX" then some installation.toString
+    else if key == "PLUGIN_ROOT" then some (installation/"share/eggshell/codex-plugin").toString
+    else if key == "EGGSHELL_CONFIG" then some config.toString
+    else if key == "EGGSHELL_HANDOFF_TRACE" then some (area/"discovery.log").toString else value)
+  let input := input.setObjVal! "output" (toJson output.toString)
+    |>.setObjVal! "config" (toJson config.toString)
+    |>.setObjVal! "runtime" (toJson runtime.toString)
+    |>.setObjVal! "runtimeSha256" (toJson (← hash runtime))
+    |>.setObjVal! "plugin" (toJson (installation/"share/eggshell/codex-plugin").toString)
+    |>.setObjVal! "environment" (toJson environment)
+    |>.setObjVal! "counts" (toJson (if baseline then #[(4 : Nat)] else #[4,16]))
+    |>.setObjVal! "diagnostic" (toJson baseline)
+  write (area/"input.json") input
+  let unsets := environment.foldl (fun args (key,value) => if value.isNone then args++#["-u",key] else args) (#[] : Array String)
+  let assignments := environment.filterMap fun (key,value) => value.map (key++"="++·)
+  guard (if baseline then "current-cleanup-verification" else "parent-facts-hooks")
+    (#["/usr/bin/env"]++unsets++assignments++#[runtime.toString,
+      if baseline then "owned-selection-capacity" else "parent-facts-capacity",(area/"input.json").toString])
+
+def repairEntry : IO Unit := do
+  idle
+  let failed ← read (base/"parent-facts-build.guard.json")
+  check (failed.getObjValD "state" == toJson "finished" && failed.getObjValD "exitCode" == toJson (1 : Nat) &&
+    failed.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "failed build has not drained"
+  write (records/"build-first-rejected.json") (Json.mkObj [("guard",failed),
+    ("reason",toJson (← IO.FS.readFile (base/"parent-facts-build.stderr"))),
+    ("candidateHookCalls",toJson (0 : Nat)),("answeringModelCalls",toJson (0 : Nat))])
+  IO.FS.writeFile (source/"tools/research/ParentFactsRuntime.lean")
+    (← IO.FS.readFile (project/"tools/research/ParentFactsRuntime.lean"))
+  guard "parent-facts-build2" #[(compiler/"bin/lean").toString,"-j1","-M768","--run",
+    (project/"tools/research/StudyBuildMain.lean").toString,(base/"parent-facts-build-settings.json").toString]
+
+def collectRun (baseline : Bool) : IO Unit := do
+  idle
+  let monitor ← finished (if baseline then "current-cleanup-verification" else "parent-facts-hooks")
+  let area := root/(if baseline then "baseline-cleanup" else "hooks")
+  let input ← read (area/"input.json")
+  let output := area/"run"
+  let report ← read (output/"report.json")
+  let primes ← IO.ofExcept ((← read (output/"prime.json")).getArr?)
+  let phases ← IO.ofExcept (report.getObjValAs? (Array Json) "phases")
+  let mut all := #[]
+  for (rows,label) in [(primes,"prime")] ++ phases.toList.map (fun phase =>
+      ((phase.getObjValAs? (Array Json) "rows").toOption.getD #[],
+        "phase-"++toString ((phase.getObjValAs? Nat "clients").toOption.getD 0))) do
+    for row in rows do
+      check (row.getObjValD "success" == toJson true) "hook did not pass"
+      let client ← IO.ofExcept (row.getObjValAs? Nat "client")
+      let topic ← IO.ofExcept (row.getObjValAs? Nat "topic")
+      let id ← IO.ofExcept (row.getObjValAs? String "receipt")
+      let stdout := output/label/s!"client-{client}"/"stdout"
+      let raw ← IO.FS.readFile stdout
+      let directory := parent/"data/receipts"/id
+      let publication := (← read (directory/"published.json")).getObjValD "data"
+      check (publication.getObjValD "output" == toJson raw &&
+        publication.getObjValD "sha256" == toJson (← hash stdout) &&
+        publication.getObjValD "replyComplete" == toJson true) "actual stdout/publication mismatch"
+      let parsed ← IO.ofExcept (Json.parse raw)
+      let body ← IO.ofExcept ((parsed.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext")
+      check (body == (← IO.FS.readFile (base/"snapshot-scheduling/diagnostic"/s!"topic-{topic}"/"body.txt")))
+        "original body changed"
+      let search := (← read (directory/"search.json")).getObjValD "data"
+      let trace := search.getObjValD "trace"
+      check (trace.getObjValD "route" == toJson "configured" &&
+        trace.getObjValD "semantic" == toJson "completed") "semantic route failed"
+      let synapse := (← read (directory/"synaptic-delivery.json")).getObjValD "data"
+      check (synapse.getObjValD "complete" == toJson true &&
+        synapse.getObjValD "packetVerified" == toJson true) "synaptic packet failed"
+      let ack := (← read (directory/"ack.json")).getObjValD "data"
+      check (ack.getObjValD "offerAccepted" == toJson true &&
+        ack.getObjValD "rpcCompleted" == toJson true) "ACK failed"
+      all := all.push (row.setObjVal! "phase" (toJson label)
+        |>.setObjVal! "stdoutSha256" (publication.getObjValD "sha256")
+        |>.setObjVal! "search" search)
+  let originalFiles : Array (String × String) ← IO.ofExcept (fromJson? (input.getObjValD "sourceFiles"))
+  let db ← IO.ofExcept (input.getObjValAs? String "project")
+  for (relative,expected) in originalFiles do
+    check ((← hash (.mk db/relative)) == expected) "original DB changed"
+  let publisher ← read (output/"publisher-shutdown.json")
+  let frontend ← read (output/"frontend-shutdown.json")
+  for stopped in [publisher,frontend] do
+    check (stopped.getObjValD "processExited" == toJson true &&
+      stopped.getObjValD "daemonExitCode" == toJson (0 : Nat)) "service did not stop normally"
+  let expected := if baseline then 7 else 23
+  check (all.size == expected) "native clients are missing"
+  let enoughForComparison := !baseline && (phases[1]?.bind (fun phase =>
+    (phase.getObjValAs? Nat "wallMs").toOption)).any (· < 11000)
+  let destination := if baseline then project/"docs/cleanup/current-artifacts/verification.json" else records/"hooks.json"
+  write destination (Json.mkObj [("guard",monitor),("report",report),("rows",toJson all),
+    ("allActualBodiesAndAcksEqual",toJson true),("originalSourceFiles",toJson originalFiles),
+    ("publisherShutdown",publisher),("frontendShutdown",frontend),
+    ("predeclared16SecondGateMet",toJson enoughForComparison),
+    ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+  IO.println s!"Verified {all.size} actual bodies and ACKs. Next comparison gate: {enoughForComparison}."
+
 def main (args : List String) : IO Unit := match args with
   | ["prepare"] => prepare
   | ["prune-changed-clones"] => pruneChangedClones
@@ -232,6 +379,11 @@ def main (args : List String) : IO Unit := match args with
   | ["finish-proof"] => finishProof
   | ["collect-proof"] => collectProof
   | ["resume-cache"] => resumeCache
+  | ["prepare-baseline"] => prepareRun true
+  | ["prepare-hooks"] => prepareRun false
+  | ["repair-entry"] => repairEntry
+  | ["collect-baseline"] => collectRun true
+  | ["collect-hooks"] => collectRun false
   | _ => throw (IO.userError "prepare required")
 end ParentFactsStudy
 def main := ParentFactsStudy.main
