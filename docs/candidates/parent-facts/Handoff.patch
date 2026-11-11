@@ -1,0 +1,212 @@
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.SourcePlan
++public import Std.Data.HashMap.Lemmas
+ public import Eggshell.OriginalStructure
+ public import Eggshell.OriginalPresentation
+ public import Eggshell.Deadline
+@@ -3179,7 +3180,106 @@
+               (!explicitRange || shown.2 == destination.2) then
+             some shown else none
+       | _ => none
++
++namespace PreparedCitationLinks
++open Lean
++abbrev Links := List (String × String)
++
++/-- Markdown structure, independent of the later target file or rank. -/
++def prepare (text : String) : Links :=
++  let parts := (text.splitOn "](")
++  (parts.drop 1).zipIdx.filterMap fun (tail,index) => do
++    let before ← parts[index]?
++    let label ← (before.splitOn "[").getLast?
++    let target ← (tail.splitOn ")").head?
++    pure (label,target)
++
++def intervals (links : Links) (relative : String) : List (Nat × Nat) :=
++  if !SourceEvidence.safeRelative relative then [] else
++    links.filterMap fun (label,target) => do
++      let destination ← citationTarget? target relative
++      let explicitRange := [relative ++ ":",relative ++ "#L"].any fun marker =>
++        ((target.splitOn marker).drop 1).any fun bounds =>
++          !(bounds.toList.dropWhile Char.isDigit).isEmpty
++      let basename := (relative.splitOn "/").getLast?.getD relative
++      let displayed := (label.splitOn (basename ++ ":")).drop 1
++      match displayed with
++      | [] => some destination
++      | [bounds] => do
++          let shown ← citationBounds? bounds
++          if shown.1 == destination.1 && (!explicitRange || shown.2 == destination.2) then some shown else none
++      | _ => none
++
++theorem prepared_intervals_exact (text relative : String) :
++    intervals (prepare text) relative = citedLineIntervals text relative := by
++  unfold intervals citedLineIntervals
++  split
++  · rfl
++  · simp only [prepare,List.filterMap_filterMap]
++    congr 1
++    funext entry
++    rcases entry with ⟨tail,index⟩
++    cases before : (text.splitOn "](")[index]? with
++    | none => rfl
++    | some prior =>
++      simp only [bind,Option.bind,Option.pure_def]
++      cases label : (prior.splitOn "[").getLast? <;>
++        cases target : (tail.splitOn ")").head? <;> rfl
++
++abbrev Parser := Std.HashMap Nat (String × Links)
++def Parser.valid (parser : Parser) : Prop :=
++  ∀ (id : Nat) (text : String) (links : Links), parser[id]? = some (text,links) → links = prepare text
++
++def Parser.parse (parser : Parser) (id : Nat) (text relative : String) : List (Nat × Nat) :=
++  match parser[id]? with
++  | none => citedLineIntervals text relative
++  | some (expected,links) => if expected == text then intervals links relative else citedLineIntervals text relative
++
++theorem Parser.parse_exact (parser : Parser) (valid : Parser.valid parser) (id : Nat) (text relative : String) :
++    parser.parse id text relative = citedLineIntervals text relative := by
++  unfold parse
++  cases found : parser[id]? with
++  | none => rfl
++  | some entry =>
++    rcases entry with ⟨expected,links⟩
++    by_cases same : expected = text
++    · subst expected
++      simp only [beq_self_eq_true,if_true]
++      rw [valid id text links found,prepared_intervals_exact]
++    · simp [same]
++
++theorem Parser.empty_valid : Parser.valid ({} : Parser) := by simp [valid]
++
++theorem Parser.insert_valid (parser : Parser) (valid : Parser.valid parser) (id : Nat) (text : String) :
++    Parser.valid (parser.insert id (text,prepare text)) := by
++  intro probe expected links found
++  by_cases same : id = probe
++  · subst probe
++    have values : (text,prepare text) = (expected,links) := by simpa using found
++    cases values
++    rfl
++  · apply valid probe expected links
++    simpa [Std.HashMap.getElem?_insert,same] using found
++
++def Parser.prepare (texts : List (Nat × String)) : Parser :=
++  texts.foldl (fun parser (id,text) => parser.insert id (text,PreparedCitationLinks.prepare text)) {}
++
++theorem Parser.prepared_valid (texts : List (Nat × String)) : Parser.valid (Parser.prepare texts) := by
++  have step : ∀ (rows : List (Nat × String)) (parser : Parser), Parser.valid parser →
++      Parser.valid (rows.foldl (fun parser (id,text) => parser.insert id (text,PreparedCitationLinks.prepare text)) parser) := by
++    intro rows
++    induction rows with
++    | nil => intro parser valid; exact valid
++    | cons row rows ih =>
++      intro parser valid
++      exact ih _ (Parser.insert_valid parser valid row.1 row.2)
++  exact step texts {} Parser.empty_valid
+ 
++#print axioms prepared_intervals_exact
++#print axioms Parser.parse_exact
++#print axioms Parser.prepared_valid
++end PreparedCitationLinks
++
+ def observedLineNumber? (text : String) : Option (Nat × Char) := do
+   let chars := text.toList.dropWhile (· == ' ')
+   let digits := chars.takeWhile Char.isDigit
+@@ -3338,6 +3438,75 @@
+   let some first := hints.head? | return none
+   return some (first.2,hints.map Prod.fst,hints,groups)
+ 
++def rankedCitedObservationCoordinatesUsing (parse : Nat → String → String → List (Nat × Nat))
++    (texts : List (Nat × String)) (owner : OutcomeEdge)
++    (records : List SourceEvidence.Record) : Option
++      (Nat × List Nat × List (Nat × Nat) × List (Nat × List (Nat × Nat))) := Id.run do
++  let some source := Matcher.atomText? owner.outcome | return none
++  let some work := Matcher.atomText? owner.work | return none
++  let layout := (decodedToolText? source).map DecodedLayout.make
++  let text := layout.map (·.decoded.text) |>.getD source
++  let rows := (contextRecordSpans source layout).zip (text.splitOn "\n")
++  let native := nativeReadRows source layout work records
++  let mut hints : List (Nat × Nat) := []
++  let mut groups : List (Nat × List (Nat × Nat)) := []
++  for (priority,parent) in texts do
++    let intervals := ((records.flatMap (·.files)).flatMap fun file =>
++      parse priority parent file.relative).eraseDups
++    for (first,last) in intervals do
++      -- Filter finite saved rows, never enumerate an untrusted interval.
++      let numbered := (rows.filterMap fun (span,row) => do
++        let (number,_) ← observedLineNumber? row
++        if first ≤ number && number ≤ last then some (number,span) else none) ++
++        (native.filterMap fun (span,number) =>
++          if first ≤ number && number ≤ last then some (number,span) else none)
++      let spans := numbered.map Prod.snd
++      -- Completeness counts the finite stored row domain; it never expands
++      -- citation-controlled line bounds into a new allocation or file read.
++      if (numbered.map Prod.fst).eraseDups.length == last-first+1 && !spans.isEmpty then
++        let original := (spans.map fun span => (span.start,span.stop)).eraseDups
++        if !groups.contains (priority,original) then groups := groups ++ [(priority,original)]
++      for position in (spans.flatMap (observedSpanWindows (work.length+1))).eraseDups do
++        match hints.find? (·.1 == position) with
++        | none => hints := hints ++ [(position,priority)]
++        | some (_,old) => if priority < old then
++            hints := hints.map fun row => if row.1 == position then (position,priority) else row
++  let some first := hints.head? | return none
++  return some (first.2,hints.map Prod.fst,hints,groups)
++theorem ranked_citation_parser_exact
++    (parse : Nat → String → String → List (Nat × Nat))
++    (same : ∀ rank text relative,parse rank text relative = citedLineIntervals text relative)
++    (texts : List (Nat × String)) (owner : OutcomeEdge) (records : List SourceEvidence.Record) :
++    rankedCitedObservationCoordinatesUsing parse texts owner records = rankedCitedObservationCoordinates texts owner records := by
++  have exactParser : parse = fun _ => citedLineIntervals := by funext rank text relative; exact same rank text relative
++  subst parse
++  rfl
++
++theorem ranked_prepared_parser_exact (parents texts : List (Nat × String))
++    (owner : OutcomeEdge) (records : List SourceEvidence.Record) :
++    rankedCitedObservationCoordinatesUsing (PreparedCitationLinks.Parser.prepare parents).parse texts owner records =
++      rankedCitedObservationCoordinates texts owner records :=
++  ranked_citation_parser_exact _ (PreparedCitationLinks.Parser.parse_exact _ (PreparedCitationLinks.Parser.prepared_valid parents)) ..
++#print axioms ranked_prepared_parser_exact
++
++namespace SourceCitationFacts
++def prepare (index : SourceIncidence all unions) (parents : List (Nat × Value × String)) : List (Nat × List Value × String) :=
++  parents.map fun (rank,work,text) => (rank,(index.neighborhood [work]).map (·.work),text)
++def admitted (facts : List (Nat × List Value × String)) (work : Value) : List (Nat × String) :=
++  facts.filterMap fun (rank,reached,text) => if reached.any (· == work) then some (rank,text) else none
++theorem admitted_exact (index : SourceIncidence all unions) (parents : List (Nat × Value × String)) (work : Value) :
++    admitted (prepare index parents) work = (parents.filterMap fun (rank,parent,text) =>
++      if (index.neighborhood [parent]).any (·.work == work) then some (rank,text) else none) := by
++  unfold admitted prepare
++  rw [List.filterMap_map]
++  apply congrArg (fun f => parents.filterMap f)
++  funext row
++  rcases row with ⟨rank,parent,text⟩
++  simp only [Function.comp_apply,List.any_map]
++  rfl
++#print axioms admitted_exact
++end SourceCitationFacts
++
+ def citedObservationWindows (texts : List String) (owner : OutcomeEdge)
+     (records : List SourceEvidence.Record) : List Nat :=
+   (citedObservationCoordinates texts owner records).map Prod.snd |>.getD []
+@@ -9945,12 +10114,13 @@
+       let owner ← nominatedOwners.find? (·.relation == relation)
+       let text ← Matcher.atomText? owner.outcome
+       if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
+-    let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
+-      let admitted := parents.filterMap fun (rank,work,text) =>
+-        if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
+-          some (rank,text) else none
++    let queryParents := if evidence.isNone then parents else []
++    let parentParser := PreparedCitationLinks.Parser.prepare (queryParents.map fun (rank,_,text) => (rank,text))
++    let parentFacts := SourceCitationFacts.prepare sourceIncidence queryParents
++    let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
++      let admitted := SourceCitationFacts.admitted parentFacts item.owner.work
+       (if admitted.isEmpty then none else
+-        rankedCitedObservationCoordinates admitted item.owner item.provenance).map
++        rankedCitedObservationCoordinatesUsing parentParser.parse admitted item.owner item.provenance).map
+         (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
+     let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)
+     let referencePriorities := referenced.map fun (owner,priority,_,_,_) => (owner,priority)

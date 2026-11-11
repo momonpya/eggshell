@@ -1,5 +1,11 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
+最新turnは進捗あり。[既存nativeの内部時系列](docs/candidates/query-stage-isolation/README.md)で、検索後の空白を分けた。最初の`queryStages`は単一DBの`indexedDiscovery`へcallbackが届かず、必要な内訳を取れていなかった。製品を変更せず既存の直接traceへ切り替え、要求IDのない並列traceを各clientへ推測で割り当てず、順番の固定された3 primeだけを使った。温まった題材2/3は、focus後の処理199/203ms、引用対応290/296ms、シナプス565/572ms、automaticの準備498/510ms、選択を含む描画1381/1378ms。単独のfetchや引用だけに遅延が集中しているという説明を改める。2つの診断は合計14本文/出版SHA/意味検索/シナプス/ACKが一致、原典不変、両service/guard終了0・ownedPids空、4並列5.069/5.018秒。候補の速度比較・p99ではない。
+
+[親の共通factsを一度だけ作る候補](docs/candidates/parent-facts/README.md)を隔離sourceで実装した。親のneighborhoodと引用構造を要求内で一度作り、各所有者に再利用する。任意のgraph/親列の到達判定と、任意のowner/来歴/順位を含む引用結果全体の一致をLeanで確認し、標準公理のみ。DB/wire metadata・永続cache・pool・queue・ランキング重みは増減しない。前にメモリ停止した出版候補の再投入ではない。2回の証明elaboration失敗は記録し、修正したHandoff全体の3回目はwarning-as-error・guard終了0・ownedPids空。候補native build/候補hookは0で、速度改善は未確認・未採用。事前gateは4/16 nativeで全本文/ACK等を保持し、16 waveが11秒未満でなければ同じ候補のABBA/モデルへ進めない。最終の総token/品質条件も残す。
+
+Macの空きが約2.06GiBで、追加native実行体の作成には不足している。不要な試験rootと状態1,357項目・41,554,371論理bytes、候補の古いprivate cloneと未使用buildも削除し、使用中の原DB・モデル・現行実行体と必要入力を保った。archiveなし。保護下限2GiBを緩めず、新しいcompiler準備は一時出力分を含め空き3GiBを要求する。追加保存先か、Eggshell以外で削除してよい場所を問い合わせ中。候補source/証明/設定は保持するが、未起動の`parent-facts-build`や削除済みbuildをlive handleとして扱わない。全体目標・16並列数秒・一般98%・80人の実証は未達、回答モデル0・採用0・有料比較0/18を維持する。
+
 最新の[実入力による選択段階の診断](docs/candidates/real-selection-stages/README.md)で、前段の「selector全体が遅延の大半」という見方を修正した。現行revision 47・46所有者の実checked viewを借り、元の選択結果全体との一致を確認した。3題材の選択合計は約1.15〜1.17秒で、被覆問題約0.21秒、bundle/recipe約0.38〜0.40秒、貪欲選択約0.54〜0.55秒。元service自身の計測とも対応した。再生しない4並列は5.035秒で全7本文/出版SHA/意味検索/シナプス/ACKが一致し、原典不変・guard終了0・ownedPids空、RSS標本最大2,573,456KiBだった。primeには二重のselector再生が入るため、通常hookの時間や速度比較には使わない。
 
 元serviceの時系列では共有view取得54〜75ms、binding取得165〜169ms、原文fetch37〜41ms。view取得後からbinding scan開始までの約0.9秒にはfocus/引用/親の到達判定等があるが、各寄与は未確定である。次はこの検索後の実経路と、不変な関係を要求ごとに展開する表現・寿命を対象にする。既にメモリ停止した出版済み引用metadataの追加や、実全体を改善しなかったcue/index/poolの小修正を再投入しない。選択約1.2秒だけを削れば全体が数倍になるという見込みは支持されない。元selectorとの等式と元service loopとの定義上の一致は標準公理のみ、300共通製品moduleは不変、回答モデル0・採用0・有料比較0/18を維持する。今回の7件をp99・一般98%・16並列数秒・80人の日常利用の実証としない。
