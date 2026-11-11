@@ -1,0 +1,818 @@
+--- a/Eggshell/PreparationPlan.lean
++++ b/Eggshell/PreparationPlan.lean
+@@ -16,6 +16,28 @@
+ 
+ /-- A charged token/deadline slot, never a query or original payload. -/
+ def claimBytes : Nat := 160
++
++/-- Explicit administrative preparation can outlive a hook. Query leases
++retain their existing window; neither lease can exceed the caller's cutoff. -/
++def warmBudgetMs : Nat := 180000
++
++def waiterExpiry (now requested window : Nat) : Nat :=
++  min requested (now + min window warmBudgetMs)
++
++theorem waiterExpiry_requested (now requested window : Nat) :
++    waiterExpiry now requested window ≤ requested := Nat.min_le_left _ _
++
++theorem waiterExpiry_window (now requested window : Nat) :
++    waiterExpiry now requested window ≤ now + window :=
++  Nat.le_trans (Nat.min_le_right _ _) (Nat.add_le_add_left (Nat.min_le_left _ _) _)
++
++theorem waiterExpiry_bounded (now requested window : Nat) :
++    waiterExpiry now requested window ≤ now + warmBudgetMs :=
++  Nat.le_trans (Nat.min_le_right _ _) (Nat.add_le_add_left (Nat.min_le_right _ _) _)
++
++theorem waiterExpiry_query_unchanged (now requested : Nat) :
++    waiterExpiry now requested 29000 = min requested (now+29000) := by
++  simp [waiterExpiry,warmBudgetMs]
+ 
+ structure Ticket where
+   id : Nat
+--- a/Eggshell/PreparationService.lean
++++ b/Eggshell/PreparationService.lean
+@@ -24,11 +24,13 @@
+     set next
+     return admitted
+ 
+-def Pool.openWaiter (pool : Pool) (expires : Nat) : IO (Option PreparationPlan.Ticket) := do
++def Pool.openWaiter (pool : Pool) (expires : Nat)
++    (window : Nat := OperationWire.searchBudgetMs) : IO (Option PreparationPlan.Ticket) := do
+   let now ← IO.monoMsNow
+   let key ← Receipt.fresh
+   pool.state.atomically do
+-    let (next,ticket) := PreparationPlan.openWaiter (← get) key (min expires (now+OperationWire.searchBudgetMs)) now
++    let (next,ticket) := PreparationPlan.openWaiter (← get) key
++      (PreparationPlan.waiterExpiry now expires window) now
+     set next
+     return ticket
+ 
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -589,6 +589,19 @@
+   unless ticket.all (·.valid) do throw (IO.userError "service returned an invalid preparation capability")
+   return ticket
+ 
++/-- An explicit warm uses the same source-bound coalescing scheduler as a
++query. Only authenticated administration can obtain this longer bounded lease. -/
++def openWarmPreparation (deadline : Nat) : IO (Option PreparationPlan.Ticket) := do
++  let endpoint ← resolve
++  let budget ← liveBudget deadline
++  let now ← IO.monoMsNow
++  unless now < deadline do throw (IO.userError "explicit warm deadline expired")
++  let response ← Daemon.exchange endpoint "open-warm-preparation" (Json.mkObj [
++    ("budgetMs",toJson budget),("leaseMs",toJson (min (deadline-now) PreparationPlan.warmBudgetMs))]) (budget := budget)
++  let ticket ← IO.ofExcept (Json.parse response >>= fromJson? (α := Option PreparationPlan.Ticket))
++  unless ticket.all (·.valid) do throw (IO.userError "service returned an invalid warm capability")
++  return ticket
++
+ def claimPreparations (requests : Array (String × PageMap.Head))
+     (token : PreparationPlan.Ticket) (deadline : Nat) : IO (Array Bool) := do
+   unless requests.size ≤ PreparationPlan.claimBatchSize &&
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -943,6 +943,11 @@
+           let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
+           toJson <$> server.preparation.demandMany requests token deadline
+         | "open-preparation" => toJson <$> server.preparation.openWaiter deadline
++        | "open-warm-preparation" => do
++          let duration ← IO.ofExcept (payload.getObjValAs? Nat "leaseMs")
++          let now ← IO.monoMsNow
++          toJson <$> server.preparation.openWaiter (now+min duration PreparationPlan.warmBudgetMs)
++            PreparationPlan.warmBudgetMs
+         | "release-preparation" => do
+           let token ← IO.ofExcept (payload.getObjValAs? PreparationPlan.Ticket "token")
+           server.preparation.release token
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.PluginHooks
+ public import Eggshell.PublicationClient
+ public import Eggshell.Warm
++public import Eggshell.ExplicitWarm
+ 
+ @[expose] public section
+ 
+@@ -10,9 +11,23 @@
+ open Lean
+ 
+ def controlUsage : String :=
+-  "usage: egg [init|on|off|use P|next P|next graph auto|none|VALUES|keep [EGG]|drop|" ++
+-  "graph [VALUES]|why|find TEXT|class VALUE|union LEFT RIGHT|split UNION|" ++
+-  "diff [EGG]|inspect|doctor|warm [EGG|PATH]]"
++  "egg                     show this project's profile and save target\n" ++
++  "egg init                initialize project settings\n" ++
++  "egg inspect             show resolved DB paths and publication heads\n" ++
++  "egg doctor              check configuration and index readiness\n" ++
++  "egg warm [DB|PATH]       prepare saved memory for reuse\n" ++
++  "egg graph / why         show this chat's delivered history / selection reason\n" ++
++  "egg diff                preview the staged save\n" ++
++  "\nCurrent-chat controls (run through Codex ! shell UI):\n" ++
++  "egg on / off            enable / disable memory for this chat\n" ++
++  "egg use PROFILE         select this chat's profile\n" ++
++  "egg next PROFILE        select a profile for the next turn\n" ++
++  "egg keep                save to the DB bound when the turn was recorded\n" ++
++  "egg drop                clear the staged turn; keep saved work and queued saves\n" ++
++  "\nLow-level graph diagnostics:\n" ++
++  "egg debug graph VALUES | class VALUE | find TEXT\n" ++
++  "egg debug union LEFT RIGHT | split UNION\n" ++
++  "egg debug next-graph auto|none|VALUES"
+ 
+ def diagnosticState : IO (Option ThreadState) := do
+   match ← IO.getEnv "CODEX_THREAD_ID" with
+@@ -74,6 +89,8 @@
+       fields := fields ++ [("configuration", Lean.toJson "ready"),
+         ("config", Lean.toJson config.source.toString),
+         ("profile", Lean.toJson profile), ("memory", Lean.toJson mode),
++        ("write",toJson (selection.write.map (·.path.toString))),
++        ("handoff_chars",toJson selection.handoffChars),
+         ("databases", toJson (← selection.read.mapM (databaseCacheStatus · selection.semanticMatcher))),
+         ("next_step", Lean.toJson
+           "Review /hooks and start a new chat. Verify saving and delivery with the two-chat example.")]
+@@ -98,16 +115,19 @@
+     | none => MiniLM.command (← Paths.installRoot)
+   let command := command.getD [(← IO.appPath).toString,"search-provider","--mode","lexical"]
+   let sourceGroups ← eggs.mapM cacheSources
+-  let results ← (eggs.zip sourceGroups).mapM fun (egg,sources) => do
++  let requests := (eggs.toArray.zip sourceGroups.toArray).flatMap fun (egg,sources) =>
+     let writable := selected.all fun selection =>
+       selection.write.any (fun target => target.path.normalize == egg.path.normalize)
+-    let results ← sources.mapM fun source => Warm.run source command writable
+-    return Json.mkObj [("name",toJson egg.name),("path",toJson egg.path.toString),("sources",toJson results)]
+-  let current ← (sourceGroups.toArray.flatMap id).mapM fun source => do
+-    let current ← DB.PageMap.pin source.directory
+-    unless current.head.identity == source.head.identity do throw (IO.userError "warm source incarnation changed")
+-    return current
+-  let owners ← OwnerViews.prepare current
++    sources.map (·,writable)
++  let prepared ← ExplicitWarm.run requests command
++  let mut offset := 0
++  let mut results := #[]
++  for (egg,sources) in eggs.zip sourceGroups do
++    let rows := prepared.extract offset (offset+sources.size)
++    unless rows.size == sources.size do throw (IO.userError "warm result omitted a source")
++    offset := offset+sources.size
++    results := results.push (Json.mkObj [("name",toJson egg.name),("path",toJson egg.path.toString),("sources",toJson rows)])
++  let owners ← OwnerViews.prepare (sourceGroups.toArray.flatMap id)
+   pure (Json.mkObj [("databases", toJson results),("ownerView",toJson owners)]).compress
+ 
+ def controlSession : IO String := do
+@@ -138,20 +158,21 @@
+         s!"{phase}:{pending.turnId.take 8}"
+   s!"egg {enabled} {state.profile} [{reads}] → {write} pending:{pendingText}"
+ 
+-def chooseTarget (config : Config.Config) (pending : PendingTurn)
+-    (requested : Option String) : IO System.FilePath := do
+-  match requested with
+-  | some name =>
+-      match config.eggs.find? (·.name == name) with
+-      | some egg => pure egg.path
+-      | none => throw (IO.userError s!"unknown egg {name}")
+-  | none =>
+-      match pending.write with
+-      | some path => pure (System.FilePath.mk path)
+-      | none => throw (IO.userError "pending turn has no write target; name one with !egg keep EGG")
++def chooseTarget (pending : PendingTurn) : IO System.FilePath := do
++  match pending.write with
++  | some path => pure (System.FilePath.mk path)
++  | none => throw (IO.userError "this turn was recorded without a save target")
+ 
+-def graphForSelection (selection : Config.Selection) : IO Persistence.Composite :=
+-  Persistence.loadComposite (selection.read.map (·.path))
++def graphForSelection (selection : Config.Selection) : IO Persistence.Composite := do
++  let sources ← selection.read.toArray.mapM cacheSources
++  let graphs ← (sources.flatMap id).mapM Persistence.Store.materialize
++  pure {
++    values := graphs.toList.flatMap (·.values) |>.eraseDups
++    unions := graphs.toList.flatMap fun graph => graph.unions.map (·.edge)
++    authorities := graphs.toList.map (·.authority)
++    origins := graphs.toList.flatMap fun graph => graph.values.map (·,graph.authority)
++    unionOrigins := graphs.toList.flatMap fun graph => graph.unions.map (·.edge,graph.authority)
++  }
+ 
+ def renderFind (composite : Persistence.Composite) (query : String) : String :=
+   let needle := query.toLower
+@@ -220,6 +241,84 @@
+       Persistence.Store.writeChange writer {added := [],removed := [],unionsChanged := true}
+     pure entry.edge
+ 
++/-- Validate syntax before touching project or session state. The first flag
++selects a read-only path; debug operations retain their original kernel rules. -/
++def controlRequest : List String → Except String (Bool × List String)
++  | [] => .ok (true,[])
++  | ["inspect"] => .ok (true,["inspect"])
++  | ["graph"] => .ok (true,["graph"])
++  | ["why"] => .ok (true,["why"])
++  | ["diff"] => .ok (true,["diff"])
++  | ["on"] => .ok (false,["on"])
++  | ["off"] => .ok (false,["off"])
++  | ["drop"] => .ok (false,["drop"])
++  | ["keep"] => .ok (false,["keep"])
++  | ["use",profile] => .ok (false,["use",profile])
++  | ["next",profile] => .ok (false,["next",profile])
++  | ["debug","class",key] => .ok (true,["class",key])
++  | ["debug","union",left,right] => .ok (false,["union",left,right])
++  | ["debug","split",key] => .ok (false,["split",key])
++  | "debug" :: "graph" :: (root :: roots) => .ok (true,"graph" :: root :: roots)
++  | "debug" :: "find" :: (word :: words) => .ok (true,"find" :: word :: words)
++  | "debug" :: "next-graph" :: (root :: roots) => .ok (false,"next" :: "graph" :: root :: roots)
++  | _ => .error controlUsage
++
++/-- Read the atomically published state without acquiring the writer's lock
++or quarantining malformed files. These observations never authorize reuse or
++publication. A missing chat uses the current project's configured profile. -/
++def readControl (arguments : List String) : IO String := do
++  let config ← currentConfig
++  let files ← (← IO.getEnv "CODEX_THREAD_ID").mapM sessionFiles
++  let stored ← files.mapM fun paths => readJson? (α := ThreadState) paths.state stateJsonDefaults
++  let state := (stored.getD none).getD (defaultState config)
++  let pending ← if arguments == ["graph"] || arguments == ["why"] then pure none
++    else do
++      let staged ← files.mapM fun paths => readJson? (α := PendingTurn) paths.pending pendingJsonDefaults
++      pure (staged.getD none)
++  let selection ← currentSelection config state
++  match arguments with
++  | [] => pure (statusLine selection state pending)
++  | ["inspect"] => do
++      let reads := ", ".intercalate (selection.read.map fun egg => s!"{egg.name}={egg.path}")
++      let heads ← selection.read.mapM fun egg => do
++        let snapshots ← cacheSources egg
++        if snapshots.isEmpty then pure s!"{egg.name}:missing" else
++          pure (egg.name ++ ":" ++ ";".intercalate (snapshots.toList.map fun snapshot =>
++            s!"{snapshot.head.identity}:revision={snapshot.head.revision},rows={snapshot.head.root.map (·.rows) |>.getD 0}"))
++      pure (statusLine selection state pending ++ s!"\nread=[{reads}]\n" ++
++        "heads=[" ++ "; ".intercalate heads ++ s!"]\nconfig={config.source}")
++  | ["graph"] => pure <| if !state.enabled then "egg off; no graph was sent"
++      else if state.lastHandoff == "" then "no graph was sent" else state.lastHandoff
++  | ["why"] => pure <| if !state.enabled then "egg off; no graph selection has run"
++      else if state.lastReason == "" then "no graph selection has run" else state.lastReason
++  | "graph" :: roots => do
++      let composite ← graphForSelection selection
++      renderRoots <$> IO.ofExcept (roots.mapM (resolveKey composite))
++  | "find" :: query => do
++      let composite ← graphForSelection selection
++      pure (renderFind composite (" ".intercalate query))
++  | ["class",key] => do
++      let composite ← graphForSelection selection
++      let value ← IO.ofExcept (resolveKey composite key)
++      renderClass composite value
++  | ["diff"] => do
++      let some pending := pending | pure "no staged turn"
++      let pending ← match files with
++        | some paths => loadToolReceipts paths pending
++        | none => pure pending
++      let some target := pending.write | pure "this turn is read-only; nothing will be saved"
++      let target := System.FilePath.mk target
++      let graph ← if ← (target/"project").pathExists then do
++          let project ← ProjectStore.openProject target
++          let slot := ProjectStore.routeSlot pending.sessionId project.manifest.owners.size
++          Persistence.Store.header (← project.current slot)
++        else match ← DB.PageMap.open? target with
++          | some snapshot => Persistence.Store.header snapshot
++          | none => pure (Graph.empty (← Persistence.freshAuthority))
++      let compiled ← IO.ofExcept (compile graph pending target.toString)
++      pure s!"target={target}\nbase-revision={graph.revision}\nstaged-values={compiled.transaction.stagedValues.length}\noutcomes={compiled.promotion.outcomeRelations.length}"
++  | _ => throw (IO.userError controlUsage)
++
+ def control (arguments : List String) : IO String := do
+   let session ← controlSession
+   withSession session fun files => do
+@@ -239,8 +338,6 @@
+     let pending ← readPending? files
+     let selection ← currentSelection config state
+     match arguments with
+-    | [] => pure (statusLine selection state pending)
+-    | ["--help"] | ["-h"] => pure controlUsage
+     | ["on"] =>
+         state := { state with enabled := true }
+         writeJson files.state state
+@@ -274,15 +371,14 @@
+     | ["drop"] =>
+         removeIfExists files.pending
+         pure "egg cleared the active turn; saved observations and queued commits are retained"
+-    | ["keep"] | ["keep", _] =>
++    | ["keep"] =>
+         if !state.enabled then
+           throw (IO.userError "Eggshell is off; run !egg on before keeping a turn")
+         let some pending := pending |
+           throw (IO.userError "no staged turn")
+         if !pending.closed && pending.finalMessage.isNone then
+           throw (IO.userError "active turn cannot be kept")
+-        let requested := arguments.drop 1 |>.head?
+-        let target ← chooseTarget config pending requested
++        let target ← chooseTarget pending
+         let promotion ← promote pending target
+         -- The foreground command publishes; its indexing runs in the same
+         -- durable background lane as native terminal observations.
+@@ -290,30 +386,14 @@
+         let _sourceReceipt := promotion.source
+         removeIfExists files.pending
+         pure s!"egg kept {pending.turnId.take 8} → {target}"
+-    | ["graph"] =>
+-        pure <| if !state.enabled then "egg off; no graph was sent"
+-          else if state.lastHandoff = "" then "no graph was sent" else state.lastHandoff
+-    | ["why"] =>
+-        pure <| if !state.enabled then "egg off; no graph selection has run"
+-          else if state.lastReason = "" then "no graph selection has run" else state.lastReason
+-    | "graph" :: roots =>
+-        let values ← readSelection selection roots
+-        pure (renderRoots values)
+-    | "find" :: query =>
+-        let composite ← graphForSelection selection
+-        pure (renderFind composite (" ".intercalate query))
+-    | ["class", key] =>
+-        let composite ← graphForSelection selection
+-        let value ← match resolveKey composite key with
+-          | .ok value => pure value
+-          | .error message => throw (IO.userError message)
+-        renderClass composite value
+     | ["union", leftKey, rightKey] =>
+         if !state.enabled then
+           throw (IO.userError "Eggshell is off; run !egg on before changing a graph")
+         let target ← match selection.write with
+           | some egg => pure egg.path
+           | none => throw (IO.userError "current profile is read-only")
++        if ← (target/"project").pathExists then
++          throw (IO.userError "manual Union requires an explicit physical-source debug configuration")
+         let values ← readSelection selection [leftKey, rightKey]
+         let [left, right] := values | throw (IO.userError "selected Union endpoint arity changed")
+         let edge ← persistUnion target left right
+@@ -324,31 +404,10 @@
+         let target ← match selection.write with
+           | some egg => pure egg.path
+           | none => throw (IO.userError "current profile is read-only")
++        if ← (target/"project").pathExists then
++          throw (IO.userError "manual Union requires an explicit physical-source debug configuration")
+         let edge ← splitPersistentUnion target key
+         pure s!"egg split {key} {valueKey edge.left} != {valueKey edge.right} → {target}"
+-    | ["inspect"] =>
+-        let reads := ", ".intercalate (selection.read.map fun egg =>
+-          s!"{egg.name}={egg.path}")
+-        let heads ← selection.read.mapM fun egg => do
+-          match ← DB.PageMap.open? egg.path with
+-          | none => pure s!"{egg.name}:missing"
+-          | some snapshot => pure (s!"{egg.name}:revision={snapshot.head.revision}," ++
+-              s!"values={(← Persistence.Store.rootIds snapshot).length}," ++
+-              s!"unions={(← Persistence.Store.unionPairs snapshot).length}")
+-        pure (statusLine selection state pending ++ s!"\nread=[{reads}]\n" ++
+-          "heads=[" ++ "; ".intercalate heads ++ s!"]\nconfig={config.source}")
+-    | ["diff"] | ["diff", _] =>
+-        let some pending := pending |
+-          throw (IO.userError "no staged turn")
+-        let requested := arguments.drop 1 |>.head?
+-        let target ← chooseTarget config pending requested
+-        let graph ← match ← DB.PageMap.open? target with
+-          | some snapshot => Persistence.Store.header snapshot
+-          | none => pure (Graph.empty (← Persistence.freshAuthority))
+-        let compiled ← match compile graph pending target.toString with
+-          | .ok compiled => pure compiled
+-          | .error message => throw (IO.userError message)
+-        pure s!"target={target}\nbase-revision={graph.revision}\nstaged-values={compiled.transaction.stagedValues.length}\noutcomes={compiled.promotion.outcomeRelations.length}"
+     | _ => throw (IO.userError controlUsage)
+ 
+ def eggControl (arguments : List String) : IO UInt32 := do
+@@ -360,7 +419,9 @@
+       | ["doctor"] => doctor
+       | ["warm"] => warm none
+       | ["warm", requested] => warm (some requested)
+-      | _ => control arguments
++      | _ => do
++          let (readOnly,request) ← IO.ofExcept (controlRequest arguments)
++          if readOnly then readControl request else control request
+     IO.println output
+     pure 0
+   catch error =>
+--- /dev/null
++++ b/Eggshell/ExplicitWarm.lean
+@@ -0,0 +1,78 @@
++module
++public import Eggshell.PublicationClient
++public import Eggshell.Warm
++
++@[expose] public section
++namespace Eggshell.Plugin.ExplicitWarm
++open Lean DB
++
++def inspect (source : PageMap.Snapshot) (target : IndexTarget) : IO Warm.Inspection := do
++  if Warm.lexicalOnly target.command then
++    return {coverage := {
++      database := Sidecar.Owner.ofSnapshot source
++      revision := source.head.revision
++      model := "lexical-only"
++      windows := 0
++      valid := 0
++      missing := 0
++      invalid := 0
++      encoderContract := SearchProvider.encoderContract
++      input := {}
++      focusContract := focusWindowContract
++      discovery := {}
++      focus := {} },needed := []}
++  Warm.inspect source (← Warm.options source target.command target.storage)
++
++/-- Register all sources once and retain one bounded claim over their exact
++heads. This path never executes an index producer or takes its writer lock.
++The existing scheduler owns exclusion and merges identical captured requests. -/
++def run (requests : Array (PageMap.Snapshot × Bool)) (command : List String) : IO (Array Json) := do
++  let started ← IO.monoMsNow
++  let deadline := started+PreparationPlan.warmBudgetMs
++  let targets ← requests.mapM fun (source,writable) => do
++    let target ← registerIndexTarget source command writable
++    return {target with sourceHead := some source.head}
++  let before ← (requests.zip targets).mapM fun ((source,_),target) => inspect source target
++  let needed ← (requests.zip targets).mapM fun ((source,_),target) => Warm.required target source
++  if needed.any id then
++    let some token ← Publication.Client.openWarmPreparation deadline |
++      throw (IO.userError "preparation service has no room for an explicit warm")
++    try
++      for batch in [:(targets.size+PreparationPlan.claimBatchSize-1)/PreparationPlan.claimBatchSize] do
++        let mut claims := #[]
++        for index in [batch*PreparationPlan.claimBatchSize:min targets.size ((batch+1)*PreparationPlan.claimBatchSize)] do
++          if !(needed[index]?.getD false) then continue
++          let some target := targets[index]? | throw (IO.userError "warm source inventory changed")
++          let some source := requests[index]? | throw (IO.userError "warm source inventory changed")
++          let registry := {target with sourceHead := none}
++          claims := claims.push (registry.key,source.1.head)
++        unless claims.isEmpty do
++          let accepted ← Publication.Client.claimPreparations claims token deadline
++          unless accepted.all id do throw (IO.userError "preparation service could not admit every warm source")
++      let mut delay := 20
++      repeat
++        if ← IO.checkCanceled then throw (IO.userError "explicit warm cancelled")
++        let now ← IO.monoMsNow
++        unless now < deadline do throw (IO.userError "explicit warm did not finish before its cutoff")
++        let pending ← (requests.zip targets).mapM fun ((source,_),target) => Warm.required target source
++        if !(pending.any id) then break
++        unless ← Publication.Client.preparationLive token deadline do
++          throw (IO.userError "explicit warm lost its preparation claim")
++        IO.sleep (min delay (deadline-now)).toUInt32
++        delay := min 200 (delay*2)
++    finally Publication.Client.releasePreparation token deadline
++  (requests.zip targets).zipIdx.mapM fun (((source,_),target),index) => do
++    let after ← inspect source target
++    unless after.needed.isEmpty do throw (IO.userError "warm completed without valid numerical coverage")
++    let model ← if Warm.lexicalOnly command then pure MiniLM.model else Warm.model command
++    let some prepared ← PreparedInputs.load? source model SearchProvider.encoderContract |
++      throw (IO.userError "warm completed without its exact prepared source")
++    unless prepared.accepts source model SearchProvider.encoderContract do
++      throw (IO.userError "warm prepared reference changed its captured source")
++    let some previous := before[index]? | throw (IO.userError "warm coverage inventory changed")
++    return Json.mkObj [("prepared",toJson (some prepared)),("before",toJson previous.coverage),
++      ("after",toJson after.coverage),("requested",toJson previous.needed.length),
++      ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("scope",toJson "shared-service"),
++      ("coordinated",toJson true)]
++
++end Eggshell.Plugin.ExplicitWarm
+--- a/Eggshell/PreparedInputs.lean
++++ b/Eggshell/PreparedInputs.lean
+@@ -53,6 +53,46 @@
+   usage : Option PageMap.Head := none
+   deriving BEq,ToJson,FromJson
+ 
++/-- A shared prepared frame cannot contain addresses relative to the creating
++user's private cache. Usage is attached only after loading into a private turn. -/
++def Reference.publicStorages (reference : Reference) : List Sidecar.Storage :=
++  reference.windows.toList.map (·.storage) ++ reference.lexical.toList.map (·.storage) ++
++    reference.numeric.toList.map (·.storage) ++ reference.canonical.toList.map Prod.fst ++
++    reference.shared.toList.map (·.storage)
++
++def Reference.sharedSafe (reference : Reference) : Bool :=
++  reference.publicStorages.all (· == .database) && reference.usage.isNone
++
++theorem Reference.shared_storage (reference : Reference) (safe : reference.sharedSafe = true)
++    (storage : Sidecar.Storage) (present : storage ∈ reference.publicStorages) :
++    storage = .database := by
++  have flags := safe
++  simp only [Reference.sharedSafe, Bool.and_eq_true] at flags
++  have all := flags.1
++  simp only [List.all_eq_true] at all
++  have accepted := all storage present
++  cases storage with
++  | database => rfl
++  | user => cases accepted
++
++structure StoredReference (storage : Sidecar.Storage) where
++  reference : Reference
++  checked : storage = .user ∨ reference.sharedSafe = true
++
++def StoredReference.make (storage : Sidecar.Storage) (reference : Reference) :
++    Except String (StoredReference storage) :=
++  match storage with
++  | .user => .ok ⟨reference,.inl rfl⟩
++  | .database =>
++      if safe : reference.sharedSafe = true then .ok ⟨reference,.inr safe⟩
++      else .error "shared prepared input contains a private cache reference"
++
++theorem StoredReference.shared_is_portable (stored : StoredReference .database) :
++    stored.reference.sharedSafe = true := by
++  cases stored.checked with
++  | inl impossible => cases impossible
++  | inr safe => exact safe
++
+ /-- A private turn/operation transport, never a shared publication or equality
+ certificate. It includes absence in the original read inventory. -/
+ structure Frame where
+@@ -119,10 +159,10 @@
+   if population == 0 then return empty source model encoder
+   let some windows ← WindowOwners.open? source storage |
+     throw (IO.userError "window-owner input is not prepared")
+-  let some locatedLexical ← RetrievalResearch.Index.openLocated? source |
++  let some lexicalReader ← RetrievalResearch.Index.openStored? source storage |
+     throw (IO.userError "lexical input is not prepared")
+-  let lexical := locatedLexical.2.index
+-  let expected := locatedLexical.2.expected
++  let lexical := lexicalReader.index
++  let expected := lexicalReader.expected
+   unless lexical.head.authority == RetrievalResearch.Index.authority source &&
+       (← RetrievalResearch.Index.readStamp lexical) == some expected &&
+       (← getNat lexical.get "documents") == population do
+@@ -144,7 +184,7 @@
+     | none => Synapses.Index.open? source storage .shared
+   return {
+     producer := implementation,source := source.head,model,encoder,population
+-    windows := some ⟨storage,windows.snapshot.head⟩,lexical := some (Root.fromLexical locatedLexical),numeric := numerical
++    windows := some ⟨storage,windows.snapshot.head⟩,lexical := some (Root.fromLexical (storage,lexicalReader)),numeric := numerical
+     canonical := canonical.map (fun ready => (storage,ready.metadata))
+     shared := shared.map (fun ready => ⟨storage,ready.index.head⟩),usage := none}
+ 
+@@ -158,7 +198,8 @@
+ directory is bounded; an admitted caller carries the full immutable record. -/
+ def publish (source : PageMap.Snapshot) (storage : Sidecar.Storage) (model encoder : String)
+     (numeric : Bool) : IO Reference := do
+-  let reference ← capture source storage model encoder numeric
++  let stored ← IO.ofExcept (StoredReference.make storage (← capture source storage model encoder numeric))
++  let reference := stored.reference
+   let path ← folder source storage model encoder
+   let (_,index) ← Sidecar.withIndexClaim (Sidecar.Owner.ofSnapshot source) .canonical (fun _ => do
+     let index ← match ← PageMap.open? path with
+@@ -181,31 +222,36 @@
+     writer.put "latest" (some encoded)
+   return reference
+ 
+-def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Reference) := do
++def loadStored? (source : PageMap.Snapshot) (storage : Sidecar.Storage)
++    (model encoder : String) : IO (Option Reference) := do
+   -- An actually empty source needs no lexical or numerical publication. Its
+   -- original head still belongs to the complete certification/read inventory.
+   if (← getNat source.get "candidates") == 0 then return some (empty source model encoder)
++  let path ← folder source storage model encoder
++  let found ← try
++    match ← PageMap.open? path with
++    | none => pure none
++    | some index =>
++      let raw ← match ← index.get (sourceKey source.head) with
++        | some raw => pure (some raw)
++        | none => index.get "latest"
++      raw.mapM (Synapses.Index.decode (α := Reference))
++    catch error => match error with
++      | .permissionDenied _ _ _ => pure none
++      | _ => throw error
++  if let some reference := found then
++    unless reference.producer == implementation && reference.source.identity == source.head.identity &&
++        reference.source.authority == source.head.authority && reference.model == model && reference.encoder == encoder do
++      throw (IO.userError "foreign prepared query input record")
++    if storage == .database && !reference.sharedSafe then return none
++    if reference.source == source.head || (← Synapses.Index.sameSources source reference.source) then
++      let usage ← Synapses.UsageCache.open? source
++      return some {reference with source := source.head,usage := usage.map (·.index.head)}
++  return none
++
++def load? (source : PageMap.Snapshot) (model encoder : String) : IO (Option Reference) := do
+   for storage in [Sidecar.Storage.database,.user] do
+-    let path ← folder source storage model encoder
+-    let found ← try
+-      match ← PageMap.open? path with
+-      | none => pure none
+-      | some index =>
+-        let raw ← match ← index.get (sourceKey source.head) with
+-          | some raw => pure (some raw)
+-          | none => index.get "latest"
+-        raw.mapM (Synapses.Index.decode (α := Reference))
+-      catch error => match error with
+-        | .permissionDenied _ _ _ => pure none
+-        | _ => throw error
+-    if let some reference := found then
+-      unless reference.producer == implementation && reference.source.identity == source.head.identity &&
+-          reference.source.authority == source.head.authority && reference.model == model && reference.encoder == encoder do
+-        throw (IO.userError "foreign prepared query input record")
+-      if reference.source == source.head || (← Synapses.Index.sameSources source reference.source) then
+-        -- Usage is private and may advance without a source publication.
+-        let usage ← Synapses.UsageCache.open? source
+-        return some {reference with source := source.head,usage := usage.map (·.index.head)}
++    if let some reference ← loadStored? source storage model encoder then return some reference
+   return none
+ 
+ def lexical (reference : Reference) (source : PageMap.Snapshot) : IO (RetrievalResearch.Index.Reader source) := do
+--- a/Eggshell/Warm.lean
++++ b/Eggshell/Warm.lean
+@@ -94,14 +94,20 @@
+ 
+ /-- A rebuildable scheduling hint only. Actual numerical reads validate their
+ inputs and record private repair events; search deadlines leave it intact. -/
+-def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Bool := do
++def storedRequired (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Bool := do
+   if ← Synapses.Build.required snapshot target.storage then return true
+   unless ← Synapses.CanonicalSource.Cache.ready snapshot do return true
+   unless (← WindowOwners.openShared? snapshot).isSome do return true
+   unless ← RetrievalResearch.Index.ready snapshot do return true
+   let inputModel ← if lexicalOnly target.command then pure MiniLM.model else model target.command
+-  let some inputs ← PreparedInputs.load? snapshot inputModel SearchProvider.encoderContract | return true
+-  if ← OwnerViews.requiredFor snapshot then return true
++  let inputs ← match target.storage with
++    | .database => PreparedInputs.loadStored? snapshot .database inputModel SearchProvider.encoderContract
++    | .user => PreparedInputs.load? snapshot inputModel SearchProvider.encoderContract
++  let some inputs := inputs | return true
++  let ownerRequired ← match target.storage with
++    | .database => OwnerViews.requiredStored snapshot .database
++    | .user => OwnerViews.requiredFor snapshot
++  if ownerRequired then return true
+   if !(lexicalOnly target.command) && inputs.population > 0 && inputs.numeric.isNone then return true
+   if lexicalOnly target.command then return false
+   -- Exact interests are completed by a source-bound prepared frame. The
+@@ -125,6 +131,15 @@
+     return (← PartitionBuild.read? sidecar.semantic current.model SearchProvider.encoderContract snapshot).isNone
+   catch _ => pure true
+ 
++/-- Read-only clients reuse checked project preparation before building any
++private copy. The selected original snapshot and model remain unchanged. -/
++def required (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Bool := do
++  match target.storage with
++  | .database => storedRequired target snapshot
++  | .user =>
++      if !(← storedRequired {target with storage := .database} snapshot) then return false
++      storedRequired target snapshot
++
+ def mark (target : Plugin.IndexTarget) (snapshot : DB.PageMap.Snapshot) : IO Unit := do
+   let sidecar ← DB.Sidecar.prepare target.owner target.storage
+   let _ ← DB.Sidecar.childDirectory sidecar.indexes "warm"
+@@ -200,6 +215,10 @@
+     owner := some (DB.Sidecar.Owner.ofSnapshot snapshot)}
+ 
+ def inspectInput (options : SearchProvider.Options) (key : String) : IO InputState := do
++  -- The shared projection is the source scorer's canonical representation.
++  -- A writer may have pooled it from a private raw embedding; later readers
++  -- must validate that committed row rather than require the writer's file.
++  if let some (coverage,_) ← SearchProvider.projectedHint options key then return .valid coverage
+   let paths := SearchProvider.vectorPaths options (SearchProvider.windowCacheKey options.model key)
+   if ← paths.allM (fun path => return (← FileSystem.symlinkMetadata? path).isNone) then return .missing
+   try
+--- a/tools/RetrievalIndex.lean
++++ b/tools/RetrievalIndex.lean
+@@ -50,18 +50,21 @@
+   index : Snapshot
+   expected : Stamp
+ 
+-def openLocated? (source : Snapshot) : IO (Option (DB.Sidecar.Storage × Reader source)) := do
++def openStored? (source : Snapshot) (storage : DB.Sidecar.Storage) : IO (Option (Reader source)) := do
+   DB.Sidecar.observe source
+   let expected ← stamp source
++  try
++    let workspace ← DB.PageMap.pin (← path source storage)
++    unless workspace.head.authority == authority source do return none
++    let some index ← PreparedRoot.select? source workspace | return none
++    unless (← readStamp index) == some expected &&
++        (← getNat index.get "documents") == expected.candidates do return none
++    return some ⟨index,expected⟩
++  catch _ => pure none
++
++def openLocated? (source : Snapshot) : IO (Option (DB.Sidecar.Storage × Reader source)) := do
+   for storage in [.database, .user] do
+-    try
+-      let workspace ← DB.PageMap.pin (← path source storage)
+-      unless workspace.head.authority == authority source do continue
+-      let some index ← PreparedRoot.select? source workspace | continue
+-      unless (← readStamp index) == some expected &&
+-          (← getNat index.get "documents") == expected.candidates do continue
+-      return some (storage,⟨index, expected⟩)
+-    catch _ => pure ()
++    if let some reader ← openStored? source storage then return some (storage,reader)
+   pure none
+ 
+ /-- Preserve the existing lookup and its order while allowing consumers to
+@@ -262,7 +265,7 @@
+   let expected ← stamp source
+   if expected.candidates == 0 && !(← (← path source storage).pathExists) then
+     return {stamp := expected,mode := "empty"}
+-  if let some known ← open? source then
++  if let some known ← openStored? source storage then
+     return {stamp := known.expected}
+   DB.Sidecar.withIndexClaim (DB.Sidecar.Owner.ofSnapshot source) .lexical (fun sidecar => do
+     let folder ← DB.Sidecar.childDirectory sidecar.directory "lexical"
+--- a/Eggshell/SearchProvider.lean
++++ b/Eggshell/SearchProvider.lean
+@@ -544,11 +544,24 @@
+     pure #[Json.str pooled]
+   pure (.arr values.toArray.flatten)
+ 
+-/-- Prepare source-only pooled hints after raw-cache coverage is checked.
++/-- Use a committed projection before raw encoder scratch. Moving this entry
++to an authorized destination preserves its coverage and exact vector bytes. -/
++def projectedHint (options : Options) (key : String) : IO (Option (EncodingCoverage × VectorMatrix.Entry)) := do
++  for root in options.cache :: options.fallback.toList do
++    try
++      let some matrix ← VectorMatrix.open? root options.model encoderContract | continue
++      let some (metadata,pooled) ← VectorMatrix.read matrix key | continue
++      let coverage ← IO.ofExcept (Json.parse metadata >>= fromJson? (α := EncodingCoverage))
++      if coverage.valid && packedFinite pooled then return some (coverage,⟨key,metadata,pooled⟩)
++    catch _ => pure ()
++  return none
++
++/-- Prepare source-only pooled hints after canonical/raw coverage is checked.
+ Questions remain private and do not enter this DB-owned matrix. -/
+ def prepareMatrix (options : Options) (keys : List String) : IO VectorMatrix.Result := do
+   let keys := hashDistinct keys
+   VectorMatrix.ensureUsing options.cache options.model encoderContract keys fun key => do
++    if let some (_,entry) ← projectedHint options key then return entry
+     let cached ← indexedWindow options key
+     let pooled ← IO.ofExcept (Eggshell.WindowCentroid.project cached.vector
+       cached.coverage.sourceTokens (cached.coverage.contextTokens - 2) cached.coverage.overlapTokens)
+--- a/Eggshell/PreparationRegistry.lean
++++ b/Eggshell/PreparationRegistry.lean
+@@ -72,7 +72,7 @@
+   let source ← target.pin
+   if !(← indexPaths target source).isEmpty then return false
+   if ← Warm.required target source then return false
+-  return !(← Build.required source target.storage)
++  return true
+ 
+ def explain (job : PreparationPlan.Job) : IO Json := do
+   if synaptic job then
+@@ -102,7 +102,7 @@
+   let target ← indexTarget job
+   let source ← target.pin
+   if !(← indexPaths target source).isEmpty then return false
+-  return !(← Warm.required target source) && !(← Build.required source target.storage)
++  return !(← Warm.required target source)
+ 
+ /-- Discovery of current debt is service-side. A source change after completion
+ does not acknowledge preparation of that new source; it remains durable debt. -/
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -477,7 +477,9 @@
+       (``Eggshell.Synapses.CanonicalSource.rebase, #[],
+         #[``Eggshell.Synapses.Provenance.stamp, ``Eggshell.Synapses.Provenance.state,
+           ``Eggshell.Synapses.Provenance.records, ``Eggshell.Synapses.Provenance.derive]),
+-      (``Eggshell.Warm.required, #[``Eggshell.Synapses.CanonicalSource.Cache.ready], #[]),
++      (``Eggshell.Warm.required, #[``Eggshell.Warm.storedRequired], #[]),
++      (``Eggshell.Warm.storedRequired, #[``Eggshell.Synapses.CanonicalSource.Cache.ready,
++        ``Eggshell.Synapses.Build.required], #[]),
+       (``Eggshell.DB.PageMap.open?,
+         #[``Eggshell.FileSystem.openRead, ``Eggshell.FileSystem.boundedBytes],
+         #[``IO.setAccessRights, ``Eggshell.FileSystem.privateDirectory, ``IO.FS.createDir]),
+--- a/Eggshell/OwnerViews.lean
++++ b/Eggshell/OwnerViews.lean
+@@ -43,27 +43,30 @@
+     unless index.head.authority == authority do throw (IO.userError "owner-input authority changed during creation")
+     return index
+ 
++def loadStored? (source : Snapshot) (storage : Sidecar.Storage) : IO (Option Item) := do
++  let found ← try
++      let some book ← PageMap.open? ((← directory source storage)/"ready.egg") | pure none
++      PreparedOwners.readJson (α := Item) book book.get (sourceKey source)
++    catch error => match error with
++      | .permissionDenied _ _ _ => pure none
++      | _ => throw error
++  let some item := found | return none
++  unless item.storage == storage && item.captured.state.source.head == source.head &&
++      item.captured.state.source.directory == source.directory.toString &&
++      item.captured.state.binding.scope == (← scope source) &&
++      item.captured.state.binding.producer == SourceOwners.implementation do
++    throw (IO.userError "individual owner input changed its source or namespace")
++  return some item
++
+ def loadOne? (source : Snapshot) : IO (Option Item) := do
+   for storage in [Sidecar.Storage.database,.user] do
+-    let found ← try
+-        let some book ← PageMap.open? ((← directory source storage)/"ready.egg") | pure none
+-        PreparedOwners.readJson (α := Item) book book.get (sourceKey source)
+-      catch error => match error with
+-        | .permissionDenied _ _ _ => pure none
+-        | _ => throw error
+-    if let some item := found then
+-      unless item.storage == storage && item.captured.state.source.head == source.head &&
+-          item.captured.state.source.directory == source.directory.toString &&
+-          item.captured.state.binding.scope == (← scope source) &&
+-          item.captured.state.binding.producer == SourceOwners.implementation do
+-        throw (IO.userError "individual owner input changed its source or namespace")
+-      return some item
++    if let some item ← loadStored? source storage then return some item
+   return none
+ 
+ /-- Publish one source's roots in its project cache or private read overlay.
+ No read-set tuple is registered and original ACKs never wait for this writer. -/
+ def prepareSource (source : Snapshot) (storage : Sidecar.Storage) : IO Item := do
+-  if let some item ← loadOne? source then return item
++  if let some item ← loadStored? source storage then return item
+   let _ ← Sidecar.prepare (Sidecar.Owner.ofSnapshot source) storage
+   let folder ← directory source storage
+   FileSystem.privateDirectory folder
+@@ -111,6 +114,9 @@
+ 
+ def requiredFor (source : Snapshot) : IO Bool := return (← loadOne? source).isNone
+ 
++def requiredStored (source : Snapshot) (storage : Sidecar.Storage) : IO Bool :=
++  return (← loadStored? source storage).isNone
++
+ structure Reader where
+   base : SourceOwners.Reader
+   stride : Nat

@@ -2,6 +2,18 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[別利用者から共有DBを使う検査](docs/practical-runtime/shared-project/README.md)を進めた。
+明示warmと背景producerの競合、共有frameの個人側字句root、個人側所有者索引を共有準備済みとする誤りを再現し、
+[隔離候補](docs/candidates/coordinated-warm/README.md)で保存先を固定して判定するよう修正した。
+最終候補 `0411e492…` の新規2 DB・4並行writerでは、実フックから15観測と3辺を保存し、
+別data rootの2チャットへ原文10/10、2.155 / 0.947秒、本文byte一致で配送した。
+読み取りwarmでの個人側投影0、元publication不変、全service/guard終了0・ownedPids空。
+同じ原DBの途中版の検査と最終新規構築を区別する。
+任意のDT変換、NFS/SMB、80人の継続利用、一般98%、総token改善の実証ではなく、本体採用0・有料比較0/18。
+333 native object、13 sourceのpatch適用結果、Leanの期限/共有保存の定理と実consumer境界も検査した。
+終了済みの共有試験DB/cacheは11,631項目・143,827,347論理bytesを削除、archiveなし。
+原典と現行実行体2,065ファイルのhashは前後一致した。
+
 追加指示の[eggコマンド整理](docs/candidates/egg-commands/README.md)は隔離候補でnative28件を通した。確認系はsessionの書き込みロック保持中でも207～212msで完了し、ファイルを変更しない。取得時のproject DBへの保存先固定、共有projectのinspect/diff、不正なstate/pendingの非変更、既存init設定の保護を確認した。全件走査・手動Unionなどはdebug配下へ移した。326 native objectが整合し、製品coreの変更はPluginCliだけ。現在製品・通常インストールは不変、フック改善や総token改善としては数えず、AGENTS.mdの採用条件は未達のまま。
 
 復旧・packageの終了済み作業DB/cacheは、本文・stdout・監査結果を保存後に5,326項目・601,353,304論理bytesを削除した。archiveなし。元の実セッションDBと現行native・必要なモデル入力は保持し、削除後も保護対象のhashを確認した。削除済みの試験DBを再開点にはしない。
