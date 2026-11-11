@@ -63,3 +63,5 @@
 終了済みの有限キーbenchmark実行体100,304,832bytesはarchiveせず削除した。[削除記録](trimmed.json)。現在の製品実行体、DB、cache、MiniLMは保持し、hash不変を確認した。次の範囲bridgeのnative検証に必要なsource/interface/objectだけを残している。
 
 範囲版の終了済み実行体106,690,288bytesと一時import probeも削除した。[範囲版の削除記録](range/trimmed.json)。次の製品接続に必要なnative入力は保持し、現在の製品・制御器・原DBのheadのhash不変を確認した。新規DB/cacheやarchiveは作っていない。
+
+その後、[実LLVMの3題材](../range-workload/README.md)で同じ部品を検証し、全9対の順序付き出力が一致した。旧`factored-incidence`実験rootは終了済みとして削除し、次の接続に必要なkernel source/interface/objectは現在の`range-workload`側へ残した。未使用の旧test interfaceへの参照も検査して除いた。[退役と依存検査](../range-workload/retired-component.json)。過去の実験rootや削除済み実行体をそのまま再開できるとは扱わない。

@@ -1,5 +1,9 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
+直近の[実LLVM入力の診断](docs/candidates/range-workload/README.md)では、3題材とも範囲照合の全出力順が9/9対で一致し、元の約192〜194msから約10.5〜10.8msへ短縮した。ただしbaseだけの部品で、製品選択器への接続、全Problem/bonusの一致、通常フックの改善は未完。既存出版catalogueと範囲・source keyが一致する4,016 unit、動的group 1,165、generic 5,456を区別した。次はこの不変部分を既存imageで共有し、genericと動的差分を含む全選択準備の境界を閉じる。部品0.19秒の改善を16並行数秒へ外挿しない。
+
+診断の採取では、privateな約12MBのselectionPlanを公開返信にも入れて8MiB frameを超える欠陥を確認した。private fieldだけを除く型付き返信境界で本文・認定・packet・ACKの不変性をLeanで証明し、隔離native候補で実CLIの題材1/2/3を各1回確認した。本文・stdout記録・ACKは正本と一致し、意味検索とシナプスは全件完了、診断付き時間は10.074/7.105/7.167秒。これは通常性能・16並行・モデル両周の比較ではなく、以前の観測なしACK timeoutの修復とも数えない。本体採用0、有料比較0/18を維持する。終了した診断実行体・受領状態と未使用の祖先実行体/旧component rootはarchiveせず削除し、次に使う選択metadataだけをprivate fixtureとして残した。現行runtime・DB・project cache・モデル・必要native入力は保持する。
+
 全体目標は未達。本体への採用0、現行/候補の有料比較0/18。現行の性能比較元はbyte-pages（SHA `534a92d6…`）、隔離した製品候補は[既存位置を保つ修正](docs/candidates/stable-source-rows/README.md)（SHA `dd53c89b…`）。新seed→題材1/2/3→2周目1/2/3の実モデル6/6段階が保存監査まで完了した。[凍結したDB内根拠](docs/candidates/stable-source-rows/sequence/six-stage-results.json)は全体保存31/31、部分保存を含め35/35が実際の初回入力に存在し、44フック失敗0、初回7.880〜9.204秒。1周目の題材1/2/3はfresh比73.275%/94.890%/79.363%削減、2周目は同条件の1周目fresh参照比85.728%/94.865%/96.010%である。
 
 2周目の題材1の新freshは500万token上限で中断し、観測5,078,087 tokenが下限・最終使用量不明である。独立した6対比較の完了や、失敗費用を含む正確な総削減率とは数えない。[継続手順](docs/candidates/stable-source-rows/sequence/reference-round.json)で完了済みの同条件freshを再利用し、自動再試行と上限緩和はしない。この凍結対象の6段階配送は通過したが、16並行で数秒、80人の持続利用、一般的な98%配送率、反復した総token/品質の採用条件は未達/未検証である。
