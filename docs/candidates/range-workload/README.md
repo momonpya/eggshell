@@ -18,7 +18,7 @@ AB/BA/ABを事前固定し、各出力のbase hitは78,489件だった。class�
 
 出版済みの`PreparedSourceView.readOwner`から、範囲だけでなくsource keyも照合した。4,016 unitは既存の不変catalogueと一致し、1,165 unitは追加のquery group、5,456 unitはgenericだった。generic全件が静的だとは確認していない。query内のfamily番号は永続scopeではない。接続時はDB/source identity・完全な原文参照を保ち、ファイル以外の記録を除外せず、動的なgroupを差分として扱う必要がある。
 
-この約0.19秒の部品改善を、数秒かかる選択準備全体の修復へ読み替えない。bundleのbonus判定、全Problemの一致、実フックの比較、16並行、総token・品質の対比較は未完である。
+この約0.19秒の部品改善を、数秒かかる選択準備全体の修復へ読み替えない。以下の全Problem/bonusの証明は進んだが、そのnative接続と実フックの比較、16並行、総token・品質の対比較は未完である。
 
 ## 採取中に見つかった診断返信の欠陥
 
@@ -48,4 +48,14 @@ AB/BA/ABを事前固定し、各出力のbase hitは78,489件だった。class�
 
 次の接続に使う3題材の選択metadataだけを、hash照合してprivateな`range-workload/fixtures/`へ移動した。DB/cacheのコピーやarchiveではなく、次の候補の現役入力である。raw query入力はGitへ保存せず、実行終了時には削除する。[保持範囲](fixtures.json)。compiler入力は同じbytesのものだけを現行原典への参照にそろえた。[照合](shared-compiler-inputs.json)。
 
-次は既存OwnerReady/imageの不変構造を使い、generic原文と動的groupを含めてbase/bonus/全Problemの一致を閉じる。構築済み索引をunitごとに再生成せず、全所有者・全起点閉包を新しいcacheとして増やさない。その後に通常フックと同条件16並行を確認する。poolは全フックの改善と保持量に根拠が出た場合だけ候補とし、同じ小効果の配置を繰り返さない。採用にはAGENTSの同一snapshot・反復した総tokenと品質の比較が必要である。
+次は既存OwnerReady/imageの不変構造を、下の一致契約へ接続する。構築済み索引をunitごとに再生成せず、全所有者・全起点閉包を新しいcacheとして増やさない。その後に通常フックと同条件16並行を確認する。poolは全フックの改善と保持量に根拠が出た場合だけ候補とし、同じ小効果の配置を繰り返さない。採用にはAGENTSの同一snapshot・反復した総tokenと品質の比較が必要である。
+
+## 選択問題とbundleへの一致契約
+
+`PreparedSelectorIncidence.lean`で、baseの順序付き照合だけから、元の`problemFromView`全体との等式へ進めた。全unitを対象に、file/genericの費用closure、cue directory、重複、範囲外参照の失敗、固定費・上限をそのまま保持する。geometryの共有はWorkやcost nodeの同一視ではない。query family番号を永続キーへ流用することも認めていない。
+
+bundle側では、元の受理述語を「この範囲を覆うunitが選択集合にある」と「このfamilyの範囲をbundleの引用が支持する」に分解した。全cueのunit被覆を一度だけ計算し、元のbucket絞り込みを保って使う。選択unitのhash setもbundleごとに一度だけ作る。union被覆は最初の点による候補探索を元の厳密な述語で検査し、隣接したraw rangeをまたぐ場合を落とさない。`bonus_exact`と`recipe_exact`は任意のbundle・費用問題・directoryについて元の完全な結果列と失敗を保つ。引用の重みや推薦/認定の境界は変更しない。
+
+factoryは準備済みresolverを引数に取り、factory自身は木を構築しない。追加分のresolverと既存resolverの合成も、全範囲を作り直した場合と同じ照合になることを証明した。重複する構造の証人があってもcueの票は増えず、request順も変わらない。append-onlyの契約であり、削除・書換え・compactionの証明ではない。
+
+全9つの公理監査は標準3公理以内で、sorry/native_decide/Z3/unsafeは使っていない。[監査](prepared-selector-axioms.txt)。Lean 4.33.0、768MiB上限で警告なし・終了0。製品DBのinterpreter操作、新しいDB/cache、native実行体の生成はしていない。これは一致性の実装であり、準備全体の実費用・保持量の改善や、選択器全体への接続を実証したものではない。ディスク空きが2GiBの保護線を下回っている間は重いnative試験を開始しない。

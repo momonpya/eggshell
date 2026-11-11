@@ -1,6 +1,6 @@
 # Eggshell：10〜80人・複数プロジェクトの共有記憶
 
-直近の[実LLVM入力の診断](docs/candidates/range-workload/README.md)では、3題材とも範囲照合の全出力順が9/9対で一致し、元の約192〜194msから約10.5〜10.8msへ短縮した。ただしbaseだけの部品で、製品選択器への接続、全Problem/bonusの一致、通常フックの改善は未完。既存出版catalogueと範囲・source keyが一致する4,016 unit、動的group 1,165、generic 5,456を区別した。次はこの不変部分を既存imageで共有し、genericと動的差分を含む全選択準備の境界を閉じる。部品0.19秒の改善を16並行数秒へ外挿しない。
+直近の[実LLVM入力の診断](docs/candidates/range-workload/README.md)では、3題材とも範囲照合の全出力順が9/9対で一致し、元の約192〜194msから約10.5〜10.8msへ短縮した。ただしbaseだけのnative部品で、製品選択器への接続と通常フックの改善は未完。続くLean実装で全Problemとbundleのbonus/recipeの完全な一致を証明した。準備済みresolverを借り、被覆は全cueについて一度、選択unit集合はbundleごとに一度作る。既存/追加resolverの合成も証明済みで、9公理監査は標準3公理以内。既存出版catalogueと範囲・source keyが一致する4,016 unit、動的group 1,165、generic 5,456を区別した。次はこの不変部分を既存imageへ結び、genericと動的差分を含むnativeの全準備を比較する。部品0.19秒の改善を16並行数秒へ外挿しない。
 
 診断の採取では、privateな約12MBのselectionPlanを公開返信にも入れて8MiB frameを超える欠陥を確認した。private fieldだけを除く型付き返信境界で本文・認定・packet・ACKの不変性をLeanで証明し、隔離native候補で実CLIの題材1/2/3を各1回確認した。本文・stdout記録・ACKは正本と一致し、意味検索とシナプスは全件完了、診断付き時間は10.074/7.105/7.167秒。これは通常性能・16並行・モデル両周の比較ではなく、以前の観測なしACK timeoutの修復とも数えない。本体採用0、有料比較0/18を維持する。終了した診断実行体・受領状態と未使用の祖先実行体/旧component rootはarchiveせず削除し、次に使う選択metadataだけをprivate fixtureとして残した。現行runtime・DB・project cache・モデル・必要native入力は保持する。
 
