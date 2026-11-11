@@ -91,3 +91,5 @@ viewの取得後からbinding scan開始までには約0.9秒あり、
 比較元の実行体と必要なcompiler入力を保持した。圧縮archiveは作らない。
 削除後の[比較元326 native object](parent-after-retirement.json)も整合した。
 同じ負荷の実フックを再実行したという主張ではない。
+一度限りの制御器はcommit `346a18f6`に記録し、現在のtreeから削除した。
+既に終了したguardを同じ設定で再開しない。段階分離の証明と観測用moduleは残す。
