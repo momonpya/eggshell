@@ -53,3 +53,11 @@ native親`7cc1432d…`の`SharedReadViews`では、byte予算128MiBに加え、i
 80人・複数プロジェクトでは別の障害になるため、次は保持量と同時操作数に基づく上限へ整理する。byte境界・scope・旧readerの寿命を維持し、16個の異なる小さいviewを同時に保持するnative試行で、固定8枠が待ちを作ることと修正後の受付を比べる。既存の他の固定枠やFIFOも同じ境界で点検する。これは未実装・未検証の次段階である。
 
 終了した前の範囲候補のcompiler/source 9,337項目・221,247,714論理bytesを削除し、現行原典、親、モデル、現在のnative入力を保持した。[退役](retirement.json)。archiveは作っていない。
+
+## 計測終了後の借用境界と退役
+
+99フックの計測と制御器はcommit `e693cf47`の版に属する。その後、汎用APIの`posting`は逆順のまま保存されたリストを直接借りる形に直した。順序付き集合へ渡す前のpostings順は結果に影響しないことを証明しており、元のrecord位置順と重複の契約は変わらない。準備済みpostingsを照会ごとに反転する処理は残していない。
+
+この修正はnativeの同じ合成64比較で完全な出力順が一致した。密なケースの中央値は約2,435µsである。[結果](borrowed-component.json)、[証明](borrowed-proof.txt)、[native](borrowed-native.json)、[source](borrowed-sources.json)。修正後の部品は製品coreを変えておらず、実フックやモデルの再測定はしていない。前の12.9秒をこの修正後の計測として扱わない。
+
+計測に使った実行体2つ、終了した実験source/build、重複stdout、session/receipt/台帳など7箇所、786,603,130論理bytesをarchiveせず削除した。原典4ファイル、現行親、回答制御器、正本本文のhashは前後で一致した。[削除](closed.json)。現行親のcanonical cacheは最後の親armで元のproducerへ戻り、現在使用中なので削除していない。部品のcompiler/sourceは次の共有view試験で使う現役の入力として保持し、削除した実行体と実験状態は再開対象にしない。

@@ -252,6 +252,20 @@ def checkInputs : IO Unit := do
     ("entryBytesUnchanged",toJson true),("compiledHelpersMatchProvedSources",toJson true),
     ("compiledSourcesMatchPreparedCandidate",toJson true)])
 
+def prepareBorrowed : IO Unit := do
+  idle
+  check ((← read (records/"comparison.json")).getObjValD "verifiedPublishedClients" == toJson (99 : Nat))
+    "close the fixed hook comparison before changing its primitive"
+  IO.FS.writeFile (root/"source/tools/research/PreparedRecordGroups.lean")
+    (← IO.FS.readFile (project/"tools/research/PreparedRecordGroups.lean"))
+  guard "record-groups-borrowed-build" #[(compiler/"bin/lean").toString,"-j1","-M768","--run",
+    (project/"tools/research/StudyBuildMain.lean").toString,(base/"record-groups-build-settings.json").toString]
+
+def prepareBorrowedRun : IO Unit := do
+  idle
+  discard <| finished "record-groups-borrowed-build"
+  guard "record-groups-borrowed-bench" #[(root/"build/StudyMain").toString,"record-groups-bench",(root/"borrowed").toString]
+
 def main (args : List String) : IO Unit := do
   match args with
   | ["setup"] => setup
@@ -263,6 +277,8 @@ def main (args : List String) : IO Unit := do
   | ["prepare-comparison"] => prepareComparison
   | ["collect"] => collect
   | ["check-inputs"] => checkInputs
+  | ["prepare-borrowed"] => prepareBorrowed
+  | ["prepare-borrowed-run"] => prepareBorrowedRun
   | _ => throw (IO.userError "setup|prepare-run required")
 end RecordGroupsStudy
 def main := RecordGroupsStudy.main

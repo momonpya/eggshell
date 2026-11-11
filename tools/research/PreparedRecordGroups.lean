@@ -17,15 +17,27 @@ def prepare (records : List (List Nat)) : Index records :=
   let values := records.toArray
   ⟨values,by simp [values],OrderedIncidence.build (fun i : Fin values.size => values[i]) (List.finRange values.size)⟩
 
+/-- Union needs membership, not posting order. Borrow the stored cons list
+directly instead of reversing it for every request. -/
+def Index.posting (ready : Index records) (row : Nat) : List (Fin ready.values.size) :=
+  ready.membership.table.getD row []
+
+theorem Index.posting_mem (ready : Index records) (row : Nat) (i : Fin ready.values.size) :
+    i ∈ ready.posting row ↔ row ∈ ready.values[i] := by
+  have same : i ∈ (ready.membership.table.getD row []).reverse ↔ row ∈ ready.values[i] := by
+    rw [ready.membership.exact]
+    simp
+  simpa only [Index.posting,List.mem_reverse] using same
+
 /-- Only incident record IDs enter the ordered union. Sorting IDs preserves
 the original record order; equal payloads at different positions survive. -/
 def Index.selected (ready : Index records) (requested : List Nat) : Std.TreeSet (Fin ready.values.size) compare :=
   (∅ : Std.TreeSet (Fin ready.values.size) compare).insertMany
-    (requested.flatMap ready.membership.lookup)
+    (requested.flatMap ready.posting)
 
 theorem Index.selected_mem (ready : Index records) (requested : List Nat) (i : Fin ready.values.size) :
     i ∈ (ready.selected requested).toList ↔ (ready.values[i]).any requested.contains = true := by
-  simp [Index.selected,OrderedIncidence.Index.lookup_exact,List.mem_flatMap]
+  simp [Index.selected,Index.posting_mem,List.mem_flatMap]
   constructor
   · rintro ⟨row,present,inside⟩; exact ⟨row,inside,present⟩
   · rintro ⟨row,inside,present⟩; exact ⟨row,present,inside⟩
@@ -81,7 +93,7 @@ already outnumber records, the dense hash scan avoids a larger ordered union.
 The decision uses current cardinalities, never a learned query threshold. -/
 def Index.chooseRecords (ready : Index records) (requested : List Nat) : List (List Nat) :=
   let keys := hashDistinct requested
-  let postings := keys.map ready.membership.lookup
+  let postings := keys.map ready.posting
   let incident := postings.foldl (fun count posting => count+posting.length) 0
   if incident < ready.values.size then
     let selected := (∅ : Std.TreeSet (Fin ready.values.size) compare).insertMany postings.flatten
