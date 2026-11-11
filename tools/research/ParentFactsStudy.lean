@@ -101,7 +101,7 @@ def prepare : IO Unit := do
   let text ← replace text "        rankedCitedObservationCoordinates admitted item.owner item.provenance).map"
     "        rankedCitedObservationCoordinatesUsing parentParser.parse admitted item.owner item.provenance).map"
   IO.FS.writeFile (source/"Eggshell/Handoff.lean") text
-  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U3","--label","a/Eggshell/Handoff.lean",
+  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/Handoff.lean",
     "--label","b/Eggshell/Handoff.lean",(parent/"source/Eggshell/Handoff.lean").toString,(source/"Eggshell/Handoff.lean").toString]}
   check (patch.exitCode == 1) "candidate patch absent"
   IO.FS.writeFile (records/"Handoff.patch") patch.stdout
@@ -198,7 +198,7 @@ def collectProof : IO Unit := do
   check (!log.contains "sorryAx" && !log.contains "error:" && !log.contains "warning:") "proof did not close cleanly"
   IO.FS.writeFile (records/"proof.txt") log
   let path := source/"Eggshell/Handoff.lean"
-  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U3","--label","a/Eggshell/Handoff.lean",
+  let patch ← IO.Process.output {cmd := "/usr/bin/diff",args := #["-U0","--label","a/Eggshell/Handoff.lean",
     "--label","b/Eggshell/Handoff.lean",(parent/"source/Eggshell/Handoff.lean").toString,path.toString]}
   check (patch.exitCode == 1) "candidate difference missing"
   IO.FS.writeFile (records/"Handoff.patch") patch.stdout

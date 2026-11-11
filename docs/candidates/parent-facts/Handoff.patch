@@ -1,17 +1,8 @@
 --- a/Eggshell/Handoff.lean
 +++ b/Eggshell/Handoff.lean
-@@ -1,6 +1,7 @@
- module
- 
- public import Eggshell.SourcePlan
+@@ -3,0 +4 @@
 +public import Std.Data.HashMap.Lemmas
- public import Eggshell.OriginalStructure
- public import Eggshell.OriginalPresentation
- public import Eggshell.Deadline
-@@ -3179,7 +3180,106 @@
-               (!explicitRange || shown.2 == destination.2) then
-             some shown else none
-       | _ => none
+@@ -3181,0 +3183,94 @@
 +
 +namespace PreparedCitationLinks
 +open Lean
@@ -106,19 +97,13 @@
 +      intro parser valid
 +      exact ih _ (Parser.insert_valid parser valid row.1 row.2)
 +  exact step texts {} Parser.empty_valid
- 
+@@ -3182,0 +3278,5 @@
 +#print axioms prepared_intervals_exact
 +#print axioms Parser.parse_exact
 +#print axioms Parser.prepared_valid
 +end PreparedCitationLinks
 +
- def observedLineNumber? (text : String) : Option (Nat × Char) := do
-   let chars := text.toList.dropWhile (· == ' ')
-   let digits := chars.takeWhile Char.isDigit
-@@ -3338,6 +3438,75 @@
-   let some first := hints.head? | return none
-   return some (first.2,hints.map Prod.fst,hints,groups)
- 
+@@ -3340,0 +3441,69 @@
 +def rankedCitedObservationCoordinatesUsing (parse : Nat → String → String → List (Nat × Nat))
 +    (texts : List (Nat × String)) (owner : OutcomeEdge)
 +    (records : List SourceEvidence.Record) : Option
@@ -188,13 +173,7 @@
 +#print axioms admitted_exact
 +end SourceCitationFacts
 +
- def citedObservationWindows (texts : List String) (owner : OutcomeEdge)
-     (records : List SourceEvidence.Record) : List Nat :=
-   (citedObservationCoordinates texts owner records).map Prod.snd |>.getD []
-@@ -9945,12 +10114,13 @@
-       let owner ← nominatedOwners.find? (·.relation == relation)
-       let text ← Matcher.atomText? owner.outcome
-       if sourceAll.any (·.parent == owner.work) then some (rank,owner.work,text) else none
+@@ -9948,4 +10117,5 @@
 -    let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
 -      let admitted := parents.filterMap fun (rank,work,text) =>
 -        if (sourceIncidence.neighborhood [work]).any (·.work == item.owner.work) then
@@ -204,9 +183,6 @@
 +    let parentFacts := SourceCitationFacts.prepare sourceIncidence queryParents
 +    let referenced := if evidence.isSome then [] else focusDomain.filterMap fun item =>
 +      let admitted := SourceCitationFacts.admitted parentFacts item.owner.work
-       (if admitted.isEmpty then none else
+@@ -9953 +10123 @@
 -        rankedCitedObservationCoordinates admitted item.owner item.provenance).map
 +        rankedCitedObservationCoordinatesUsing parentParser.parse admitted item.owner item.provenance).map
-         (fun (priority,positions,ranks,ranges) => (item.owner.relation,priority,positions,ranks,ranges))
-     let referencedEvidence := referenced.map fun (owner,_,positions,_,_) => (owner,positions)
-     let referencePriorities := referenced.map fun (owner,priority,_,_,_) => (owner,priority)
