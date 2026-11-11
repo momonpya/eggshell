@@ -2,6 +2,18 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[保存とLLVM照会の混在負荷](docs/practical-runtime/shared-traffic/README.md)を同じ候補 `0411e492…` で検査した。
+4保存＋6照会の10クライアント、事前固定した3回は全件9.654 / 9.710 / 9.777秒で完了した。
+LLVMのDB-present必要原文は各回3/3・6/6・5/5、合計42/42（部分保存込み48/48）。
+共有側の基準8定義も9照会すべてで配送、全18照会の意味検索が完了し、追加後の48観測を確認した。
+これは10 UserPromptの並行検索や実モデルの両周ではなく、4 writerの実Pre/Post/Stop/keepと6 UserPromptの混在試験。
+16クライアントは保護停止し、80人・8時間・p99・一般98%・総token改善の未達を残す。
+関連RSS標本最大4,098,654,208 bytes、全service/guard終了0・ownedPids空。製品sourceは変更せず、採用0・有料比較0/18。
+LLVM3題材の本文・stdoutは、同じsnapshotの既存の健全な復旧試験とbyte一致し、重複ファイルを除いた。速度や総tokenの比較へは転用しない。
+明示keepは377〜399ms、Pre/Post全体は約1.0〜1.8秒。72件の既存受領記録でサービス内dispatchとの差も残した。
+DB/選択器の再調整へ飛ばず、クライアントの起動・転送・stdout/receipt処理を含む残る費用をこの記録から追う。
+終了済みDB/cache/専用実行体等25,166項目・1,001,055,533論理bytesはarchiveせず削除し、原典と現行実行体のhashを維持した。
+
 [別利用者から共有DBを使う検査](docs/practical-runtime/shared-project/README.md)を進めた。
 明示warmと背景producerの競合、共有frameの個人側字句root、個人側所有者索引を共有準備済みとする誤りを再現し、
 [隔離候補](docs/candidates/coordinated-warm/README.md)で保存先を固定して判定するよう修正した。

@@ -80,14 +80,15 @@ def hook (plan : StudySeedChecks.Input) (root data config : System.FilePath)
   call plan root data config session label #["codex-hook"] (input.compress++"\n")
 
 def writer (plan : StudySeedChecks.Input) (root data config target : System.FilePath)
-    (item : Case) : IO Json := do
-  discard <| hook plan root data config item.session "start" "SessionStart"
-  discard <| hook plan root data config item.session "prompt" "UserPromptSubmit"
-    [("prompt",toJson "Inspect the shared source evidence and explain its two recorded fields.")]
+    (item : Case) (begin : Bool := true) (projects : Nat := 2) : IO Json := do
+  if begin then
+    discard <| hook plan root data config item.session "start" "SessionStart"
+    discard <| hook plan root data config item.session "prompt" "UserPromptSubmit"
+      [("prompt",toJson "Inspect the shared source evidence and explain its two recorded fields.")]
   let pendingPath := data/"sessions"/item.session/"pending.json"
   let some pending ← (readJson? pendingPath pendingJsonDefaults : IO (Option PendingTurn)) |
     throw (IO.userError "normal hook did not stage the configured project")
-  check (pending.write == some target.toString && pending.projectInputs.any (·.size == 2))
+  check (pending.write == some target.toString && pending.projectInputs.any (·.size == projects))
     "native hook changed its write target or omitted a configured project"
   for (id,command) in #[
       ("read",s!"nl -ba {item.path} | sed -n '1p'"),
