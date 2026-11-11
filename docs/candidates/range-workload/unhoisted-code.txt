@@ -1,0 +1,45 @@
+Initial compiled recipe factory
+Runtime: 91cbc334caadeebaeb18fd5110a49be95a3be70aa560a1d4473104e6168da89f
+Object: 8dbb775cb27d11c665b3b9f0d0ee8eb41503ebe2f870702338f6ef6e4dd59e7e
+Lean closure layout: lean.h uint16_t m_arity, m_num_fixed.
+Factory closure: arity 7 / fixed 4; directory and Problem supply only 2 more arguments.
+prepareBonus therefore remains in the function invoked by the final Plan argument.
+No hook or answering-model run was performed for this variant.
+
+00024ab4 False long   True   PAGOF12 False     _l_Eggshell_Research_PreparedViewSelector_borrowedRecipes___boxed
+00024ab0 True  long   True   PAGE21  False     _l_Eggshell_Research_PreparedViewSelector_borrowedRecipes___boxed
+0002483c True  long   True   BR26    False     _l_Eggshell_Research_PreparedSelectorIncidence_prepareBonus
+00024774 True  long   True   BR26    False     _l_Eggshell_Research_PreparedSelectorIncidence_prepareBonus
+
+0000000000024a90	str	w8, [x26]
+0000000000024a94	mov	w0, #0x38
+0000000000024a98	bl	0x24a98
+0000000000024a9c	mov	x5, x0
+0000000000024aa0	mov	w8, #0x1
+0000000000024aa4	str	w8, [x0]
+0000000000024aa8	mov	w8, #0xf500
+0000000000024aac	strh	w8, [x0, #0x6]
+0000000000024ab0	adrp	x8, 0 ; 0x24000
+0000000000024ab4	add	x8, x8, #0x0
+0000000000024ab8	str	x8, [x0, #0x8]
+0000000000024abc	mov	w8, #0x7
+0000000000024ac0	movk	w8, #0x4, lsl #16
+0000000000024ac4	str	w8, [x0, #0x10]
+0000000000024ac8	stp	x26, x24, [x0, #0x18]
+0000000000024acc	stp	x25, x20, [x0, #0x28]
+0000000000024ad0	mov	x0, x22
+0000000000024ad4	mov	x1, x21
+0000000000024ad8	mov	x2, x20
+0000000000024adc	mov	x3, x19
+0000000000024ae0	mov	x4, x23
+0000000000024ae4	ldp	x29, x30, [sp, #0x40]
+0000000000024ae8	ldp	x20, x19, [sp, #0x30]
+0000000000024aec	ldp	x22, x21, [sp, #0x20]
+0000000000024af0	ldp	x24, x23, [sp, #0x10]
+0000000000024af4	ldp	x26, x25, [sp], #0x50
+0000000000024af8	b	0x24af8
+0000000000024afc	adrp	x0, 0 ; 0x24000
+
+_initialize_tools_research_PreparedViewSelector
+_l_Eggshell_Research_PreparedViewSelector_choose
+_runtime_initialize_tools_research_PreparedViewSelector

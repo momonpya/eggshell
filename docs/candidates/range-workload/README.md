@@ -1,6 +1,6 @@
 # 実LLVMの範囲照合と診断返信の境界
 
-未採用の隔離検証。回答モデル呼出し0、有料の対比較0。pool、推薦順位、認定、3辺、配送予算、フック期限は変更していない。範囲索引はまだ製品の選択器へ接続していない。
+不採用の隔離検証。範囲索引を実際のnative選択器へ接続し、結果全体の一致を確認したが、4/16並列の速度が悪化し、次の16並列はRSS保護停止した。回答モデル呼出し0、有料の対比較0。pool、推薦順位、認定、3辺、配送予算、フック期限は変更していない。既存project imageからgeometryを借りるresident経路は未接続である。
 
 ## 実際の入力で確認した範囲
 
@@ -72,6 +72,43 @@ factoryは準備済みresolverを引数に取り、factory自身は木を構築�
 
 呼出し元の全moduleを768MiBで検査する試行は候補・親とも`takeGroup`の同じ式で制限に達した。元のbuilderはこのmoduleに3,072MiBを設定しており、これを候補のruntime回帰や、呼出し元の検査成功とは判定しない。[候補](selector-caller-check.txt)、[親](selector-parent-caller-check.txt)、[検査の範囲](selector-checks.json)。同じ低メモリ試行を繰り返さない。
 
-次の[隔離native sourceとbuild設定](selector-native-plan.json)は準備済みだが、guardは開始していない。現行runtime、モデル、DB、project cacheは保持した。空き容量の2GiB条件を満たしてから通常の資源監視下でビルドし、native呼出し先、全source閉包、3題材の本文/ACK、16並行を確認する。その後も、resident imageへの接続と差分更新、モデル両周、反復した総token・品質、成長DB、共有利用の実証が残る。
+[隔離native sourceとbuild設定](selector-native-plan.json)によるビルドと実フック確認を行った。以下はその結果である。resident imageへの接続と差分更新、モデル両周、反復した総token・品質、成長DB、共有利用の実証は残る。
 
 参照がない旧性能試験用cache 2,389項目・348,446,835論理bytesを削除し、6,300 interface参照・現行実行体・原DBのhashを照合した。現行cacheとモデルは保持している。[削除](superseded-capacity-cache-removed.json)。論理削除量に相当する空き容量の増加は確認していない。終了済みの採取/退役コマンドは制御器から取り除き、現在の操作だけを117行へ整理した。過去コマンドは当時のGit revisionに属し、今の制御器で再実行しない。新しいDB/cacheやarchiveは作っていない。
+
+## nativeで判明した準備の繰返し
+
+最初の実行体`91cbc334…`では、Leanがrecipe factoryを最終Plan引数までeta展開し、`prepareBonus`をbundleごとに実行する生成コードになっていた。純粋な返り値の証明だけでは、この実行費用の誤りを防げなかった。closureはarity 7・固定4引数で、factoryの呼出しが渡す追加2引数では準備が実行されない。[生成コード](unhoisted-code.txt)、[棄却](unhoisted-result.json)。この版ではフック・回答モデルを呼んでいない。
+
+`prepareBonus`を成功したProblemの後で値として作り、factoryへ渡す形に修正した。失敗経路と選択全体が同じことを証明し、標準3公理だけで閉じた。[証明](query-preparation-proof.txt)。修正版`728fe87c…`の実リンク331 objectが整合し、既存sourceの直接変更はPublicationServiceへの証明importだけである。[native](query-preparation-native.json)、[source](query-preparation-sources.json)。生成コードでもprepareBonusの唯一の呼出しはchooseWith内にあり、recipe factory内にはない。[呼出し位置](query-preparation-code.txt)。ただしgeometryは単独入口で質問ごとに作るままである。
+
+両ビルドのguardは終了0・ownedPids空。最初のビルドの終了直後の空きは2GiBを割っていたため、標本guardが正常でも空き条件を継続して満たしたとは記録しない。修正版は開始前・終了後とも保護線以上で、RSS標本最大2,265,168KiBだった。[資源](query-preparation-build-resources.json)。
+
+## fixtureの絶対パスと回復
+
+最初のprimeは79msで未完了通知になった。コピーしたowner-input索引が、退役した親cacheの絶対パスを保持しており、復元時に「memory DB does not exist」となった。原典ではなく派生物の参照切れである。原DB・dictionaryを保持し、owner-inputsの5,246,536論理bytesだけを取り除いてnative warmで再構築した。実行体は変更せず、参照先が現在の保存先へ戻ったことと、3題材の本文・ACK、4並列全件の意味検索/シナプス完了を確認した。[回復](cache-coordinate-recovery.json)。3primeは9.246/6.363/6.030秒、4並列は8.178秒。これは性能改善の測定ではない。
+
+単純なディレクトリコピーとファイルhash保持は、派生物内に捕捉された参照先の保存を保証しない。fork/退役のnative検査でこの依存も閉じる必要がある。今回のfixture回復を、製品のcache移動対応が完成したことにはしない。
+
+## 固定順の通常フック比較：不採用
+
+同じ原DB・source・3質問・正本本文・native計測器・project cacheで、親/候補/候補/親、各4/16並列を事前固定した。40/80並列や回答モデルは実行していない。
+
+| arm | 4並列 | 16並列 | 終了 |
+| --- | ---: | ---: | --- |
+| 親1 | 5.083秒 | 13.676秒 | 正常 |
+| 候補1 | 7.179秒 | 20.945秒 | 正常 |
+| 候補2 | 6.805秒 | 未完了 | RSS保護停止 |
+| 親2 | 未実行 | 未実行 | 直前の強制停止で残ったpublisher記録により起動前に拒否 |
+
+候補2の関連RSS標本は4,379,536KiBで、4,358,524KiBの保護線を超えた。guardの終了とownedPids空を確認し、同じ候補の再試行や保護線の緩和は行わない。最後の親の測定も、この候補を不採用にした後には再実行しない。固定ABBA全体は未完了であり、反復比較を通過したとは扱わない。
+
+比較で完了した54 clientの実stdoutは、正本本文と出版受領記録のSHAに一致し、意味検索configured/completed・synapse complete/packetVerified・ACKを確認した。候補2の16並列では1 clientの完了だけを採取でき、残る15件の結果はない。欠損を成功へ数えていない。[全比較と未完了](query-preparation-comparison.json)。pool変更・総token改善・品質維持・一般98%・80人持続利用は未実証で、本体採用0・有料比較0/18である。
+
+この結果から、約0.19秒のbase照合改善と等式証明を、選択器全体の性能向上に読み替えない。単独入口の自動置換は不採用とし、有用な一致契約と準備済みgeometryを借りる入口を次の設計に残す。poolは、既存project imageの不変部分と小さい質問固有の差分を扱い、全フックのCPU費用と保持量を改善できる場合だけ候補にする。
+
+## 終了物の削除
+
+未参照compiler入力は537,073,504・309,623,128・81,572,064論理bytes、古いDB/派生物32箇所は666,448,597論理bytesを削除した。実行記録はhashと小さい集計に整理し、重複する数MBの全入力一覧を残していない。[compiler](compiler-retirement.json)、[旧状態](closed-state-retirement.json)、[旧baseline](baseline-compiler-retirement.json)、[参照切れ](cache-coordinate-retirement.json)。Homebrewの未使用download archive36個（割当552,872KiB）も削除した。インストール済みツールやモデルは削除していない。[download cache](download-cache-retirement.json)。論理bytesと割当KiBを混ぜて空き容量の増加を報告しない。
+
+終了した不採用実行体・重複stdout・session/receipt/台帳・raw選択metadata・失効したendpoint記録の15箇所、357,180,375論理bytesを、原典4ファイルと現行実行体/正本本文のhashを前後照合してarchiveせず削除した。候補のcompiler witness/interfaceは次の借用境界の検証入力として保持する。削除したnative実行体や実験状態から再開できるとは扱わない。[退役](selector-retirement.json)。

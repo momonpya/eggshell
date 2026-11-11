@@ -146,31 +146,41 @@ def prepareGeometry (units : Array ServiceUnit) : Geometry units :=
   ⟨PreparedSelectorIncidence.baseResolver units,
     PreparedSelectorIncidence.coverageResolver (units.map (·.shape))⟩
 
-def borrowedRecipes (keys : Array String) (shapes : Array UnitShape)
-    (index : RangeIncidence.Resolver (Fin shapes.size) (RangeIncidence.Coordinate Nat)
-      (PreparedSelectorIncidence.covered shapes)) (pieces : List CuePiece)
+def borrowedRecipes (keys : Array String) (shapes : Array UnitShape) (pieces : List CuePiece)
+    (bonus : PreparedSelectorIncidence.Bonus shapes pieces.zipIdx)
     (directory : Array Nat × Array (Nat × Nat)) (p : SharedCoverage.Problem) :=
-  let bonus := PreparedSelectorIncidence.prepareBonus index pieces.zipIdx
   PreparedSelectorIncidence.recipe keys bonus directory p
 
-theorem borrowed_recipes_exact (keys : Array String) (shapes : Array UnitShape) (index) (pieces : List CuePiece) :
-    borrowedRecipes keys shapes index pieces = referenceRecipes keys pieces shapes := by
+theorem borrowed_recipes_exact (keys : Array String) (shapes : Array UnitShape) (pieces : List CuePiece) (bonus) :
+    borrowedRecipes keys shapes pieces bonus = referenceRecipes keys pieces shapes := by
   funext directory p
   exact recipe_function_exact _ _ (PreparedCueIndex.prepare cueBucketKey pieces.zipIdx.toArray) _ _
+
+theorem selectUsing_bind (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
+    (source : Synapses.PreparedSourceView.Domain) (build : Option SharedCoverage.Problem) (makeRecipe) :
+    (do let p ← build; selectUsing query units pieces source (some p) makeRecipe) =
+      selectUsing query units pieces source build makeRecipe := by
+  cases build <;> rfl
 
 /-- A service lends geometry tied to this checked view. This path builds
 only query-weighted postings, never the structural trees. -/
 def chooseWith (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
-    (source : Synapses.PreparedSourceView.Domain) (geometry : Geometry units) : Option ServiceChoice :=
+    (source : Synapses.PreparedSourceView.Domain) (geometry : Geometry units) : Option ServiceChoice := do
   let base := PreparedSelectorIncidence.prepareBase geometry.base pieces.zipIdx
-  selectUsing query units pieces source (PreparedSelectorIncidence.problem query source units pieces base)
-    (borrowedRecipes query.owners (units.map (·.shape)) geometry.bonus pieces)
+  let p ← PreparedSelectorIncidence.problem query source units pieces base
+  -- A factory returning a function can be eta-expanded through its final
+  -- Plan argument. Pass the prepared data across that boundary instead.
+  let bonus := PreparedSelectorIncidence.prepareBonus geometry.bonus pieces.zipIdx
+  selectUsing query units pieces source (some p)
+    (borrowedRecipes query.owners (units.map (·.shape)) pieces bonus)
 
 theorem chooseWith_exact (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
     (source : Synapses.PreparedSourceView.Domain) (geometry : Geometry units) :
     chooseWith query units pieces source geometry = SharedRangeAdapter.selectView query units pieces source := by
   dsimp only [chooseWith]
-  rw [PreparedSelectorIncidence.problem_exact,borrowed_recipes_exact]
+  rw [PreparedSelectorIncidence.problem_exact]
+  simp only [borrowed_recipes_exact]
+  rw [selectUsing_bind]
   exact reference_exact query units pieces source
 
 /-- Standalone compiler entry. Resident service reuse must call chooseWith
