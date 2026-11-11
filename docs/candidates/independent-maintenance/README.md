@@ -1,5 +1,13 @@
 # 保存と準備の所有権を分ける候補
 
+**起動先の訂正：** 後の検査で、この試験でコピーしたpluginのlauncherには
+`coordinated-warm/prefix`が固定されていたことが分かった。
+直接起動したfrontend/publisherは候補`bd9096c4…`、登録commandから起動したhook親子は
+親候補`0411e492…`だった。この記録はその混成構成の実測であり、全processが候補実行体だったという証拠ではない。
+保存枠の独立性の証明・直接のnative control・実際の配送bytesは取り消さないが、
+一つのruntimeに固定した製品の実フック検証としては不足している。
+[起動先の監査と修正試験](../../practical-runtime/bound-product/README.md)へ進む。
+
 隔離候補であり、本体・global installには未採用。
 基底は `0411e492…`、候補実行体は `bd9096c4378e207b22e1ad48de5906f6967cf7dbbcb1c12722bfc6ce6bb25707`。
 変更した製品coreは`Eggshell.HookFrontend`だけで、vector・e-class・認定・シナプス・ランキング・配送予算は変更していない。

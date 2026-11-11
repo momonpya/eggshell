@@ -2,6 +2,19 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[起動先を固定した実フック試験](docs/practical-runtime/bound-product/README.md)を追加した。
+前の所有権候補はfrontend/publisherが`bd9096c4…`、コピーしたlauncherからのhook親子が`0411e492…`だった。
+前の結果を単一runtimeの製品検証とする解釈を訂正した。artifact hashや環境値だけでなく、製品のlauncher生成関数との完全一致を起動前に検査する。
+旧prefixのコピーを負の対照として拒否し、新しい隔離prefixで全processの実行体を`bd9096c4…`へ揃えた。
+同時4 writer＋6 readerの3組は10.265 / 9.471 / 10.478秒。全18意味検索、必要原文42/42（部分保存込み48/48）、48観測・16最終回答の自動保存、3種の辺、88件の終了系応答を確認した。
+10秒の暫定条件は2組超えており、速度達成とはしない。backgroundで読取専用readerのstate guard待ち警告を1件観測し、最終保存と配送の欠落はなかったが、警告の解消も主張しない。
+関連RSS標本最大3,970,464KiB、サービスとguardは終了0・ownedPids空。MCP/NAS/長期80人/一般98%と、現在runtimeの実モデルseed・両周、反復した総token・品質の採用条件は未達のまま残す。
+終了済みDB/cache/helperと不採用入口の実行体など13,345項目・794,287,731論理bytesをarchiveせず削除した。実本文は既存bytesと照合して重複6ファイルも除いた。
+[Mainだけの入口](docs/candidates/product-entry/README.md)も同じcoreで比較したが、16回のhelp起動で高速化を確認できず、不採用にした。実行体サイズの減少を改善として扱わない。
+次は正しく固定したprefixを使い、約0.2秒のprocess初期化と、Pre dispatch 437〜626ms / Post 172〜240msをそれぞれ調べる。
+PublicationWireが起動時に実装全体のdigestを初期化していることは確認したが、寄与は未測定。Lean compilerの`never_extract`等で必要な役割へ計算を遅らせるなら、同じdigestを返す証明と実フックの測定を先に行う。
+無関係な入口削除の負荷試験や、選択の重みの再調整を反復しない。本体採用0・有料比較0/18。
+
 [保存と準備の所有権を分ける候補](docs/candidates/independent-maintenance/README.md)を隔離実装した。
 製品coreの差分はHookFrontendだけで、保存と準備がそれぞれ2つの調整taskを持つ。native worker数・認定・vector・3辺・選択・期限は変えない。
 準備を足しても保存の受付が変わらないこと、保存の重複起動の拒否、古い世代の完了の拒否を実際の関数でLean証明した。
@@ -12,8 +25,7 @@
 先に行った[無変更の観測診断](docs/practical-runtime/maintenance-flow/README.md)では3回とも滞留せず、stack採取0。前回の停止の実行位置や根本原因は未特定であり、今回の成功で上書きしない。
 終了済み診断と試験状態は合計22,047項目・1,191,340,651論理bytesをarchiveせず削除し、原典・現行native/model・次に使う候補を保持した。
 本体採用0・有料比較0/18、現在候補の実モデルseed/両周は未実施、80人・8時間・一般98%とNASの目標は継続する。
-次は正常hookの起動・返送費を切り分ける。候補の実行体139,336,192bytesの入口にはMainに加えて研究制御器等30 importがあることを確認したが、遅延への寄与は未測定である。
-Mainだけを呼ぶ製品入口を同じcoreから分離し、必要なsourceの同一性・実本文・時刻・RSSを比較する。保存や選択の重みへ戻らず、既存の薄いclient/poolを新設したことにもしない。
+入口だけの比較と、起動先の訂正は上の最新記録へ進めた。既存の薄いclient/poolを新設したことにしない。
 
 [登録されたcommandとfast予算による自動保存検査](docs/practical-runtime/registered-hooks/README.md)を同じ製品 `0411e492…` で行い、不合格を確認した。
 手動keepなしの4保存＋6照会は、1回目9.376秒、2回目10.110秒。全12 readerの意味検索が完了し、LLVM必要原文28/28（部分保存込み32/32）が届いた。

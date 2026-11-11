@@ -2,6 +2,7 @@ import tools.research.StudyPrepare
 import Eggshell.SynapseLive
 import Eggshell.ContentMetadata
 import tools.research.StudyReadiness
+import tools.research.StudyLaunchers
 
 open Lean Eggshell Eggshell.Synapses
 open Eggshell.Research
@@ -27,6 +28,9 @@ def requireNumericalSupport (plan : Input) : IO Unit := do
   let installation := executable.parent.get!.parent.get!
   check ((plan.environment.find? (·.1 == "EGGSHELL_PREFIX")).bind Prod.snd == some installation.toString)
     "native fixture must use its sealed runtime's installed prefix"
+  check (plan.pluginRoot == (installation/"plugins/eggshell").toString)
+    "native fixture plugin differs from its admitted installation"
+  StudyLaunchers.verify installation
   let paths := MiniLM.layout installation
   check ((← MiniLM.runtimePython? paths).isSome && (← paths.models.isDir))
     "native fixture lacks installed MiniLM support; no hooks or DB were started"

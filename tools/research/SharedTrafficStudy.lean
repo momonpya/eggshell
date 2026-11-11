@@ -107,11 +107,10 @@ def run (directory tag buildTag : String) (prepared : Option String := none) (re
   guard tag (#["/usr/bin/env"] ++ unset.flatMap (fun key => #["-u",key]) ++
     assigned ++ #[(root/"build/StudyMain").toString,"shared-traffic",input.toString,output.toString])
 
-def retain (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
+def retainAt (root records : System.FilePath) (tag : String)
+    (registered observed independent : Bool) : IO Unit := do
   idle
-  let root := if independent then practical/"independent-maintenance" else if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
-  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
-  let monitor ← finished (if independent then "independent-maintenance-traffic" else if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
+  let monitor ← finished tag
   let area := root/(if registered then "run" else "local")
   let result ← read (area/"result.json")
   let waves ← IO.ofExcept (result.getObjValAs? (Array Json) "waves")
@@ -206,11 +205,15 @@ def retain (registered : Bool := false) (observed : Bool := false) (independent 
       attempts := attempts ++ [(name,← read (base/(tag++".guard.json")))]
     write (records/"earlier-attempts.json") (Json.mkObj attempts)
 
-def retainProfiles (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
-  idle
+def retain (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
   let root := if independent then practical/"independent-maintenance" else if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
   let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
-  discard <| finished (if independent then "independent-maintenance-traffic" else if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
+  let tag := if independent then "independent-maintenance-traffic" else if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local"
+  retainAt root records tag registered observed independent
+
+def retainProfilesAt (root records : System.FilePath) (tag : String) (registered : Bool) : IO Unit := do
+  idle
+  discard <| finished tag
   let mut rows := #[]
   for entry in ← (root/(if registered then "run" else "local")/"data/receipts").readDir do
     let path := entry.path/"request.json"
@@ -230,6 +233,12 @@ def retainProfiles (registered : Bool := false) (observed : Bool := false) (inde
   check (rows.size == 72) "retain all twelve writers' three Pre/Post pairs"
   write (records/"hook-profiles.json") (toJson rows)
 
+def retainProfiles (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
+  let root := if independent then practical/"independent-maintenance" else if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
+  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
+  let tag := if independent then "independent-maintenance-traffic" else if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local"
+  retainProfilesAt root records tag registered
+
 def retainEarlier : IO Unit := do
   idle
   let mut attempts := []
@@ -245,9 +254,8 @@ def retainEarlier : IO Unit := do
     attempts := attempts ++ [(name,Json.mkObj stages)]
   write (records/"earlier-traffic.json") (Json.mkObj attempts)
 
-def reuseExisting (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
+def reuseExistingAt (records : System.FilePath) : IO Unit := do
   idle
-  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
   let result ← read (records/"result.json")
   let mut queries := #[]
   let mut removed : Array String := #[]
@@ -279,6 +287,10 @@ def reuseExisting (registered : Bool := false) (observed : Bool := false) (indep
   write (records/"shared-bodies.json") (Json.mkObj [("matches",toJson matched),
     ("removedDuplicateFiles",toJson removed.size),("currentHookCallsReplaced",toJson false),
     ("sameBytesFromIndependentCurrentRequests",toJson true),("speedOrTokenComparison",toJson false)])
+
+def reuseExisting (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
+  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
+  reuseExistingAt records
 
 def tidyAudits : IO Unit := do
   idle
@@ -342,6 +354,9 @@ def cleanup (registered : Bool := false) (observed : Bool := false) : IO Unit :=
     ("currentNativeInputsAndModelOutsideRetiredDirectory",toJson true)])
 
 def main : List String → IO Unit
+  | ["retain-at",directory,output,tag] => retainAt (.mk directory) (.mk output) tag true false true
+  | ["profiles-at",directory,output,tag] => retainProfilesAt (.mk directory) (.mk output) tag true
+  | ["reuse-at",directory] => reuseExistingAt (.mk directory)
   | ["prepare"] => prepare
   | ["rebuild",previous,next] => rebuild previous next
   | ["run",directory,tag,buildTag] => run directory tag buildTag
