@@ -45,3 +45,5 @@ guardは終了0・reasonなし・ownedPids空、関連RSS標本最大3,609,056Ki
 残る対象は、準備済みの不変構造を借用した後の、要求に応じた原文の投影・選択・描画である。既に失敗した範囲selector、同じデータの別pool、質問結果だけのcacheを再投入しない。大きい複数project imageの同時保持、writerの持続処理、16並列数秒、80人の日常利用、総tokenと品質は未達/未検証である。
 
 終了したclientのDB派生状態・receipt・重複出力など1,871 file、68,288,000論理bytesは、集計・SHAの採取後にarchiveせず削除した。原DBと保護対象のhashは前後で一致した。[削除](retirement.json)。原DB、現在のproject cache、モデル、現行比較元とこの候補のnative/compiler入力は次の調査で使うため保持している。
+
+終了した一度限りの制御器はcommit `f13d07b2`に記録し、現行treeから削除した。再利用できるnative probeと寿命証明は残す。削除済みのclient状態から受付監査を再集計したり、このgateを未実行として再起動したりしない。
