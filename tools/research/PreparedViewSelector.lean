@@ -183,24 +183,7 @@ theorem chooseWith_exact (query : ServiceQuery) (units : Array ServiceUnit) (pie
   rw [selectUsing_bind]
   exact reference_exact query units pieces source
 
-/-- Standalone compiler entry. Resident service reuse must call chooseWith
-with its captured geometry instead of repeatedly using this constructor. -/
-def choose (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
-    (source : Synapses.PreparedSourceView.Domain) : Option ServiceChoice :=
-  chooseWith query units pieces source (prepareGeometry units)
-
-theorem choose_exact (query : ServiceQuery) (units : Array ServiceUnit) (pieces : List CuePiece)
-    (source : Synapses.PreparedSourceView.Domain) :
-    choose query units pieces source = SharedRangeAdapter.selectView query units pieces source := by
-  exact chooseWith_exact query units pieces source _
-
-@[csimp] theorem selectView_compiled : @SharedRangeAdapter.selectView = @choose := by
-  funext query units pieces source
-  exact (choose_exact query units pieces source).symm
-
 #print axioms reference_exact
 #print axioms borrowed_recipes_exact
 #print axioms chooseWith_exact
-#print axioms choose_exact
-#print axioms selectView_compiled
 end Eggshell.Research.PreparedViewSelector

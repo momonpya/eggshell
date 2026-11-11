@@ -112,3 +112,7 @@ factoryは準備済みresolverを引数に取り、factory自身は木を構築�
 未参照compiler入力は537,073,504・309,623,128・81,572,064論理bytes、古いDB/派生物32箇所は666,448,597論理bytesを削除した。実行記録はhashと小さい集計に整理し、重複する数MBの全入力一覧を残していない。[compiler](compiler-retirement.json)、[旧状態](closed-state-retirement.json)、[旧baseline](baseline-compiler-retirement.json)、[参照切れ](cache-coordinate-retirement.json)。Homebrewの未使用download archive36個（割当552,872KiB）も削除した。インストール済みツールやモデルは削除していない。[download cache](download-cache-retirement.json)。論理bytesと割当KiBを混ぜて空き容量の増加を報告しない。
 
 終了した不採用実行体・重複stdout・session/receipt/台帳・raw選択metadata・失効したendpoint記録の15箇所、357,180,375論理bytesを、原典4ファイルと現行実行体/正本本文のhashを前後照合してarchiveせず削除した。候補のcompiler witness/interfaceは次の借用境界の検証入力として保持する。削除したnative実行体や実験状態から再開できるとは扱わない。[退役](selector-retirement.json)。
+
+## 現在残す実装
+
+測定した候補とその制御器はcommit `1b0116aa`に属する。試行終了後、不採用の単独入口`choose`とcompiler自動置換の登録、終了した`RangeWorkloadStudy.lean`を現行treeから除去した。残すのは、準備済みのgeometryを受け取る`chooseWith`、元の選択器との完全な一致契約、準備用の純粋関数である。残した3つの証明は再度768MiB上限で検査し、標準3公理だけで閉じた。[監査](retained-borrowing-proof.txt)。この入口のresident接続とpoolの性能検証は未完であり、削除した試行を現在の制御器で再実行しない。
