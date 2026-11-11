@@ -12,8 +12,14 @@
 [実Codexの8フック](codex-discovery.json)も確認した。新しいCODEX_HOMEではプラグイン登録が必要で、
 登録前の0フックはモデルに進めず[別記録](unregistered-codex.json)に残した。
 登録後の隔離環境でnativeの保存/復旧/原文2/2配送も完了した。
-[同じ製品の新しいseedと6段階の計画](sequence-plan.json)を固定し、空DBのseedを取得中。
-現在の製品でのモデル6段階はまだ0/6であり、下の既存結果とは区別する。
+[同じ製品の新しいseedと6段階の計画](sequence-plan.json)を固定したが、
+[seedは事前の500万総token上限で中断](interrupted-seed.json)した。
+観測5,025,499 token、最終消費は不明。入力5,015,113＋出力10,386で、
+cached入力4,756,480は入力の内数として含める。seed取得費用として別記し、失敗費用を捨てない。
+82フック失敗0、保存/capture/checkpoint/終了のエラーなし、両serviceは終了0。
+context packetは0件であり、入力増加をEggshell本文の重複に起因すると断定しない。
+取得は未受理、現在版のモデル6段階は0/6。上限緩和や自動再試行はしない。
+[中断後の出版連鎖](interrupted-source.json)は41世代を正常に読めたが、必要原文の配送監査とは区別する。
 
 利用者が指定した当面のMacの性能条件は、10並列以上で、全件がその並列数以下の秒数に完了すること。
 既存の[固定比較](../candidates/canonical-codec/runtime/comparison.json)で、この製品の16並列は

@@ -224,6 +224,27 @@ def sealSeed : IO Unit := do
     ("cohortGate",monitor),("answeringModelCallsAtSealing",toJson (0 : Nat)),
     ("allSixStagesCompleted",toJson false),("adopted",toJson false)])
 
+def recordInterruptedSeed : IO Unit := do
+  idle
+  let cohort := root/"cohort"
+  let acquisition := cohort/"study/seed-1"
+  let monitor ← read (cohort/"seed-1.guard.json")
+  check (monitor.getObjValD "state" == toJson "finished" && monitor.getObjValD "exitCode" == toJson (1 : Nat) &&
+    monitor.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "seed has not stopped and drained"
+  let failure ← read (acquisition/"failure.json")
+  check (failure.getObjValD "completed" == toJson false &&
+    failure.getObjValD "runError" == toJson "observed inclusive token limit reached; retain all charged usage")
+    "unexpected seed failure requires separate diagnosis"
+  write (records/"interrupted-seed.json") (Json.mkObj [
+    ("guard",monitor),("failure",failure),("budgetStop",← read (acquisition/"budget-stop.json")),
+    ("frontendShutdown",← read (acquisition/"shutdown.json")),
+    ("publisherShutdown",← read (acquisition/"publisher-shutdown.json")),
+    ("seedAccepted",toJson false),("modelStagesCompleted",toJson (0 : Nat)),
+    ("automaticRetry",toJson false),("limitsIncreased",toJson false),
+    ("chargedTokensMustRemainIncluded",toJson true),("adopted",toJson false)])
+  guard "practical-interrupted-source" #[(root/"build/StudyMain").toString,"source-ancestry",
+    (acquisition/"work.egg").toString,(records/"interrupted-source.json").toString]
+
 def main (args : List String) : IO Unit := match args with
   | ["prepare"] => prepare
   | ["audit"] => audit
@@ -233,6 +254,7 @@ def main (args : List String) : IO Unit := match args with
   | ["register-codex"] => registerCodex
   | ["prepare-sequence"] => prepareSequence
   | ["seal-seed"] => sealSeed
+  | ["record-interrupted-seed"] => recordInterruptedSeed
   | ["resume-build"] => do
     idle
     let failed ← read (base/"practical-controller-build.guard.json")

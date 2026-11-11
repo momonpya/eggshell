@@ -10,7 +10,9 @@
 
 この経路は[小さいnative実試験](docs/practical-runtime/lifecycle.json)が完了した。8観測・17日誌、消費1・支持16・共引用4、一般出力の内容対応15行が保存され、元DBだけをコピーし、新しい私有状態で復旧した後の別sessionに必要原文2/2を配送、hook 2.029秒。原DB不変、4つのservice終了0・guard終了0・ownedPids空。実MCPサーバー、一般98%、モデル6段階、p99の実証ではない。同じ製品sourceの新しい制御器は330 objectが整合し、全製品coreと共通sourceが一致した。
 
-実Codexの新しい隔離環境は、設定コピーだけではフック0件だったためモデル前に拒否し、既存の正規プラグイン登録手順を通した。[再確認](docs/practical-runtime/codex-discovery.json)では8つの正確なフックを検出・信頼し、この環境でもnative保存/復旧/2原文配送が完了した。[新しい実験](docs/practical-runtime/sequence-plan.json)はgpt-5.6-luna/xhigh・同じ製品SHAで空DBのseed取得を開始し、実際のターン開始と保存を確認した。seedは未完了、現在版のモデル6段階は0/6。保存中の冷たい数値差分についてforeground repair pending警告が出ており、索引完了の監査は取得後に行う。hook失敗やseedの不成立と今の時点で断定せず、警告も無視しない。live guardは `practical-runtime/cohort/seed-1.guard.json`、PID 64039。終了・ownedPids空を確認するまで次のguardやnative入力の変更をしない。
+実Codexの新しい隔離環境は、設定コピーだけではフック0件だったためモデル前に拒否し、既存の正規プラグイン登録手順を通した。[再確認](docs/practical-runtime/codex-discovery.json)では8つの正確なフックを検出・信頼し、この環境でもnative保存/復旧/2原文配送が完了した。[新しい実験](docs/practical-runtime/sequence-plan.json)はgpt-5.6-luna/xhigh・同じ製品SHAで空DBのseedを取得したが、[事前の500万総token上限で中断](docs/practical-runtime/interrupted-seed.json)した。観測5,025,499 token（入力5,015,113＋出力10,386、cached入力4,756,480を内数に含む）、最終消費は不明。82フック失敗0、capture/checkpoint/cleanup/publisher errorなし、両service終了0。hookのcontext packetは0で、今回の入力増加を配送本文の重複と断定する根拠はない。保存中の数値差分についてforeground repair pending警告は残す。取得は未完了・未受理seed、現在版のモデル6段階は0/6。上限緩和・自動再試行・不完了seedからのモデル段階投入はしない。
+
+中断後の[出版連鎖監査](docs/practical-runtime/interrupted-source.json)は41世代を正常に読み、原head不変だった。これは保存済みの全payloadや必要根拠の配送の監査ではない。seed guardは終了1・ownedPids空、続く原典監査guardは終了0・ownedPids空で、現在live jobはない。中断したDBは実用経路の診断入力として保持するが、完成seedやモデル比較の成果へ数えない。次はこの保存状態と実際の入口を使って常用経路を仕上げ、過去と同じpaid seed再試行を繰り返さない。
 
 空き容量の問い合わせは解消済み。旧実行体3件390,348,832論理bytesと、終了済みDB/cache/compiler/source等32,358項目548,583,821論理bytesを削除し、archiveなし。実際の現行nativeと必要入力を残し、削除後も7本文・出版SHA・意味検索・シナプス・ACKの全件一致と原DB不変を確認した。Macの空きは約19GiB。空き容量増加の全量をこの削除の効果とは扱わない。
 
