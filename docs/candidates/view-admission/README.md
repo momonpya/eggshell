@@ -47,3 +47,5 @@ guardは終了0・reasonなし・ownedPids空、関連RSS標本最大3,609,056Ki
 終了したclientのDB派生状態・receipt・重複出力など1,871 file、68,288,000論理bytesは、集計・SHAの採取後にarchiveせず削除した。原DBと保護対象のhashは前後で一致した。[削除](retirement.json)。原DB、現在のproject cache、モデル、現行比較元とこの候補のnative/compiler入力は次の調査で使うため保持している。
 
 終了した一度限りの制御器はcommit `f13d07b2`に記録し、現行treeから削除した。再利用できるnative probeと寿命証明は残す。削除済みのclient状態から受付監査を再集計したり、このgateを未実行として再起動したりしない。
+
+後続の[引用gate試験](../citation-gate/README.md)終了時に、共有していたcompiler/sourceと旧prefixも退役した。この受付候補の実行体は現在保持していない。上のhashと結果は当時の測定に属し、現在そのpathから同じ実行体を起動できるという意味ではない。

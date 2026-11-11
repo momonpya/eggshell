@@ -61,3 +61,5 @@ native親`7cc1432d…`の`SharedReadViews`では、byte予算128MiBに加え、i
 この修正はnativeの同じ合成64比較で完全な出力順が一致した。密なケースの中央値は約2,435µsである。[結果](borrowed-component.json)、[証明](borrowed-proof.txt)、[native](borrowed-native.json)、[source](borrowed-sources.json)。修正後の部品は製品coreを変えておらず、実フックやモデルの再測定はしていない。前の12.9秒をこの修正後の計測として扱わない。
 
 計測に使った実行体2つ、終了した実験source/build、重複stdout、session/receipt/台帳など7箇所、786,603,130論理bytesをarchiveせず削除した。原典4ファイル、現行親、回答制御器、正本本文のhashは前後で一致した。[削除](closed.json)。現行親のcanonical cacheは最後の親armで元のproducerへ戻り、現在使用中なので削除していない。部品のcompiler/sourceは次の共有view試験で使う現役の入力として保持し、削除した実行体と実験状態は再開対象にしない。終了した制御器は`b97d6e5e`に残して現行treeから除去した。
+
+この後の共有view試験と[引用gate試験](../citation-gate/README.md)まで完了し、再利用していた部品compiler/sourceも退役した。現行の親と必要なproject cache/モデルは保持しているが、この古い部品buildを現在の再開点として扱わない。
