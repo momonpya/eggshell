@@ -7,10 +7,10 @@ def parent := practical/"coordinated-warm"
 def root := practical/"shared-traffic"
 def records := project/"docs/practical-runtime/shared-traffic"
 
-def prepare (registered : Bool := false) : IO Unit := do
+def prepare (registered : Bool := false) (observed : Bool := false) : IO Unit := do
   idle
-  let root := if registered then practical/"registered-hooks" else root
-  let records := if registered then project/"docs/practical-runtime/registered-hooks" else records
+  let root := if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
+  let records := if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
   check (!(← root.pathExists)) "preserve existing mixed-traffic trial"
   check (!(← (records/"plan.json").pathExists)) "preserve the sealed previous traffic plan"
   check ((← hash (parent/"build/StudyMain")) ==
@@ -41,16 +41,17 @@ def prepare (registered : Bool := false) : IO Unit := do
     ("waves",toJson (3 : Nat)),("simultaneousClients",toJson (if registered then 10 else (16 : Nat))),("writers",toJson (4 : Nat)),
     ("activeReaders",toJson (if registered then 3 else (6 : Nat))),("llvmReaders",toJson (if registered then 3 else (6 : Nat))),
     ("registeredCommands",toJson registered),("manualKeepUsed",toJson (!registered)),
+    ("observeMaintenance",toJson observed),("diagnosticLatencyNotComparison",toJson observed),
     ("registry",← read (parent/"prefix/plugins/eggshell/hooks/hooks.json")),
     ("llvmTopics",toJson #[1,2,3]),("hookDeadlineMs",toJson (30000 : Nat)),
     ("answeringModelCalls",toJson (0 : Nat)),("seedAccepted",toJson false),("adopted",toJson false),
     ("passRequiresAllFrozenEvidence",toJson true),("numericalFallbackReportedSeparately",toJson true)])
-  guard (if registered then "practical-registered-hooks-build" else "practical-shared-traffic-build") #[(compiler/"bin/lean").toString,"-j1","-M768","--run",
+  guard (if observed then "practical-maintenance-flow-build" else if registered then "practical-registered-hooks-build" else "practical-shared-traffic-build") #[(compiler/"bin/lean").toString,"-j1","-M768","--run",
     (project/"tools/research/StudyBuildMain.lean").toString,(root/"build-settings.json").toString]
 
-def rebuild (previous next : String) (registered : Bool := false) : IO Unit := do
+def rebuild (previous next : String) (registered : Bool := false) (observed : Bool := false) : IO Unit := do
   idle
-  let root := if registered then practical/"registered-hooks" else root
+  let root := if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
   let stopped ← read (base/(previous++".guard.json"))
   check (stopped.getObjValD "state" == toJson "finished" &&
     stopped.getObjValD "ownedPids" == toJson (#[] : Array Nat)) "previous compiler still owns processes"
@@ -73,10 +74,10 @@ def rebuild (previous next : String) (registered : Bool := false) : IO Unit := d
     (project/"tools/research/StudyBuildMain.lean").toString,(root/"build-settings.json").toString]
 
 def run (directory tag buildTag : String) (prepared : Option String := none) (readers : Nat := 6)
-    (registered : Bool := false) : IO Unit := do
+    (registered : Bool := false) (observed : Bool := false) : IO Unit := do
   idle
-  let root := if registered then practical/"registered-hooks" else root
-  let records := if registered then project/"docs/practical-runtime/registered-hooks" else records
+  let root := if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
+  let records := if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
   discard <| finished buildTag
   let output := root/directory
   let previous ← read (parent/"owner-lifecycle-input.json")
@@ -90,13 +91,15 @@ def run (directory tag buildTag : String) (prepared : Option String := none) (re
     ("original",frozen.getObjValD "source"),("originalFiles",frozen.getObjValD "sourceFiles"),
     ("workspace",seed.getObjValD "workspace"),
     ("definitions",← read (practical/"interrupted-recovery/definitions.json")),("preparedReference",toJson prepared),
-    ("activeReaders",toJson readers),("llvmReaders",toJson readers),("registered",toJson registered)]
+    ("activeReaders",toJson readers),("llvmReaders",toJson readers),("registered",toJson registered),
+    ("observeMaintenance",toJson observed)]
   let input := root/(directory++"-input.json")
   check (!(← input.pathExists)) "preserve sealed mixed-traffic admission"
   write input specification
   write (records/(directory++"-plan.json")) (Json.mkObj [("clients",toJson (4+2*readers)),
     ("writers",toJson (4 : Nat)),("activeReaders",toJson readers),("llvmReaders",toJson readers),
     ("waves",toJson (3 : Nat)),("product",(previous.getObjValD "runtime")),("registeredCommands",toJson registered),
+    ("observeMaintenance",toJson observed),("diagnosticLatencyNotComparison",toJson observed),
     ("fullAuditsAfterServicesStop",toJson true),("sameSnapshot",toJson true),
     ("priorAttemptsNotPooled",toJson true),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   let unset := env.filterMap fun (key,value) => if value.isNone then some key else none
@@ -104,11 +107,11 @@ def run (directory tag buildTag : String) (prepared : Option String := none) (re
   guard tag (#["/usr/bin/env"] ++ unset.flatMap (fun key => #["-u",key]) ++
     assigned ++ #[(root/"build/StudyMain").toString,"shared-traffic",input.toString,output.toString])
 
-def retain (registered : Bool := false) : IO Unit := do
+def retain (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
   idle
-  let root := if registered then practical/"registered-hooks" else root
-  let records := if registered then project/"docs/practical-runtime/registered-hooks" else records
-  let monitor ← finished (if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
+  let root := if independent then practical/"independent-maintenance" else if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
+  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
+  let monitor ← finished (if independent then "independent-maintenance-traffic" else if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
   let area := root/(if registered then "run" else "local")
   let result ← read (area/"result.json")
   let waves ← IO.ofExcept (result.getObjValAs? (Array Json) "waves")
@@ -180,11 +183,22 @@ def retain (registered : Bool := false) : IO Unit := do
       ("automaticAnswers",automatic),("fastEvents",fast),("synapses",facts),
       ("drainTiming",← read (area/s!"wave-{number}-ready/record.json"))])
   write (records/"result.json") (Json.mkObj [("native",result),("guard",monitor),("summary",toJson summaries),
-    ("queries",toJson queries),("saves",toJson saves),("productUnchanged",toJson true),
+    ("queries",toJson queries),("saves",toJson saves),("productUnchanged",toJson (!independent)),
+    ("runtimeUnchangedDuringTraffic",toJson true),("isolatedSourceCandidate",toJson independent),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   write (records/"frozen-before-delivery.json") (← read (area/"frozen-before-delivery.json"))
   write (records/"stopped.json") (Json.mkObj [("frontend",← read (area/"frontend-stop.json")),
     ("publisher",← read (area/"publisher-stop.json"))])
+  if observed then
+    let mut samples := #[]
+    for wave in [1,2,3] do
+      let directory := area/"maintenance"/s!"wave-{wave}"
+      check (!(← (directory/"frontend.sample").pathExists)) "retain the native stack before generic no-stall consolidation"
+      samples := samples.push (Json.mkObj [("wave",toJson wave),("progress",← read (directory/"progress.json")),
+        ("source",← read (directory/"latest-source.json"))])
+    write (records/"observed-source.json") (Json.mkObj [("waves",toJson samples),
+      ("nativeStacksTaken",toJson (0 : Nat)),("previousFailureReproduced",toJson false),
+      ("diagnosticNotSpeedComparison",toJson true)])
   if !registered then
     let mut attempts := []
     for (name,tag) in [("wrong-workspace","practical-shared-traffic-native"),
@@ -192,11 +206,11 @@ def retain (registered : Bool := false) : IO Unit := do
       attempts := attempts ++ [(name,← read (base/(tag++".guard.json")))]
     write (records/"earlier-attempts.json") (Json.mkObj attempts)
 
-def retainProfiles (registered : Bool := false) : IO Unit := do
+def retainProfiles (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
   idle
-  let root := if registered then practical/"registered-hooks" else root
-  let records := if registered then project/"docs/practical-runtime/registered-hooks" else records
-  discard <| finished (if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
+  let root := if independent then practical/"independent-maintenance" else if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
+  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
+  discard <| finished (if independent then "independent-maintenance-traffic" else if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
   let mut rows := #[]
   for entry in ← (root/(if registered then "run" else "local")/"data/receipts").readDir do
     let path := entry.path/"request.json"
@@ -231,9 +245,9 @@ def retainEarlier : IO Unit := do
     attempts := attempts ++ [(name,Json.mkObj stages)]
   write (records/"earlier-traffic.json") (Json.mkObj attempts)
 
-def reuseExisting (registered : Bool := false) : IO Unit := do
+def reuseExisting (registered : Bool := false) (observed : Bool := false) (independent : Bool := false) : IO Unit := do
   idle
-  let records := if registered then project/"docs/practical-runtime/registered-hooks" else records
+  let records := if independent then project/"docs/candidates/independent-maintenance" else if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
   let result ← read (records/"result.json")
   let mut queries := #[]
   let mut removed : Array String := #[]
@@ -287,11 +301,11 @@ partial def remove (path : System.FilePath) : IO (Nat × Nat) := do
   IO.FS.removeFile path
   return (1,if metadata.type == .file then metadata.byteSize.toNat else 0)
 
-def cleanup (registered : Bool := false) : IO Unit := do
+def cleanup (registered : Bool := false) (observed : Bool := false) : IO Unit := do
   idle
-  let root := if registered then practical/"registered-hooks" else root
-  let records := if registered then project/"docs/practical-runtime/registered-hooks" else records
-  discard <| finished (if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
+  let root := if observed then practical/"maintenance-flow" else if registered then practical/"registered-hooks" else root
+  let records := if observed then project/"docs/practical-runtime/maintenance-flow" else if registered then project/"docs/practical-runtime/registered-hooks" else records
+  discard <| finished (if observed then "practical-maintenance-flow-native" else if registered then "practical-registered-hooks-native" else "practical-shared-traffic-local")
   check (!(← (records/"retired.json").pathExists)) "preserve previous retirement"
   let measured ← read (records/"result.json")
   let queries ← IO.ofExcept (measured.getObjValAs? (Array Json) "queries")
@@ -346,6 +360,16 @@ def main : List String → IO Unit
   | ["profiles-registered"] => retainProfiles true
   | ["reuse-registered"] => reuseExisting true
   | ["cleanup-registered"] => cleanup true
+  | ["prepare-maintenance"] => prepare true true
+  | ["rebuild-maintenance",previous,next] => rebuild previous next true true
+  | ["run-maintenance",buildTag] => run "run" "practical-maintenance-flow-native" buildTag none 3 true true
+  | ["retain-maintenance"] => retain true true
+  | ["profiles-maintenance"] => retainProfiles true true
+  | ["reuse-maintenance"] => reuseExisting true true
+  | ["cleanup-maintenance"] => cleanup true true
+  | ["retain-independent"] => retain true false true
+  | ["profiles-independent"] => retainProfiles true false true
+  | ["reuse-independent"] => reuseExisting true false true
   | _ => IO.println "SharedTrafficStudy prepare | run"
 end SharedTrafficStudy
 def main := SharedTrafficStudy.main

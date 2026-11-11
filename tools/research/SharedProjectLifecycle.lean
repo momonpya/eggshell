@@ -44,7 +44,8 @@ def originals (project : ProjectStore.Project) : IO Json := do
       ("files",toJson (← StudyRuntime.files source.directory))])
   return Json.mkObj [("manifest",toJson project.manifest),("sources",toJson rows)]
 
-def census (project : ProjectStore.Project) (expected : Nat) : IO Json := do
+def census (project : ProjectStore.Project) (expected : Nat)
+    (observe : Nat → Array Json → IO Unit := fun _ _ => pure ()) : IO Json := do
   let deadline := (← IO.monoMsNow)+20000
   repeat
     let mut rows := #[]
@@ -56,6 +57,7 @@ def census (project : ProjectStore.Project) (expected : Nat) : IO Json := do
       check (records.all (·.origin.valid)) "stored observation has invalid temporal/source provenance"
       rows := rows.push (Json.mkObj [("slot",toJson slot),("head",toJson source.head),
         ("origins",toJson (records.map (·.origin)))])
+    observe count rows
     if count == expected then return Json.mkObj [("count",toJson count),("sources",toJson rows)]
     check (count < expected && (← IO.monoMsNow) < deadline) "source publication lost or duplicated observations"
     IO.sleep 25

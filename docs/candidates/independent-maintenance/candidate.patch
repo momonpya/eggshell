@@ -1,0 +1,247 @@
+--- a/Eggshell/HookFrontend.lean
++++ b/Eggshell/HookFrontend.lean
+@@ -14,7 +14,8 @@
+   indexCursor : IO.Ref String
+   indexWake : IO.Ref (Option String)
+   revision : Nat := 0
+-  quiet : Bool := false
++  sourceQuiet : Bool := false
++  preparationQuiet : Bool := false
+ 
+ def Session.create (name : String) (now : Nat) : IO Session := do
+   let _ ← IO.ofExcept (safeSession name)
+@@ -26,15 +27,39 @@
+     indexWake := ← IO.mkRef none }
+ 
+ def Session.touch (entry : Session) (now : Nat) : Session :=
+-  {entry with touched := now,revision := entry.revision+1,quiet := false}
++  {entry with touched := now,revision := entry.revision+1,sourceQuiet := false,preparationQuiet := false}
+ 
+-def Session.finish (entry : Session) (revision : Nat) (quiet : Bool) : Session :=
+-  if entry.revision == revision then {entry with quiet} else entry
++def Session.quiet (entry : Session) : Bool := entry.sourceQuiet && entry.preparationQuiet
+ 
+-theorem Session.stale_result_ignored (entry : Session) (revision : Nat) (quiet : Bool)
+-    (changed : entry.revision ≠ revision) : entry.finish revision quiet = entry := by
+-  simp [finish,changed]
++def Session.finishSave (entry : Session) (revision : Nat) (quiet : Bool) : Session :=
++  if entry.revision == revision then
++    {entry with revision := entry.revision+1,sourceQuiet := quiet,preparationQuiet := false}
++  else entry
+ 
++def Session.finishPreparation (entry : Session) (revision : Nat) (quiet : Bool) : Session :=
++  if entry.revision == revision then {entry with preparationQuiet := quiet} else entry
++
++theorem Session.stale_save_ignored (entry : Session) (revision : Nat) (quiet : Bool)
++    (changed : entry.revision ≠ revision) : entry.finishSave revision quiet = entry := by
++  simp [finishSave,changed]
++
++theorem Session.stale_preparation_ignored (entry : Session) (revision : Nat) (quiet : Bool)
++    (changed : entry.revision ≠ revision) : entry.finishPreparation revision quiet = entry := by
++  simp [finishPreparation,changed]
++
++theorem Session.preparation_preserves_source (entry : Session) (revision : Nat) (quiet : Bool) :
++    (entry.finishPreparation revision quiet).sourceQuiet = entry.sourceQuiet := by
++  simp only [finishPreparation]
++  split <;> rfl
++
++theorem Session.save_requires_new_preparation (entry : Session) (quiet : Bool) :
++    (entry.finishSave entry.revision quiet).preparationQuiet = false := by
++  simp [finishSave]
++
++theorem Session.old_preparation_cannot_close_after_save (entry : Session) (quiet : Bool) :
++    ((entry.finishSave entry.revision true).finishPreparation entry.revision quiet).quiet = false := by
++  simp [finishSave,finishPreparation,Session.quiet]
++
+ theorem Session.touch_invalidates_quiet (entry : Session) (now : Nat) :
+     (entry.touch now).quiet = false := by rfl
+ 
+@@ -55,20 +80,23 @@
+     return pending.closed
+   catch _ => return false
+ 
+-def Session.refresh (entry : Session) : IO Bool := do
++def Session.refreshSave (entry : Session) : IO Bool := do
+   if ← IO.checkCanceled then return false
+   let deadline := (← IO.monoMsNow)+60000
+   flushDeferred entry.name deadline (some entry.saveCursor)
+   if ← IO.checkCanceled then return false
++  withSession entry.name Session.closedAndDrained
++
++def Session.refreshPreparation (entry : Session) : IO Bool := do
++  if ← IO.checkCanceled then return false
++  let deadline := (← IO.monoMsNow)+60000
+   let observed ← preparationWake entry.name
+   if PreparationPlan.Wake.needed observed (← entry.indexWake.get) then
+     let accepted ← flushIndexesResult entry.name deadline (some entry.indexCursor)
+     entry.indexWake.modify (fun before => PreparationPlan.Wake.record observed before accepted)
+     unless accepted do return false
+   if ← IO.checkCanceled then return false
+-  withSession entry.name fun files => do
+-    unless (← preparationWake entry.name) == observed do return false
+-    Session.closedAndDrained files
++  return (← preparationWake entry.name) == observed
+ 
+ structure Reading where
+   socket : Socket.Client
+@@ -90,6 +118,7 @@
+ structure OwnedTasks where
+   readers : Array Reading := #[]
+   clients : Array Client := #[]
++  saves : Array Maintenance := #[]
+   maintenance : Array Maintenance := #[]
+ 
+ def OwnedTasks.addReader (owned : OwnedTasks) (reader : Reading) : OwnedTasks :=
+@@ -98,7 +127,31 @@
+   {owned with clients := owned.clients.push client}
+ def OwnedTasks.addMaintenance (owned : OwnedTasks) (work : Maintenance) : OwnedTasks :=
+   {owned with maintenance := owned.maintenance.push work}
++
++/-- Source admission depends only on source owners. Derived work retains its
++existing independent bound; no native worker, writer or query pool is enlarged. -/
++def OwnedTasks.canSave (owned : OwnedTasks) (session : String) : Bool :=
++  owned.saves.size < HookBudget.maintenance &&
++    HookBudget.canStart (owned.saves.toList.map (·.session)) session
++
++def OwnedTasks.addSave (owned : OwnedTasks) (work : Maintenance) : OwnedTasks :=
++  {owned with saves := owned.saves.push work}
+ 
++def OwnedTasks.startSave (owned : OwnedTasks) (entry : Session) : IO OwnedTasks := do
++  unless owned.canSave entry.name do return owned
++  let task ← IO.asTask entry.refreshSave .dedicated
++  return owned.addSave ⟨entry.name,entry.revision,task⟩
++
++theorem OwnedTasks.preparation_cannot_block_source (owned : OwnedTasks) (work : Maintenance) (session : String) :
++    (owned.addMaintenance work).canSave session = owned.canSave session := rfl
++
++theorem OwnedTasks.source_preserves_preparation (owned : OwnedTasks) (work : Maintenance) :
++    (owned.addSave work).maintenance = owned.maintenance := rfl
++
++theorem OwnedTasks.duplicate_source_refused (owned : OwnedTasks) (work : Maintenance) :
++    (owned.addSave work).canSave work.session = false := by
++  simp [addSave,canSave,HookBudget.canStart]
++
+ theorem OwnedTasks.reader_registered (owned : OwnedTasks) (reader : Reading) :
+     reader ∈ (owned.addReader reader).readers := by simp [addReader]
+ theorem OwnedTasks.client_registered (owned : OwnedTasks) (client : Client) :
+@@ -121,9 +174,11 @@
+   stopReaders.cancel
+   for reader in owned.readers do discard <| IO.wait reader.task
+   for client in owned.clients do IO.cancel client.task
++  for work in owned.saves do IO.cancel work.task
+   for work in owned.maintenance do IO.cancel work.task
+   Worker.shutdown
+   for client in owned.clients do discard <| IO.wait client.task
++  for work in owned.saves do discard <| IO.wait work.task
+   for work in owned.maintenance do discard <| IO.wait work.task
+ 
+ def Session.canRetire (entry : Session) (pending running clients : List String) : Bool :=
+@@ -172,6 +227,7 @@
+   let stopReaders ← Std.CancellationToken.new
+   let mut sessions := #[← Session.create initial (← IO.monoMsNow)]
+   let owned ← IO.mkRef ({} : OwnedTasks)
++  let mut pendingSaves := #[initial]
+   let mut pending := #[initial]
+   let mut nextMaintenance := 0
+   let mut lastActivity ← IO.monoMsNow
+@@ -179,6 +235,7 @@
+   let mut stopped := false
+   let mut retiredSessions := 0
+   let mut maintenanceRuns := 0
++  let mut sourceRuns := 0
+   try
+     while !stopped do
+       let mut active := #[]
+@@ -192,16 +249,27 @@
+               if let some index := sessions.findIdx? (·.name == session) then
+                 let touched ← IO.monoMsNow
+                 sessions := sessions.modify index (·.touch touched)
++              pendingSaves := notify pendingSaves session
+               pending := notify pending session
+         else active := active.push client
+       owned.modify fun state => {state with clients := active}
++      let mut saving := #[]
++      for work in (← owned.get).saves do
++        if ← IO.hasFinished work.task then
++          match ← IO.wait work.task with
++          | .ok quiet =>
++            if let some index := sessions.findIdx? (·.name == work.session) then
++              sessions := sessions.modify index (·.finishSave work.revision quiet)
++          | .error _ => IO.eprintln "Eggshell retained unfinished source publication"
++        else saving := saving.push work
++      owned.modify fun state => {state with saves := saving}
+       let mut working := #[]
+       for work in (← owned.get).maintenance do
+         if ← IO.hasFinished work.task then
+           match ← IO.wait work.task with
+           | .ok quiet =>
+             if let some index := sessions.findIdx? (·.name == work.session) then
+-              sessions := sessions.modify index (·.finish work.revision quiet)
++              sessions := sessions.modify index (·.finishPreparation work.revision quiet)
+           | .error _ => IO.eprintln "Eggshell retained unfinished session maintenance"
+         else working := working.push work
+       owned.modify fun state => {state with maintenance := working}
+@@ -234,12 +302,13 @@
+                     sessions := sessions.modify index (·.touch touched)
+                   else
+                     if sessions.size ≥ HookBudget.sessions then
+-                      if let some index := retirementIndex? sessions pending.toList
+-                          ((← owned.get).maintenance.toList.map (·.session)) ((← owned.get).clients.toList.filterMap (·.session)) then
++                      if let some index := retirementIndex? sessions (pendingSaves++pending).toList
++                          (((← owned.get).saves++(← owned.get).maintenance).toList.map (·.session)) ((← owned.get).clients.toList.filterMap (·.session)) then
+                         sessions := sessions.eraseIdx index.val index.isLt
+                         retiredSessions := retiredSessions+1
+                     if sessions.size < HookBudget.sessions then
+                       sessions := sessions.push (← Session.create name (← IO.monoMsNow))
++                      pendingSaves := notify pendingSaves name
+                       pending := notify pending name
+                     else error := some "frontend session admission is full"
+               let stop := error.isNone && optionalString request "kind" == some "shutdown"
+@@ -249,6 +318,8 @@
+               let status := Json.mkObj [("registeredSessions",toJson sessions.size),
+                 ("requestBytes",toJson (heldBytes (← owned.get).clients)),("activeRequests",toJson (← owned.get).clients.size),
+                 ("readers",toJson (← owned.get).readers.size),("activeMaintenance",toJson (← owned.get).maintenance.size),
++                ("activeSaves",toJson (← owned.get).saves.size),("pendingSaves",toJson pendingSaves.size),
++                ("sourceRuns",toJson sourceRuns),
+                 ("pendingMaintenance",toJson pending.size),("retiredSessions",toJson retiredSessions),
+                 ("quiescentSessions",toJson (sessions.filter (·.quiet)).size),("maintenanceRuns",toJson maintenanceRuns)]
+               let task ← IO.asTask (do
+@@ -280,25 +351,34 @@
+             owned.modify (·.addReader ⟨socket,task⟩)
+         if now ≥ nextMaintenance then
+           for entry in sessions do
+-            unless entry.quiet do pending := notify pending entry.name
++            unless entry.sourceQuiet do pendingSaves := notify pendingSaves entry.name
++            unless entry.preparationQuiet do pending := notify pending entry.name
+           nextMaintenance := now+1000
++        let mut waitingSaves := #[]
++        for name in pendingSaves do
++          if (← owned.get).canSave name then
++            if let some entry := sessions.find? (·.name == name) then
++              owned.set (← (← owned.get).startSave entry)
++              sourceRuns := sourceRuns+1
++          else waitingSaves := waitingSaves.push name
++        pendingSaves := waitingSaves
+         let mut waiting := #[]
+         for name in pending do
+           if (← owned.get).maintenance.size < HookBudget.maintenance &&
+               HookBudget.canStart ((← owned.get).maintenance.toList.map (·.session)) name then
+             if let some entry := sessions.find? (·.name == name) then
+-              let task ← IO.asTask entry.refresh .dedicated
++              let task ← IO.asTask entry.refreshPreparation .dedicated
+               owned.modify (·.addMaintenance ⟨name,entry.revision,task⟩)
+               maintenanceRuns := maintenanceRuns+1
+           else waiting := waiting.push name
+         pending := waiting
+         let currentOwned ← owned.get
+         let retained := sessions.filter fun entry => now < entry.touched+300000 ||
+-          !entry.canRetire pending.toList (currentOwned.maintenance.toList.map (·.session)) (currentOwned.clients.toList.filterMap (·.session))
++          !entry.canRetire (pendingSaves++pending).toList ((currentOwned.saves++currentOwned.maintenance).toList.map (·.session)) (currentOwned.clients.toList.filterMap (·.session))
+         retiredSessions := retiredSessions+sessions.size-retained.size
+         sessions := retained
+         if (← owned.get).clients.isEmpty && (← owned.get).readers.isEmpty &&
+-            (← owned.get).maintenance.isEmpty && now > lastActivity+300000 then
++            (← owned.get).saves.isEmpty && (← owned.get).maintenance.isEmpty && now > lastActivity+300000 then
+           closing := true
+           stopped := true
+       IO.sleep 1

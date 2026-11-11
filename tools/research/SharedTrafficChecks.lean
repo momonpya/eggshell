@@ -24,6 +24,7 @@ structure Input where
   activeReaders : Nat := 6
   llvmReaders : Nat := 6
   registered : Bool := false
+  observeMaintenance : Bool := false
   deriving FromJson
 
 def route (item : Case) (slot : Nat) : IO Case := do
@@ -134,6 +135,37 @@ def extraEvents (plan : StudySeedChecks.Input) (root workspace data config : Sys
     let result ← RegisteredHook.invoke plan root workspace data config session label event fields
     rows := rows.push (Json.mkObj [("event",toJson event),("elapsedMs",toJson result.elapsedMs)])
   return Json.mkObj [("session",toJson session),("events",toJson rows)]
+
+/-- Read-only frontend statistics and one bounded native stack sample when
+publication has not caught up. The original census deadline is not extended. -/
+def observedCensus (root : System.FilePath) (wave : Nat) (project : ProjectStore.Project)
+    (expected : Nat) : IO Json := do
+  let directory := root/"maintenance"/s!"wave-{wave}"
+  IO.FS.createDirAll directory
+  let started ← IO.monoMsNow
+  let next ← IO.mkRef started
+  let sampled ← IO.mkRef false
+  let history ← IO.mkRef (#[] : Array Json)
+  let observe : Nat → Array Json → IO Unit := fun count rows => do
+    let now ← IO.monoMsNow
+    if now < (← next.get) && count != expected then return
+    next.set (now+1000)
+    let stats ← try
+        let endpoint ← Daemon.loadEndpoint "shared-traffic"
+        let raw ← Daemon.exchangeBefore endpoint "stats" (Json.mkObj []) (now+1000)
+        IO.ofExcept (Json.parse raw)
+      catch error => pure (Json.mkObj [("error",toJson error.toString)])
+    history.modify (·.push (Json.mkObj [("elapsedMs",toJson (now-started)),("count",toJson count),
+      ("expected",toJson expected),("frontend",stats)]))
+    save (directory/"progress.json") (toJson (← history.get))
+    save (directory/"latest-source.json") (Json.mkObj [("count",toJson count),("sources",toJson rows)])
+    if count < expected && now ≥ started+3000 && !(← sampled.get) then
+      sampled.set true
+      let endpoint ← Daemon.loadEndpoint "shared-traffic"
+      let result ← StudyCommand.run "/usr/bin/sample" #[toString endpoint.pid,"1","1","-file",(directory/"frontend.sample").toString]
+        #[] root.toString "" (directory/"sample-command") 4000
+      check (result.exitCode == 0) "bounded native maintenance sample failed"
+  census project expected observe
 
 /-- Read-only postmortem of the actual project. It never resumes publishing,
 warms an index, or turns a failed timed census into a passing traffic run. -/
@@ -334,7 +366,8 @@ def run (inputPath directory : String) : IO Unit := do
         if kind == toJson "active-reader" then
           check (delivery.getObjValD "missing" == toJson (#[] : Array String) &&
             delivery.getObjValD "completeBody" == toJson true) "active publication caused lost baseline evidence"
-      save (root/s!"wave-{wave}-census.json") (← census active (12+wave*12))
+      save (root/s!"wave-{wave}-census.json") (← if input.observeMaintenance then
+        observedCensus root wave active (12+wave*12) else census active (12+wave*12))
       if input.registered then
         save (root/s!"wave-{wave}-auto-answers.json") (← waitAnswers active writers)
       save (root/s!"wave-{wave}-drain.json") (← warm plan root data writerConfig s!"wave-{wave}-ready")
@@ -352,6 +385,10 @@ def run (inputPath directory : String) : IO Unit := do
       waves := waves.push (Json.mkObj [("wave",toJson wave),("elapsedMs",toJson elapsed),
         ("outcomes",toJson outcomes)])
       save (root/"waves.json") (toJson waves)
+  catch error =>
+    save (root/"failure.json") (Json.mkObj [("error",toJson error.toString),("observedMs",toJson (← IO.monoMsNow)),
+      ("completedWaves",toJson waves.size),("observeMaintenance",toJson input.observeMaintenance)])
+    throw error
   finally
     try StudyRuntime.stopManaged frontend (root/"frontend-stop.json")
     finally StudyRuntime.stopManaged publisher (root/"publisher-stop.json")
