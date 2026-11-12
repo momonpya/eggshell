@@ -113,9 +113,9 @@ def reviewPatch : IO Unit := do
     check (result.exitCode == 1) "declared source change absent"
     patch := patch++result.stdout
   IO.FS.writeFile (records/"candidate.patch") patch
-def install : IO Unit := do
+def installAt (root parent records : System.FilePath) (nativeAudit : String := "native.json") : IO Unit := do
   idle
-  check ((← read (records/"native.json")).getObjValD "consistent" == toJson true) "native closure must pass"
+  check ((← read (records/nativeAudit)).getObjValD "consistent" == toJson true) "native closure must pass"
   check (!(← (root/"prefix").pathExists)) "fresh prefix required"
   discard <| command "/bin/cp" #["-cR",(parent/"prefix").toString,(root/"prefix").toString]
   IO.FS.removeFile (root/"prefix/libexec/eggshell")
@@ -160,6 +160,8 @@ def install : IO Unit := do
   IO.FS.createDirAll (root/"tmp")
   write (root/"installation.json") installation
   write (records/"installation.json") installation
+
+def install : IO Unit := installAt root parent records
 
 def prepareChecks : IO Unit := do
   idle
@@ -496,6 +498,8 @@ def main : List String → IO Unit
   | ["retry-build"] => TerminalIntentStudy.retryBuild
   | ["review-patch"] => TerminalIntentStudy.reviewPatch
   | ["install"] => TerminalIntentStudy.install
+  | ["install-at",directory,origin,output] => TerminalIntentStudy.installAt (.mk directory) (.mk origin) (.mk output)
+  | ["install-at",directory,origin,output,audit] => TerminalIntentStudy.installAt (.mk directory) (.mk origin) (.mk output) audit
   | ["prepare-checks"] => TerminalIntentStudy.prepareChecks
   | ["audit-checks"] => TerminalIntentStudy.auditChecks
   | ["boundaries"] => TerminalIntentStudy.runCheck false

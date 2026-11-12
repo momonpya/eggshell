@@ -1,0 +1,115 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -292,16 +292,30 @@
+ 
+ def terminalSeal (pending : PendingTurn) (message : Option String) : PendingTurn :=
+   {pending with finalMessage := pending.finalMessage.or message,closed := true,inFlight := []}
+-
+-def terminalCloseState (state : ThreadState) (pending : PendingTurn) : ThreadState :=
+-  if pending.closed then state else {state with epoch := state.epoch+1,offers := []}
+ 
+-theorem terminal_replay_does_not_advance_epoch (state : ThreadState) (pending : PendingTurn)
+-    (message : Option String) :
+-    terminalCloseState (terminalCloseState state pending) (terminalSeal pending message) =
+-      terminalCloseState state pending := by
+-  simp [terminalCloseState,terminalSeal]
++/-- Closure has a stable target taken from the captured context. Replaying a
++partial metadata write never uses the mutable closed flag as its progress log. -/
++def terminalCloseState (state : ThreadState) (observedEpoch : Nat) : ThreadState :=
++  {state with epoch := max state.epoch (observedEpoch+1),offers := []}
+ 
++theorem terminal_replay_does_not_advance_epoch (state : ThreadState) (observedEpoch : Nat) :
++    terminalCloseState (terminalCloseState state observedEpoch) observedEpoch =
++      terminalCloseState state observedEpoch := by
++  simp [terminalCloseState,Nat.max_assoc]
++
++theorem terminal_closure_keeps_newer_epoch (state : ThreadState) (observedEpoch : Nat)
++    (newer : observedEpoch+1 ≤ state.epoch) :
++    (terminalCloseState state observedEpoch).epoch = state.epoch := by
++  exact Nat.max_eq_left newer
++
++theorem terminal_closure_never_decreases_epoch (state : ThreadState) (observedEpoch : Nat) :
++    state.epoch ≤ (terminalCloseState state observedEpoch).epoch :=
++  Nat.le_max_left _ _
++
++theorem terminal_closure_finishes_observed_epoch (state : ThreadState) (observedEpoch : Nat) :
++    observedEpoch+1 ≤ (terminalCloseState state observedEpoch).epoch :=
++  Nat.le_max_right _ _
++
+ theorem terminal_replay_keeps_first_answer (pending : PendingTurn) (a b : Option String)
+     (answer : pending.finalMessage.isSome = true) :
+     (terminalSeal (terminalSeal pending a) b).finalMessage = pending.finalMessage := by
+@@ -342,7 +356,9 @@
+     if terminalScope active intent.pending then
+       let sealed := terminalSeal active intent.pending.finalMessage
+       writeJson files.pending sealed
+-      if !active.closed then writeJson files.state (terminalCloseState state active)
++      let repaired := terminalCloseState state intent.context.state.epoch
++      if state.epoch != repaired.epoch || !state.offers.isEmpty then
++        writeJson files.state repaired
+       writeJson (closedTurnPath files active.turnId) sealed
+       return true
+   let old ← readClosedTurn? files intent.pending.turnId
+@@ -390,20 +406,22 @@
+     let active ← (readJson? files.pending pendingJsonDefaults : IO (Option PendingTurn))
+     let nanos := (input.getObjValAs? Nat "_eggshell_synapse_nanos").toOption.getD 0
+     let clock := (optionalString input "_eggshell_synapse_clock").filter fun clock => Synapses.digest clock && nanos > 0
++    let closedContext := fun (captured : PendingTurn) => do
++      let saved ← (readJson? (terminalContextPath files captured.turnId) [] : IO (Option TerminalContext))
++      let prior := saved.getD ⟨{profile := captured.profile},none,true⟩
++      pure {prior with clock := if prior.clock == clock then clock else none}
+     let captured ← match active.bind (capturedFinal? · session turn message) with
+       | some captured =>
+-          let contextState := state.getD {profile := captured.profile}
+-          let unknown ← try Synapses.Live.uncertain files contextState catch _ => pure true
+-          pure (some (captured,⟨contextState,if state.isSome then clock else none,unknown || state.isNone⟩))
++          if active.any (·.closed) then pure (some (captured,← closedContext captured))
++          else
++            let contextState := state.getD {profile := captured.profile}
++            let unknown ← try Synapses.Live.uncertain files contextState catch _ => pure true
++            pure (some (captured,⟨contextState,if state.isSome then clock else none,unknown || state.isNone⟩))
+       | none => do
+           let closed ← turn.mapM (readClosedTurn? files)
+           match closed.join.bind (capturedFinal? · session turn message) with
+           | none => pure none
+-          | some captured =>
+-              let saved ← (readJson? (terminalContextPath files captured.turnId) [] : IO (Option TerminalContext))
+-              let prior := saved.getD ⟨{profile := captured.profile},none,true⟩
+-              let clock := if prior.clock == clock then clock else none
+-              pure (some (captured,{prior with clock := clock}))
++          | some captured => pure (some (captured,← closedContext captured))
+     if let some (captured,context) := captured then
+       let intent : TerminalIntent := ⟨captured,context,nanos,Synapses.Live.receivedUnixMs? input⟩
+       let path := files.directory/"terminal-intents"/(terminalKey input captured++".json")
+@@ -703,9 +721,20 @@
+ 
+ def AcknowledgmentBasis.accepts (basis : AcknowledgmentBasis) (state : ThreadState)
+     (pending : PendingTurn) (now : Nat) : Bool :=
+-  state.enabled && state.epoch == basis.epoch &&
++  !pending.closed && pending.finalMessage.isNone && state.enabled && state.epoch == basis.epoch &&
+     basis.offer.stamp.accepts pending.turnId state.epoch now &&
+     state.confirmedDelivery == basis.previous && state.offers.any (sameDeliveryOffer basis.offer)
++
++theorem acknowledgment_rejects_closed_turn (basis : AcknowledgmentBasis) (state : ThreadState)
++    (pending : PendingTurn) (now : Nat) (closed : pending.closed = true) :
++    basis.accepts state pending now = false := by
++  simp [AcknowledgmentBasis.accepts,closed]
++
++theorem acknowledgment_rejects_answered_turn (basis : AcknowledgmentBasis) (state : ThreadState)
++    (pending : PendingTurn) (now : Nat) (message : String)
++    (answered : pending.finalMessage = some message) :
++    basis.accepts state pending now = false := by
++  simp [AcknowledgmentBasis.accepts,answered]
+ 
+ theorem acknowledgment_rejects_new_context (basis : AcknowledgmentBasis) (state : ThreadState)
+     (pending : PendingTurn) (now : Nat) (changed : state.epoch ≠ basis.epoch) :
+@@ -723,7 +752,8 @@
+   let some pending ← readPendingBase? files | return none
+   let now ← IO.monoMsNow
+   let some offer := state.offers.find? (·.id == id) | return none
+-  let accepted := state.enabled && offer.stamp.accepts pending.turnId state.epoch now
++  let accepted := !pending.closed && pending.finalMessage.isNone &&
++    state.enabled && offer.stamp.accepts pending.turnId state.epoch now
+   if !accepted then
+     Synapses.Live.unconfirmed files
+     writeJson files.state {state with offers := state.offers.filter (·.id != id)}

@@ -55,7 +55,9 @@ def copyLocalArtifacts (origin destination : System.FilePath) : IO Unit := do
 def finished (tag : String) : IO Json := do
   let record ← read (base/(tag++".guard.json"))
   check (record.getObjValD "state" == toJson "finished" && record.getObjValD "exitCode" == toJson (0 : Nat) &&
-    record.getObjValD "ownedPids" == toJson (#[] : Array Nat)) (tag++" has not succeeded and drained")
+    record.getObjValD "ownedPids" == toJson (#[] : Array Nat) &&
+    record.getObjValD "guardTriggered" == toJson false && record.getObjValD "reason" == Json.null &&
+    record.getObjValD "error" == Json.null) (tag++" has not succeeded and drained")
   return record
 def guard (tag : String) (args : Array String) : IO Unit := do
   idle

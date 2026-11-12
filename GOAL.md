@@ -2,6 +2,18 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[書込み途中から収束する終了状態](docs/candidates/terminal-closure/README.md)をLeanで隔離実装した。現行候補の製品SHAは`302ead20…`。
+親の製品関数で、pendingだけ保存されるとepochが進まないこと、stateだけなら二重に進むこと、終了済み回答の再受領でcontextが付け替わることをnativeで再現した。
+捕捉epochから終了先を固定してmaxで収束させ、再受領には最初のcontextを使う。修正版は同じ5つの書込み状態と再受領を通過した。
+終了フラグだけが保存された隙間でも古い受領確認を通さないよう、closed/回答済みturnを入口・確定時の両方で拒否する。標準公理のみの9法則を確認した。
+実登録Stopの通信失敗→サービス停止/再起動でも、回答・journal 7件・終了状態が回復し、元clock/context/受領時刻を保持した。通常系の消費1・支持4・共引用4も維持した。
+製品coreの変更はPluginHooksだけ。336 objectと全source/literalを照合し、終了済み試行9,887項目・1,976,126,807論理bytesをarchiveせず削除した。削除後も336 objectが整合した。
+
+純粋な受領確認の反例は得たが、その最初のguardは広すぎる作業pathから別のdisk集計processまで拾い終了2だった。これを成功扱いにせず保存した。
+以後の監視を候補専用rootと子孫へ限定し、RSS/空き上限は不変。StudyLocal.finishedはguard未発動・reason/errorなしまで要求する。
+古いcacheからの制御器buildは47.2秒で中止・全process回収後、完成済み製品cacheへ揃えた。Mainを使わないmetadata試験への誤った必須module指定の拒否も保持し、実際のHooks subsetを再照合した。
+現在候補の受理seed・モデル両周0/6・反復総token比較0/18・本体採用0。10検索や80人の測定を親から転用しない。以下は親候補で確認した性能の記録である。
+
 [終了要求の時点を保持して回復する候補](docs/candidates/terminal-intent/README.md)をLeanで隔離実装した。
 親[terminal-capture](docs/candidates/terminal-capture/README.md)で残った、故障時journal 6件・私有lifecycle未閉鎖に対処する。
 RPC前に元のturn・保存先・clock/context・観測時刻を保持し、保存workerがその文脈から終了処理を再開する。
