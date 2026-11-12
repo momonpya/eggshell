@@ -274,7 +274,7 @@ def readerBatch (plan : StudySeedChecks.Input) (root data : System.FilePath) (cl
     "mixed reader batch omitted needed original rows"
   return rows
 
-def run (inputPath directory : String) : IO Unit := do
+def run (inputPath directory : String) (sharedOwner : Bool := false) : IO Unit := do
   let plan ← IO.ofExcept (fromJson? (α := StudySeedChecks.Input) (← StudyAdmission.readJson inputPath))
   StudyAdmission.verifyArtifact plan.runtime
   for file in plan.pluginFiles do StudyAdmission.verifyArtifact file
@@ -294,14 +294,20 @@ def run (inputPath directory : String) : IO Unit := do
     IO.FS.writeFile (root/("read-"++name++".toml")) (SharedTrafficChecks.config plan.runtime.path project.directory false)
   let mut sessions := #[]
   for (group,slot) in [("ALPHA",0),("ALPHA",1),("BETA",2),("BETA",3)] do
-    let item ← SharedTrafficChecks.route ⟨s!"mixed-{group}-{slot}","","","",""⟩ slot
+    let item ← SharedTrafficChecks.route ⟨s!"mixed-{group}-{slot}","","","",""⟩ (if sharedOwner then 0 else slot)
     sessions := sessions.push (group,slot,item.session)
+  if sharedOwner then
+    check (sessions.all (fun (_,_,session) => ProjectStore.routeSlot session 4 == 0))
+      "shared-owner fixture did not force every writer onto the same physical owner"
   let first := sessions.map fun (group,slot,session) => makeTurn group session 0 slot
   let second := sessions.map fun (group,slot,session) => makeTurn group session 1 slot
   let switched := makeTurn "BETA" sessions[0]!.2.2 2 0
   let turns := first++second++#[switched]
-  for turn in turns do IO.FS.writeFile (root/turn.item.path) (turn.item.first++"\n"++turn.item.second++"\n")
-  save (root/"declared-turns.json") (toJson turns)
+  let growth := if sharedOwner then (Array.range 4).map fun phase =>
+    sessions.map fun (group,slot,session) => makeTurn group session (phase+3) slot else #[]
+  let declared := turns++growth.flatten
+  for turn in declared do IO.FS.writeFile (root/turn.item.path) (turn.item.first++"\n"++turn.item.second++"\n")
+  save (root/"declared-turns.json") (toJson declared)
   let environment := replaceEnv plan.environment #[("EGGSHELL_DATA_ROOT",some data.toString),
     ("TMPDIR",some (root/"tmp").toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
   let services ← IO.mkRef (none : Option (StudyRuntime.Managed × StudyRuntime.Managed))
@@ -321,7 +327,7 @@ def run (inputPath directory : String) : IO Unit := do
     let tasks ← first.mapM fun turn => IO.asTask (writer plan root data turn true false) .dedicated
     let settled := tasks.map (·.get)
     for result in settled do discard <| IO.ofExcept (result.mapError IO.Error.toString)
-    save (root/"baseline-inventory.json") (← waitStored alpha beta turns 12 4)
+    save (root/"baseline-inventory.json") (← waitStored alpha beta declared 12 4)
     save (root/"baseline-ready.json") (← awaitReady alpha beta plan.runtime.path)
     let initialNeeded ← freeze alpha beta root first
     save (root/"baseline-required.json") (toJson initialNeeded)
@@ -363,7 +369,7 @@ def run (inputPath directory : String) : IO Unit := do
       if let some value ← IO.ofExcept (result.mapError IO.Error.toString) then paused := paused.push value
     check (paused.size == 2) "both interrupted writers required"
     save (root/"paused.json") (toJson paused)
-    save (root/"before-restart-inventory.json") (← waitStored alpha beta turns 20 6)
+    save (root/"before-restart-inventory.json") (← waitStored alpha beta declared 20 6)
     stop "before-restart"
     let beforeRestart := Json.mkObj [("alpha",← originals alpha),("beta",← originals beta)]
     start
@@ -386,7 +392,7 @@ def run (inputPath directory : String) : IO Unit := do
         for id in ["read","consume","detail"] do tool plan root data config switched id
         finish plan root data config switched
       else finish plan root data config held.turn "duplicate-stop"
-    save (root/"final-inventory.json") (← waitStored alpha beta turns 27 9)
+    save (root/"final-inventory.json") (← waitStored alpha beta declared 27 9)
     save (root/"final-ready.json") (← awaitReady alpha beta plan.runtime.path)
     let finalNeeded ← freeze alpha beta root turns
     save (root/"final-required.json") (toJson finalNeeded)
@@ -397,32 +403,117 @@ def run (inputPath directory : String) : IO Unit := do
     for client in #[freshA,freshBoth] do startReader plan root data client "read-2" "startup"
     let finalReaders := existing++newcomers++#[freshA,freshBoth]
     let final ← readerBatch plan root data finalReaders "read-2" "final-readers" finalNeeded
+    let mut knownTurns := turns
+    let mut knownNeeded := finalNeeded
+    let mut growthWaves := #[]
+    for phase in [:growth.size] do
+      let readTurn := s!"read-growth-{phase}"
+      for client in finalReaders do startReader plan root data client readTurn "resume"
+      let gate ← IO.mkRef false
+      let writers ← growth[phase]!.mapM fun turn => IO.asTask (do
+        while !(← gate.get) do IO.sleep 1
+        writer plan root data turn false false) .dedicated
+      let readers ← finalReaders.mapM fun client => IO.asTask (do
+        while !(← gate.get) do IO.sleep 1
+        read plan root data client readTurn knownNeeded) .dedicated
+      let began ← IO.monoMsNow
+      gate.set true
+      let written := writers.map (·.get)
+      let (received,ok) ← SharedTrafficChecks.settle readers
+      let traffic := Json.mkObj [("elapsedMs",toJson ((← IO.monoMsNow)-began)),("readers",toJson received),
+        ("writerResults",toJson (written.map fun result => match result with
+          | .ok _ => Json.mkObj [("ok",toJson true)]
+          | .error error => Json.mkObj [("error",toJson error.toString)]))]
+      save (root/s!"growth-traffic-{phase}.json") traffic
+      check (ok && received.size == 10 && received.all (fun row => row.getObjValD "missing" == toJson (#[] : Array Needed)))
+        "same-owner overlapping readers omitted previously committed originals"
+      for value in written do discard <| IO.ofExcept (value.mapError IO.Error.toString)
+      knownTurns := knownTurns++growth[phase]!
+      let saved ← waitStored alpha beta declared (knownTurns.size*3) knownTurns.size
+      save (root/s!"growth-inventory-{phase}.json") saved
+      let ready ← awaitReady alpha beta plan.runtime.path
+      save (root/s!"growth-ready-{phase}.json") ready
+      knownNeeded ← freeze alpha beta root knownTurns
+      save (root/s!"growth-required-{phase}.json") (toJson knownNeeded)
+      growthWaves := growthWaves.push traffic
+    if sharedOwner then
+      discard <| readerBatch plan root data finalReaders "read-growth-final" "growth-final-readers" knownNeeded
     for client in finalReaders do
-      discard <| invoke plan root data client.config client.session "read-2" "end" "SessionEnd"
+      discard <| invoke plan root data client.config client.session (if sharedOwner then "read-growth-final" else "read-2") "end" "SessionEnd"
     save (root/"facts.json") (Json.mkObj [("alpha",← graphFacts alpha),("beta",← graphFacts beta)])
     save (root/"result.json") (Json.mkObj [("runtime",toJson plan.runtime),("projects",toJson (2 : Nat)),
       ("writers",toJson turns),("readers",toJson final),("observations",toJson (27 : Nat)),("answers",toJson (9 : Nat)),
       ("manualWarmCalls",toJson (0 : Nat)),("manualKeepCalls",toJson (0 : Nat)),
       ("actualServiceRestart",toJson true),("interruptedWriters",toJson (2 : Nat)),
-      ("maxSimultaneousClients",toJson (12 : Nat)),("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
+      ("samePhysicalOwner",toJson sharedOwner),("growthWaves",toJson growthWaves),
+      ("finalWriterTurns",toJson knownTurns.size),("finalOriginalObservations",toJson (knownTurns.size*3)),
+      ("maxSimultaneousClients",toJson (if sharedOwner then 14 else 12 : Nat)),
+      ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   catch error =>
     save (root/"failure.json") (Json.mkObj [("error",toJson error.toString),("runtime",toJson plan.runtime)])
     throw error
   finally stop "final"
 
-/-- Read-only postmortem. It neither registers a session nor resumes a save,
-warms an index, repairs state, or changes the failed run's outcome. -/
-def inspect (directory output : String) : IO Unit := do
-  let root : System.FilePath := .mk directory
-  check (!(← (System.FilePath.mk output).pathExists)) "retain the first mixed postmortem"
+def declaredTurns (root : System.FilePath) : IO (Array Turn) := do
   let values ← IO.ofExcept ((← StudyAdmission.readJson (root/"declared-turns.json").toString).getArr?)
-  let turns ← values.mapM fun value => do
+  values.mapM fun value => do
     let project ← IO.ofExcept (value.getObjValAs? String "project")
     let id ← IO.ofExcept (value.getObjValAs? String "id")
     let item := value.getObjValD "item"
     let text := fun name => IO.ofExcept (item.getObjValAs? String name)
     let item : Case := ⟨← text "session",← text "path",← text "symbol",← text "first",← text "second"⟩
     return (⟨project,id,item⟩ : Turn)
+
+/-- Query the completed growing DB from a distinct, initially empty client
+data root. No earlier model context or client receipts can be reused. -/
+def freshGrown (inputPath directory : String) : IO Unit := do
+  let plan ← IO.ofExcept (fromJson? (α := StudySeedChecks.Input) (← StudyAdmission.readJson inputPath))
+  StudyAdmission.verifyArtifact plan.runtime
+  for file in plan.pluginFiles do StudyAdmission.verifyArtifact file
+  let root : System.FilePath := .mk directory
+  let data := root/"fresh-data"
+  check (!(← data.pathExists) && (← Paths.dataRoot) == data) "fresh grown-DB reader root required"
+  IO.FS.createDirAll data
+  let turns ← declaredTurns root
+  check (turns.size == 25) "the full predeclared growth workload must finish first"
+  let alpha ← ProjectStore.openProject (root/"alpha.egg")
+  let beta ← ProjectStore.openProject (root/"beta.egg")
+  let before := Json.mkObj [("alpha",← originals alpha),("beta",← originals beta)]
+  let needed ← freeze alpha beta root turns
+  save (root/"fresh-grown-frozen.json") (toJson needed)
+  let environment := replaceEnv plan.environment #[("EGGSHELL_DATA_ROOT",some data.toString),
+    ("TMPDIR",some (root/"tmp").toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
+  let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
+  let frontend ← try
+      StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot)
+        "grown-fresh-service" (data/"daemon.json") environment
+    catch error => StudyRuntime.stopManaged publisher (root/"fresh-startup-publisher-stop.json"); throw error
+  try
+    let mut clients := #[]
+    for index in [:10] do
+      let groups := if index % 3 == 0 then #["ALPHA"] else if index % 3 == 1 then #["BETA"] else #["ALPHA","BETA"]
+      let client ← makeReader root s!"grown-fresh-{index}" groups
+      startReader plan root data client "fresh-grown" "startup"
+      clients := clients.push client
+    discard <| readerBatch plan root data clients "fresh-grown" "fresh-grown-readers" needed
+    for client in clients do discard <| invoke plan root data client.config client.session "fresh-grown" "end" "SessionEnd"
+    check ((Json.mkObj [("alpha",← originals alpha),("beta",← originals beta)]) == before)
+      "fresh read-only clients changed original project publications"
+    save (root/"fresh-grown-result.json") (Json.mkObj [("originalsUnchanged",toJson true),
+      ("freshDataRoot",toJson data.toString),("manualWarmCalls",toJson (0 : Nat)),("answeringModelCalls",toJson (0 : Nat))])
+  catch error =>
+    save (root/"fresh-grown-failure.json") (Json.mkObj [("error",toJson error.toString)])
+    throw error
+  finally
+    try StudyRuntime.stopManaged frontend (root/"fresh-frontend-stop.json")
+    finally StudyRuntime.stopManaged publisher (root/"fresh-publisher-stop.json")
+
+/-- Read-only postmortem. It neither registers a session nor resumes a save,
+warms an index, repairs state, or changes the failed run's outcome. -/
+def inspect (directory output : String) : IO Unit := do
+  let root : System.FilePath := .mk directory
+  check (!(← (System.FilePath.mk output).pathExists)) "retain the first mixed postmortem"
+  let turns ← declaredTurns root
   let alpha ← ProjectStore.openProject (root/"alpha.egg")
   let beta ← ProjectStore.openProject (root/"beta.egg")
   let before := Json.mkObj [("alpha",← originals alpha),("beta",← originals beta)]
@@ -484,5 +575,7 @@ end MixedChatChecks
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["check",input,directory] => MixedChatChecks.run input directory; return 0
+  | ["shared-owner",input,directory] => MixedChatChecks.run input directory true; return 0
+  | ["fresh-grown",input,directory] => MixedChatChecks.freshGrown input directory; return 0
   | ["inspect",directory,output] => MixedChatChecks.inspect directory output; return 0
   | _ => sourceRouteEngine args

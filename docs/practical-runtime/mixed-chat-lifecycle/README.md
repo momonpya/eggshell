@@ -4,6 +4,8 @@ This is a native Lean fixture using actual registered plugin hook commands,
 real source reads, and a real frontend/publication-service restart. It does not
 create Codex UI chats or call an answering model. Both projects start empty;
 no manual `keep` or `warm` command runs.
+The existing fixture configuration allows 500,000 handoff characters. This is
+not the public default; body volume is not treated as evidence of token savings.
 
 The predeclared workload has two logical project DBs with four storage owners
 each, four writer sessions, nine writer turns, and three reader waves of
