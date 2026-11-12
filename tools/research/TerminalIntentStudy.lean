@@ -333,9 +333,9 @@ def readers : IO Unit := do
       (root/"input.json").toString,(root/"run/llvm.egg").toString,
       (records/"frozen-before-delivery.json").toString,(root/"ten-readers").toString])
 
-def retainReaders : IO Unit := do
+def retainReadersAt (root records : System.FilePath) (tag : String) : IO Unit := do
   idle
-  let monitor ← finished "terminal-intent-ten-readers"
+  let monitor ← finished tag
   let area := root/"ten-readers"
   let result ← read (area/"result.json")
   let waves ← IO.ofExcept (result.getObjValAs? (Array Json) "waves")
@@ -392,6 +392,7 @@ def retainReaders : IO Unit := do
     ("allRetainedOutputsMatchKnownBytes",toJson true),("adopted",toJson false)]
   write (records/"ten-readers-summary.json") summary
   IO.println summary.compress
+def retainReaders : IO Unit := retainReadersAt root records "terminal-intent-ten-readers"
 def proofAudit : IO Unit := do
   idle
   let law := root/"laws.lean"
@@ -491,6 +492,7 @@ def retire : IO Unit := do
     ("nativeInputsAndInterfacesOutsideRetiredTargets",toJson true),("candidateProductRetained",toJson true)])
 end TerminalIntentStudy
 def main : List String → IO Unit
+  | ["retain-readers-at",root,records,tag] => TerminalIntentStudy.retainReadersAt (.mk root) (.mk records) tag
   | ["prepare"] => TerminalIntentStudy.prepare
   | ["seal"] => TerminalIntentStudy.sealPatch
   | ["audit"] => TerminalIntentStudy.audit

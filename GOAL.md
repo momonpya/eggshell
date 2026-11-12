@@ -2,6 +2,18 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[現行候補でのLLVM読取](docs/practical-runtime/stable-storage-read-llvm/README.md)を、製品 `ed077918…` を変えずに検査した。
+中断した診断原典の出版だけを復元し、既存数値ヒントを別途コピーして一度warmした。warm 55.105秒、原典とコピーの保存本文は不変。
+別の空data rootの新規10検索×3組は7.071 / 5.052 / 4.984秒で、全30意味検索・必要原文135/135（部分保存込み156/156）・既存の本文/返送bytes一致を確認した。
+題材1は全体3/3・部分込み4/4、題材2は6/6・7/7、題材3は5/5・5/5。分母は配送前に原典から凍結し、以前と一致した。
+実callback 90件に未完了・stderr・失敗なし、30 closed-turnにwrite target / observed-files / source queueなし。関連RSS最大3,342,992KiB、全service正常終了・ownedPids空。
+新規chatのquery gateはstartup/endを含めない。各callbackの最大値を別記し、実測を本番p99へ読み替えない。既存数値libraryのpooling警告1件は保持した。
+試験入力の不足はDB作成/フック前に拒否され、失敗記録を残して別tagで補完した。製品は変更していない。
+終了済みDB/cache/source/制御器9,682項目・1,532,569,040論理bytesをarchiveせず削除し、削除後も現行336 objectが整合した。
+約1MBの状態fileは以前にも記録済みであり、byte数を新しい遅延原因としない。修復で書くreadState?のlockを無条件に外さない。
+次は利用者が追加した、複数DB・新規/既存chat・中断/再開を同じ負荷へ混ぜる検査を行う。別々の既存試験をこの組合せの合格へ転用しない。
+現在版の受理seed・回答model両周0/6・反復総token比較0/18・本体採用0を維持し、80人8時間・一般98%・MCP/NASは未達のまま。
+
 [原子的な差し替え後も安定して読む候補](docs/candidates/stable-storage-read/README.md)をLeanで隔離実装した。製品SHAは `ed077918…`。
 同じFDで最大3回、完全な変更情報・全byte・予算の検査に通った読取だけを返す。読取lock・待機・sleep・path再open・包括的な例外握りつぶしは加えない。
 nativeで差し替え中の読取が2回目に成功し、連続変更・途中切れ・容量超過・IO失敗を拒否すること、外部原文の差し替えを鮮度検査が拒否することを確認した。

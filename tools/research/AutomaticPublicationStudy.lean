@@ -425,6 +425,32 @@ def retireProduct (location evidence : String) (tags : List String) : IO Unit :=
   check ((← read (records/"source-blocks.json")).getObjValD "ok" == toJson true) "source-block audit must precede cleanup"
   checkRetainedQueries (records/"queries.json")
   retireArtifacts records root #[root/"run",root/"checks",root/"checks-build",root/"tmp",root/"helper-lib",root/"launcher.lean",root/"laws.lean"]
+
+def retireTrial (location evidence product : String) (tags : List String) : IO Unit := do
+  idle
+  let root : System.FilePath := .mk location
+  let records : System.FilePath := .mk evidence
+  let productRoot : System.FilePath := .mk product
+  check (root.isAbsolute && root.toString.startsWith (base.toString++"/practical-runtime/") &&
+    !productRoot.toString.startsWith (root.toString++"/") && productRoot != root &&
+    !records.toString.startsWith (root.toString++"/")) "trial cleanup overlaps its product or retained evidence"
+  check (!tags.isEmpty) "all trial stages need terminal evidence"
+  for tag in tags do write (records/(tag++".guard.json")) (← finished tag)
+  check ((← read (records/"hook-callbacks.json")).getObjValD "failedOrIncompleteCallbacks" == toJson (#[] : Array Json))
+    "retain and resolve failed actual callbacks before trial cleanup"
+  for call in ← IO.ofExcept ((← read (records/"registered-calls.json")).getArr?) do
+    let path : String ← IO.ofExcept (call.getObjValAs? _ "stdout")
+    check (toJson (← hash (.mk path)) == (call.getObjValD "timing").getObjValD "stdoutSha256") "retained actual stdout changed"
+  -- Check every actual child, rather than treating this metadata controller's
+  -- own root argument as a live native executable. No product may depend on a
+  -- child. Removing the final empty directory cannot erase a new arrival.
+  let targets := (← root.readDir).map (·.path)
+  retireArtifacts records productRoot targets
+  IO.FS.removeDir root
+  let retained ← read (records/"retired.json")
+  let count : Nat ← IO.ofExcept (retained.getObjValAs? _ "files")
+  write (records/"retired.json") (retained.setObjVal! "files" (toJson (count+1))
+    |>.setObjVal! "trialDirectoryRemoved" (toJson true))
 end AutomaticPublicationStudy
 def main : List String → IO Unit
   | ["prepare"] => AutomaticPublicationStudy.prepare
@@ -441,4 +467,5 @@ def main : List String → IO Unit
   | ["correct-fingerprint-audit"] => AutomaticPublicationStudy.correctFingerprintAudit
   | ["retire"] => AutomaticPublicationStudy.retire
   | "retire-product-at" :: root :: records :: tags => AutomaticPublicationStudy.retireProduct root records tags
+  | "retire-trial-at" :: root :: records :: product :: tags => AutomaticPublicationStudy.retireTrial root records product tags
   | _ => throw (IO.userError "AutomaticPublicationStudy prepare|audit|run")
