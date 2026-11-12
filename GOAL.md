@@ -2,6 +2,14 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[共有projectの検索・原文返送](docs/candidates/project-read-service/README.md)を隔離実装した。製品 `a6f2160d…` は、全project/owner cutを保ち、既存のproject view/public readerを共有してvector・e-class/work graph・synaptic探索と原文描画をデータ側で行う。質問と完全な入力digestを照合し、返送はadvisoryだけで現在のWorkを完了扱いにしない。
+通常フックで2DB・各2所有領域に6原観測/2回答を保存し、配送前にDB内の必要コード4項目を凍結した。元ファイル削除後の13照会は全件が意味検索・synaptic完了。10接続の全gateは0.503秒、最大個別照会0.501秒。さらに空の別service/client data rootから同じDBを新規10接続で読むgateは1.988秒で、手動warmなし・実本文は前の同じcutとバイト一致だった。
+全23照会で出典path/fingerprintとCODE内の必要原文60/60を検査した（4固有項目の反復出現数）。他DB混入なし、原典head/files不変。fixture予算500,000文字・実本文最大9,374 UTF-8 bytesで、公開既定予算/総token削減へ読み替えない。
+新入口の検索経過未付与と、空のoriginal treeを索引欠落と誤認する既存不具合を修正した。空領域をread/certificationの配列から除外せず、検証済みの空だけを恒等寄与とし、非空の索引欠落/要求rangeは従来どおり拒否する。9法則は標準公理だけ、client側1,376宣言の依存閉包にproject file読込/mutex atomicallyなし。
+最初の失敗は成功へ書き換えず保持した。失敗時の強制abortによる残存processも検出し、通常終了を先に行うよう修正した。成功fixtureの関連RSS最大2,111,728KiB/新service 1,823,744KiB、全guard terminal/ownedPids空・保護発動なし、18 callback/6原実行commandに失敗/stderr/未完了通知なし。新serviceには既存MiniLMのpooling警告1件があり保持した。モデル/設定/runtimeは変更していない。
+終了済みDB/cache/重複observer/不要helper 14,415項目・2,636,490,671論理bytesをarchiveせず削除し、原典/current runtime/model/native入力のSHAと削除後340 object整合を維持した。保存/再接続候補は前段の独立検証であり、この新製品の全保存混在試験へ合算しない。
+次は通常hookのremote read targetへの接続と、現在のclient依存を使った認定/中断再開の接続へ進む。別PC/認証deployment/NAS・大規模/増加DB・80人8時間・一般98%と、現runtimeでのLLVM seed/両周/反復総token/品質は未達。回答model 0・比較0/18・採用0を維持する。
+
 [共有projectのprocess接続候補](docs/candidates/project-gateway/README.md)をLeanで隔離実装した。製品 `e7f3c8b6…` は保存と完全な読取cutのpinに対応し、hostの物理path/管理secret/private capabilityをclientへ渡さない。選択した書込projectと全読取projectの境界を既存の永続ACKへ結び付け、独立接続ごとに要求を処理する。
 nativeの別publisher/gateway process試験で、2DBへの10並行保存gateは0.416秒。実ツールの完全な入力/出力12観測・回答12件が正しいDBにあり、client cwdを削除した後でも保存できた。ACK直後/返送前に切断し、再接続/同一要求再送とpublisher再起動後の再送で原典headの不変を確認した。
 読取専用のraw要求とSDK要求、保存先/cut/scope変更、権限なしproject、不正/切断/過大frameを拒否した。応答停止は305msで取消/子taskをjoin。全fixtureは9.699秒、関連RSS最大784,224KiB、全guard terminal/ownedPids空・publisher正常終了であり、検索/hookの時間ではない。

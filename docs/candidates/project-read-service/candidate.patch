@@ -1,0 +1,409 @@
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.PublicationWire
+ public import Eggshell.ProjectPublication
++public import Eggshell.ProjectRead
+ public import Eggshell.PreparationService
+ public import Eggshell.OperationPool
+ public import tools.research.SharedReadViews
+@@ -888,18 +889,18 @@
+     let json ← IO.ofExcept (Json.parse text)
+     let secret ← IO.ofExcept (json.getObjValAs? String "secret")
+     let kind ← IO.ofExcept (json.getObjValAs? String "kind")
+-    unless (kind == "worker-exchange") == operationsOnly do
++    unless (["worker-exchange","project-query"].contains kind) == operationsOnly do
+       throw (IO.userError "operation used the wrong service listener")
+     let profileDecoded ← IO.monoMsNow
+-    let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
++    let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange","project-query"].contains kind
+     streamed.set streamedRead
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-publish","project-query"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+     replyDeadline.set deadline
+-    let replyCharge := if streamedRead && kind != "worker-exchange" then Stream.maxBytes else 65536
++    let replyCharge := if streamedRead && !["worker-exchange","project-query"].contains kind then Stream.maxBytes else 65536
+     if !["source-palette","source-palettes","source-plan"].contains kind then
+       reserveReply server replyCharge deadline
+       reservedReply.set replyCharge
+@@ -915,6 +916,9 @@
+       else if kind == "source-release" then releasePalette server secret payload
+       else if kind == "source-bindings" then sourceBindings server secret payload deadline
+       else if kind == "release-retained-source" then releaseRetainedSource server secret payload
++      else if kind == "project-query" then do
++        let request ← IO.ofExcept (payload.getObjVal? "request" >>= fromJson? (α := Read.Request))
++        toJson <$> Read.query server.owned server.operations.readers request cancelled deadline
+       else if kind == "project-read-pin" then do
+         let identity ← IO.ofExcept (payload.getObjValAs? String "database")
+         toJson <$> server.owned.pinRead identity secret deadline
+@@ -979,7 +983,7 @@
+       reserveReply server replyCharge deadline
+       reservedReply.set replyCharge
+     let encoded ← (← IO.mkRef value.compress).get
+-    if kind == "worker-exchange" then
++    if ["worker-exchange","project-query"].contains kind then
+       let charge ← reservedReply.get
+       let needed := min Stream.chunkBytes encoded.utf8ByteSize
+       if needed > charge then
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -9,6 +9,7 @@
+ public import Eggshell.SynapticBindings
+ public import tools.research.SourceViewBatch
+ public import Eggshell.OperationWire
++public import Eggshell.ProjectReadWire
+ public import Eggshell.PreparationPlan
+ 
+ @[expose] public section
+@@ -686,6 +687,20 @@
+   unless cut.inScope granted.manifest do throw (IO.userError "read project pin omitted or mixed original owners")
+   return cut
+ 
++def readProjectAdvice (requests : Array (ReadGrant × ProjectStore.Cut)) (question : Read.Question)
++    (deadline : Nat) : IO Read.Response := do
++  unless question.valid && !requests.isEmpty && requests.all (fun (grant,cut) => cut.inScope grant.manifest) do
++    throw (IO.userError "project query changed its complete authorized boundary")
++  let endpoint ← operationEndpoint
++  let request : Read.Request := ⟨requests.map (fun (grant,cut) => ⟨grant.manifest.identity,grant.capability,cut⟩),question⟩
++  let budget ← liveBudget deadline
++  let response ← Stream.exchange endpoint "project-query" (Json.mkObj [
++    ("request",toJson request),("budgetMs",toJson budget)]) budget
++  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := Read.Response))
++  unless result.check question (requests.map fun (grant,cut) => Read.image grant.manifest cut) do
++    throw (IO.userError "project query response changed its original inputs or question")
++  return result
++
+ def readImage (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut) : ProjectInputs.Image :=
+   ⟨manifest.identity,ProjectStore.manifestChecksum manifest,cut⟩
+ 
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -121,6 +121,11 @@
+ /-- Installation paths and copy mtimes are not service generations. The same
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
++  (include_str "ProjectRead.lean").toUTF8,
++  (include_str "ProjectReadWire.lean").toUTF8,
++  (include_str "SynapseRecommend.lean").toUTF8,
++  (include_str "SynapticTransport.lean").toUTF8,
++  (include_str "SynapseTransport.lean").toUTF8,
+   (include_str "../tools/research/CheckedOriginalRecipe.lean").toUTF8,
+   (include_str "Handoff.lean").toUTF8,
+   (include_str "BuiltinSearch.lean").toUTF8,(include_str "KeyedSearchClient.lean").toUTF8,
+--- a/Eggshell/ProjectGateway.lean
++++ b/Eggshell/ProjectGateway.lean
+@@ -20,6 +20,7 @@
+   deriving FromJson, ToJson
+ structure Catalog where
+   projects : Array Entry
++  policy : Read.Policy
+   deriving FromJson, ToJson
+ structure Selection where
+   read : Array String
+@@ -33,6 +34,7 @@
+   protocol : String
+   projects : Array NamedManifest
+   write : Option String
++  policy : Read.Policy
+   deriving FromJson, ToJson
+ structure NamedCut where
+   name : String
+@@ -83,7 +85,7 @@
+       · simp [writeFor,saved,same] at accepted
+ 
+ def openScope (endpoint : Daemon.Endpoint) (catalog : Catalog) (selection : Selection) : IO Scope := do
+-  unless catalog.projects.size ≤ 64 && (catalog.projects.toList.map (·.name)).Nodup &&
++  unless catalog.policy.valid && catalog.projects.size ≤ 64 && (catalog.projects.toList.map (·.name)).Nodup &&
+       catalog.projects.all (fun entry => !entry.name.isEmpty && (!entry.writable || entry.readable)) &&
+       selection.read.size ≤ 64 && selection.read.toList.Nodup &&
+       selection.write.all selection.read.contains do throw (IO.userError "invalid project selection")
+@@ -105,7 +107,7 @@
+       writer := some ⟨name,grant⟩
+   unless ((descriptions.map (·.manifest.identity)).toList).Nodup do
+     throw (IO.userError "project aliases repeat one physical inventory")
+-  let descriptor : Descriptor := ⟨implementation,descriptions,selection.write⟩
++  let descriptor : Descriptor := ⟨implementation,descriptions,selection.write,catalog.policy⟩
+   let key := Blake3.hex (Blake3.digest "eggshell.project-gateway-scope".toUTF8 [(toJson descriptor).compress.toUTF8])
+   return ⟨descriptor,key,readers,writer⟩
+ 
+@@ -120,6 +122,7 @@
+   | open (selection : Selection)
+   | pin
+   | publish (target : String) (boundary : Boundary) (capsule : Capsule)
++  | query (boundary : Boundary) (question : Read.Question)
+   deriving FromJson, ToJson
+ structure Request where
+   id : String
+@@ -132,6 +135,11 @@
+   match operation with
+   | .open _ => throw (IO.userError "project scope is immutable for this connection")
+   | .pin => return toJson (← pin endpoint scope deadline)
++  | .query boundary question =>
++    unless boundary.inScope scope && question.policy == scope.descriptor.policy do
++      throw (IO.userError "project query changed its selected scope or host policy")
++    let requests := (boundary.projects.zip scope.readers).map fun (cut,(_,grant)) => (grant,cut.cut)
++    return toJson (← Client.readProjectAdvice requests question deadline)
+   | .publish target boundary capsule =>
+     let writer ← IO.ofExcept (writeFor scope target)
+     unless boundary.inScope scope do throw (IO.userError "publication changed its complete read boundary")
+--- a/Eggshell/ProjectGatewayPeer.lean
++++ b/Eggshell/ProjectGatewayPeer.lean
+@@ -86,6 +86,18 @@
+   unless (← IO.monoMsNow) < deadline do throw (IO.userError "project ACK arrived after its deadline")
+   return checked
+ 
++@[no_expose] def Peer.query (peer : Peer) (boundary : Boundary) (text : String) (delivered : List String)
++    (deadline : Nat) : IO Read.Response := do
++  unless peer.accepts boundary do throw (IO.userError "project query changed its complete read scope")
++  let question : Read.Question := ⟨text,delivered,peer.descriptor.policy⟩
++  unless question.valid do throw (IO.userError "project query exceeds its input or output bound")
++  let value ← peer.channel.exchange (.query boundary question) deadline
++  let response ← IO.ofExcept (fromJson? (α := Read.Response) value)
++  let images := (boundary.projects.zip peer.descriptor.projects).map fun (cut,project) =>
++    Read.image project.manifest cut.cut
++  unless response.check question images do throw (IO.userError "project query returned another question or original cut")
++  return response
++
+ /-- Command arguments are operator configuration, not tool output or request
+ text. SSH authentication/forced-command policy belongs to that deployment.
+ Child groups and pipe tasks are owned and joined on every exit. -/
+@@ -101,7 +113,7 @@
+   try
+     let value ← channel.exchange (.open selection) deadline
+     let descriptor ← IO.ofExcept (fromJson? (α := Descriptor) value)
+-    unless descriptor.protocol == implementation && descriptor.projects.map (·.name) == selection.read && descriptor.write == selection.write &&
++    unless descriptor.protocol == implementation && descriptor.policy.valid && descriptor.projects.map (·.name) == selection.read && descriptor.write == selection.write &&
+       descriptor.projects.all (fun project => decide project.manifest.Valid) &&
+       (descriptor.projects.toList.map (·.manifest.identity)).Nodup do
+       throw (IO.userError "project service changed its selected inventory")
+--- a/Eggshell/SynapseRecommend.lean
++++ b/Eggshell/SynapseRecommend.lean
+@@ -206,6 +206,18 @@
+   failure : Option String := none
+   canonical : Option Plugin.Publication.Client.SourceReference := none
+   canonicalFailure : Option String := none
++
++/-- A genuinely empty original tree is the empty contribution, not a missing
++index. Any original tree, private usage or explicit preparation error excludes it. -/
++def Prepared.emptyOriginal (prepared : Prepared) : Bool :=
++  prepared.source.head.root.isNone && prepared.shared.isNone && prepared.usage.isNone &&
++    prepared.failure.isNone && prepared.canonical.isNone && prepared.canonicalFailure.isNone
++
++theorem Prepared.emptyOriginal_no_tree (prepared : Prepared) (empty : prepared.emptyOriginal = true) :
++    prepared.source.head.root = none := by
++  cases root : prepared.source.head.root with
++  | none => rfl
++  | some tree => simp [Prepared.emptyOriginal,root] at empty
+ 
+ /-- Read existing authenticated views without selecting a write destination.
+ A read-only profile may reuse DB-owned preparation. Private views remain the
+--- a/Eggshell/SynapticTransport.lean
++++ b/Eggshell/SynapticTransport.lean
+@@ -53,6 +53,7 @@
+ index. Missing or stale preparation is explicit; a hook never rebuilds it. -/
+ def collect (prepared : Recommend.Prepared) (answers : Array (String × Nat))
+     (query : String) (deadline : Nat) (consumers : Array (Occurrence × Nat)) : IO Result := do
++  if prepared.emptyOriginal then return {}
+   let initial : Result := {index := prepared.shared.map (·.index.head),usage := prepared.usage.map (·.index.head)}
+   if prepared.failure.isSome then return {initial with complete := false,available := false,failure := prepared.failure}
+   let some shared := prepared.shared | return {initial with complete := false,available := false,failure := some "source-index-unavailable"}
+@@ -74,6 +75,17 @@
+       routing := some routing.snapshot.head,usageRouting := usage.map (·.snapshot.head)}
+   catch error => return {initial with complete := false,failure := some s!"routing-read: {error}"}
+ 
++theorem empty_original_collection (prepared : Recommend.Prepared) (answers query deadline consumers)
++    (empty : prepared.emptyOriginal = true) : collect prepared answers query deadline consumers = pure ({} : Result) := by
++  simp [collect,empty]
++
++theorem missing_nonempty_collection (prepared : Recommend.Prepared) (answers query deadline consumers)
++    (notEmpty : prepared.emptyOriginal = false) (missing : prepared.shared = none) (clean : prepared.failure = none) :
++    collect prepared answers query deadline consumers = pure ({
++      usage := prepared.usage.map (·.index.head),
++      complete := false,available := false,failure := some "source-index-unavailable"} : Result) := by
++  simp [collect,notEmpty,missing,clean]
++
+ /-- A hint cannot supply coordinates. Original rows independently establish
+ the range, owner and bytes even if the advisory projection is malformed. -/
+ structure Located where
+--- a/Eggshell/SynapseTransport.lean
++++ b/Eggshell/SynapseTransport.lean
+@@ -151,7 +151,23 @@
+ 
+ theorem unprepared_binding_projection (wanted : Array Range) (allowed : Std.HashSet String) (deadline : Nat) :
+     bindingProjection none wanted allowed deadline = pure ({complete := false} : IndexedBindings.Resolved) := rfl
++
++/-- Keep empty owners in the complete read inventory. Only an authenticated
++empty original with no requested range contributes the identity projection. -/
++def originalBindings (source : Recommend.Prepared) (wanted : Array Range)
++    (allowed : Std.HashSet String) (deadline : Nat) : IO IndexedBindings.Resolved :=
++  if source.emptyOriginal && wanted.isEmpty then pure {}
++  else bindingProjection source.canonical wanted allowed deadline
++
++theorem empty_original_bindings (source : Recommend.Prepared) (allowed deadline)
++    (empty : source.emptyOriginal = true) : originalBindings source #[] allowed deadline = pure ({} : IndexedBindings.Resolved) := by
++  simp [originalBindings,empty]
+ 
++theorem requested_original_bindings (source : Recommend.Prepared) (wanted : Array Range) (allowed deadline)
++    (requested : wanted.isEmpty = false) : originalBindings source wanted allowed deadline =
++      bindingProjection source.canonical wanted allowed deadline := by
++  simp [originalBindings,requested]
++
+ def sourceViews (prepared : Array Recommend.Prepared) (owners : Array Owner) :
+     Array (Plugin.Publication.Client.SourceReference × Array String) :=
+   prepared.filterMap fun source => do
+@@ -217,7 +233,7 @@
+       else allowed) ({} : Std.HashSet String)
+     let resolved ←
+       if result.complete && result.available && result.failure.isNone then
+-        bindingProjection source.canonical wanted allowed deadline
++        originalBindings source wanted allowed deadline
+       else pure ({} : IndexedBindings.Resolved)
+     plan := {plan with
+       bindingComplete := plan.bindingComplete && resolved.complete
+--- /dev/null
++++ b/Eggshell/ProjectReadWire.lean
+@@ -0,0 +1,55 @@
++module
++public import Eggshell.PublicationWire
++@[expose] public section
++namespace Eggshell.Plugin.Publication.Read
++open Lean DB
++structure Policy where
++  chars : Nat := 120000
++  numeric : Bool := true
++  deriving ToJson, FromJson, BEq
++def Policy.valid (policy : Policy) : Bool := 0 < policy.chars && policy.chars ≤ 500000
++structure Question where
++  text : String
++  delivered : List String
++  policy : Policy
++  deriving ToJson, FromJson
++def Question.valid (question : Question) : Bool :=
++  !question.text.isEmpty && question.text.utf8ByteSize ≤ 65536 && question.policy.valid &&
++  question.delivered.length ≤ 4096 && question.delivered.all (fun key => key.utf8ByteSize ≤ 1024)
++structure Request where
++  reads : Array ReadInput
++  question : Question
++  deriving ToJson, FromJson
++def image (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut) : ProjectInputs.Image :=
++  ⟨manifest.identity,ProjectStore.manifestChecksum manifest,cut⟩
++theorem image_keeps_inventory (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut) :
++    (image manifest cut).inventory = ProjectStore.manifestChecksum manifest := rfl
++def requestKey (question : Question) (inputs : String) :=
++  Blake3.hex (Blake3.digest "eggshell.project-read-question".toUTF8 [(toJson (question,inputs)).compress.toUTF8])
++/-- Advisory originals have no constructor or flag that can stop current Work.
++Client-local Exact/freshness checks remain a separate authority path. -/
++structure Advice where
++  text : String
++  reason : String
++  delivered : List String
++  advisory : Nat
++  synapticComplete : Bool
++  search : Option SearchTrace
++  deriving ToJson, FromJson
++def Advice.completed (_ : Advice) : Nat := 0
++def Advice.blocksCurrent (_ : Advice) : Bool := false
++theorem advice_never_completes (advice : Advice) : advice.completed = 0 ∧ advice.blocksCurrent = false := ⟨rfl,rfl⟩
++structure Response where
++  inputs : String
++  question : String
++  advice : Option Advice
++  deriving ToJson, FromJson
++def Response.check (response : Response) (question : Question) (images : Array ProjectInputs.Image) : Bool :=
++  response.inputs == ProjectInputs.digest images && response.question == requestKey question response.inputs &&
++    response.advice.all (fun advice => advice.text.length ≤ question.policy.chars &&
++      advice.text.utf8ByteSize ≤ 4*question.policy.chars && advice.reason != "search-incomplete")
++theorem response_keeps_inputs (response : Response) (question : Question) (images : Array ProjectInputs.Image)
++    (accepted : response.check question images = true) : response.inputs = ProjectInputs.digest images := by
++  simp only [Response.check,Bool.and_eq_true,beq_iff_eq] at accepted
++  exact accepted.1.1
++end Eggshell.Plugin.Publication.Read
+--- /dev/null
++++ b/Eggshell/ProjectRead.lean
+@@ -0,0 +1,81 @@
++module
++public import Eggshell.ProjectReadWire
++public import Eggshell.ProjectPublication
++public import Eggshell.SearchReaders
++public import Eggshell.Handoff
++@[expose] public section
++namespace Eggshell.Plugin.Publication.Read
++open Lean DB
++def advice (handoff : Handoff) : Except String Advice := do
++  unless handoff.completed == 0 && !handoff.blocksCurrent && handoff.localUnions == 0 &&
++      handoff.reason != "search-incomplete" do throw "shared advisory query did not finish without completion authority"
++  return ⟨handoff.text,handoff.reason,handoff.deliveredGraphs,handoff.advisory,handoff.synapticComplete,handoff.search⟩
++/-- Reuse complete project images and the public-reader coordinator already
++owned by the service. Mutable reader state is forked for each request. -/
++def query (pool : Owned.Pool) (readers : SearchReaders.Coordinator) (request : Request)
++    (cancelled : IO.Ref Bool) (deadline : Nat) : IO Response := do
++  unless request.question.valid && 0 < request.reads.size && request.reads.size ≤ 64 &&
++      (request.reads.toList.map (·.database)).Nodup do throw (IO.userError "invalid project read request")
++  let held ← IO.mkRef (#[] : Array ProjectViews.Borrow)
++  try
++    let mut sources : Array PageMap.Snapshot := #[]
++    let mut images : Array ProjectInputs.Image := #[]
++    let mut names : List Config.Egg := []
++    for input in request.reads do
++      TaskDeadline.ensureLive deadline
++      unless !(← cancelled.get) do throw (IO.userError "project read cancelled")
++      let registered ← pool.readProject input.database input.capability
++      let borrow ← pool.views.acquire registered.project input.cut deadline
++      held.modify (·.push borrow)
++      let (originals,image) ← borrow.withReader fun view => pure (view.sources,ProjectInputs.ofView view)
++      images := images.push image
++      for slot in [:originals.size] do
++        let some source := originals[slot]? | throw (IO.userError "project view omitted an original owner")
++        sources := sources.push source
++        names := names++[⟨input.database++":"++toString slot,source.directory⟩]
++    let mut inputs : Array PreparedInputs.Reference := #[]
++    for source in sources do
++      let some input ← PreparedInputs.loadStored? source .database MiniLM.model SearchProvider.encoderContract |
++        throw (IO.userError "project read is waiting for publication preparation")
++      let input := {input with usage := none}
++      unless input.sharedSafe do throw (IO.userError "project reader contains private preparation")
++      inputs := inputs.push input
++    let owners ← OwnerViews.load? sources
++    let frame ← PreparedReaders.Frame.capture sources inputs owners
++    let session ← readers.borrow frame deadline cancelled
++    let prepared ← session.pool.acquire session.sources inputs owners
++    let synaptic ← Synapses.Recommend.prepareMany session.sources (some inputs) deadline (some prepared)
++    try
++      unless synaptic.all (·.failure.isNone) do throw (IO.userError "project read omitted a prepared synaptic source")
++      let executable ← IO.appPath
++      let selection : Config.Selection := {
++        label := "project-service",semanticMatcher := if request.question.policy.numeric then
++          some [executable.toString,"search-provider"] else none
++        read := names,write := none,handoffChars := request.question.policy.chars,localUnion := false }
++      let started ← IO.monoMsNow
++      let semanticReady ← IO.mkRef (none : Option Nat)
++      let result ← computeAutomaticHandoff selection (session.sources.toList.map some) request.question.text
++        request.question.delivered false (enableLocalUnion := false) (meaningQuery := some request.question.text)
++        (synaptic := synaptic) (upstreamDeadline := some deadline) (queryInputs := some inputs)
++        (queryOwners := owners) (preparedReaders := some prepared)
++        (onSemanticReady := do semanticReady.set (some (← IO.monoMsNow)))
++      TaskDeadline.ensureLive deadline
++      unless !(← cancelled.get) do throw (IO.userError "project read cancelled before delivery")
++      let ended ← IO.monoMsNow
++      let completed ← semanticReady.get
++      let trace : SearchTrace := {
++        semantic := if !request.question.policy.numeric then .notRequested
++          else if completed.isSome then .completed else .failed
++        route := if request.question.policy.numeric then .configured else .lexical
++        semanticMs := if request.question.policy.numeric then completed.getD ended-started else 0
++        lexicalMs := if request.question.policy.numeric then 0 else ended-started }
++      let body ← IO.ofExcept (result.mapM fun handoff => advice {handoff with search := some trace})
++      let stamp := ProjectInputs.digest images
++      let response : Response := ⟨stamp,requestKey request.question stamp,body⟩
++      unless response.check request.question images do throw (IO.userError "project read response changed its input boundary")
++      return response
++    finally
++      Synapses.Recommend.releaseMany synaptic ((← IO.monoMsNow)+1000)
++  finally
++    for borrow in ← held.get do borrow.release
++end Eggshell.Plugin.Publication.Read
