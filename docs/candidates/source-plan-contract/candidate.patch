@@ -1,0 +1,31 @@
+--- a/tools/research/PreparedOwnerArena.lean
++++ b/tools/research/PreparedOwnerArena.lean
+@@ -5,0 +6 @@
++public import Eggshell.SourcePlanContract
+@@ -38,4 +39,7 @@
+-    (metadata : PublishedPlanMetadata.Stored) : Except String Ready := do
+-  let ready ← prepare database owner stored
+-  let _ ← PublishedPlanMetadata.check ready.owner ready.stored ready.layout metadata
+-  return ready
++    (metadata : PublishedPlanMetadata.Stored) : Except String Ready :=
++  match prepare database owner stored with
++  | .error message => .error message
++  | .ok ready =>
++    match SourcePlanContract.check ready.owner ready.stored.rows metadata with
++    | .error message => .error message
++    | .ok _ => .ok ready
+@@ -42,0 +47,14 @@
++theorem published_result_checked (database owner : String) (stored : CanonicalSource.Recipe.Stored)
++    (metadata : PublishedPlanMetadata.Stored) (ready : Ready)
++    (accepted : preparePublished database owner stored metadata = .ok ready) :
++    ∃ witness, SourcePlanContract.check ready.owner ready.stored.rows metadata = .ok witness := by
++  cases produced : prepare database owner stored with
++  | error message => simp [preparePublished,produced] at accepted
++  | ok original =>
++    cases validated : SourcePlanContract.check original.owner original.stored.rows metadata with
++    | error message => simp [preparePublished,produced,validated] at accepted
++    | ok witness =>
++      have same : original = ready := by simpa [preparePublished,produced,validated] using accepted
++      cases same
++      exact ⟨witness,validated⟩
++

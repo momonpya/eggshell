@@ -15,7 +15,10 @@ structure Plan where
   workspace : String
   root : String
   records : String
+  project : Option String := none
   deriving FromJson, ToJson
+def Plan.projectPath (plan : Plan) : System.FilePath :=
+  plan.project.map System.FilePath.mk |>.getD (System.FilePath.mk plan.root/"llvm.egg")
 structure Definition where
   topic : Nat
   prompt : StudyAdmission.Artifact
@@ -52,15 +55,16 @@ def prepare (input : String) : IO Unit := do
   check (!(← root.pathExists) && (← records.isDir)) "fresh LLVM project capture required"
   IO.FS.createDirAll (root/"commands")
   IO.FS.createDirAll (root/"tmp")
-  let projectPath := root/"llvm.egg"
+  let projectPath := plan.projectPath
   let runtime := plan.installation.runtime.path
   IO.FS.writeFile (root/"host.toml") ("default = \"work\"\nsemantic_matcher = "++
     (toJson #[runtime,"search-provider"]).compress++"\n[eggs]\nllvm = "++
     (toJson projectPath.toString).compress++"\n[profiles.work]\nread = [\"llvm\"]\nhandoff_chars = 120000\n")
-  let captured ← StudyCommand.run (plan.installation.pluginRoot++"/bin/egg")
-    #["snapshot",plan.original,projectPath.toString] (environment plan (root/"host")) plan.workspace ""
-    (root/"commands/snapshot") 180000
-  check (captured.exitCode == 0 && captured.stderr.isEmpty) ("actual egg snapshot failed: "++captured.stderr)
+  if plan.project.isNone then
+    let captured ← StudyCommand.run (plan.installation.pluginRoot++"/bin/egg")
+      #["snapshot",plan.original,projectPath.toString] (environment plan (root/"host")) plan.workspace ""
+      (root/"commands/snapshot") 180000
+    check (captured.exitCode == 0 && captured.stderr.isEmpty) ("actual egg snapshot failed: "++captured.stderr)
   let project ← ProjectStore.openProject projectPath
   let source ← project.current 0
   let original ← DB.PageMap.pin (.mk plan.original)
@@ -99,7 +103,7 @@ def run (input : String) : IO Unit := do
   let frozen ← read (records/"before-delivery.json")
   check (frozen.getObjValD "frozenBeforeAnyQueryOrWarm" == toJson true) "evidence denominator was not frozen first"
   let topics ← IO.ofExcept ((frozen.getObjValD "topics").getArr?)
-  let project ← ProjectStore.openProject (root/"llvm.egg")
+  let project ← ProjectStore.openProject plan.projectPath
   check (toJson (← project.current 0).head == frozen.getObjValD "capturedHead") "captured source head changed"
   let data := root/"client"
   check ((← Paths.dataRoot) == data && !(← (records/"result.json").pathExists)) "isolated fresh LLVM clients required"
@@ -178,7 +182,7 @@ def diagnose (input : String) : IO Unit := do
   let topics ← IO.ofExcept ((frozen.getObjValD "topics").getArr?)
   let some topic := topics[0]? | throw (IO.userError "missing fixed first topic")
   let question ← IO.ofExcept ((topic.getObjValD "specification").getObjValAs? String "prompt")
-  let project ← ProjectStore.openProject (root/"llvm.egg")
+  let project ← ProjectStore.openProject plan.projectPath
   let service ← StudyRuntime.startPublisher (.mk plan.installation.runtime.path) (root/"host") (environment plan (root/"host"))
   let coordinator ← SearchReaders.Coordinator.new
   try
