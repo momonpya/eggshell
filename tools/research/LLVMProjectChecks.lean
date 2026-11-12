@@ -3,6 +3,7 @@ import Eggshell.ContractAudit
 import tools.research.RegisteredHook
 import tools.research.NativeTrialAudit
 import tools.research.StudyRuntime
+import tools.research.StudyLaunchers
 
 open Lean Eggshell Eggshell.Plugin Eggshell.Research
 namespace LLVMProjectChecks
@@ -229,6 +230,18 @@ def diagnose (input : String) : IO Unit := do
 end LLVMProjectChecks
 
 def main : List String → IO UInt32
+  | ["bind",directory,inherited] => do
+    let target : System.FilePath := .mk directory
+    let parent : System.FilePath := .mk inherited
+    unless target.isAbsolute && parent.isAbsolute && target != parent do
+      throw (IO.userError "isolated launcher binding required")
+    for name in ["egg","eggshelld"] do
+      let relative := "plugins/eggshell/bin/"++name
+      unless (← IO.FS.readFile (target/relative)) == (← IO.FS.readFile (parent/relative)) do
+        throw (IO.userError "copied launcher changed before binding")
+      Install.writeExecutable (target/relative) (Install.pluginLauncher target)
+    StudyLaunchers.verify target
+    return 0
   | ["prepare",input] => do LLVMProjectChecks.prepare input; return 0
   | ["run",input] => do LLVMProjectChecks.run input; return 0
   | ["diagnose",input] => do LLVMProjectChecks.diagnose input; return 0

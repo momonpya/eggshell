@@ -1,0 +1,113 @@
+--- a/tools/research/PreparedSourceView.lean
++++ b/tools/research/PreparedSourceView.lean
+@@ -6,0 +7 @@
++public import Eggshell.ProducerWindows
+@@ -44,0 +46 @@
++  prerequisites : Array Nat
+@@ -58,0 +61,15 @@
++def planForOwner (owner : String) (stored : Recipe.Stored) (layout : Recipe.Checked stored.rows)
++    (focus : Option PreparedFocusFacts.Stored) (geometry : Option (Nat × Nat)) : PublishedPlanMetadata.Stored :=
++  let base := (PublishedPlanMetadata.prepare owner stored layout).metadata
++  match geometry with
++  | none => base
++  | some (workChars,sourceChars) => {base with
++      units := ProducerWindows.units owner stored layout workChars sourceChars
++        ((focus.map (·.originalWindows.length)).getD 0)}
++
++theorem planForOwner_costs (owner : String) (stored : Recipe.Stored) (layout : Recipe.Checked stored.rows)
++    (focus : Option PreparedFocusFacts.Stored) (geometry : Option (Nat × Nat)) :
++    (planForOwner owner stored layout focus geometry).costs =
++      (PublishedPlanMetadata.prepare owner stored layout).metadata.costs := by
++  cases geometry <;> rfl
++
+@@ -60 +77 @@
+-    (focus : Option PreparedFocusFacts.Stored := none) : OwnerStored :=
++    (focus : Option PreparedFocusFacts.Stored := none) (geometry : Option (Nat × Nat) := none) : OwnerStored :=
+@@ -63,3 +80,5 @@
+-  ⟨(PublishedPlanMetadata.prepare owner stored layout).metadata,
+-    OwnerPalette.describe stored layout,layout.records.map (fun record => record.payload.map Fin.val),
+-    files.toArray.map (fun (file,rows) => (file,compileExtents rows)),focus⟩
++  let plan := planForOwner owner stored layout focus geometry
++  let descriptor := {OwnerPalette.describe stored layout with catalogue := plan.units.toList.map (·.indices)}
++  ⟨plan,descriptor,layout.records.map (fun record => record.payload.map Fin.val),
++    files.toArray.map (fun (file,rows) => (file,compileExtents rows)),focus,
++    ProducerWindows.prerequisites plan.costs plan.units⟩
+@@ -66,0 +86,10 @@
++theorem owner_stored_costs_for_geometry (owner : String) (stored : Recipe.Stored)
++    (layout : Recipe.Checked stored.rows) (focus : Option PreparedFocusFacts.Stored)
++    (geometry : Option (Nat × Nat)) :
++    (ownerStored owner stored layout focus geometry).plan.costs = stored.rows.map (fun row =>
++      ((Packet.rowText row).length,(Packet.rowText row).utf8ByteSize)) :=
++  by
++    change (planForOwner owner stored layout focus geometry).costs = _
++    rw [planForOwner_costs]
++    exact (PublishedPlanMetadata.prepare owner stored layout).costs_exact
++
+@@ -70 +99 @@
+-  by simpa only [ownerStored] using (PublishedPlanMetadata.prepare owner stored layout).costs_exact
++  owner_stored_costs_for_geometry owner stored layout none none
+@@ -74,0 +104,3 @@
++      stored.prerequisites.size == stored.descriptor.rows.size &&
++      (stored.prerequisites.zipIdx.all fun (unit,row) =>
++        (stored.plan.units[unit]?).any (fun basis => basis.indices.contains row)) &&
+@@ -91,2 +123 @@
+-  let bytes := json.compress.utf8ByteSize+
+-    (stored.focus.map (fun facts => (toJson facts).compress.utf8ByteSize)).getD 0
++  let bytes := (toJson stored).compress.utf8ByteSize
+@@ -98 +129 @@
+-    (focus : Option PreparedFocusFacts.Stored := none) : IO Unit := do
++    (focus : Option PreparedFocusFacts.Stored := none) (geometry : Option (Nat × Nat) := none) : IO Unit := do
+@@ -102 +133 @@
+-  let bytes := (toJson (ownerStored owner stored layout focus)).compress.toUTF8
++  let bytes := (toJson (ownerStored owner stored layout focus geometry)).compress.toUTF8
+@@ -133,2 +164,4 @@
+-  let selected := hashDistinct (requested ++ (ready.stored.records.filter fun record =>
+-    record.any requested.contains).flatten)
++  let required ← requested.mapM fun index => do
++    let basis ← requireSome ready.stored.prerequisites[index]? "prepared row has no producer basis"
++    return (← requireSome ready.stored.plan.units[basis]? "prepared row basis escaped its units").indices
++  let selected := hashDistinct required.flatten
+@@ -154,3 +187,3 @@
+-/-- A genuinely federated view remaps already-published record identities.
+-It never reconstructs boundaries from code. Singleton coverage is retained
+-for rows without a bounded record in the joined view. -/
++/-- A federated view remaps already-published producer units by original row
++identity. It never reconstructs boundaries from code. Rows not covered by an
++inherited unit remain available in the authorized joined view. -/
+@@ -170,10 +203,4 @@
+-  let mut records := []
+-  for part in parts do
+-    for record in part.stored.records do
+-      let remapped ← record.mapM fun index => do
+-        let row ← requireSome (part.rows[index]?) "federated record escaped its owner"
+-        requireSome positions[row.key]? "federation lost an original record row"
+-      records := records ++ [remapped]
+-  records := hashDistinct records
+-  let covered := Std.HashSet.ofList records.flatten
+-  let catalogue := records ++ (Array.range rows.size).toList.filterMap fun index =>
++  let inherited ← parts.toList.flatMapM fun part => part.units.toList.mapM fun unit =>
++    unit.keys.toList.mapM fun key => requireSome positions[key]? "federation lost an original producer window"
++  let covered := Std.HashSet.ofList inherited.flatten
++  let catalogue := inherited ++ (Array.range rows.size).toList.filterMap fun index =>
+@@ -180,0 +208,3 @@
++  let basisUnits := catalogue.toArray.map fun indices =>
++    ({indices,ranges := []} : PublishedPlanMetadata.Unit)
++  let prerequisites := ProducerWindows.prerequisites (rows.map (·.cost)) basisUnits
+@@ -183,2 +213,2 @@
+-  let make := fun (spans : List (Nat × Nat)) =>
+-    let indices := (Array.range rows.size).toList.filter fun index => (rows[index]?).any fun row =>
++  let make := fun (spans : List (Nat × Nat)) => do
++    let requested := (Array.range rows.size).toList.filter fun index => (rows[index]?).any fun row =>
+@@ -187,2 +217,4 @@
+-    federatedUnit? owner rows (hashDistinct (indices ++
+-      (records.filter (fun record => record.any indices.contains)).flatten))
++    let required ← requested.mapM fun index => do
++      let basis ← requireSome prerequisites[index]? "federated row has no producer basis"
++      return (← requireSome basisUnits[basis]? "federated row basis escaped its units").indices
++    federatedUnit? owner rows (hashDistinct required.flatten)
+--- a/Eggshell/CanonicalSourceCache.lean
++++ b/Eggshell/CanonicalSourceCache.lean
+@@ -19,0 +20 @@
++  (include_str "ProducerWindows.lean").toUTF8,
+@@ -219,0 +221 @@
++    (some ((document.workText.getD "").length,(document.source.getD "").length))
