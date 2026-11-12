@@ -2,6 +2,17 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[手動warmなしの差分保存と検索](docs/practical-runtime/automatic-publication/README.md)を、製品SHA `302ead20…` を変えずに確認した。
+空の2プロジェクト・各4所有者へ16 turnを積み増し、48観測・16回答が自動保存された。
+4保存＋10検索の混在3組は7.335 / 7.956 / 8.604秒、新規10検索4組は1.892〜2.057秒。
+全70意味検索が完了し、配送前に出版済み原文から凍結した必要項目640/640が、実本文へpath・製品fingerprint付きで届いた。
+全検索のwarm要求0、消費・支持・共引用も各所有者で維持。関連RSS標本最大3,823,408KiB、全service/guard終了0・ownedPids空。
+従来の混合試験にはwaveごとの明示warmがあり、今回の証拠を過去へ遡って適用しない。
+ただしPre 1件は `storage object mutated during read` で未完了通知を返した。終了後journal 7件は残り、保存は失われていない。
+native診断で、原子的なpath差し替えが保持中の旧FDのctimeだけを変え、正常な旧本文を読取ガードが拒否する機構を再現した。
+実失敗の対象fileまでは同定していない。次は同じFDでの有界な安定読取に修正し、外部原文の鮮度確認は維持する。
+検査器の最初のSHA-256との誤比較は記録を残し、製品のlength-bound BLAKE3へ修正。回答model・総token比較・採用は0のまま。
+
 [書込み途中から収束する終了状態](docs/candidates/terminal-closure/README.md)をLeanで隔離実装した。現行候補の製品SHAは`302ead20…`。
 親の製品関数で、pendingだけ保存されるとepochが進まないこと、stateだけなら二重に進むこと、終了済み回答の再受領でcontextが付け替わることをnativeで再現した。
 捕捉epochから終了先を固定してmaxで収束させ、再受領には最初のcontextを使う。修正版は同じ5つの書込み状態と再受領を通過した。
