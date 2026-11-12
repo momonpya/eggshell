@@ -1,0 +1,483 @@
+--- a/Eggshell/Config.lean
++++ b/Eggshell/Config.lean
+@@ -18,0 +19,5 @@
++inductive ProjectTransport where
++  | process (command : List String)
++  | connection (path : String)
++  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
++
+@@ -20 +25 @@
+-  command : List String
++  transport : ProjectTransport
+@@ -32,2 +37,2 @@
+-  /-- User-owned process transport. Read names are host catalog names. -/
+-  projectService : Option (List String) := none
++  /-- User-owned transport. Read names are host catalog names. -/
++  projectService : Option ProjectTransport := none
+@@ -160,3 +165,10 @@
+-          let command ← arrayStrings value
+-          if command.isEmpty || command.head!.isEmpty then throw "project_service must name an executable"
+-          pure (alterProfile state name fun profile => {profile with projectService := some command})
++          let transport ← if value.startsWith "[" then do
++            let command ← arrayStrings value
++            if command.isEmpty || command.head!.isEmpty then throw "project_service must name an executable"
++            pure (ProjectTransport.process command)
++          else do
++            let path ← unquote value
++            unless (System.FilePath.mk path).isAbsolute do
++              throw "project_service connection file must be an absolute path"
++            pure (ProjectTransport.connection path)
++          pure (alterProfile state name fun profile => {profile with projectService := some transport})
+@@ -328 +340 @@
+-  if let some command := profile.projectService then
++  if let some transport := profile.projectService then
+@@ -330 +342 @@
+-    unless !command.isEmpty && !command.head!.isEmpty && !projects.isEmpty &&
++    unless !projects.isEmpty &&
+@@ -340 +352 @@
+-      service := some ⟨command,projects,profile.write⟩ }
++      service := some ⟨transport,projects,profile.write⟩ }
+--- a/Eggshell/ProjectGateway.lean
++++ b/Eggshell/ProjectGateway.lean
+@@ -11 +11,2 @@
+-  (include_str "ProcessGroup.lean").toUTF8,
++  (include_str "ProcessGroup.lean").toUTF8,(include_str "OwnedSocket.lean").toUTF8,
++  (include_str "Storage/socket.c").toUTF8,
+@@ -77,0 +79,4 @@
++def Catalog.valid (catalog : Catalog) : Bool :=
++  catalog.policy.valid && catalog.projects.size ≤ 64 && (catalog.projects.toList.map (·.name)).Nodup &&
++    catalog.projects.all (fun entry => !entry.name.isEmpty && (!entry.writable || entry.readable))
++
+@@ -110,3 +115,3 @@
+-def openScope (endpoint : Daemon.Endpoint) (catalog : Catalog) (selection : Selection) : IO Scope := do
+-  unless catalog.policy.valid && catalog.projects.size ≤ 64 && (catalog.projects.toList.map (·.name)).Nodup &&
+-      catalog.projects.all (fun entry => !entry.name.isEmpty && (!entry.writable || entry.readable)) &&
++def openScopeUsing (catalog : Catalog) (selection : Selection)
++    (readProject : Entry → IO ReadGrant) (writeProject : Entry → IO ProjectGrant) : IO Scope := do
++  unless catalog.valid &&
+@@ -122,3 +127,2 @@
+-    let project ← ProjectStore.openProject (.mk entry.directory)
+-    let read ← Client.registerReadProject endpoint project.directory project.manifest.identity
+-    unless read.manifest == project.manifest do throw (IO.userError "read inventory changed")
++    let read ← readProject entry
++    unless decide read.manifest.Valid do throw (IO.userError "invalid read inventory")
+@@ -128 +132 @@
+-      let grant ← Client.registerProject endpoint project.directory project.manifest.identity
++      let grant ← writeProject entry
+@@ -137 +141,19 @@
+-def pin (endpoint : Daemon.Endpoint) (scope : Scope) (deadline : Nat) : IO Boundary := do
++def openScope (endpoint : Daemon.Endpoint) (catalog : Catalog) (selection : Selection) : IO Scope :=
++  openScopeUsing catalog selection (fun entry => do
++    let project ← ProjectStore.openProject (.mk entry.directory)
++    let grant ← Client.registerReadProject endpoint project.directory project.manifest.identity
++    unless grant.manifest == project.manifest do throw (IO.userError "read inventory changed")
++    return grant) (fun entry => do
++    let project ← ProjectStore.openProject (.mk entry.directory)
++    Client.registerProject endpoint project.directory project.manifest.identity)
++
++/-- Both transports execute this one checked operation plan. Private grants
++remain on the host; only the executor decides how an admitted job runs. -/
++structure Executor where
++  pin : ReadGrant → Nat → IO (ProjectStore.Cut × Array ProjectReadSnapshot.Pin)
++  query : Array (ReadGrant × ProjectStore.Cut) → Read.Question →
++    Array (Array ProjectReadSnapshot.Pin) → Nat → IO Read.Response
++  publish : ProjectGrant → ProjectStore.Cut → Capsule →
++    Array (ReadGrant × ProjectStore.Cut) → Nat → IO Json
++
++def pinUsing (executor : Executor) (scope : Scope) (deadline : Nat) : IO Boundary := do
+@@ -139 +161 @@
+-    let (cut,prepared) ← Client.pinPreparedProject endpoint grant deadline
++    let (cut,prepared) ← executor.pin grant deadline
+@@ -158 +180 @@
+-def execute (endpoint : Daemon.Endpoint) (scope : Scope) (operation : Operation) (deadline : Nat) : IO Json := do
++def executeUsing (executor : Executor) (scope : Scope) (operation : Operation) (deadline : Nat) : IO Json := do
+@@ -161 +183 @@
+-  | .pin => return toJson (← pin endpoint scope deadline)
++  | .pin => return toJson (← pinUsing executor scope deadline)
+@@ -166 +188 @@
+-    return toJson (← Client.readProjectAdvice requests question (boundary.projects.map (·.prepared)) deadline)
++    return toJson (← executor.query requests question (boundary.projects.map (·.prepared)) deadline)
+@@ -175 +197 @@
+-    return toJson (← Client.submitProject endpoint writer.grant original.cut capsule inputs deadline)
++    executor.publish writer.grant original.cut capsule inputs deadline
+@@ -176,0 +199,46 @@
++def remoteExecutor (endpoint : Daemon.Endpoint) : Executor := {
++  pin := Client.pinPreparedProject endpoint
++  query := Client.readProjectAdvice
++  publish := fun grant cut capsule inputs deadline =>
++    toJson <$> Client.submitProject endpoint grant cut capsule inputs deadline }
++
++def execute (endpoint : Daemon.Endpoint) (scope : Scope) (operation : Operation) (deadline : Nat) : IO Json :=
++  executeUsing (remoteExecutor endpoint) scope operation deadline
++
++theorem execute_shares_checks (endpoint : Daemon.Endpoint) (scope : Scope)
++    (operation : Operation) (deadline : Nat) :
++    execute endpoint scope operation deadline = executeUsing (remoteExecutor endpoint) scope operation deadline := rfl
++
++/-- Private startup configuration. Its paths and registration grants never
++enter a client message. Each output file delegates exactly one fixed scope. -/
++structure Delegation where
++  selection : Selection
++  capability : String
++  output : String
++  deriving FromJson, ToJson
++structure Host where
++  catalog : Catalog
++  delegations : Array Delegation
++  deriving FromJson, ToJson
++structure Hosted where
++  capability : String
++  scope : Scope
++structure Connection where
++  protocol : String
++  controlPort : Nat
++  queryPort : Nat
++  capability : String
++  deriving FromJson, ToJson
++
++def Hosted.accepts (hosted : Hosted) (selection : Selection) : Bool :=
++  hosted.scope.descriptor.projects.map (·.name) == selection.read &&
++    hosted.scope.descriptor.write == selection.write
++
++theorem delegated_keeps_writer (hosted : Hosted) (selection : Selection)
++    (accepted : hosted.accepts selection = true) : hosted.scope.descriptor.write = selection.write :=
++  beq_iff_eq.mp (Bool.and_eq_true_iff.mp accepted).2
++
++def Request.valid (request : Request) : Bool :=
++  request.protocol == implementation && !request.id.isEmpty && request.id.length ≤ 128 &&
++    0 < request.budgetMs && request.budgetMs ≤ maxBudgetMs
++
+@@ -221,2 +289 @@
+-  unless request.protocol == implementation && !request.id.isEmpty && request.id.length ≤ 128 &&
+-      0 < request.budgetMs && request.budgetMs ≤ maxBudgetMs do
++  unless request.valid do
+--- a/Eggshell/ProjectGatewayPeer.lean
++++ b/Eggshell/ProjectGatewayPeer.lean
+@@ -3,0 +4 @@
++public import Eggshell.OwnedSocket
+@@ -62 +63 @@
+-  private channel : Channel
++  private exchange : Operation → Nat → IO Json
+@@ -73 +74 @@
+-  let boundary ← IO.ofExcept (fromJson? (α := Boundary) (← peer.channel.exchange .pin deadline))
++  let boundary ← IO.ofExcept (fromJson? (α := Boundary) (← peer.exchange .pin deadline))
+@@ -86 +87 @@
+-  let result ← peer.channel.exchange (.publish target boundary capsule) deadline
++  let result ← peer.exchange (.publish target boundary capsule) deadline
+@@ -96 +97 @@
+-  let value ← peer.channel.exchange (.query boundary question) deadline
++  let value ← peer.exchange (.query boundary question) deadline
+@@ -106 +107 @@
+-@[no_expose] def withPeer (command : Array String) (selection : Selection) (deadline : Nat) (action : Peer → IO α)
++@[no_expose] def withProcessPeer (command : Array String) (selection : Selection) (deadline : Nat) (action : Peer → IO α)
+@@ -124 +125 @@
+-    action ⟨channel,descriptor,key⟩
++    action ⟨channel.exchange,descriptor,key⟩
+@@ -126,0 +128,49 @@
++
++/-- One direct exchange owns one OS connection and task. Cancellation signals
++and joins that task; there is no per-request relay process or shared queue. -/
++@[no_expose] def directExchange (connection : Connection) (cancelled : IO Bool)
++    (operation : Operation) (deadline : Nat) : IO Json := do
++  let now ← IO.monoMsNow
++  unless now < deadline && !(← cancelled) do throw (IO.userError "project connection expired or cancelled")
++  let id ← Receipt.fresh
++  let request : Request := ⟨id,implementation,min maxBudgetMs (deadline-now),operation⟩
++  let querying := match operation with | .query .. => true | _ => false
++  let kind := if querying then "gateway-query" else "gateway-call"
++  let port := if querying then connection.queryPort else connection.controlPort
++  let task ← IO.asTask (OwnedSocket.withConnection port deadline fun socket => do
++    socket.writeFrame (Json.mkObj [("secret",toJson connection.capability),("kind",toJson kind),
++      ("payload",Json.mkObj [("budgetMs",toJson request.budgetMs),("request",toJson request)])]).compress.toUTF8 deadline
++    let text ← Stream.receiveWith (socket.readFrame deadline) kind
++    let reply ← IO.ofExcept (Json.parse text >>= fromJson? (α := Reply))
++    unless reply.id == id && reply.protocol == implementation do
++      throw (IO.userError "project reply belongs to another request or implementation")
++    match reply.body with
++    | .value value => pure value
++    | .error message => throw (IO.userError message)) .dedicated
++  try
++    while !(← IO.hasFinished task) do
++      unless (← IO.monoMsNow) < deadline && !(← cancelled) do
++        throw (IO.userError "project connection expired or cancelled")
++      IO.sleep 2
++    IO.ofExcept (task.get.mapError IO.Error.toString)
++  finally
++    if !(← IO.hasFinished task) then IO.cancel task
++    discard <| IO.wait task
++
++@[no_expose] def withPeer (transport : Config.ProjectTransport) (selection : Selection) (deadline : Nat)
++    (action : Peer → IO α) (cancelled : IO Bool := pure false) : IO α := do
++  match transport with
++  | .process command => withProcessPeer command.toArray selection deadline action cancelled
++  | .connection path =>
++    let connection : Connection ← readBoundedJson (.mk path) 65536
++    unless connection.protocol == implementation && Synapses.digest connection.capability &&
++        OwnedSocket.validPort connection.controlPort && OwnedSocket.validPort connection.queryPort do
++      throw (IO.userError "invalid delegated project connection")
++    let exchange := directExchange connection cancelled
++    let descriptor ← IO.ofExcept (fromJson? (α := Descriptor) (← exchange (.open selection) deadline))
++    unless descriptor.protocol == implementation && descriptor.policy.valid &&
++        descriptor.projects.map (·.name) == selection.read && descriptor.write == selection.write &&
++        descriptor.projects.all (fun project => decide project.manifest.Valid) &&
++        (descriptor.projects.toList.map (·.manifest.identity)).Nodup do
++      throw (IO.userError "project service changed its selected inventory")
++    action ⟨exchange,descriptor,descriptor.key⟩
+--- a/Eggshell/ProjectHookRead.lean
++++ b/Eggshell/ProjectHookRead.lean
+@@ -16 +16 @@
+-    withPeer target.command.toArray ⟨target.projects.toArray,target.write⟩ deadline (fun peer => do
++    withPeer target.transport ⟨target.projects.toArray,target.write⟩ deadline (fun peer => do
+@@ -42 +42 @@
+-    withPeer target.command.toArray ⟨target.projects.toArray,target.write⟩ request.deadline (fun peer => do
++    withPeer target.transport ⟨target.projects.toArray,target.write⟩ request.deadline (fun peer => do
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -1124 +1124 @@
+-  Publication.Gateway.withPeer service.command.toArray ⟨service.projects.toArray,service.write⟩ deadline fun peer => do
++  Publication.Gateway.withPeer service.transport ⟨service.projects.toArray,service.write⟩ deadline fun peer => do
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -5,0 +6 @@
++public import Eggshell.ProjectGateway
+@@ -71,0 +73,2 @@
++  /-- Immutable, already registered authority. Readers never rebuild it. -/
++  gateways : Array Gateway.Hosted
+@@ -878,0 +882,93 @@
++/-- The host chooses scopes once at startup. Restart regenerates private
++registration capabilities and atomically republishes only delegated ports and
++tokens. No client paths or administration credentials cross this boundary. -/
++def loadGateways (server : Server) (root : System.FilePath) (controlPort queryPort : Nat) : IO Server := do
++  let path := root/"project-access.json"
++  unless ← path.pathExists do return server
++  let host : Gateway.Host ← readBoundedJson path (1024*1024)
++  unless host.catalog.valid && host.delegations.size ≤ 256 &&
++      (host.delegations.toList.map (·.capability)).Nodup &&
++      (host.delegations.toList.map (fun item => (System.FilePath.mk item.output).normalize)).Nodup &&
++      host.delegations.all (fun item => Synapses.digest item.capability &&
++        (System.FilePath.mk item.output).isAbsolute) do
++    throw (IO.userError "invalid private project-access configuration")
++  let mut registered : Array (String × ReadGrant × Option ProjectGrant) := #[]
++  for entry in host.catalog.projects do
++    if entry.readable then
++      let project ← ProjectStore.openProject (.mk entry.directory)
++      let read ← server.owned.registerRead project.directory project.manifest.identity
++      let write ← if host.delegations.any (·.selection.write == some entry.name) then do
++        unless entry.writable do throw (IO.userError "project write scope denied")
++        let grant ← server.owned.register project.directory project.manifest.identity
++        registerProjectPreparation server grant
++        pure (some grant)
++      else pure none
++      registered := registered.push (entry.name,read,write)
++  let mut ready : Array Gateway.Hosted := #[]
++  let mut exports : Array (String × Gateway.Connection) := #[]
++  for item in host.delegations do
++    let scope ← Gateway.openScopeUsing host.catalog item.selection (fun entry => do
++      let some (_,grant,_) := registered.find? (·.1 == entry.name) |
++        throw (IO.userError "project read scope denied")
++      return grant) (fun entry => do
++      let some (_,_,some grant) := registered.find? (·.1 == entry.name) |
++        throw (IO.userError "project write scope denied")
++      return grant)
++    ready := ready.push ⟨item.capability,scope⟩
++    exports := exports.push (item.output,⟨Gateway.implementation,controlPort,queryPort,item.capability⟩)
++  -- Do not expose any scope until the complete catalog has validated.
++  for (output,connection) in exports do writeJson (.mk output) connection
++  return {server with gateways := ready}
++
++/-- One native receive watches one direct caller. A disconnect cancels and
++joins its work; independent requests do not share a gateway queue or lock. -/
++def executeGateway (server : Server) (client : Socket.Client) (secret : String) (payload : Json)
++    (querying : Bool) (cancelled : IO.Ref Bool) (deadline : Nat) : IO Json := do
++  let request ← IO.ofExcept (payload.getObjVal? "request" >>= fromJson? (α := Gateway.Request))
++  unless request.valid do throw (IO.userError "invalid delegated project request")
++  let result : Except String Json ← try
++    let some hosted := server.gateways.find? (·.capability == secret) |
++      throw (IO.userError "project scope denied")
++    let isQuery := match request.operation with | .query .. => true | _ => false
++    unless isQuery == querying do throw (IO.userError "project operation used the wrong listener")
++    let executor : Gateway.Executor := {
++      pin := fun grant expires => Read.pin server.owned grant.manifest.identity grant.capability expires
++        (do return !(← cancelled.get) && !(← server.stopping.get))
++      query := fun reads question prepared expires => do
++        let request : Read.Request := ⟨reads.map (fun (grant,cut) =>
++          ⟨grant.manifest.identity,grant.capability,cut⟩),prepared,question⟩
++        Read.query server.owned server.operations.readers request cancelled expires
++      publish := fun grant cut capsule reads expires => do
++        let inputs := reads.map fun (read,cut) => (⟨read.manifest.identity,read.capability,cut⟩ : ReadInput)
++        let promise ← server.owned.submit grant.manifest.identity grant.capability capsule cut inputs expires cancelled
++        repeat
++          TaskDeadline.ensureLive expires
++          unless !(← cancelled.get) && !(← server.stopping.get) do
++            throw (IO.userError "project requester left before ACK")
++          if ← promise.isResolved then
++            let some result := promise.result?.get | throw (IO.userError "project publisher lost its ACK")
++            return ← IO.ofExcept result
++          IO.sleep 5
++        throw (IO.userError "unreachable delegated publication wait") }
++    let peer ← client.native.recv? 1
++    let work ← IO.asTask (do
++      match request.operation with
++      | .open selection =>
++        unless hosted.accepts selection do throw (IO.userError "delegated project scope is immutable")
++        return toJson hosted.scope.descriptor
++      | operation => Gateway.executeUsing executor hosted.scope operation deadline) .dedicated
++    try
++      while !(← IO.hasFinished work) do
++        unless !(← server.stopping.get) && (← IO.monoMsNow) < deadline && !(← peer.isResolved) do
++          throw (IO.userError "delegated project requester left or expired")
++        IO.sleep 2
++      TaskDeadline.ensureLive deadline
++      pure (.ok (← IO.ofExcept (work.get.mapError IO.Error.toString)))
++    finally
++      cancelled.set true
++      client.native.cancelRecv
++      if !(← IO.hasFinished work) then IO.cancel work
++      discard <| IO.wait work
++  catch _ => pure (.error "project request rejected")
++  return toJson (Gateway.response request.id result)
++
+@@ -906 +1002 @@
+-    unless (["worker-exchange","project-query"].contains kind) == operationsOnly do
++    unless (["worker-exchange","project-query","gateway-query"].contains kind) == operationsOnly do
+@@ -909 +1005 @@
+-    let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange","project-query"].contains kind
++    let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange","project-query","gateway-query","gateway-call"].contains kind
+@@ -912 +1008 @@
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-prepared-pin","project-publish","project-query"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-prepared-pin","project-publish","project-query","gateway-query","gateway-call"].contains kind then do
+@@ -917 +1013 @@
+-    let replyCharge := if streamedRead && !["worker-exchange","project-query"].contains kind then Stream.maxBytes else 65536
++    let replyCharge := if streamedRead && !["worker-exchange","project-query","gateway-query","gateway-call"].contains kind then Stream.maxBytes else 65536
+@@ -922 +1018,3 @@
+-    let value ← if kind == "refresh-source" then refreshSource server secret payload deadline
++    let value ← if ["gateway-call","gateway-query"].contains kind then
++        executeGateway server client secret payload (kind == "gateway-query") cancelled deadline
++      else if kind == "refresh-source" then refreshSource server secret payload deadline
+@@ -1013 +1111 @@
+-    if ["worker-exchange","project-query"].contains kind then
++    if ["worker-exchange","project-query","gateway-query","gateway-call"].contains kind then
+@@ -1097 +1194,0 @@
+-  writeJson (root / "endpoint.json") endpoint
+@@ -1099,2 +1195,0 @@
+-  writeJson (root/"operations.json") ({endpoint with
+-    session := "publisher-operations",port := operationAddress.port.toNat} : Daemon.Endpoint)
+@@ -1105 +1200,5 @@
+-    ← OperationPool.Pool.new⟩
++    ← OperationPool.Pool.new,#[]⟩
++  let server ← loadGateways server root endpoint.port operationAddress.port.toNat
++  writeJson (root / "endpoint.json") endpoint
++  writeJson (root/"operations.json") ({endpoint with
++    session := "publisher-operations",port := operationAddress.port.toNat} : Daemon.Endpoint)
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -161,0 +162,2 @@
++  (include_str "ProjectGateway.lean").toUTF8,(include_str "ProjectGatewayPeer.lean").toUTF8,
++  (include_str "OwnedSocket.lean").toUTF8,(include_str "Storage/socket.c").toUTF8,
+--- /dev/null
++++ b/Eggshell/OwnedSocket.lean
+@@ -0,0 +1,104 @@
++module
++public import Init.System.IO
++public import Init.Data.ByteArray
++@[expose] public section
++namespace Eggshell.OwnedSocket
++
++private opaque Native : Type
++@[extern "eggshell_socket_connect"] private opaque connectNative (port : UInt16) : IO Native
++@[extern "eggshell_socket_poll"] private opaque pollNative (socket : @& Native) (writing : Bool) : IO Bool
++@[extern "eggshell_socket_connected"] private opaque connectedNative (socket : @& Native) : IO Unit
++@[extern "eggshell_socket_send"] private opaque sendNative (socket : @& Native)
++    (bytes : @& ByteArray) (offset : USize) : IO USize
++@[extern "eggshell_socket_receive"] private opaque receiveNative (socket : @& Native) (amount : USize) : IO ByteArray
++@[extern "eggshell_socket_close"] private opaque closeNative (socket : @& Native) : IO Unit
++
++/-- The callback's sequential task owns close. A canceller signals that task
++and joins it; it never closes a descriptor concurrently or signals a reused FD. -/
++structure Connection where
++  private mk ::
++  private native : Native
++
++def maxFrameBytes : Nat := 8*1024*1024
++def chunkBytes : Nat := 65536
++
++def validPort (port : Nat) : Bool := decide (0 < port ∧ port ≤ 65535)
++theorem valid_port_bounded (port : Nat) (valid : validPort port = true) :
++    0 < port ∧ port ≤ 65535 := of_decide_eq_true valid
++
++def sendStep (size offset count : Nat) : Except String Nat :=
++  if offset ≤ size && count ≤ min chunkBytes (size-offset) then .ok (offset+count)
++  else .error "socket send exceeded its owned extent"
++
++theorem send_step_bounded (size offset count next : Nat)
++    (accepted : sendStep size offset count = .ok next) : offset ≤ next ∧ next ≤ size := by
++  unfold sendStep at accepted
++  split at accepted
++  · rename_i valid
++    simp only [Bool.and_eq_true,decide_eq_true_eq] at valid
++    have step := Nat.le_trans valid.2 (Nat.min_le_right _ _)
++    simp only [Except.ok.injEq] at accepted
++    omega
++  · contradiction
++
++def ensureLive (deadline : Nat) : IO Unit := do
++  if ← IO.checkCanceled then throw (IO.userError "owned socket cancelled")
++  unless (← IO.monoMsNow) < deadline do throw (IO.userError "owned socket deadline expired")
++
++private def waitReady (socket : Native) (writing : Bool) (deadline : Nat) : IO Unit := do
++  repeat
++    ensureLive deadline
++    if ← pollNative socket writing then
++      ensureLive deadline
++      return
++
++@[no_expose] def withConnection (port deadline : Nat) (action : Connection → IO α) : IO α := do
++  ensureLive deadline
++  unless validPort port do throw (IO.userError "invalid owned socket port")
++  let socket ← connectNative port.toUInt16
++  try
++    waitReady socket true deadline
++    connectedNative socket
++    let result ← action ⟨socket⟩
++    ensureLive deadline
++    return result
++  finally closeNative socket
++
++private def writeAll (connection : Connection) (bytes : ByteArray) (deadline : Nat) : IO Unit := do
++  let mut offset := 0
++  while offset < bytes.size do
++    ensureLive deadline
++    let count ← sendNative connection.native bytes offset.toUSize
++    let next ← IO.ofExcept (sendStep bytes.size offset count.toNat)
++    if next == offset then waitReady connection.native true deadline
++    offset := next
++
++private def readExactly (connection : Connection) (amount deadline : Nat) : IO ByteArray := do
++  let mut bytes := ByteArray.emptyWithCapacity amount
++  while bytes.size < amount do
++    ensureLive deadline
++    let part ← receiveNative connection.native (min chunkBytes (amount-bytes.size)).toUSize
++    unless part.size ≤ min chunkBytes (amount-bytes.size) do
++      throw (IO.userError "socket receive exceeded its owned extent")
++    if part.isEmpty then waitReady connection.native false deadline
++    else bytes := bytes++part
++  return bytes
++
++def frameLength (bytes : ByteArray) : ByteArray :=
++  let value := bytes.size.toUInt32
++  .mk #[(value >>> 24).toUInt8,(value >>> 16).toUInt8,(value >>> 8).toUInt8,value.toUInt8]
++
++def decodeLength (bytes : ByteArray) : Nat :=
++  ((bytes.get! 0).toNat <<< 24) ||| ((bytes.get! 1).toNat <<< 16) |||
++    ((bytes.get! 2).toNat <<< 8) ||| (bytes.get! 3).toNat
++
++@[no_expose] def Connection.writeFrame (connection : Connection) (bytes : ByteArray) (deadline : Nat) : IO Unit := do
++  unless 0 < bytes.size && bytes.size ≤ maxFrameBytes do throw (IO.userError "owned socket frame exceeds its bound")
++  writeAll connection (frameLength bytes) deadline
++  writeAll connection bytes deadline
++
++@[no_expose] def Connection.readFrame (connection : Connection) (deadline : Nat) : IO ByteArray := do
++  let count := decodeLength (← readExactly connection 4 deadline)
++  unless 0 < count && count ≤ maxFrameBytes do throw (IO.userError "owned socket frame exceeds its bound")
++  readExactly connection count deadline
++end Eggshell.OwnedSocket

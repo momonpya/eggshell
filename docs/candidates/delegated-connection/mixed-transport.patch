@@ -1,0 +1,30 @@
+--- a/tools/research/MixedChatChecks.lean
++++ b/tools/research/MixedChatChecks.lean
+@@ -36 +36 @@
+-def remoteConfig (runtime : String) (command : Array String) (groups : Array String)
++def remoteConfig (runtime : String) (transport : Json) (groups : Array String)
+@@ -39 +39 @@
+-  "\n[profiles.work]\nproject_service = "++(toJson command).compress++
++  "\n[profiles.work]\nproject_service = "++transport.compress++
+@@ -299 +299 @@
+-def run (inputPath directory : String) (sharedOwner : Bool := false) (remote : Bool := false) : IO Unit := do
++def run (inputPath directory : String) (sharedOwner : Bool := false) (remote : Bool := false) (direct : Bool := false) : IO Unit := do
+@@ -329,3 +329,12 @@
+-      IO.FS.writeFile (configured root name) (remoteConfig plan.runtime.path command #["ALPHA","BETA"] (some name))
+-      IO.FS.writeFile (root/("read-"++name++".toml")) (remoteConfig plan.runtime.path command #[name] none)
+-    IO.FS.writeFile (root/"read-both.toml") (remoteConfig plan.runtime.path command #["ALPHA","BETA"] none)
++      IO.FS.writeFile (configured root name) (remoteConfig plan.runtime.path (if direct then toJson (root/"connections"/("write-"++name++".json")).toString else toJson command) #["ALPHA","BETA"] (some name))
++      IO.FS.writeFile (root/("read-"++name++".toml")) (remoteConfig plan.runtime.path (if direct then toJson (root/"connections"/("read-"++name++".json")).toString else toJson command) #[name] none)
++    IO.FS.writeFile (root/"read-both.toml") (remoteConfig plan.runtime.path (if direct then toJson (root/"connections/read-both.json").toString else toJson command) #["ALPHA","BETA"] none)
++    if direct then
++      let catalog : Publication.Gateway.Catalog ← IO.ofExcept (fromJson? (← StudyAdmission.readJson catalog.toString))
++      let mut grants : Array Publication.Gateway.Delegation := #[]
++      for name in ["ALPHA","BETA"] do
++        for (label,selection) in [("write-"++name,(⟨#["ALPHA","BETA"],some name⟩ : Publication.Gateway.Selection)),
++            ("read-"++name,(⟨#[name],none⟩ : Publication.Gateway.Selection))] do
++          grants := grants.push ⟨selection,Blake3.hex (← IO.getRandomBytes 32),(root/"connections"/(label++".json")).toString⟩
++      grants := grants.push ⟨⟨#["ALPHA","BETA"],none⟩,Blake3.hex (← IO.getRandomBytes 32),(root/"connections/read-both.json").toString⟩
++      Plugin.writeJson (host/"publisher/project-access.json") (⟨catalog,grants⟩ : Publication.Gateway.Host)
+@@ -650 +659 @@
+-def main (args : List String) : IO UInt32 := do
++def mixedMain (args : List String) : IO UInt32 := do
