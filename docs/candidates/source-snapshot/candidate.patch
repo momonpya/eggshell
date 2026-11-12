@@ -1,0 +1,299 @@
+--- a/Eggshell/DB/ProjectCacheScope.lean
++++ b/Eggshell/DB/ProjectCacheScope.lean
+@@ -2 +1,0 @@
+-
+@@ -5 +4 @@
+-
++public import Eggshell.Sha256
+@@ -7,2 +6,4 @@
+-namespace Eggshell.DB
+-open Lean
++namespace Eggshell.ProjectStore
++open Lean DB
++def maxOwners : Nat := 128
++def maxMetadataBytes : Nat := 65536
+@@ -10,2 +11,8 @@
+-/-- Immutable cache placement metadata, not execution or equality authority. -/
+-structure ProjectCacheScope where
++/-- A snapshot is a sealed input, not an invented publication or an
++assertion about project ancestry before its captured source root. -/
++inductive SourceKind where
++  | managed
++  | snapshot
++  deriving ToJson, FromJson, BEq, DecidableEq
++
++structure Manifest where
+@@ -13 +19,0 @@
+-  inventory : String
+@@ -15 +21,3 @@
+-  deriving Repr, BEq, ToJson, FromJson
++  owners : Array PageMap.Head
++  kind : SourceKind := .managed
++  deriving ToJson, FromJson, BEq, DecidableEq
+@@ -17 +25,10 @@
+-def ProjectCacheScope.maxOwners : Nat := 128
++def Manifest.Valid (m : Manifest) : Prop :=
++  PageMap.validIdentity m.identity = true ∧ 0 < m.owners.size ∧ m.owners.size ≤ maxOwners ∧
++  (m.owners.toList.map (·.identity)).Nodup ∧
++  ∀ head ∈ m.owners.toList, PageMap.validIdentity head.identity = true ∧
++    head.identity ≠ m.identity ∧ head.authority = m.authority ∧
++    match m.kind with
++    | .managed => head.revision = 0 ∧ head.root = none ∧ head.bytes = PageMap.magic.size ∧
++        m.authority = (Persistence.valueToJson (.text ("egg project "++m.identity))).compress
++    | .snapshot => PageMap.magic.size ≤ head.bytes ∧ head.bytes < 2^63 ∧
++        (head.root = none → head.revision = 0 ∧ head.bytes = PageMap.magic.size)
+@@ -18,0 +36,41 @@
++instance (m : Manifest) : Decidable m.Valid := by
++  unfold Manifest.Valid
++  cases m.kind <;> infer_instance
++
++def Manifest.writable (m : Manifest) : Bool := m.kind == .managed
++theorem snapshot_not_writable (m : Manifest) : {m with kind := .snapshot}.writable = false := rfl
++
++/-- Snapshot membership is exact. Managed history is validated separately. -/
++def Manifest.accepts (m : Manifest) (slot : Nat) (head : PageMap.Head) : Bool :=
++  match m.owners[slot]? with
++  | none => false
++  | some original => head.identity == original.identity && head.authority == original.authority &&
++      match m.kind with | .managed => true | .snapshot => decide (head = original)
++
++theorem snapshot_membership_exact (m : Manifest) (slot : Nat) (head : PageMap.Head)
++    (accepted : {m with kind := .snapshot}.accepts slot head = true) : m.owners[slot]? = some head := by
++  unfold Manifest.accepts at accepted
++  cases saved : m.owners[slot]? with
++  | none => simp [saved] at accepted
++  | some original =>
++    simp only [saved, Bool.and_eq_true, decide_eq_true_eq] at accepted
++    exact congrArg some accepted.2.symm
++
++def manifestChecksum (m : Manifest) : String := Sha256.hex (toJson m).compress.toUTF8
++structure StoredManifest where
++  manifest : Manifest
++  checksum : String
++  deriving ToJson, FromJson
++end Eggshell.ProjectStore
++
++namespace Eggshell.DB
++open Lean
++/-- Cache placement comes from one checked project manifest. It grants
++neither source mutation nor semantic equality authority. -/
++structure ProjectCacheScope where
++  manifest : ProjectStore.Manifest
++  inventory : String
++  deriving BEq, ToJson, FromJson
++def ProjectCacheScope.identity (scope : ProjectCacheScope) : String := scope.manifest.identity
++def ProjectCacheScope.authority (scope : ProjectCacheScope) : String := scope.manifest.authority
++def ProjectCacheScope.maxOwners : Nat := ProjectStore.maxOwners
+@@ -20,2 +78 @@
+-  PageMap.validIdentity scope.identity && PageMap.validIdentity scope.inventory &&
+-    scope.authority == (Persistence.valueToJson (.text ("egg project "++scope.identity))).compress
++  decide scope.manifest.Valid && scope.inventory == ProjectStore.manifestChecksum scope.manifest
+@@ -24,5 +81,6 @@
+-  let bytes ← FileSystem.boundedBytes (root/"cache-scope") 4096
+-  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project cache descriptor encoding")
+-  let scope ← IO.ofExcept (Json.parse text >>= fromJson? (α := ProjectCacheScope))
+-  unless scope.valid && (toJson scope).compress.toUTF8 == bytes do
+-    throw (IO.userError "invalid project cache descriptor")
++  let bytes ← FileSystem.boundedBytes (root/"project") ProjectStore.maxMetadataBytes
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project manifest encoding")
++  let stored ← IO.ofExcept (Json.parse text >>= fromJson? (α := ProjectStore.StoredManifest))
++  let scope : ProjectCacheScope := ⟨stored.manifest,stored.checksum⟩
++  unless scope.valid && bytes == (toJson stored).compress.toUTF8 do
++    throw (IO.userError "invalid project source inventory or checksum")
+@@ -35,2 +92,0 @@
+-/-- Layout and the immutable source authority bind this small descriptor.
+-The complete owner inventory is checked by the project read/write boundary. -/
+@@ -44,2 +100 @@
+-  let some slot := owner.fileName.bind String.toNat? |
+-    throw (IO.userError "invalid project cache owner slot")
++  let some slot := owner.fileName.bind String.toNat? | throw (IO.userError "invalid project cache owner slot")
+@@ -49,2 +104,2 @@
+-  unless source.head.authority == scope.authority && source.head.identity != scope.identity do
+-    throw (IO.userError "source crossed its project cache authority")
++  unless scope.manifest.accepts slot source.head do
++    throw (IO.userError "source crossed its project cache inventory")
+@@ -52 +106,0 @@
+-
+--- a/Eggshell/ExplicitWarm.lean
++++ b/Eggshell/ExplicitWarm.lean
+@@ -29 +29,2 @@
+-def run (requests : Array (PageMap.Snapshot × Bool)) (command : List String) : IO (Array Json) := do
++def run (requests : Array (PageMap.Snapshot × Bool)) (command : List String)
++    (requireShared : Bool := false) : IO (Array Json) := do
+@@ -34,0 +36,2 @@
++  unless !requireShared || targets.all (·.storage == .database) do
++    throw (IO.userError "shared preparation requires a writable host cache; original source writes are not required")
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -18,0 +19,2 @@
++  "egg warm --shared PATH  prepare a host-owned shared cache\n" ++
++  "egg snapshot DB TARGET  capture an existing DB as a read-only project\n" ++
+@@ -103 +105 @@
+-def warm (requested : Option String) : IO String := do
++def warm (requested : Option String) (shared : Bool := false) : IO String := do
+@@ -123 +125 @@
+-    let writable := selected.all fun selection =>
++    let writable := shared || selected.all fun selection =>
+@@ -126 +128 @@
+-  let prepared ← ExplicitWarm.run requests command
++  let prepared ← ExplicitWarm.run requests command shared
+@@ -438,0 +441,5 @@
++      | ["warm", "--shared", requested] => warm (some requested) true
++      | ["snapshot", original, destination] => do
++          let project ← ProjectStore.capture (.mk original) (.mk destination)
++          pure (Lean.Json.mkObj [("project",toJson project.directory.toString),
++            ("manifest",toJson project.manifest),("readOnly",toJson true)]).compress
+--- a/Eggshell/ProjectPublication.lean
++++ b/Eggshell/ProjectPublication.lean
+@@ -79,0 +80 @@
++  unless project.manifest.writable do throw (IO.userError "captured source snapshots cannot grant publication authority")
+--- a/Eggshell/ProjectSources.lean
++++ b/Eggshell/ProjectSources.lean
+@@ -10,2 +9,0 @@
+-def maxOwners : Nat := ProjectCacheScope.maxOwners
+-def maxMetadataBytes : Nat := 65536
+@@ -13,17 +10,0 @@
+-/-- This is the complete, immutable owner inventory, not a list of whichever
+-indexes happen to be warm. Every physical incarnation is distinct. -/
+-structure Manifest where
+-  identity : String
+-  authority : String
+-  owners : Array PageMap.Head
+-  deriving ToJson, FromJson, BEq, DecidableEq
+-
+-def Manifest.Valid (m : Manifest) : Prop :=
+-  PageMap.validIdentity m.identity = true ∧ 0 < m.owners.size ∧ m.owners.size ≤ maxOwners ∧
+-  (m.owners.toList.map (·.identity)).Nodup ∧
+-  ∀ head ∈ m.owners.toList, PageMap.validIdentity head.identity = true ∧
+-    head.identity ≠ m.identity ∧ head.authority = m.authority ∧
+-    head.revision = 0 ∧ head.root = none ∧ head.bytes = PageMap.magic.size
+-
+-instance (m : Manifest) : Decidable m.Valid := by unfold Manifest.Valid; infer_instance
+-
+@@ -46,7 +26,0 @@
+-structure StoredManifest where
+-  manifest : Manifest
+-  checksum : String
+-  deriving ToJson, FromJson
+-
+-def manifestChecksum (m : Manifest) := Sha256.hex (toJson m).compress.toUTF8
+-
+@@ -62,5 +35,0 @@
+-  let bytes ← FileSystem.boundedBytes (directory / "project") maxMetadataBytes
+-  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project manifest encoding")
+-  let record ← IO.ofExcept (Json.parse text >>= fromJson? (α := StoredManifest))
+-  unless bytes == (toJson record).compress.toUTF8 && record.checksum == manifestChecksum record.manifest do
+-    throw (IO.userError "invalid project manifest checksum or encoding")
+@@ -68,3 +37 @@
+-  unless scope == ⟨record.manifest.identity,record.checksum,record.manifest.authority⟩ do
+-    throw (IO.userError "project cache descriptor disagrees with its complete inventory")
+-  if checked : record.manifest.Valid then return ⟨directory,record.manifest,checked⟩
++  if checked : scope.manifest.Valid then return ⟨directory,scope.manifest,checked⟩
+@@ -90 +57 @@
+-  let manifest : Manifest := ⟨identity,authority,heads⟩
++  let manifest : Manifest := ⟨identity,authority,heads,.managed⟩
+@@ -95,3 +61,0 @@
+-  let scope : ProjectCacheScope := ⟨identity,manifestChecksum manifest,authority⟩
+-  unless scope.valid do throw (IO.userError "project creation produced an invalid cache descriptor")
+-  FileSystem.immutableExistingBytes (staging/"cache-scope") (toJson scope).compress.toUTF8
+@@ -100,0 +65,57 @@
++def captureCount (committed offset : Nat) : Nat := min 4096 (committed-offset)
++theorem capture_step_bounded (committed offset : Nat) (remaining : offset < committed) :
++    0 < captureCount committed offset ∧ offset+captureCount committed offset ≤ committed := by
++  unfold captureCount
++  omega
++
++/-- Capture through the pinned file descriptor, not its later pathname.
++Only the immutable committed prefix is copied. No graph or historical input
++is reconstructed, and no writer lock or source write is acquired. -/
++def capturePinned (source : PageMap.Snapshot) (destination : System.FilePath) : IO Project := do
++  let destination ← PageMap.absolute destination
++  unless !(← destination.pathExists) && destination != source.directory &&
++      !destination.toString.startsWith (source.directory.toString++"/") do
++    throw (IO.userError "snapshot destination must be a fresh location outside the source DB")
++  FileSystem.rejectSymlinkAncestors destination
++  if let some root := source.head.root then discard <| source.load root
++  let identity := Blake3.hex (← IO.getRandomBytes 32)
++  let staging := destination.withFileName (".snapshot-"++identity)
++  FileSystem.durableDirectory (destination.parent.getD "/")
++  IO.FS.createDir staging
++  try
++    FileSystem.privateDirectory staging
++    let owners ← Sidecar.childDirectory staging "owners"
++    let slot ← Sidecar.childDirectory owners "0"
++    let folder ← Sidecar.childDirectory slot "source.egg"
++    let data := PageMap.dataPath folder source.head
++    FileSystem.immutableExistingBytes data ByteArray.empty
++    let output ← FileSystem.openAppend data.toString
++    try
++      let mut offset := 0
++      while offset < source.head.bytes do
++        if ← IO.checkCanceled then throw (IO.userError "source snapshot cancelled")
++        let count := captureCount source.head.bytes offset
++        let bytes ← FileSystem.readPage source.handle offset.toUInt64 ⟨count,Nat.min_le_left _ _⟩
++        unless bytes.size == count do throw (IO.userError "source committed prefix was truncated")
++        FileSystem.appendAt output offset.toUInt64 bytes
++        offset := offset+count
++      FileSystem.syncAppend output
++    finally FileSystem.closeAppend output
++    FileSystem.immutableExistingBytes (folder/"head") (toJson source.head).compress.toUTF8
++    FileSystem.immutableExistingBytes (folder/"writer") ByteArray.empty
++    let captured ← PageMap.pin folder
++    unless captured.head == source.head do throw (IO.userError "snapshot changed its original source head")
++    if let some root := source.head.root then discard <| captured.load root
++    let manifest : Manifest := ⟨identity,source.head.authority,#[source.head],.snapshot⟩
++    unless decide manifest.Valid do throw (IO.userError "invalid captured source inventory")
++    let bytes := (toJson (StoredManifest.mk manifest (manifestChecksum manifest))).compress.toUTF8
++    unless bytes.size ≤ maxMetadataBytes do throw (IO.userError "captured source metadata exceeds its bound")
++    FileSystem.immutableExistingBytes (staging/"project") bytes
++    FileSystem.publishDirectory staging.toString destination.toString
++  finally
++    if ← staging.pathExists then IO.FS.removeDirAll staging
++  openProject destination
++
++def capture (original destination : System.FilePath) : IO Project := do
++  capturePinned (← PageMap.pin original) destination
++
+@@ -102 +123 @@
+-  let some registered := project.manifest.owners[owner]? |
++  let some _registered := project.manifest.owners[owner]? |
+@@ -105 +126 @@
+-  unless source.head.identity == registered.identity && source.head.authority == registered.authority do
++  unless project.manifest.accepts owner source.head do
+@@ -121 +142,2 @@
+-      head.identity == original.identity && head.authority == original.authority)
++    head.identity == original.identity && head.authority == original.authority &&
++      match m.kind with | .managed => true | .snapshot => decide (head = original))
+@@ -176,0 +199,3 @@
++  if m.kind == .snapshot then
++    unless m.owners.contains source.head do throw (IO.userError "snapshot source changed its captured root")
++    return ⟨m.identity,m.owners⟩
+--- a/Eggshell/ProjectStore.lean
++++ b/Eggshell/ProjectStore.lean
+@@ -18,0 +19 @@
++  managed : project.manifest.writable = true
+@@ -37,9 +38,11 @@
+-  let current ← openProject project.directory
+-  unless current.manifest == project.manifest do throw (IO.userError "project inventory changed")
+-  let source ← project.current slot
+-  let path := project.ownerDirectory slot / "owner.guard"
+-  FileSystem.immutableExistingBytes path ByteArray.empty
+-  let lease ← FileSystem.openRead path.toString
+-  unless ← FileSystem.tryReadLock lease true do throw (IO.userError "project original owner is busy")
+-  let lifecycle ← Std.Mutex.new ({} : OwnerState)
+-  return ⟨project,slot,source.head,lease,lifecycle⟩
++  if writable : project.manifest.writable = true then
++    let current ← openProject project.directory
++    unless current.manifest == project.manifest do throw (IO.userError "project inventory changed")
++    let source ← project.current slot
++    let path := project.ownerDirectory slot / "owner.guard"
++    FileSystem.immutableExistingBytes path ByteArray.empty
++    let lease ← FileSystem.openRead path.toString
++    unless ← FileSystem.tryReadLock lease true do throw (IO.userError "project original owner is busy")
++    let lifecycle ← Std.Mutex.new ({} : OwnerState)
++    return ⟨project,slot,source.head,writable,lease,lifecycle⟩
++  else throw (IO.userError "captured source snapshots are read-only")
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -166,0 +167 @@
++  (include_str "DB/ProjectCacheScope.lean").toUTF8,(include_str "ExplicitWarm.lean").toUTF8,
