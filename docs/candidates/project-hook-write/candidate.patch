@@ -1,0 +1,945 @@
+--- a/Eggshell/Config.lean
++++ b/Eggshell/Config.lean
+@@ -16,9 +16,10 @@
+   path : System.FilePath
+   deriving Repr, DecidableEq
+ 
+-structure RemoteRead where
++structure ProjectService where
+   command : List String
+   projects : List String
++  write : Option String := none
+   deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
+ 
+ structure Profile where
+@@ -29,7 +30,7 @@
+   /-- False retains advisory retrieval while disabling automatic operation reuse. -/
+   localUnion : Bool := true
+   /-- User-owned process transport. Read names are host catalog names. -/
+-  readService : Option (List String) := none
++  projectService : Option (List String) := none
+   deriving Repr, DecidableEq
+ 
+ structure Config where
+@@ -53,7 +54,7 @@
+   /-- Set by the harness independently of the user profile's character budget. -/
+   handoffBytes : Option Nat := none
+   localUnion : Bool := true
+-  remoteRead : Option RemoteRead := none
++  service : Option ProjectService := none
+   deriving Repr, DecidableEq
+ 
+ inductive Section where
+@@ -155,10 +156,10 @@
+     | .eggs =>
+         pure { state with eggs := (key, ← unquote value) :: state.eggs }
+     | .profile name =>
+-        if key = "read_service" then
++        if key = "project_service" then
+           let command ← arrayStrings value
+-          if command.isEmpty || command.head!.isEmpty then throw "read_service must name an executable"
+-          pure (alterProfile state name fun profile => {profile with readService := some command})
++          if command.isEmpty || command.head!.isEmpty then throw "project_service must name an executable"
++          pure (alterProfile state name fun profile => {profile with projectService := some command})
+         else if key = "read" then
+           let names ← arrayStrings value
+           pure (alterProfile state name fun profile =>
+@@ -249,8 +250,8 @@
+       throw s!"project egg {egg.name} must be a path below {root}"
+   let eggNames := config.eggs.map (·.name)
+   for profile in config.profiles do
+-    if profile.readService.isSome then
+-      throw "project .eggshell.toml cannot execute read_service; configure it in the user-owned global config"
++    if profile.projectService.isSome then
++      throw "project .eggshell.toml cannot execute project_service; configure it in the user-owned global config"
+     if profile.read.any (!eggNames.contains ·) ||
+         profile.write.any (!eggNames.contains ·) then
+       throw s!"project profile {profile.name} may reference only eggs declared by this project"
+@@ -324,11 +325,11 @@
+   let profile ← match config.profiles.find? (·.name == profileName) with
+     | some profile => pure profile
+     | none => throw s!"unknown Eggshell profile {profileName}"
+-  if let some command := profile.readService then
+-    unless profile.write.isNone do throw "read_service is read-only; configure publication separately"
+-    unless !command.isEmpty && !command.head!.isEmpty && !profile.read.isEmpty &&
+-        profile.read.length ≤ 64 && profile.read.all (!·.isEmpty) && profile.read.Nodup do
+-      throw "read_service requires distinct nonempty project names"
++  if let some command := profile.projectService then
++    let projects := (profile.read++profile.write.toList).eraseDups
++    unless !command.isEmpty && !command.head!.isEmpty && !projects.isEmpty &&
++        projects.length ≤ 64 && projects.all (!·.isEmpty) do
++      throw "project_service requires nonempty project names"
+     return {
+       label := profileName
+       semanticMatcher := config.semanticMatcher
+@@ -336,7 +337,7 @@
+       write := none
+       handoffChars := profile.handoffChars
+       localUnion := false
+-      remoteRead := some ⟨command,profile.read⟩ }
++      service := some ⟨command,projects,profile.write⟩ }
+   let resolveEgg name := match config.eggs.find? (·.name == name) with
+     | some egg => pure egg
+     | none => throw s!"profile {profileName} names unknown egg {name}"
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -114,6 +114,31 @@
+ 
+ instance : Repr PreparedInputEnvelope where
+   reprPrec value _ := repr value.payload.compress
++
++inductive WriteTarget where
++  | directory (path : String)
++  | project (name : String)
++  deriving Repr, DecidableEq, BEq, ReflBEq, LawfulBEq
++instance : Coe String WriteTarget := ⟨WriteTarget.directory⟩
++instance : ToJson WriteTarget where
++  toJson
++    | .directory path => toJson path
++    | .project name => Json.mkObj [("project",toJson name)]
++instance : FromJson WriteTarget where
++  fromJson? value := do
++    if let .str path := value then return .directory path
++    let fields ← value.getObj?
++    unless fields.toArray.size == 1 do throw "invalid project write target"
++    let name ← value.getObjValAs? String "project"
++    unless !name.isEmpty do throw "empty project write target"
++    return .project name
++def WriteTarget.path? : WriteTarget → Option String
++  | .directory path => some path
++  | .project _ => none
++def WriteTarget.project? : WriteTarget → Option String
++  | .project name => some name
++  | .directory _ => none
++theorem project_target_has_no_path (name : String) : (WriteTarget.project name).path? = none := rfl
+ 
+ structure PendingTurn where
+   sessionId : String
+@@ -123,7 +148,7 @@
+   profile : String
+   semanticMatcher : Option (List String)
+   read : List String
+-  write : Option String
++  write : Option WriteTarget
+   /-- Complete project boundary captured before this turn's first lookup. -/
+   projectInputs : Option (Array ProjectInputs.Image) := none
+   /-- Complete original and private-usage boundary, captured even while shared
+@@ -146,10 +171,13 @@
+   sources : List SourceEvidence.File := []
+   finalMessage : Option String := none
+   closed : Bool := false
+-  remoteRead : Option Config.RemoteRead := none
++  service : Option Config.ProjectService := none
+   /-- Immutable descriptor and complete cut captured before this turn searches. -/
+   remoteFrame : Option PreparedInputEnvelope := none
+   deriving Repr, ToJson, FromJson
++
++def PendingTurn.localWrite (pending : PendingTurn) : Option String := pending.write.bind WriteTarget.path?
++def PendingTurn.projectWrite (pending : PendingTurn) : Option String := pending.write.bind WriteTarget.project?
+ 
+ structure Promotion where
+   outcomeRelations : List Value
+@@ -511,10 +539,10 @@
+   label := pending.profile
+   semanticMatcher := pending.semanticMatcher
+   read := pending.read.map fun raw => { name := raw, path := System.FilePath.mk raw }
+-  write := pending.write.map fun raw => { name := raw, path := System.FilePath.mk raw }
++  write := pending.localWrite.map fun raw => { name := raw, path := System.FilePath.mk raw }
+   handoffChars := pending.handoffChars
+   localUnion := pending.localUnion
+-  remoteRead := pending.remoteRead
++  service := pending.service
+ }
+ 
+ def valueEncoding (value : Value) : String :=
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -237,6 +237,15 @@
+     exact ⟨rfl,rfl,rfl,rfl⟩
+   · simp at accepted
+ 
++theorem final_capture_preserves_service (pending captured : PendingTurn) (session : String)
++    (turn : Option String) (message : String)
++    (accepted : capturedFinal? pending session turn message = some captured) :
++    captured.service = pending.service ∧ captured.remoteFrame = pending.remoteFrame := by
++  unfold capturedFinal? at accepted
++  split at accepted
++  · cases accepted; exact ⟨rfl,rfl⟩
++  · simp at accepted
++
+ theorem final_capture_checks_identity (pending captured : PendingTurn) (session : String)
+     (turn : Option String) (message : String)
+     (accepted : capturedFinal? pending session turn message = some captured) :
+@@ -306,13 +315,16 @@
+ 
+ def terminalScope (a b : PendingTurn) : Bool :=
+   (a.sessionId,a.turnId,a.cwd,a.prompt,a.read,a.write) ==
+-    (b.sessionId,b.turnId,b.cwd,b.prompt,b.read,b.write)
++    (b.sessionId,b.turnId,b.cwd,b.prompt,b.read,b.write) &&
++    toJson (a.service,a.remoteFrame) == toJson (b.service,b.remoteFrame)
+ 
+ theorem terminal_scope_keeps_target (a b : PendingTurn) (same : terminalScope a b = true) :
+     a.write = b.write := by
++  unfold terminalScope at same
++  have same := (Bool.and_eq_true_iff.mp same).1
+   have values : (a.sessionId,a.turnId,a.cwd,a.prompt,a.read,a.write) =
+       (b.sessionId,b.turnId,b.cwd,b.prompt,b.read,b.write) := by
+-    simpa only [terminalScope,beq_iff_eq] using same
++    simpa only [beq_iff_eq] using same
+   exact congrArg (fun value => value.2.2.2.2.2) values
+ 
+ def terminalSeal (pending : PendingTurn) (message : Option String) : PendingTurn :=
+@@ -529,7 +541,7 @@
+       if queued.write.isNone then
+         removeIfExists entry.path
+         continue
+-      let payload := Json.mkObj [("session", session), ("path", entry.path.toString)]
++      let payload := Json.mkObj [("session",toJson session),("path",toJson entry.path.toString),("deadline",toJson deadline)]
+       let some result ← Worker.exchange session "save" payload deadline | return
+       let .ok _saved := NativePublication.SaveReply.check? result |
+         IO.eprintln s!"Eggshell retained uncommitted work in {session} from {entry.path}: {result.compress}"
+@@ -554,7 +566,7 @@
+     let files ← sessionFiles session
+     if let some pending ← readPendingBase? files then
+       let context ← ProjectContext.open? pending deadline
+-      unless context.any (·.canPrepare target.owner) || pending.write.any (fun path =>
++      unless context.any (·.canPrepare target.owner) || pending.localWrite.any (fun path =>
+           (System.FilePath.mk path).normalize == (System.FilePath.mk target.owner.directory).normalize) do
+         return
+   unless ← Publication.Client.enqueuePreparation "index" target.key deadline do
+@@ -566,7 +578,7 @@
+   if let some context ← ProjectContext.open? pending deadline then
+     return some (context.reads.sources.map (·.head.identity))
+   let mut sources := #[]
+-  for path in (pending.read++pending.write.toList).eraseDups do
++  for path in (pending.read++pending.localWrite.toList).eraseDups do
+     if let some source ← DB.PageMap.open? (.mk path) then sources := sources.push source.head.identity
+   return some sources
+ 
+@@ -607,7 +619,7 @@
+         continue
+       if target.storage == .database then
+         if let some pending := pending then
+-          unless context.any (·.canPrepare target.owner) || pending.write.any (fun path =>
++          unless context.any (·.canPrepare target.owner) || pending.localWrite.any (fun path =>
+               (System.FilePath.mk path).normalize == (System.FilePath.mk target.owner.directory).normalize) do continue
+       unless ← Publication.Client.enqueuePreparation "synapses" (Synapses.Index.contentKey target) deadline do
+         throw (IO.userError "preparation admission is full; native index work remains durable")
+@@ -630,9 +642,9 @@
+             let _ ← registerIndexTarget source command (context.canPrepare (DB.Sidecar.Owner.ofSnapshot source))
+             pure ()
+         else
+-          for path in (pending.read ++ pending.write.toList).eraseDups do
++          for path in (pending.read ++ pending.localWrite.toList).eraseDups do
+             if let some snapshot ← DB.PageMap.open? (.mk path) then
+-              let _ ← registerIndexTarget snapshot command (pending.write == some path)
++              let _ ← registerIndexTarget snapshot command (pending.localWrite == some path)
+               pure ()
+   catch error => IO.eprintln s!"Eggshell retained undiscovered DB work: {error}"
+   let root ← dataRoot
+@@ -693,8 +705,8 @@
+     if !state.enabled then
+       return systemMessage "Eggshell memory is off for this chat. Use !egg on only if you want to enable it."
+     let selection ← IO.ofExcept (Config.resolve config state.profile)
+-    let mode := if selection.read.isEmpty && selection.write.isNone && selection.remoteRead.isNone then "off"
+-      else if selection.write.isNone then "read-only" else "read/write"
++    let mode := if selection.read.isEmpty && selection.write.isNone && selection.service.isNone then "off"
++      else if selection.write.isNone && selection.service.all (·.write.isNone) then "read-only" else "read/write"
+     return systemMessage (s!"Eggshell session hook connected: memory {mode}, profile {state.profile}. " ++
+       "Use !egg doctor to check setup; !egg graph shows context actually delivered.")
+ 
+@@ -880,6 +892,7 @@
+ def deliverForWork (input : Json) (pending : PendingTurn) (work : String)
+     (enforce : Bool) (evidenceText : Option String := none) (staged : Bool := false) :
+     IO (Option Handoff) := do
++  if pending.service.isSome && !ProjectHookRead.advisoryEligible enforce evidenceText staged then return none
+   let session := pending.sessionId
+   let deadline ← hookDeadline input
+   let snapshot ← withHookSession input session fun files => do
+@@ -887,7 +900,7 @@
+     let some current ← readPendingBase? files | return none
+     if !state.enabled || current.turnId != pending.turnId || (current.closed || current.finalMessage.isSome) then
+       return none
+-    if pending.projection == .none || (pending.read.isEmpty && pending.remoteRead.isNone) then return none
++    if pending.projection == .none || (pending.read.isEmpty && pending.service.isNone) then return none
+     writeJson files.state {state with searchStarted := true}
+     pure (some state)
+   let some initial := snapshot | return none
+@@ -905,7 +918,7 @@
+     finishReady := false
+     onReady := fun now => do
+       if (← readyAt.get).isNone then readyAt.set (some now) }
+-  let response ← if pending.remoteRead.isSome then ProjectHookRead.exchange query
++  let response ← if pending.service.isSome then ProjectHookRead.exchange query
+     else Worker.exchange session "search" (toJson query) deadline (some policy)
+   let observed ← IO.monoMsNow
+   let finishDeadline := configuredSearchDeadline semantic (← readyAt.get).isSome firstDeadline deadline
+@@ -965,6 +978,11 @@
+       else Json.null)])
+   pure handoff
+ 
++theorem remote_native_delivery_has_no_effect (input : Json) (pending : PendingTurn) (work : String)
++    (evidence : Option String) (staged : Bool) (remote : pending.service.isSome = true) :
++    deliverForWork input pending work true evidence staged = pure none := by
++  simp [deliverForWork,remote,ProjectHookRead.native_is_not_advisory]
++
+ def userPromptSubmit (input : Json) : IO String := do
+   let session ← IO.ofExcept (requiredString input "session_id")
+   let turn ← IO.ofExcept (requiredString input "turn_id")
+@@ -981,11 +999,14 @@
+     let pending : PendingTurn := {
+       sessionId := session, turnId := turn, cwd := cwd.toString, prompt,
+       profile := selection.label, semanticMatcher := selection.semanticMatcher,
+-      read := selection.read.map (·.path.toString), write := selection.write.map (·.path.toString),
++      read := selection.read.map (·.path.toString)
++      write := match selection.service with
++        | some service => service.write.map WriteTarget.project
++        | none => selection.write.map (fun egg => WriteTarget.directory egg.path.toString)
+       handoffChars := selection.handoffChars, localUnion := selection.localUnion,
+-      remoteRead := selection.remoteRead,
++      service := selection.service,
+       projection := state.nextProjection.getD .automatic }
+-    let pending ← if pending.remoteRead.isSome then pure pending else
++    let pending ← if pending.service.isSome then pure pending else
+       ProjectContext.capture pending (← hookDeadline input) (optionalString input "_eggshell_receipt")
+     state := { state with
+       epoch := state.epoch + 1
+@@ -997,7 +1018,7 @@
+     pure (some (pending,state.epoch))
+   let some (pending,epoch) := prepared | return emptyHook
+   Worker.cancel session "search"
+-  let captured ← if pending.remoteRead.isSome then do
++  let captured ← if pending.service.isSome then do
+       let some captured ← ProjectHookRead.capture pending (← hookDeadline input) | pure none
+       withHookSession input session fun files => do
+         let some current ← readPendingBase? files | return none
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -84,14 +84,15 @@
+       let profile := state.map (·.profile) |>.getD config.defaultProfile
+       let selection ← IO.ofExcept (Config.resolve config profile)
+       let mode := if state.any (! ·.enabled) ||
+-          (selection.read.isEmpty && selection.write.isNone && selection.remoteRead.isNone) then "off"
+-        else if selection.write.isNone then "read-only" else "read/write"
++          (selection.read.isEmpty && selection.write.isNone && selection.service.isNone) then "off"
++        else if selection.write.isNone && selection.service.all (·.write.isNone) then "read-only" else "read/write"
+       fields := fields ++ [("configuration", Lean.toJson "ready"),
+         ("config", Lean.toJson config.source.toString),
+         ("profile", Lean.toJson profile), ("memory", Lean.toJson mode),
+         ("write",toJson (selection.write.map (·.path.toString))),
+         ("handoff_chars",toJson selection.handoffChars),
+-        ("remote_read",toJson (selection.remoteRead.map (·.projects))),
++        ("remote_read",toJson (selection.service.map (·.projects))),
++        ("remote_write",toJson (selection.service.bind (·.write))),
+         ("databases", toJson (← selection.read.mapM (databaseCacheStatus · selection.semanticMatcher))),
+         ("next_step", Lean.toJson
+           "Review /hooks and start a new chat. Verify saving and delivery with the two-chat example.")]
+@@ -104,8 +105,8 @@
+   let state ← diagnosticState
+   let selected ← config.mapM fun config =>
+     IO.ofExcept (Config.resolve config (state.map (·.profile) |>.getD config.defaultProfile))
+-  if requested.isNone && selected.any (·.remoteRead.isSome) then
+-    throw (IO.userError "read_service preparation belongs to its data host; run egg warm there")
++  if requested.isNone && selected.any (·.service.isSome) then
++    throw (IO.userError "project_service preparation belongs to its data host; run egg warm there")
+   let eggs ← match requested with
+     | some raw =>
+         let named := config.bind (fun config => config.eggs.find? (·.name == raw))
+@@ -152,18 +153,23 @@
+ def statusLine (selection : Config.Selection) (state : ThreadState)
+     (pending : Option PendingTurn) : String :=
+   let enabled := if state.enabled then "on" else "off"
+-  let reads := " ".intercalate (selection.remoteRead.map (·.projects) |>.getD (selection.read.map (·.name)))
+-  let write := selection.write.map (·.name) |>.getD "read-only"
++  let reads := " ".intercalate (selection.service.map (·.projects) |>.getD (selection.read.map (·.name)))
++  let write := (selection.service.bind (·.write)).orElse (fun _ => selection.write.map (·.name)) |>.getD "read-only"
+   let pendingText := match pending with
+     | none => "none"
+     | some pending =>
+         let phase := if pending.closed || pending.finalMessage.isSome then "sealed" else "active"
+-        s!"{phase}:{pending.turnId.take 8}"
++        let destination := match pending.write with
++          | none => "read-only"
++          | some (.directory path) => path
++          | some (.project name) => "project:"++name
++        s!"{phase}:{pending.turnId.take 8}@{destination}"
+   s!"egg {enabled} {state.profile} [{reads}] → {write} pending:{pendingText}"
+ 
+ def chooseTarget (pending : PendingTurn) : IO System.FilePath := do
+   match pending.write with
+-  | some path => pure (System.FilePath.mk path)
++  | some (.directory path) => pure (System.FilePath.mk path)
++  | some (.project _) => throw (IO.userError "shared project publication uses its captured service, not a local DB path")
+   | none => throw (IO.userError "this turn was recorded without a save target")
+ 
+ def graphForSelection (selection : Config.Selection) : IO Persistence.Composite := do
+@@ -309,7 +315,9 @@
+       let pending ← match files with
+         | some paths => loadToolReceipts paths pending
+         | none => pure pending
+-      let some target := pending.write | pure "this turn is read-only; nothing will be saved"
++      if let some project := pending.projectWrite then
++        return s!"project={project}\nnative-observations={pending.tools.length}\npublication=background"
++      let some target := pending.localWrite | pure "this turn is read-only; nothing will be saved"
+       let target := System.FilePath.mk target
+       let graph ← if ← (target/"project").pathExists then do
+           let project ← ProjectStore.openProject target
+@@ -381,6 +389,10 @@
+           throw (IO.userError "no staged turn")
+         if !pending.closed && pending.finalMessage.isNone then
+           throw (IO.userError "active turn cannot be kept")
++        if let some project := pending.projectWrite then
++          queueCheckpoint files pending
++          markPreparationWake session
++          return s!"egg queued {pending.turnId.take 8} → project:{project}"
+         let target ← chooseTarget pending
+         let promotion ← promote pending target
+         -- The foreground command publishes; its indexing runs in the same
+@@ -392,6 +404,7 @@
+     | ["union", leftKey, rightKey] =>
+         if !state.enabled then
+           throw (IO.userError "Eggshell is off; run !egg on before changing a graph")
++        if selection.service.isSome then throw (IO.userError "manual Union requires a local administrative writer")
+         let target ← match selection.write with
+           | some egg => pure egg.path
+           | none => throw (IO.userError "current profile is read-only")
+@@ -404,6 +417,7 @@
+     | ["split", key] =>
+         if !state.enabled then
+           throw (IO.userError "Eggshell is off; run !egg on before changing a graph")
++        if selection.service.isSome then throw (IO.userError "manual split requires a local administrative writer")
+         let target ← match selection.write with
+           | some egg => pure egg.path
+           | none => throw (IO.userError "current profile is read-only")
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -5,6 +5,8 @@
+ public import Std.Sync.Mutex
+ public import Eggshell.WorkerLifetime
+ public import Eggshell.PublicationClient
++public import Eggshell.ProjectGatewayPeer
++public import Eggshell.ProjectIngress
+ public import Eggshell.PreparationRegistry
+ public import tools.research.SearchReadCut
+ public import tools.research.CompactSearchWire
+@@ -72,11 +74,7 @@
+ 
+ /-- Call only for a child spawned with `setsid := true`. -/
+ def killGroup {cfg : IO.Process.StdioConfig} (child : IO.Process.Child cfg) : IO Unit := do
+-  let killer ← IO.Process.spawn {
+-    cmd := "/bin/kill", args := #["-KILL", "--", "-" ++ toString child.pid]
+-    stdin := .null, stdout := .null, stderr := .null }
+-  let _ ← killer.wait
+-  try child.kill catch _ => pure ()
++  ProcessGroup.kill child
+ 
+ /-- Closure wins even before spawn. The caller owns this handle, so a delayed
+ close cannot find and kill a replacement attempt through a reused lane name. -/
+@@ -923,7 +921,7 @@
+             if entry.fileName.endsWith ".json" then
+               try
+                 if let some base ← (readJson? entry.path pendingJsonDefaults : IO (Option PendingTurn)) then
+-                  if base.write.any request.pending.read.contains then
++                  if base.localWrite.any request.pending.read.contains then
+                     let pending ← loadToolReceipts files base
+                     let values ← IO.ofExcept (stagedGraphValues pending)
+                     staged := staged ++ values
+@@ -1125,6 +1123,18 @@
+   if ← PreparationRegistry.drained job then return toJson true
+   return (← PreparationRegistry.explain job).setObjVal! "progress" (toJson progressed)
+ 
++def publishProject (pending : PendingTurn) (checkpoint : Bool) (deadline : Nat) : IO NativePublication.Saved := do
++  let (captured,project) ← IO.ofExcept (ProjectIngress.writer pending)
++  let some service := pending.service | throw (IO.userError "project publication has no service command")
++  let capsule ← ProjectIngress.capsule pending checkpoint
++  Publication.Gateway.withPeer service.command.toArray ⟨service.projects.toArray,service.write⟩ deadline fun peer => do
++    unless toJson peer.descriptor == toJson captured.descriptor && peer.accepts captured.boundary do
++      throw (IO.userError "project publication changed its captured destination or read scope")
++    let receipt ← peer.publish project.manifest.identity captured.boundary capsule deadline
++    -- The source ACK is verified. Service-owned derived readiness is separate;
++    -- this client has not itself queued a local index or claimed it complete.
++    return ⟨receipt.source,false⟩
++
+ def run (role : String) : IO UInt32 := do
+   let input ← IO.getStdin
+   let output ← IO.getStdout
+@@ -1155,7 +1165,12 @@
+           throw (IO.userError "queued turn disappeared")
+         let checkpoint := path.parent.bind (·.fileName) == some "checkpoints"
+         let pending ← pendingForSave files base checkpoint
+-        let saved ← if let some target := pending.write then do
++        let saved ← if pending.projectWrite.isSome then do
++            if pending.finalMessage.isNone && pending.tools.isEmpty then pure none else do
++              let now ← IO.monoMsNow
++              let deadline := (json.getObjValAs? Nat "deadline").toOption.getD (now+2000)
++              some <$> publishProject pending checkpoint deadline
++          else if let some target := pending.localWrite then do
+           if pending.finalMessage.isNone && pending.tools.isEmpty then pure none
+           else
+             let promotion ← if checkpoint && pending.finalMessage.isNone then
+--- a/Eggshell/ProjectGateway.lean
++++ b/Eggshell/ProjectGateway.lean
+@@ -8,6 +8,7 @@
+ /-- Actual protocol/source bytes, not a manually maintained version. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-gateway".toUTF8 [
+   (include_str "ProjectGateway.lean").toUTF8,(include_str "ProjectGatewayPeer.lean").toUTF8,
++  (include_str "ProcessGroup.lean").toUTF8,
+   Publication.implementation.toUTF8])
+ 
+ /-- Host-side configuration, never a client request. The process channel is
+@@ -36,6 +37,8 @@
+   write : Option String
+   policy : Read.Policy
+   deriving FromJson, ToJson
++def Descriptor.key (descriptor : Descriptor) : String :=
++  Blake3.hex (Blake3.digest "eggshell.project-gateway-scope".toUTF8 [(toJson descriptor).compress.toUTF8])
+ structure NamedCut where
+   name : String
+   cut : ProjectStore.Cut
+@@ -44,6 +47,22 @@
+   scope : String
+   projects : Array NamedCut
+   deriving FromJson, ToJson
++structure Captured where
++  descriptor : Descriptor
++  boundary : Boundary
++  deriving FromJson, ToJson
++def Captured.inventory (frame : Captured) (service : Config.ProjectService) : Bool :=
++  frame.descriptor.protocol == implementation && frame.descriptor.policy.valid &&
++    frame.descriptor.projects.all (fun project => decide project.manifest.Valid) &&
++    frame.descriptor.projects.map (·.name) == service.projects.toArray &&
++    frame.boundary.scope == frame.descriptor.key &&
++    frame.boundary.projects.map (·.name) == frame.descriptor.projects.map (·.name) &&
++    (frame.boundary.projects.zip frame.descriptor.projects).all (fun (cut,project) => cut.cut.inScope project.manifest)
++def Captured.accepts (frame : Captured) (service : Config.ProjectService) : Bool :=
++  frame.inventory service && frame.descriptor.write == service.write
++theorem captured_keeps_writer (frame : Captured) (service : Config.ProjectService)
++    (accepted : frame.accepts service = true) : frame.descriptor.write = service.write := by
++  exact beq_iff_eq.mp (Bool.and_eq_true_iff.mp accepted).2
+ structure Write where
+   name : String
+   grant : ProjectGrant
+@@ -108,7 +127,7 @@
+   unless ((descriptions.map (·.manifest.identity)).toList).Nodup do
+     throw (IO.userError "project aliases repeat one physical inventory")
+   let descriptor : Descriptor := ⟨implementation,descriptions,selection.write,catalog.policy⟩
+-  let key := Blake3.hex (Blake3.digest "eggshell.project-gateway-scope".toUTF8 [(toJson descriptor).compress.toUTF8])
++  let key := descriptor.key
+   return ⟨descriptor,key,readers,writer⟩
+ 
+ def pin (endpoint : Daemon.Endpoint) (scope : Scope) (deadline : Nat) : IO Boundary := do
+--- a/Eggshell/ProjectGatewayPeer.lean
++++ b/Eggshell/ProjectGatewayPeer.lean
+@@ -1,6 +1,6 @@
+ module
+ public import Eggshell.ProjectGateway
+-public import Eggshell.Worker
++public import Eggshell.ProcessGroup
+ @[expose] public section
+ 
+ namespace Eggshell.Plugin.Publication.Gateway
+@@ -28,7 +28,7 @@
+ private def closeChannel (channel : Channel) : IO Unit := do
+   unless ← channel.closed.get do
+     channel.closed.set true
+-    Worker.killGroup channel.child
++    ProcessGroup.kill channel.child
+     discard <| channel.child.wait
+     discard <| IO.wait channel.errors
+ 
+@@ -119,7 +119,7 @@
+       descriptor.projects.all (fun project => decide project.manifest.Valid) &&
+       (descriptor.projects.toList.map (·.manifest.identity)).Nodup do
+       throw (IO.userError "project service changed its selected inventory")
+-    let key := Blake3.hex (Blake3.digest "eggshell.project-gateway-scope".toUTF8 [(toJson descriptor).compress.toUTF8])
++    let key := descriptor.key
+     action ⟨channel,descriptor,key⟩
+   finally
+     closeChannel channel
+--- a/Eggshell/ProjectHookRead.lean
++++ b/Eggshell/ProjectHookRead.lean
+@@ -1,18 +1,19 @@
+ module
+ public import Eggshell.ProjectGatewayPeer
++public import Eggshell.Worker
+ @[expose] public section
+ namespace Eggshell.Plugin.ProjectHookRead
+ open Lean Publication Publication.Gateway
+-structure Captured where
+-  descriptor : Descriptor
+-  boundary : Boundary
+-  deriving ToJson, FromJson
++def advisoryEligible (enforce : Bool) (evidence : Option String) (staged : Bool) : Bool :=
++  !enforce && evidence.isNone && !staged
++theorem native_is_not_advisory (evidence : Option String) (staged : Bool) :
++    advisoryEligible true evidence staged = false := rfl
+ def capture (pending : PendingTurn) (deadline : Nat) : IO (Option PendingTurn) := do
+-  let some target := pending.remoteRead | throw (IO.userError "missing remote read configuration")
+-  unless pending.write.isNone && pending.read.isEmpty && pending.remoteFrame.isNone do
++  let some target := pending.service | throw (IO.userError "missing project service configuration")
++  unless pending.localWrite.isNone && pending.projectWrite == target.write && pending.read.isEmpty && pending.remoteFrame.isNone do
+     throw (IO.userError "ambiguous local and remote project selection")
+   Worker.withRemoteRequest pending.sessionId "search" fun _ cancelled => do
+-    withPeer target.command.toArray ⟨target.projects.toArray,none⟩ deadline (fun peer => do
++    withPeer target.command.toArray ⟨target.projects.toArray,target.write⟩ deadline (fun peer => do
+       unless peer.descriptor.policy.chars ≤ pending.handoffChars do
+         throw (IO.userError "remote host delivery policy exceeds this profile's handoff_chars")
+       let boundary ← peer.pin deadline
+@@ -31,13 +32,14 @@
+   return restored advice packet
+ def exchange (request : Worker.Search) : IO (Option Json) :=
+   Worker.withRemoteRequest request.pending.sessionId "search" fun _ cancelled => do
+-    let some target := request.pending.remoteRead | throw (IO.userError "missing remote project selection")
++    let some target := request.pending.service | throw (IO.userError "missing remote project selection")
+     let some frame := request.pending.remoteFrame | throw (IO.userError "remote turn did not capture a complete cut")
+     let captured ← IO.ofExcept (fromJson? (α := Captured) frame.payload)
+-    if request.enforce || request.evidence.isSome || request.staged then return none
++    unless advisoryEligible request.enforce request.evidence request.staged do
++      throw (IO.userError "project advisory query received a native-only request")
+     unless request.pending.projection == .automatic do
+-      throw (IO.userError "remote read_service requires automatic advisory projection")
+-    withPeer target.command.toArray ⟨target.projects.toArray,none⟩ request.deadline (fun peer => do
++      throw (IO.userError "project_service requires automatic advisory projection")
++    withPeer target.command.toArray ⟨target.projects.toArray,target.write⟩ request.deadline (fun peer => do
+       unless toJson peer.descriptor == toJson captured.descriptor && peer.accepts captured.boundary do
+         throw (IO.userError "remote service changed this turn's captured project scope")
+       let delivered := request.state.deliveryClaims request.pending.turnId (← IO.monoMsNow)
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -33,16 +33,19 @@
+   timing : Array Timing
+   deriving ToJson, FromJson
+ 
+-def Capsule.ofPrepared (request : NativePublication.Prepared) : Capsule := {
+-  session := request.pending.sessionId,turn := request.pending.turnId,cwd := request.pending.cwd
+-  work := request.pending.prompt,tools := request.pending.tools.toArray
+-  finalMessage := request.pending.finalMessage,checkpoint := request.checkpoint
+-  timing := request.items.map fun item => match item.evidence with
++def Capsule.ofItems (pending : PendingTurn) (checkpoint : Bool) (items : Array NativePublication.Item)
++    (_matching : NativePublication.matchesPending pending items = true) : Capsule := {
++  session := pending.sessionId,turn := pending.turnId,cwd := pending.cwd
++  work := pending.prompt,tools := pending.tools.toArray
++  finalMessage := pending.finalMessage,checkpoint
++  timing := items.map fun item => match item.evidence with
+     | .timed first last _ => .interval ⟨first.clock.domain,first.clock.nanos,last.clock.nanos,last.receivedUnixMs⟩
+     | .stored origin _ => .interval ⟨origin.domain,origin.started,origin.finished,origin.receivedUnixMs⟩
+     | .observed interval _ => .interval interval
+     | .awaiting => .awaiting
+     | .unavailable => .unavailable }
++def Capsule.ofPrepared (request : NativePublication.Prepared) : Capsule :=
++  Capsule.ofItems request.pending request.checkpoint request.items request.matching
+ 
+ def Capsule.pending (capsule : Capsule) (target : System.FilePath) : PendingTurn := {
+   sessionId := capsule.session,turnId := capsule.turn,cwd := capsule.cwd,prompt := capsule.work
+@@ -51,7 +54,7 @@
+ 
+ theorem pending_preserves_originals (request : NativePublication.Prepared) (target : System.FilePath) :
+     observedRoots ((Capsule.ofPrepared request).pending target) = observedRoots request.pending := by
+-  simp [Capsule.ofPrepared, Capsule.pending, observedRoots]
++  simp [Capsule.ofPrepared, Capsule.ofItems, Capsule.pending, observedRoots]
+ 
+ def Capsule.prepare (capsule : Capsule) (target : System.FilePath) (identity : String) : Except String NativePublication.Prepared := do
+   unless !capsule.session.isEmpty && !capsule.turn.isEmpty && capsule.tools.size == capsule.timing.size do
+@@ -123,6 +126,7 @@
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
+   (include_str "ProjectRead.lean").toUTF8,
+   (include_str "ProjectHookRead.lean").toUTF8,(include_str "Config.lean").toUTF8,
++  (include_str "ProjectIngress.lean").toUTF8,(include_str "ProcessGroup.lean").toUTF8,
+   (include_str "ProjectReadWire.lean").toUTF8,
+   (include_str "SynapseRecommend.lean").toUTF8,
+   (include_str "SynapticTransport.lean").toUTF8,
+--- a/Eggshell/NativePublication.lean
++++ b/Eggshell/NativePublication.lean
+@@ -145,7 +145,7 @@
+ 
+ def plan (pending : PendingTurn) (target : System.FilePath) : IO (Array Item) := do
+   let published ← PageMap.open? target
+-  let canonical := System.FilePath.mk (pending.write.getD target.toString)
++  let canonical := System.FilePath.mk (pending.localWrite.getD target.toString)
+   let journal ← match ← PageMap.open? canonical with
+     | none => pure none
+     | some source => Journal.open? source
+--- a/Eggshell/PluginProjectContext.lean
++++ b/Eggshell/PluginProjectContext.lean
+@@ -26,7 +26,8 @@
+   exact context.reads.image_source_count
+ 
+ def projectConfigured (pending : PendingTurn) : IO Bool := do
+-  for path in (pending.write.toList ++ pending.read).eraseDups do
++  if pending.service.isSome then return false
++  for path in (pending.localWrite.toList ++ pending.read).eraseDups do
+     if ← ((System.FilePath.mk path)/"project").pathExists then return true
+     if let some source ← PageMap.open? (.mk path) then
+       if (← ProjectCacheScope.at? source).isSome then
+--- a/Eggshell/SynapseLive.lean
++++ b/Eggshell/SynapseLive.lean
+@@ -2,6 +2,7 @@
+ 
+ public import Eggshell.SynapseJournal
+ public import Eggshell.PluginProjectContext
++public import Eggshell.ProjectIngress
+ 
+ @[expose] public section
+ 
+@@ -42,6 +43,10 @@
+ 
+ def observe (pending : Plugin.PendingTurn)
+     (make : DB.PageMap.Snapshot → Option String → IO Journal.Entry) : IO Unit := do
++  if pending.projectWrite.isSome then
++    let some source ← Plugin.ProjectIngress.source pending true | throw (IO.userError "native project ingress is absent")
++    discard <| Journal.append source (← make source none)
++    return
+   if let some context ← Plugin.ProjectContext.open? pending ((← IO.monoMsNow)+5000) then
+     let source ← context.source
+     let value ← make source context.archive
+@@ -73,13 +78,13 @@
+       Journal.register other (context.canPrepare (DB.Sidecar.Owner.ofSnapshot other)) (some owner)
+     Plugin.markPreparationWake pending.sessionId
+     return
+-  for path in (pending.write.toList ++ pending.read).eraseDups do
++  for path in (pending.localWrite.toList ++ pending.read).eraseDups do
+     try
+       let some source ← DB.PageMap.open? (.mk path) | continue
+-      let _ ← Journal.append source (← make source pending.write)
+-      Journal.register source (pending.write == some path)
++      let _ ← Journal.append source (← make source pending.localWrite)
++      Journal.register source (pending.localWrite == some path)
+     catch error =>
+-      if pending.write == some path then throw error
++      if pending.localWrite == some path then throw error
+       IO.eprintln s!"Eggshell retained unknown synaptic ingress: {error}"
+   Plugin.markPreparationWake pending.sessionId
+ 
+--- a/Eggshell/ProjectPublication.lean
++++ b/Eggshell/ProjectPublication.lean
+@@ -29,6 +29,7 @@
+   project : ProjectStore.Project
+   capability : String
+   lanes : Array Lane
++  preparationRegistered : Bool := false
+ 
+ structure ReadRegistration where
+   project : ProjectStore.Project
+@@ -96,7 +97,7 @@
+         let owner ← acquireOwner project slot
+         acquired.modify (·.push {owner})
+       let capability := Blake3.hex (← IO.getRandomBytes 32)
+-      let registration : Registration := ⟨project,capability,← acquired.get⟩
++      let registration : Registration := ⟨project,capability,← acquired.get,false⟩
+       set {state with projects := state.projects.push registration}
+       return ⟨project.manifest,capability⟩
+     catch error =>
+@@ -111,6 +112,19 @@
+   unless secret == registered.capability do throw (IO.userError "unauthorized logical project")
+   return registered
+ 
++/-- Only mark a complete, durable registration of all owner preparation targets.
++The registration IO runs outside this short metadata operation. A failure leaves
++the mark false; idempotent registrations can retry and restart also rechecks. -/
++def Pool.markPreparationRegistered (pool : Pool) (identity secret : String) : IO Unit :=
++  pool.state.atomically do
++    let state ← get
++    unless !state.closed do throw (IO.userError "project publisher is closed")
++    let some registered := state.projects.find? (·.project.manifest.identity == identity) |
++      throw (IO.userError "project preparation lost its registered writer")
++    unless registered.capability == secret do throw (IO.userError "unauthorized project preparation registration")
++    set {state with projects := state.projects.map (fun (item : Registration) =>
++      if item.project.manifest.identity == identity then {item with preparationRegistered := true} else item)}
++
+ /-- Local administration registers immutable read scope, without acquiring a
+ publisher lease or making a read capability a project write capability. -/
+ def Pool.registerRead (pool : Pool) (path : System.FilePath) (identity : String) : IO ReadGrant := do
+@@ -260,7 +274,7 @@
+       return some ⟨lane.owner,jobs⟩
+   return none
+ 
+-def commit (pool : Pool) (owner : Owner) : Nat → Array Job → IO (Nat × Nat)
++def commit (pool : Pool) (owner : Owner) (onPublished : Array NativePublication.Published → IO Unit) : Nat → Array Job → IO (Nat × Nat)
+   | 0,jobs => do
+     for job in jobs do job.reply.resolve (.error "project publication isolation bound reached")
+     return (0,0)
+@@ -283,6 +297,7 @@
+           acknowledged := acknowledged.push (job,NativePublication.receipt job.request.items source.head)
+         else fresh := fresh.push job
+       let mut groups := 0
++      let mut published := #[]
+       if let some first := fresh[0]? then
+         let begun ← IO.monoMsNow
+         let append := fun view => do
+@@ -300,8 +315,11 @@
+             let some firstView := views[0]? | throw (IO.userError "publication lost its retained image")
+             append (← firstView.joinMany (views.extract 1 views.size))
+         unless publications.size == fresh.size do throw (IO.userError "project publication changed its group")
++        published := publications
+         acknowledged := acknowledged ++ (fresh.zip publications).map (fun (job,published) => (job,published.source))
+         groups := 1
++      try onPublished published
++      catch error => IO.eprintln s!"Eggshell published shared source; preparation remains pending: {error}"
+       pure (.ok (groups,acknowledged) : Except String (Nat × Array (Job × NativePublication.SourceReceipt)))
+     catch error => pure (.error error.toString)
+     match result with
+@@ -314,14 +332,15 @@
+         for job in live do job.reply.resolve (.error error)
+         return (0,0)
+       let middle := live.size/2
+-      let left ← commit pool owner fuel (live.extract 0 middle)
+-      let right ← commit pool owner fuel (live.extract middle live.size)
++      let left ← commit pool owner onPublished fuel (live.extract 0 middle)
++      let right ← commit pool owner onPublished fuel (live.extract middle live.size)
+       return (left.1+right.1,left.2+right.2)
+ 
+-def Pool.publish (pool : Pool) (group : Group) : IO Unit := do
++def Pool.publish (pool : Pool) (group : Group)
++    (onPublished : Owner → Array NativePublication.Published → IO Unit := fun _ _ => pure ()) : IO Unit := do
+   let committed ← IO.mkRef (0,0)
+   try
+-    committed.set (← commit pool group.owner (group.jobs.size+1) group.jobs)
++    committed.set (← commit pool group.owner (onPublished group.owner) (group.jobs.size+1) group.jobs)
+   catch error =>
+     for job in group.jobs do job.reply.resolve (.error error.toString)
+   finally
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -861,6 +861,20 @@
+       cancelled.set true
+       throw (IO.userError "publisher requester left before its reply")
+   throw (IO.userError "unreachable publication wait")
++
++/-- Writable project admission installs persistent preparation targets for its
++complete owner inventory, including empty owners. Subsequent registrations do
++no source IO. Concurrent first registrations are idempotent; readiness remains
++the background service's responsibility, never an invented source ACK. -/
++def registerProjectPreparation (server : Server) (grant : ProjectGrant) : IO Unit := do
++  let registered ← server.owned.scope grant.manifest.identity grant.capability
++  if registered.preparationRegistered then return
++  let command := [(← IO.appPath).toString,"search-provider"]
++  for lane in registered.lanes do
++    let source ← lane.owner.project.current lane.owner.slot
++    let target ← registerIndexTarget source command
++    discard <| server.preparation.notify "index" target.key
++  server.owned.markPreparationRegistered grant.manifest.identity grant.capability
+ 
+ def serveClient (server : Server) (admin : String) (client : Socket.Client)
+     (operationsOnly : Bool := false) (retention : Option Research.RetentionProbe.Probe := none) : IO Unit := do
+@@ -969,7 +983,9 @@
+         | "project-register" => do
+           let path ← IO.ofExcept (payload.getObjValAs? String "directory")
+           let identity ← IO.ofExcept (payload.getObjValAs? String "database")
+-          toJson <$> server.owned.register (.mk path) identity
++          let grant ← server.owned.register (.mk path) identity
++          registerProjectPreparation server grant
++          pure (toJson grant)
+         | "project-read-register" => do
+           let path ← IO.ofExcept (payload.getObjValAs? String "directory")
+           let identity ← IO.ofExcept (payload.getObjValAs? String "database")
+@@ -1033,6 +1049,23 @@
+     for job in project.queue do job.reply.resolve (.error "publisher closed before commit admission")
+   return state.projects
+ 
++/-- A source ACK does not wait for derived work. Durable tickets and the
++service-owned scheduler survive the saving client's exit or lost reply. -/
++def prepareProjectPublication (server : Server) (owner : ProjectStore.Owner)
++    (publications : Array NativePublication.Published) : IO Unit := do
++  let source ← owner.project.current owner.slot
++  let command := [(← IO.appPath).toString,"search-provider"]
++  let mut target := none
++  for published in publications do
++    unless source.head.identity == published.source.head.identity &&
++        (← ProjectStore.sourceContains source published.source.head) do
++      throw (IO.userError "project preparation lost its durable source publication")
++    target := some (← queueIndexAt source command published.promotion)
++  let registered ← match target with
++    | some readyTarget => pure readyTarget
++    | none => registerIndexTarget source command
++  discard <| server.preparation.notify "index" registered.key
++
+ /-- A local data-side service. Loopback administration is private to its OS
+ owner; project capabilities are distinct. Network deployment/auth is separate. -/
+ def run : IO UInt32 := do
+@@ -1098,7 +1131,7 @@
+       server.retained.reap
+       while (← publications.get).length < 16 do
+         if let some group ← server.owned.takeGroup then
+-          let task ← IO.asTask (server.owned.publish group) .dedicated
++          let task ← IO.asTask (server.owned.publish group (prepareProjectPublication server)) .dedicated
+           publications.modify (task :: ·)
+         else
+           let some (path,identity,jobs) ← takeGroup server | break
+--- /dev/null
++++ b/Eggshell/ProcessGroup.lean
+@@ -0,0 +1,13 @@
++module
++public import Lean
++@[expose] public section
++namespace Eggshell.ProcessGroup
++/-- The caller owns a child started with setsid. Other requests never close
++its handle or signal a replacement process through a reused registry name. -/
++def kill {cfg : IO.Process.StdioConfig} (child : IO.Process.Child cfg) : IO Unit := do
++  let killer ← IO.Process.spawn {
++    cmd := "/bin/kill",args := #["-KILL","--","-"++toString child.pid]
++    stdin := .null,stdout := .null,stderr := .null }
++  discard <| killer.wait
++  try child.kill catch _ => pure ()
++end Eggshell.ProcessGroup
+--- /dev/null
++++ b/Eggshell/ProjectIngress.lean
+@@ -0,0 +1,59 @@
++module
++public import Eggshell.ProjectGateway
++@[expose] public section
++namespace Eggshell.Plugin.ProjectIngress
++open Lean DB Publication Publication.Gateway
++def writer (pending : PendingTurn) : Except String (Captured × NamedManifest) := do
++  let some service := pending.service | throw "project writer has no captured service"
++  let some name := pending.projectWrite | throw "turn has no selected project writer"
++  unless pending.localWrite.isNone && service.write == some name do throw "ambiguous project writer"
++  let some envelope := pending.remoteFrame | throw "project writer has no captured read boundary"
++  let frame ← fromJson? (α := Captured) envelope.payload
++  unless frame.accepts service do throw "project writer changed its captured inventory"
++  let some project := frame.descriptor.projects.find? (·.name == name) | throw "captured writer is absent from its inventory"
++  return (frame,project)
++def directory (pending : PendingTurn) : IO (System.FilePath × String) := do
++  let (frame,project) ← IO.ofExcept (writer pending)
++  let occurrence := Blake3.hex (Blake3.digest "eggshell.private-native-ingress".toUTF8
++    [(toJson (frame.boundary.scope,pending.sessionId,pending.turnId)).compress.toUTF8])
++  let root := (← Paths.dataRoot)/"native-ingress"/project.manifest.identity/occurrence
++  return (root,"private-project-ingress:"++project.manifest.identity++":"++occurrence)
++/-- This source is an empty private anchor for one turn's native journal, not
++a local mirror or cache of the shared work graph. Atomic directory creation
++arbitrates first creation without a lock shared by other chats. -/
++def source (pending : PendingTurn) (create : Bool) : IO (Option PageMap.Snapshot) := do
++  let (directory,authority) ← directory pending
++  FileSystem.rejectSymlinkAncestors directory
++  let found ← PageMap.open? directory
++  let found ← match found with
++    | some source => pure (some source)
++    | none =>
++      if !create then pure none else do
++        FileSystem.privateDirectory (directory.parent.getD ".")
++        try some <$> PageMap.create directory authority
++        catch error =>
++          let some concurrent ← PageMap.open? directory | throw error
++          pure (some concurrent)
++  for source in found do
++    unless source.head.authority == authority && source.head.root.isNone do
++      throw (IO.userError "private ingress anchor is a foreign or nonempty original graph")
++  return found
++/-- A final answer may travel through the checkpoint queue. Its publication
++must still compile the complete turn, just as the local publication path does. -/
++def observationsOnly (pending : PendingTurn) (checkpoint : Bool) : Bool :=
++  checkpoint && pending.finalMessage.isNone
++theorem final_compiles_turn (pending : PendingTurn) (answer : String)
++    (final : pending.finalMessage = some answer) (checkpoint : Bool) :
++    observationsOnly pending checkpoint = false := by
++  simp [observationsOnly,final]
++def capsule (pending : PendingTurn) (checkpoint : Bool) : IO Capsule := do
++  discard <| IO.ofExcept (writer pending)
++  let anchor ← source pending false
++  let journal ← match anchor with
++    | none => pure none
++    | some anchor => Synapses.Journal.open? anchor
++  let items ← NativePublication.planUsing pending none journal
++  if matching : NativePublication.matchesPending pending items = true then
++    return Capsule.ofItems pending (observationsOnly pending checkpoint) items matching
++  else throw (IO.userError "remote publication changed its captured native observations")
++end Eggshell.Plugin.ProjectIngress

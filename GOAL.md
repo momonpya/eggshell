@@ -2,6 +2,11 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[通常hookから共有projectへ保存する候補](docs/candidates/project-hook-write/README.md)をLeanで隔離実装中。設定の`project_service`とread/write project名、turn開始時に捕捉した完全なcutを使用し、ローカルdirectoryと共有projectの保存先を型で区別する。クライアントには原graphのコピーを作らず、turn専用の私有native journalを使い、原観測と来歴をデータ側へ出版する。source ACKと索引準備は別契約で、登録・差分出版からデータ側の背景準備へ渡す。remote adviceの認定権限は増やさない。
+実フックで、検索しないツール前処理が未完了通知になる不具合と、checkpoint queueに入った最終回答が観測のみの出版になる不具合を再現・修正した。後者の修正では6原観測/2回答の保存と3種のadvisory辺を確認したが、読み込みは空ownerの認定用索引がなく失敗した。native read-only監査で非空2領域は全入力準備済み、空2領域は検索入力のみ準備済みと特定。書込project登録時に全ownerの永続準備targetを一度登録し、以後の準備は背景serviceへ渡す修正を入れた。登録IOは既存registryの短いmetadata操作の外で行い、全target登録後だけ完了markを付ける。
+製品 `d3496cae…` の新しい空DB試験では2DB・各2owner・2並行writerから6原観測/2回答を保存し、手動keep/warmなしで完全な準備まで4.835秒。必要4固有原文をDBから先に凍結し、原ファイル削除後、10新規/10再開/3service再起動後の再開clearcompact/新規3+既存7混在の4waveが2.355/2.270/3.223/2.281秒で通った（restart自体は後続gate外）。全40意味検索・可視原文104/104、うち新規本文60出現、原典head/files不変、144 native command（138 hook）に失敗/stderr/未完了通知なし。Pre/Postは各6件の最大376/381ms、prompt42件の最大2.129秒であり、本番p99とは扱わない。関連RSS最大3,561,152KiB、guard未発動・terminal・ownedPids空。8法則は標準公理のみ、343製品object/320 observer objectと共通318 source・全coreを照合。17,607項目・3,203,995,751論理bytesの終了済みDB/cache/journal/observer/helperをarchiveせず削除し、保護原典/runtime/modelと削除後343 objectの整合を維持した。
+失敗/中断記録とruntime/observer/source bindingは別に保持し、失敗を配送成功へ読み替えない。小fixture・500,000文字予算・最大実本文8,738 bytesであり、一般98%へ転用しない。新経路の処理中中断/後着通知/保存先変更・保存と読込の重なり・別PC/NAS・増加DB・80人8時間・受理LLVM seedと両周・総token/品質比較は未完。回答model追加0、比較0/18、採用0を維持する。
+
 [共有検索を通常hookへ接続する候補](docs/candidates/project-hook-read/README.md)をLeanで隔離実装した。製品 `7bc72da7…` は、user-owned profileの`read_service`とproject名から完全なproject/owner cutをturn開始時に捕捉する。接続はsession stateのcritical section外で行い、turn/epochが現行のときだけ捕捉結果を確定する。検索と取消は既存のrequest単位の管理を使い、新しい共有検索queueは置かない。
 実描画と一致する配送packetを既存のreconcile/offer/ACKへ通し、remote adviceにはcompletion/block/local unionの権限を与えない。空返送にも実検索traceを保持する。`egg doctor`のremote名/readonly表示と、`egg warm`が空のlocal DBを温めたように見せない動作も追加した。
 同runtimeで2DB・各2所有領域に6原観測/2回答を通常hookから保存し、DB内の必要4項目を先に凍結した。原ファイルを削除した後の直接13照会は通り、10並行gateは0.506秒。元serviceを終了し、別の空host/client data rootから通常hookで10新規/10継続resume/4resume+3clear+3compactを実行した。開始/検索/終了を含むgateは4.068/2.412/2.440秒、全30照会の可視原文78/78を検査した。うち新たな実返送本文は44出現で、残りは継続contextの受領済み本文である（4固有項目の反復数）。
