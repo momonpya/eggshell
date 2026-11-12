@@ -2,6 +2,14 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[共有検索を通常hookへ接続する候補](docs/candidates/project-hook-read/README.md)をLeanで隔離実装した。製品 `7bc72da7…` は、user-owned profileの`read_service`とproject名から完全なproject/owner cutをturn開始時に捕捉する。接続はsession stateのcritical section外で行い、turn/epochが現行のときだけ捕捉結果を確定する。検索と取消は既存のrequest単位の管理を使い、新しい共有検索queueは置かない。
+実描画と一致する配送packetを既存のreconcile/offer/ACKへ通し、remote adviceにはcompletion/block/local unionの権限を与えない。空返送にも実検索traceを保持する。`egg doctor`のremote名/readonly表示と、`egg warm`が空のlocal DBを温めたように見せない動作も追加した。
+同runtimeで2DB・各2所有領域に6原観測/2回答を通常hookから保存し、DB内の必要4項目を先に凍結した。原ファイルを削除した後の直接13照会は通り、10並行gateは0.506秒。元serviceを終了し、別の空host/client data rootから通常hookで10新規/10継続resume/4resume+3clear+3compactを実行した。開始/検索/終了を含むgateは4.068/2.412/2.440秒、全30照会の可視原文78/78を検査した。うち新たな実返送本文は44出現で、残りは継続contextの受領済み本文である（4固有項目の反復数）。
+通常promptのremote frame、local project境界なし、native ACK後のoffers空・confirmed projectionありを確認した。原典head/files不変、114 acquisition/source/hook commandは非0終了/stderrなし。接続後に返答しないprocessの取消は初回5ms/最終7msでscope不成立・join完了。通常hook段階の関連RSS最大2,937,584KiB、成功guardはterminal/未発動/ownedPids空、既存MiniLM警告1件を保持する。モデル/数値runtimeは変更していない。
+5法則は標準公理のみ、adapterの1,358宣言にlocal project file読込なし。341製品object/319 observer objectと共通core sourceを照合した。最初のfixture記録先dir不足は通常hook前の失敗として保持し、製品/保存DBを変えず検査器だけを直して新service/client rootから続行した。fixture libraryの抽出とnative CLIの分離は検査コードだけの整理である。
+nativeの`egg doctor`でremote ALPHA/readonly/local DBなしを確認し、`egg warm`がdata hostでの準備を案内して拒否することも確認した。旧fixture CLI入口は通常のnative buildで通り、小さなinterpreter heapでの検査拒否とmetadata launcherのimport失敗は別記した。aggregate RSS保護線は不変。終了済み試験DB/cache/observer/helper 6,420項目・924,844,131論理bytesをarchiveせず削除し、原典/current runtime/model/native入力のhashと削除後341 object整合を維持した。
+予算500,000文字・最大実本文9,361 UTF-8 bytesの小native fixtureであり、公開既定予算/総token削減/一般98%へ転用しない。通常hookのremote保存は未接続で、`read_service`と同時のwrite指定は明示的に拒否する。別PC/実Codex UI/実query中の中断とpublisher再起動をまたぐ再開/共有FS/増加DB/80人8時間/現runtimeの受理seed・題材両周/反復総token/品質は未完。回答model 0・比較0/18・採用0を維持する。
+
 [共有projectの検索・原文返送](docs/candidates/project-read-service/README.md)を隔離実装した。製品 `a6f2160d…` は、全project/owner cutを保ち、既存のproject view/public readerを共有してvector・e-class/work graph・synaptic探索と原文描画をデータ側で行う。質問と完全な入力digestを照合し、返送はadvisoryだけで現在のWorkを完了扱いにしない。
 通常フックで2DB・各2所有領域に6原観測/2回答を保存し、配送前にDB内の必要コード4項目を凍結した。元ファイル削除後の13照会は全件が意味検索・synaptic完了。10接続の全gateは0.503秒、最大個別照会0.501秒。さらに空の別service/client data rootから同じDBを新規10接続で読むgateは1.988秒で、手動warmなし・実本文は前の同じcutとバイト一致だった。
 全23照会で出典path/fingerprintとCODE内の必要原文60/60を検査した（4固有項目の反復出現数）。他DB混入なし、原典head/files不変。fixture予算500,000文字・実本文最大9,374 UTF-8 bytesで、公開既定予算/総token削減へ読み替えない。

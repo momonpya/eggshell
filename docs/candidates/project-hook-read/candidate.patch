@@ -1,0 +1,427 @@
+--- a/Eggshell/Config.lean
++++ b/Eggshell/Config.lean
+@@ -16,6 +16,11 @@
+   path : System.FilePath
+   deriving Repr, DecidableEq
+ 
++structure RemoteRead where
++  command : List String
++  projects : List String
++  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
++
+ structure Profile where
+   name : String
+   read : List String := []
+@@ -23,6 +28,8 @@
+   handoffChars : Nat := 120000
+   /-- False retains advisory retrieval while disabling automatic operation reuse. -/
+   localUnion : Bool := true
++  /-- User-owned process transport. Read names are host catalog names. -/
++  readService : Option (List String) := none
+   deriving Repr, DecidableEq
+ 
+ structure Config where
+@@ -46,6 +53,7 @@
+   /-- Set by the harness independently of the user profile's character budget. -/
+   handoffBytes : Option Nat := none
+   localUnion : Bool := true
++  remoteRead : Option RemoteRead := none
+   deriving Repr, DecidableEq
+ 
+ inductive Section where
+@@ -147,7 +155,11 @@
+     | .eggs =>
+         pure { state with eggs := (key, ← unquote value) :: state.eggs }
+     | .profile name =>
+-        if key = "read" then
++        if key = "read_service" then
++          let command ← arrayStrings value
++          if command.isEmpty || command.head!.isEmpty then throw "read_service must name an executable"
++          pure (alterProfile state name fun profile => {profile with readService := some command})
++        else if key = "read" then
+           let names ← arrayStrings value
+           pure (alterProfile state name fun profile =>
+             { profile with read := names })
+@@ -237,6 +249,8 @@
+       throw s!"project egg {egg.name} must be a path below {root}"
+   let eggNames := config.eggs.map (·.name)
+   for profile in config.profiles do
++    if profile.readService.isSome then
++      throw "project .eggshell.toml cannot execute read_service; configure it in the user-owned global config"
+     if profile.read.any (!eggNames.contains ·) ||
+         profile.write.any (!eggNames.contains ·) then
+       throw s!"project profile {profile.name} may reference only eggs declared by this project"
+@@ -310,6 +324,19 @@
+   let profile ← match config.profiles.find? (·.name == profileName) with
+     | some profile => pure profile
+     | none => throw s!"unknown Eggshell profile {profileName}"
++  if let some command := profile.readService then
++    unless profile.write.isNone do throw "read_service is read-only; configure publication separately"
++    unless !command.isEmpty && !command.head!.isEmpty && !profile.read.isEmpty &&
++        profile.read.length ≤ 64 && profile.read.all (!·.isEmpty) && profile.read.Nodup do
++      throw "read_service requires distinct nonempty project names"
++    return {
++      label := profileName
++      semanticMatcher := config.semanticMatcher
++      read := []
++      write := none
++      handoffChars := profile.handoffChars
++      localUnion := false
++      remoteRead := some ⟨command,profile.read⟩ }
+   let resolveEgg name := match config.eggs.find? (·.name == name) with
+     | some egg => pure egg
+     | none => throw s!"profile {profileName} names unknown egg {name}"
+--- a/Eggshell/PluginModel.lean
++++ b/Eggshell/PluginModel.lean
+@@ -146,6 +146,9 @@
+   sources : List SourceEvidence.File := []
+   finalMessage : Option String := none
+   closed : Bool := false
++  remoteRead : Option Config.RemoteRead := none
++  /-- Immutable descriptor and complete cut captured before this turn searches. -/
++  remoteFrame : Option PreparedInputEnvelope := none
+   deriving Repr, ToJson, FromJson
+ 
+ structure Promotion where
+@@ -511,6 +514,7 @@
+   write := pending.write.map fun raw => { name := raw, path := System.FilePath.mk raw }
+   handoffChars := pending.handoffChars
+   localUnion := pending.localUnion
++  remoteRead := pending.remoteRead
+ }
+ 
+ def valueEncoding (value : Value) : String :=
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -3,6 +3,7 @@
+ public import Eggshell.DB.CacheReclaim
+ 
+ public import Eggshell.Worker
++public import Eggshell.ProjectHookRead
+ public import Eggshell.MiniLM
+ public import Eggshell.SynapseLive
+ public import Eggshell.HashDistinct
+@@ -692,7 +693,7 @@
+     if !state.enabled then
+       return systemMessage "Eggshell memory is off for this chat. Use !egg on only if you want to enable it."
+     let selection ← IO.ofExcept (Config.resolve config state.profile)
+-    let mode := if selection.read.isEmpty && selection.write.isNone then "off"
++    let mode := if selection.read.isEmpty && selection.write.isNone && selection.remoteRead.isNone then "off"
+       else if selection.write.isNone then "read-only" else "read/write"
+     return systemMessage (s!"Eggshell session hook connected: memory {mode}, profile {state.profile}. " ++
+       "Use !egg doctor to check setup; !egg graph shows context actually delivered.")
+@@ -886,7 +887,7 @@
+     let some current ← readPendingBase? files | return none
+     if !state.enabled || current.turnId != pending.turnId || (current.closed || current.finalMessage.isSome) then
+       return none
+-    if pending.projection == .none || pending.read.isEmpty then return none
++    if pending.projection == .none || (pending.read.isEmpty && pending.remoteRead.isNone) then return none
+     writeJson files.state {state with searchStarted := true}
+     pure (some state)
+   let some initial := snapshot | return none
+@@ -904,7 +905,8 @@
+     finishReady := false
+     onReady := fun now => do
+       if (← readyAt.get).isNone then readyAt.set (some now) }
+-  let response ← Worker.exchange session "search" (toJson query) deadline (some policy)
++  let response ← if pending.remoteRead.isSome then ProjectHookRead.exchange query
++    else Worker.exchange session "search" (toJson query) deadline (some policy)
+   let observed ← IO.monoMsNow
+   let finishDeadline := configuredSearchDeadline semantic (← readyAt.get).isSome firstDeadline deadline
+   let decoded := Worker.SearchReply.decode response
+@@ -981,8 +983,10 @@
+       profile := selection.label, semanticMatcher := selection.semanticMatcher,
+       read := selection.read.map (·.path.toString), write := selection.write.map (·.path.toString),
+       handoffChars := selection.handoffChars, localUnion := selection.localUnion,
++      remoteRead := selection.remoteRead,
+       projection := state.nextProjection.getD .automatic }
+-    let pending ← ProjectContext.capture pending (← hookDeadline input) (optionalString input "_eggshell_receipt")
++    let pending ← if pending.remoteRead.isSome then pure pending else
++      ProjectContext.capture pending (← hookDeadline input) (optionalString input "_eggshell_receipt")
+     state := { state with
+       epoch := state.epoch + 1
+       offers := []
+@@ -990,9 +994,20 @@
+       nextProfile := none, nextProjection := none }
+     writeJson files.state state
+     writeJson files.pending pending
+-    pure (some pending)
+-  let some pending := prepared | return emptyHook
++    pure (some (pending,state.epoch))
++  let some (pending,epoch) := prepared | return emptyHook
+   Worker.cancel session "search"
++  let captured ← if pending.remoteRead.isSome then do
++      let some captured ← ProjectHookRead.capture pending (← hookDeadline input) | pure none
++      withHookSession input session fun files => do
++        let some current ← readPendingBase? files | return none
++        let some state ← readState? files | return none
++        unless state.epoch == epoch && current.turnId == pending.turnId && !current.closed && current.finalMessage.isNone do
++          return none
++        writeJson files.pending captured
++        return some captured
++    else pure (some pending)
++  let some pending := captured | return emptyHook
+   let handoff ← deliverForWork input pending prompt false
+   let context := handoff.map (·.text) |>.getD ""
+   pure <| withSearchNotice handoff (if context == "" then emptyHook else hookContext "UserPromptSubmit" context)
+--- a/Eggshell/PluginCli.lean
++++ b/Eggshell/PluginCli.lean
+@@ -84,13 +84,14 @@
+       let profile := state.map (·.profile) |>.getD config.defaultProfile
+       let selection ← IO.ofExcept (Config.resolve config profile)
+       let mode := if state.any (! ·.enabled) ||
+-          (selection.read.isEmpty && selection.write.isNone) then "off"
++          (selection.read.isEmpty && selection.write.isNone && selection.remoteRead.isNone) then "off"
+         else if selection.write.isNone then "read-only" else "read/write"
+       fields := fields ++ [("configuration", Lean.toJson "ready"),
+         ("config", Lean.toJson config.source.toString),
+         ("profile", Lean.toJson profile), ("memory", Lean.toJson mode),
+         ("write",toJson (selection.write.map (·.path.toString))),
+         ("handoff_chars",toJson selection.handoffChars),
++        ("remote_read",toJson (selection.remoteRead.map (·.projects))),
+         ("databases", toJson (← selection.read.mapM (databaseCacheStatus · selection.semanticMatcher))),
+         ("next_step", Lean.toJson
+           "Review /hooks and start a new chat. Verify saving and delivery with the two-chat example.")]
+@@ -103,6 +104,8 @@
+   let state ← diagnosticState
+   let selected ← config.mapM fun config =>
+     IO.ofExcept (Config.resolve config (state.map (·.profile) |>.getD config.defaultProfile))
++  if requested.isNone && selected.any (·.remoteRead.isSome) then
++    throw (IO.userError "read_service preparation belongs to its data host; run egg warm there")
+   let eggs ← match requested with
+     | some raw =>
+         let named := config.bind (fun config => config.eggs.find? (·.name == raw))
+@@ -149,7 +152,7 @@
+ def statusLine (selection : Config.Selection) (state : ThreadState)
+     (pending : Option PendingTurn) : String :=
+   let enabled := if state.enabled then "on" else "off"
+-  let reads := " ".intercalate (selection.read.map (·.name))
++  let reads := " ".intercalate (selection.remoteRead.map (·.projects) |>.getD (selection.read.map (·.name)))
+   let write := selection.write.map (·.name) |>.getD "read-only"
+   let pendingText := match pending with
+     | none => "none"
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -35,6 +35,30 @@
+   cancelled : IO.Ref Bool
+ 
+ initialize remote : Std.Mutex (Lifetime.Cell (Array Remote)) ← Std.Mutex.new (.open #[])
++
++/-- Only registration/removal holds the metadata mutex. The request itself,
++including independent remote-project IO, runs outside that critical section. -/
++def withRemoteRequest (session role : String)
++    (action : String → IO.Ref Bool → IO (Option α)) : IO (Option α) := do
++  let id ← Receipt.fresh
++  let cancelled ← IO.mkRef false
++  let admitted ← remote.atomically do
++    match ← get with
++    | .closed => pure false
++    | .open current =>
++      unless current.size < 256 do return false
++      set (Lifetime.Cell.open (current.push ⟨session,role,id,cancelled⟩))
++      return true
++  unless admitted do return none
++  try action id cancelled
++  catch error =>
++    unless ← cancelled.get do IO.eprintln s!"Eggshell shared {role} operation: {error}"
++    return none
++  finally
++    remote.atomically do
++      match ← get with
++      | .closed => pure ()
++      | .open current => set (Lifetime.Cell.open (current.filter (·.id != id)))
+ 
+ def slotFor (session role : String) : IO Slot := slots.atomically do
+   let key := session ++ ":" ++ role
+@@ -614,17 +638,7 @@
+     (searchPolicy : Option SearchPolicy := none) : IO (Option Json) := do
+   let some operation := OperationWire.Role.ofName role |
+     return ← exchangeLocal session role payload deadline searchPolicy
+-  let id ← Receipt.fresh
+-  let cancelled ← IO.mkRef false
+-  let admitted ← remote.atomically do
+-    match ← get with
+-    | .closed => pure false
+-    | .open current =>
+-      unless current.size < 256 do return false
+-      set (Lifetime.Cell.open (current.push ⟨session,role,id,cancelled⟩))
+-      return true
+-  unless admitted do return none
+-  try
++  withRemoteRequest session role fun id cancelled => do
+     let payload ← if operation == .search then do
+         let request ← IO.ofExcept (fromJson? payload : Except String Search)
+         let captured ← capturePrepared request (some deadline) cancelled.get
+@@ -648,14 +662,6 @@
+         throw (IO.userError "foreign or expired operation progress")
+       policy.onReady arrived
+     Publication.Client.operationExchange request cutoff cancelled ready
+-  catch error =>
+-    unless ← cancelled.get do IO.eprintln s!"Eggshell shared {role} operation: {error}"
+-    return none
+-  finally
+-    remote.atomically do
+-      match ← get with
+-      | .closed => pure ()
+-      | .open current => set (Lifetime.Cell.open (current.filter (·.id != id)))
+ 
+ /-- A finished search is publishable only in its requesting context and before
+     its deadline. An incomplete search can carry only a current-context notice,
+--- a/Eggshell/ProjectGatewayPeer.lean
++++ b/Eggshell/ProjectGatewayPeer.lean
+@@ -17,6 +17,7 @@
+   private child : PipeChild
+   private errors : Task (Except IO.Error Unit)
+   private closed : IO.Ref Bool
++  private cancelled : IO Bool
+ 
+ private partial def drain (handle : IO.FS.Handle) : IO Unit := do
+   let bytes ← handle.read 65536
+@@ -33,7 +34,7 @@
+ 
+ @[no_expose] def Channel.exchange (channel : Channel) (operation : Operation) (deadline : Nat) : IO Json := do
+   let now ← IO.monoMsNow
+-  unless now < deadline && !(← channel.closed.get) do throw (IO.userError "project request expired or closed")
++  unless now < deadline && !(← channel.closed.get) && !(← channel.cancelled) do throw (IO.userError "project request expired, cancelled or closed")
+   let id ← Receipt.fresh
+   let request : Request := ⟨id,implementation,min maxBudgetMs (deadline-now),operation⟩
+   let task ← IO.asTask (do
+@@ -48,7 +49,7 @@
+     | .error message => throw (IO.userError message)) .dedicated
+   try
+     while !(← IO.hasFinished task) do
+-      unless (← IO.monoMsNow) < deadline do throw (IO.userError "project request exceeded its deadline")
++      unless (← IO.monoMsNow) < deadline && !(← channel.cancelled) do throw (IO.userError "project request expired or cancelled")
+       IO.sleep 2
+     IO.ofExcept (task.get.mapError IO.Error.toString)
+   finally
+@@ -101,7 +102,8 @@
+ /-- Command arguments are operator configuration, not tool output or request
+ text. SSH authentication/forced-command policy belongs to that deployment.
+ Child groups and pipe tasks are owned and joined on every exit. -/
+-@[no_expose] def withPeer (command : Array String) (selection : Selection) (deadline : Nat) (action : Peer → IO α) : IO α := do
++@[no_expose] def withPeer (command : Array String) (selection : Selection) (deadline : Nat) (action : Peer → IO α)
++    (cancelled : IO Bool := pure false) : IO α := do
+   unless (← IO.monoMsNow) < deadline do throw (IO.userError "project connection expired")
+   let some executable := command[0]? | throw (IO.userError "empty project service command")
+   let spawned ← IO.Process.spawn {
+@@ -109,7 +111,7 @@
+     stdin := .piped, stdout := .piped, stderr := .piped, setsid := true }
+   let (stdin,child) ← spawned.takeStdin
+   let errors ← IO.asTask (drain child.stderr) .dedicated
+-  let channel : Channel := ⟨IO.FS.Stream.ofHandle child.stdout,IO.FS.Stream.ofHandle stdin,child,errors,← IO.mkRef false⟩
++  let channel : Channel := ⟨IO.FS.Stream.ofHandle child.stdout,IO.FS.Stream.ofHandle stdin,child,errors,← IO.mkRef false,cancelled⟩
+   try
+     let value ← channel.exchange (.open selection) deadline
+     let descriptor ← IO.ofExcept (fromJson? (α := Descriptor) value)
+--- a/Eggshell/ProjectReadWire.lean
++++ b/Eggshell/ProjectReadWire.lean
+@@ -35,6 +35,8 @@
+   advisory : Nat
+   synapticComplete : Bool
+   search : Option SearchTrace
++  /-- Checked by the native hook adapter; preserves exact subtractable delivery. -/
++  packet : Option Json := none
+   deriving ToJson, FromJson
+ def Advice.completed (_ : Advice) : Nat := 0
+ def Advice.blocksCurrent (_ : Advice) : Bool := false
+@@ -43,11 +45,13 @@
+   inputs : String
+   question : String
+   advice : Option Advice
++  search : SearchTrace
+   deriving ToJson, FromJson
+ def Response.check (response : Response) (question : Question) (images : Array ProjectInputs.Image) : Bool :=
+   response.inputs == ProjectInputs.digest images && response.question == requestKey question response.inputs &&
+     response.advice.all (fun advice => advice.text.length ≤ question.policy.chars &&
+-      advice.text.utf8ByteSize ≤ 4*question.policy.chars && advice.reason != "search-incomplete")
++      advice.text.utf8ByteSize ≤ 4*question.policy.chars && advice.reason != "search-incomplete" &&
++      toJson advice.search == toJson (some response.search))
+ theorem response_keeps_inputs (response : Response) (question : Question) (images : Array ProjectInputs.Image)
+     (accepted : response.check question images = true) : response.inputs = ProjectInputs.digest images := by
+   simp only [Response.check,Bool.and_eq_true,beq_iff_eq] at accepted
+--- a/Eggshell/ProjectRead.lean
++++ b/Eggshell/ProjectRead.lean
+@@ -8,8 +8,11 @@
+ open Lean DB
+ def advice (handoff : Handoff) : Except String Advice := do
+   unless handoff.completed == 0 && !handoff.blocksCurrent && handoff.localUnions == 0 &&
+-      handoff.reason != "search-incomplete" do throw "shared advisory query did not finish without completion authority"
+-  return ⟨handoff.text,handoff.reason,handoff.deliveredGraphs,handoff.advisory,handoff.synapticComplete,handoff.search⟩
++      handoff.reason != "search-incomplete" && handoff.controlDeltaChars == 0 &&
++      handoff.sourceCheckpoints.isEmpty && (handoff.text.isEmpty || handoff.capturedPacket?.isSome) do
++    throw "shared advisory query did not finish with an exact authority-free delivery packet"
++  return ⟨handoff.text,handoff.reason,handoff.deliveredGraphs,handoff.advisory,handoff.synapticComplete,handoff.search,
++    handoff.packet.map toJson⟩
+ /-- Reuse complete project images and the public-reader coordinator already
+ owned by the service. Mutable reader state is forked for each request. -/
+ def query (pool : Owned.Pool) (readers : SearchReaders.Coordinator) (request : Request)
+@@ -71,7 +74,7 @@
+         lexicalMs := if request.question.policy.numeric then 0 else ended-started }
+       let body ← IO.ofExcept (result.mapM fun handoff => advice {handoff with search := some trace})
+       let stamp := ProjectInputs.digest images
+-      let response : Response := ⟨stamp,requestKey request.question stamp,body⟩
++      let response : Response := ⟨stamp,requestKey request.question stamp,body,trace⟩
+       unless response.check request.question images do throw (IO.userError "project read response changed its input boundary")
+       return response
+     finally
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -122,6 +122,7 @@
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
+   (include_str "ProjectRead.lean").toUTF8,
++  (include_str "ProjectHookRead.lean").toUTF8,(include_str "Config.lean").toUTF8,
+   (include_str "ProjectReadWire.lean").toUTF8,
+   (include_str "SynapseRecommend.lean").toUTF8,
+   (include_str "SynapticTransport.lean").toUTF8,
+--- /dev/null
++++ b/Eggshell/ProjectHookRead.lean
+@@ -0,0 +1,47 @@
++module
++public import Eggshell.ProjectGatewayPeer
++@[expose] public section
++namespace Eggshell.Plugin.ProjectHookRead
++open Lean Publication Publication.Gateway
++structure Captured where
++  descriptor : Descriptor
++  boundary : Boundary
++  deriving ToJson, FromJson
++def capture (pending : PendingTurn) (deadline : Nat) : IO (Option PendingTurn) := do
++  let some target := pending.remoteRead | throw (IO.userError "missing remote read configuration")
++  unless pending.write.isNone && pending.read.isEmpty && pending.remoteFrame.isNone do
++    throw (IO.userError "ambiguous local and remote project selection")
++  Worker.withRemoteRequest pending.sessionId "search" fun _ cancelled => do
++    withPeer target.command.toArray ⟨target.projects.toArray,none⟩ deadline (fun peer => do
++      unless peer.descriptor.policy.chars ≤ pending.handoffChars do
++        throw (IO.userError "remote host delivery policy exceeds this profile's handoff_chars")
++      let boundary ← peer.pin deadline
++      return some {pending with remoteFrame := some ⟨toJson (⟨peer.descriptor,boundary⟩ : Captured)⟩}) cancelled.get
++def restored (advice : Read.Advice) (packet : Option DeliveryPacket) : Handoff :=
++  {text := advice.text,reason := advice.reason,deliveredGraphs := advice.delivered,
++    completed := 0,advisory := advice.advisory,localUnions := 0,coveredFragments := [],
++    blocksCurrent := false,packet,search := advice.search,synapticComplete := advice.synapticComplete}
++theorem restored_has_no_completion (advice : Read.Advice) (packet : Option DeliveryPacket) :
++    (restored advice packet).completed = 0 ∧ (restored advice packet).blocksCurrent = false ∧
++    (restored advice packet).localUnions = 0 := ⟨rfl,rfl,rfl⟩
++def handoff (advice : Read.Advice) : Except String Handoff := do
++  let packet ← advice.packet.mapM (fromJson? (α := DeliveryPacket))
++  unless packet.all (fun packet => packet.render == advice.text) &&
++      (advice.text.isEmpty || packet.isSome) do throw "remote delivery packet differs from its actual body"
++  return restored advice packet
++def exchange (request : Worker.Search) : IO (Option Json) :=
++  Worker.withRemoteRequest request.pending.sessionId "search" fun _ cancelled => do
++    let some target := request.pending.remoteRead | throw (IO.userError "missing remote project selection")
++    let some frame := request.pending.remoteFrame | throw (IO.userError "remote turn did not capture a complete cut")
++    let captured ← IO.ofExcept (fromJson? (α := Captured) frame.payload)
++    if request.enforce || request.evidence.isSome || request.staged then return none
++    unless request.pending.projection == .automatic do
++      throw (IO.userError "remote read_service requires automatic advisory projection")
++    withPeer target.command.toArray ⟨target.projects.toArray,none⟩ request.deadline (fun peer => do
++      unless toJson peer.descriptor == toJson captured.descriptor && peer.accepts captured.boundary do
++        throw (IO.userError "remote service changed this turn's captured project scope")
++      let delivered := request.state.deliveryClaims request.pending.turnId (← IO.monoMsNow)
++      let response ← peer.query captured.boundary request.work delivered request.deadline
++      let result ← IO.ofExcept (response.advice.mapM handoff)
++      return some (toJson (⟨result,response.search⟩ : Worker.SearchReply))) cancelled.get
++end Eggshell.Plugin.ProjectHookRead

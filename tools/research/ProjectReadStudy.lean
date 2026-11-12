@@ -77,7 +77,7 @@ def prepareChecks (buildName tag : String) : IO Unit := do
   idle
   discard <| finished "project-read-empty-checked-build"
   check (!(← (root/buildName).pathExists)) "fresh shared read observer required"
-  for name in ["ProjectReadChecks","SourceBlocks"] do
+  for name in ["ProjectReadChecks","ProjectReadFixture","SourceBlocks"] do
     IO.FS.writeFile (root/"source/tools/research"/(name++".lean"))
       (← IO.FS.readFile (project/"tools/research"/(name++".lean")))
   copyLocalArtifacts (root/"build") (root/buildName)
@@ -184,7 +184,7 @@ def retain : IO Unit := do
   write (records/"guards.json") (Json.mkObj [("queries",first),("fresh",fresh),
     ("runtime",← finished "project-read-empty-checked-build"),
     ("initialObserver",← finished "project-read-checks-empty-build"),("freshObserver",← finished "project-read-checks-fresh-build")])
-  write (records/"fixture-sources.json") (toJson (← #["ProjectReadChecks","SourceBlocks"].mapM fun name => do
+  write (records/"fixture-sources.json") (toJson (← #["ProjectReadChecks","ProjectReadFixture","SourceBlocks"].mapM fun name => do
     let file := project/"tools/research"/(name++".lean")
     check ((← IO.FS.readFile file) == (← IO.FS.readFile (root/"source/tools/research"/(name++".lean")))) "fresh observer source changed"
     return (name,← hash file)))
