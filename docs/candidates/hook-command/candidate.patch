@@ -1,0 +1,482 @@
+--- a/Eggshell/Daemon.lean
++++ b/Eggshell/Daemon.lean
+@@ -1,5 +1,6 @@
+ module
+ 
++public import Eggshell.HookCommand
+ public import Eggshell.PluginCli
+ public import Eggshell.DaemonWire
+ public import Eggshell.ObservationAge
+@@ -254,77 +255,8 @@
+ 
+ /-- The supervisor kills and reaps its process group before returning on timeout. -/
+ def boundedRpc (kind : String) (input : Json) (deadline : Nat) : IO (Option String) := do
+-  let child ← IO.Process.spawn {
+-    cmd := (← IO.appPath).toString, args := #["codex-rpc", kind]
+-    stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
+-  let task ← IO.asTask (do
+-    child.stdin.putStr ((input.setObjVal! "_eggshell_rpc_deadline" (toJson deadline)).compress ++ "\n")
+-    child.stdin.flush
+-    -- RPC stdin is one JSON line; it must not wait for EOF from its parent.
+-    child.stdout.readToEnd) .dedicated
+-  try
+-    let result ← Worker.awaitUntil task deadline
+-    Worker.killGroup child
+-    let _ ← child.wait
+-    let _ ← IO.wait task
+-    pure result
+-  catch error =>
+-    Worker.killGroup child
+-    let _ ← child.wait
+-    throw error
+-
+-def validHookOutput (text : String) : Bool :=
+-  match Json.parse text with
+-  | .ok (.obj _) => true
+-  | _ => false
+-
+-/-- Only a decoded JSON object may be forwarded as a completed hook response. -/
+-structure HookOutput where
+-  text : String
+-  valid : validHookOutput text = true
+-
+-inductive HookReply where
+-  | completed (output : HookOutput)
+-  | incomplete
+-
+-def decodeHookReply (reply : Option Json) : HookReply :=
+-  match reply.bind (optionalString · "output") with
+-  | none => .incomplete
+-  | some text =>
+-      if valid : validHookOutput text = true then .completed ⟨text, valid⟩
+-      else .incomplete
+-
+-def incompleteHook (event : String) : String :=
+-  if ["UserPromptSubmit", "PreToolUse", "PostToolUse"].contains event then
+-    hookContext event pendingSearch.text
+-  else
+-    systemMessage "Eggshell hook did not complete. Memory delivery and this hook's processing are unconfirmed."
+-
+-def HookReply.output (event : String) : HookReply → String
+-  | .completed output => output.text
+-  | .incomplete => incompleteHook event
+-
+-def HookReply.isComplete : HookReply → Bool
+-  | .completed _ => true
+-  | .incomplete => false
+-
+-theorem valid_hook_reply_is_preserved (reply : Option Json) (event text : String)
+-    (field : reply.bind (optionalString · "output") = some text)
+-    (valid : validHookOutput text = true) :
+-    (decodeHookReply reply).output event = text := by
+-  simp [decodeHookReply, field, valid, HookReply.output]
++  Command.boundedRpc (← IO.appPath) kind input deadline
+ 
+-theorem absent_hook_reply_is_incomplete (event : String) :
+-    (decodeHookReply none).output event = incompleteHook event ∧
+-      (decodeHookReply none).isComplete = false := by
+-  exact ⟨rfl, rfl⟩
+-
+-theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
+-    (field : reply.bind (optionalString · "output") = some text)
+-    (invalid : validHookOutput text = false) :
+-    decodeHookReply reply = .incomplete := by
+-  simp [decodeHookReply, field, invalid]
+-
+ def hookRequest (input : Json) (deadline : Nat) (receipt : String) : IO Json := do
+   let receivedUnixMs ← ObservationAge.now
+   let observedNanos ← IO.monoNanosNow
+@@ -391,45 +323,7 @@
+ /-- The registered handler selects its budget before stdin can block. The child
+ inherits stdin, so a timed-out reader cannot keep a parent IO task alive. -/
+ def hookClient (fast : Bool := false) : IO UInt32 := do
+-  let started ← IO.monoMsNow
+-  let deadline := started + (if fast then 2000 else 29000)
+-  let receipt ← Receipt.fresh
+-  try
+-    let child ← IO.Process.spawn {
+-      cmd := (← IO.appPath).toString, args := #["codex-hook-child", toString deadline, receipt]
+-      stdin := .inherit, stdout := .piped, stderr := .inherit, setsid := true }
+-    let task ← IO.asTask child.stdout.readToEnd .dedicated
+-    let result ← try
+-      Worker.awaitUntil task (deadline - 150)
+-      finally
+-        Worker.killGroup child
+-        let _ ← child.wait
+-        let _ ← IO.wait task
+-        pure ()
+-    let json := result.bind (Json.parse · |>.toOption)
+-    let reply := decodeHookReply json
+-    let stdout ← IO.getStdout
+-    let output := (reply.output "").trimAscii.toString ++ "\n"
+-    stdout.putStr output
+-    stdout.flush
+-    let flushed ← IO.monoMsNow
+-    let publication := Json.mkObj [("output", toJson output),
+-      ("bytes", toJson output.utf8ByteSize), ("sha256", toJson (Sha256.hex output.toUTF8)),
+-      ("replyComplete", toJson reply.isComplete), ("startedMs", toJson started),
+-      ("flushedMs", toJson flushed), ("deadlineMs", toJson deadline)]
+-    let payload := Json.mkObj [("receipt", toJson receipt), ("publication", publication),
+-      ("ack", if reply.isComplete then json.map (·.getObjValD "ack") |>.getD Json.null else Json.null)]
+-    let recorded ← try boundedRpc "receipt" payload deadline
+-      catch error => do
+-        IO.eprintln s!"Eggshell publication receipt failed: {error}"
+-        pure none
+-    unless recorded.bind (Json.parse · |>.toOption) |>.bind (optionalString · "output") |>.isSome do
+-      IO.eprintln s!"Eggshell publication receipt was not confirmed: {receipt}"
+-    pure 0
+-  catch error =>
+-    IO.eprintln s!"Eggshell hook failed open: {error}"
+-    IO.println (incompleteHook "")
+-    pure 0
++  Command.hookClient (← IO.appPath) fast
+ 
+ def awaitStopped (endpoint : Endpoint) : IO Unit := do
+   let deadline := (← IO.monoMsNow) + 3000
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -16,20 +16,6 @@
+ 
+ open Lean
+ open Eggshell.Research
+-
+-def requiredString (json : Json) (name : String) : Except String String := do
+-  (json.getObjVal? name).bind Json.getStr?
+-
+-def optionalString (json : Json) (name : String) : Option String :=
+-  (json.getObjVal? name).toOption.bind (Json.getStr? · |>.toOption)
+-
+-def jsonField (json : Json) (name : String) : String :=
+-  json.getObjValD name |>.compress
+-
+-def emptyHook : String := "{}"
+-
+-def systemMessage (message : String) : String :=
+-  Json.mkObj [("systemMessage", message)] |>.compress
+ 
+ def withSearchNotice (handoff : Option Handoff) (output : String) : String :=
+   match handoff.bind (·.search) with
+--- a/Eggshell/Handoff.lean
++++ b/Eggshell/Handoff.lean
+@@ -1,5 +1,6 @@
+ module
+ 
++public import Eggshell.HookWire
+ public import Eggshell.SourcePlan
+ public import Eggshell.OriginalStructure
+ public import Eggshell.OriginalPresentation
+@@ -455,11 +456,7 @@
+ 
+ /-- A search status carries no authority to certify or suppress work. -/
+ def pendingSearch : Handoff := {
+-  text := "EGGSHELL SEARCH INCOMPLETE\n" ++
+-    "Local memory search is busy or unavailable. This is not a completed search with no matches.\n" ++
+-    "No prior work is certified as complete by this notice. Continue uncovered work using accessible evidence; " ++
+-    "if required evidence is unavailable, report that gap instead of repeatedly checking the same source.\n" ++
+-    "END EGGSHELL SEARCH INCOMPLETE"
++  text := pendingSearchText
+   reason := "search-incomplete"
+   deliveredGraphs := [], completed := 0, advisory := 0, localUnions := 0
+   coveredFragments := [], blocksCurrent := false
+@@ -11089,14 +11086,6 @@
+   let roots ← readSelection selection keys captured
+   pure (manualHandoffForRoots selection current roots)
+ 
+-def hookContext (event : String) (text : String) : String :=
+-  Lean.Json.mkObj [
+-    ("hookSpecificOutput", Lean.Json.mkObj [
+-      ("hookEventName", event),
+-      ("additionalContext", text)
+-    ])
+-  ] |>.compress
+-
+ def hookDeny (text : String) : String :=
+   Lean.Json.mkObj [
+     ("hookSpecificOutput", Lean.Json.mkObj [
+--- a/Eggshell/ProcessGroup.lean
++++ b/Eggshell/ProcessGroup.lean
+@@ -1,5 +1,5 @@
+ module
+-public import Lean
++public import Std
+ @[expose] public section
+ namespace Eggshell.ProcessGroup
+ /-- The caller owns a child started with setsid. Other requests never close
+@@ -10,4 +10,13 @@
+     stdin := .null,stdout := .null,stderr := .null }
+   discard <| killer.wait
+   try child.kill catch _ => pure ()
++partial def awaitUntil (task : Task (Except IO.Error α)) (deadline : Nat) : IO (Option α) := do
++  if ← IO.hasFinished task then
++    match ← IO.wait task with
++    | .ok value => return some value
++    | .error error => throw error
++  if (← IO.monoMsNow) ≥ deadline then return none
++  IO.sleep 5
++  awaitUntil task deadline
++
+ end Eggshell.ProcessGroup
+--- a/Eggshell/Worker.lean
++++ b/Eggshell/Worker.lean
+@@ -143,14 +143,8 @@
+     let _ ← owned.wait
+     pure ()
+ 
+-partial def awaitUntil (task : Task (Except IO.Error α)) (deadline : Nat) : IO (Option α) := do
+-  if ← IO.hasFinished task then
+-    match ← IO.wait task with
+-    | .ok value => return some value
+-    | .error error => throw error
+-  if (← IO.monoMsNow) ≥ deadline then return none
+-  IO.sleep 5
+-  awaitUntil task deadline
++def awaitUntil (task : Task (Except IO.Error α)) (deadline : Nat) : IO (Option α) :=
++  ProcessGroup.awaitUntil task deadline
+ 
+ structure Search where
+   pending : PendingTurn
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -167,6 +167,7 @@
+   (include_str "ProjectViews.lean").toUTF8,
+   (include_str "../tools/research/PreparedOwnerArena.lean").toUTF8,
+   (include_str "CanonicalSourcePrepared.lean").toUTF8,(include_str "DaemonWire.lean").toUTF8,
++  (include_str "HookWire.lean").toUTF8,(include_str "HookCommand.lean").toUTF8,
+   (include_str "PluginModel.lean").toUTF8,(include_str "DB/PageMap.lean").toUTF8,
+   (include_str "DB/Sidecar.lean").toUTF8,
+   (include_str "PreparationPlan.lean").toUTF8,(include_str "PreparationRegistry.lean").toUTF8,
+--- a/Eggshell/ContractAudit.lean
++++ b/Eggshell/ContractAudit.lean
+@@ -523,7 +523,11 @@
+         #[``Eggshell.Matcher.extractAt, ``Eggshell.Extract.runWithPolicyFuel,
+           ``Eggshell.QuotientBuilder.build?]),
+       (``Eggshell.Plugin.Daemon.hookClient,
+-        #[``Eggshell.Plugin.Worker.awaitUntil, ``Eggshell.Plugin.Worker.killGroup,
++        #[``Eggshell.ProcessGroup.awaitUntil, ``Eggshell.ProcessGroup.kill,
++          ``Eggshell.Plugin.Daemon.Command.hookClient,
++          ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),
++      (``Eggshell.Plugin.Daemon.Command.hookClient,
++        #[``Eggshell.ProcessGroup.awaitUntil, ``Eggshell.ProcessGroup.kill,
+           ``Eggshell.Plugin.Daemon.decodeHookReply], #[``IO.getStdin, ``Eggshell.Plugin.captureTerminal]),
+       (``Eggshell.Plugin.Daemon.hookProcess,
+         #[``Eggshell.Plugin.Daemon.hookRequest], #[]),
+--- a/Eggshell/Install.lean
++++ b/Eggshell/Install.lean
+@@ -114,6 +114,9 @@
+   bootstrapMarker := root / "libexec" / "eggshell.owner"
+ }
+ 
++def Layout.hookExecutable (layout : Layout) : System.FilePath :=
++  layout.root / "libexec" / "eggshell-hook"
++
+ def installLayout : IO Layout := do
+   pure (Layout.at (← Paths.installRoot))
+ 
+@@ -132,8 +135,9 @@
+   "#!/bin/sh\nset -eu\nEGGSHELL_PREFIX=" ++ shellQuote root.toString ++ r#"
+ export EGGSHELL_PREFIX
+ case "${1-}" in
+-  codex-start) exec "$EGGSHELL_PREFIX/libexec/eggshell" codex-hook ;;
+-  codex-hook|codex-daemon|codex-worker|codex-rpc) exec "$EGGSHELL_PREFIX/libexec/eggshell" "$@" ;;
++  codex-start) exec "$EGGSHELL_PREFIX/libexec/eggshell-hook" "$EGGSHELL_PREFIX/libexec/eggshell" ;;
++  codex-hook) shift; exec "$EGGSHELL_PREFIX/libexec/eggshell-hook" "$EGGSHELL_PREFIX/libexec/eggshell" "$@" ;;
++  codex-daemon|codex-worker|codex-rpc) exec "$EGGSHELL_PREFIX/libexec/eggshell" "$@" ;;
+   *) exec "$EGGSHELL_PREFIX/libexec/eggshell" egg "$@" ;;
+ esac
+ "#
+@@ -202,6 +206,9 @@
+       throw (IO.userError s!"refusing to replace unowned launcher {launcher}")
+ 
+ def validatePayload (layout : Layout) : IO Unit := do
++  if ← layout.hookExecutable.pathExists then
++    unless (← layout.payloadMarker.pathExists) && (← IO.FS.readFile layout.payloadMarker) == ownerMarkerContents do
++      throw (IO.userError s!"refusing to replace unowned hook executable {layout.hookExecutable}")
+   let managedExists ← layout.executable.pathExists
+   if managedExists then
+     let marked ← if ← layout.payloadMarker.pathExists then
+@@ -321,8 +328,12 @@
+ def installRuntime : IO String := do
+   let layout ← installLayout
+   validatePayload layout
+-  Plugin.Daemon.shutdown
+   let executable ← IO.appPath
++  let hookExecutable := executable.parent.getD (System.FilePath.mk ".") / "eggshell-hook"
++  unless ← hookExecutable.pathExists do
++    throw (IO.userError "runtime payload is missing its eggshell-hook companion")
++  Plugin.Daemon.shutdown
++  copyExecutable hookExecutable layout.hookExecutable
+   copyExecutable executable layout.executable
+   writeExecutable layout.launcher commandLauncher
+   IO.FS.writeFile layout.bootstrapMarker ownerMarkerContents
+@@ -362,6 +373,7 @@
+   if ← layout.plugin.pathExists then IO.FS.removeDirAll layout.plugin
+   if ← layout.launcher.pathExists then IO.FS.removeFile layout.launcher
+   if ← layout.executable.pathExists then IO.FS.removeFile layout.executable
++  if ← layout.hookExecutable.pathExists then IO.FS.removeFile layout.hookExecutable
+   let minilm := MiniLM.supportRoot layout.root
+   if ← minilm.pathExists then IO.FS.removeDirAll minilm
+   if ← layout.payloadMarker.pathExists then IO.FS.removeFile layout.payloadMarker
+--- /dev/null
++++ b/Eggshell/HookWire.lean
+@@ -0,0 +1,35 @@
++module
++public import Lean.Data.Json.Parser
++public import Lean.Data.Json.FromToJson
++@[expose] public section
++namespace Eggshell.Plugin
++open Lean
++def requiredString (json : Json) (name : String) : Except String String := do
++  (json.getObjVal? name).bind Json.getStr?
++
++def optionalString (json : Json) (name : String) : Option String :=
++  (json.getObjVal? name).toOption.bind (Json.getStr? · |>.toOption)
++
++def jsonField (json : Json) (name : String) : String :=
++  json.getObjValD name |>.compress
++
++def emptyHook : String := "{}"
++
++def systemMessage (message : String) : String :=
++  Json.mkObj [("systemMessage", message)] |>.compress
++
++def pendingSearchText : String := "EGGSHELL SEARCH INCOMPLETE\n" ++
++    "Local memory search is busy or unavailable. This is not a completed search with no matches.\n" ++
++    "No prior work is certified as complete by this notice. Continue uncovered work using accessible evidence; " ++
++    "if required evidence is unavailable, report that gap instead of repeatedly checking the same source.\n" ++
++    "END EGGSHELL SEARCH INCOMPLETE"
++
++def hookContext (event : String) (text : String) : String :=
++  Lean.Json.mkObj [
++    ("hookSpecificOutput", Lean.Json.mkObj [
++      ("hookEventName", event),
++      ("additionalContext", text)
++    ])
++  ] |>.compress
++
++end Eggshell.Plugin
+--- /dev/null
++++ b/Eggshell/HookCommand.lean
+@@ -0,0 +1,123 @@
++module
++public import Eggshell.HookWire
++public import Eggshell.Receipt
++public import Eggshell.ProcessGroup
++@[expose] public section
++namespace Eggshell.Plugin.Daemon
++open Lean
++def validHookOutput (text : String) : Bool :=
++  match Json.parse text with
++  | .ok (.obj _) => true
++  | _ => false
++
++/-- Only a decoded JSON object may be forwarded as a completed hook response. -/
++structure HookOutput where
++  text : String
++  valid : validHookOutput text = true
++
++inductive HookReply where
++  | completed (output : HookOutput)
++  | incomplete
++
++def decodeHookReply (reply : Option Json) : HookReply :=
++  match reply.bind (optionalString · "output") with
++  | none => .incomplete
++  | some text =>
++      if valid : validHookOutput text = true then .completed ⟨text, valid⟩
++      else .incomplete
++
++def incompleteHook (event : String) : String :=
++  if ["UserPromptSubmit", "PreToolUse", "PostToolUse"].contains event then
++    hookContext event pendingSearchText
++  else
++    systemMessage "Eggshell hook did not complete. Memory delivery and this hook's processing are unconfirmed."
++
++def HookReply.output (event : String) : HookReply → String
++  | .completed output => output.text
++  | .incomplete => incompleteHook event
++
++def HookReply.isComplete : HookReply → Bool
++  | .completed _ => true
++  | .incomplete => false
++
++theorem valid_hook_reply_is_preserved (reply : Option Json) (event text : String)
++    (field : reply.bind (optionalString · "output") = some text)
++    (valid : validHookOutput text = true) :
++    (decodeHookReply reply).output event = text := by
++  simp [decodeHookReply, field, valid, HookReply.output]
++
++theorem absent_hook_reply_is_incomplete (event : String) :
++    (decodeHookReply none).output event = incompleteHook event ∧
++      (decodeHookReply none).isComplete = false := by
++  exact ⟨rfl, rfl⟩
++
++theorem invalid_hook_reply_is_incomplete (reply : Option Json) (text : String)
++    (field : reply.bind (optionalString · "output") = some text)
++    (invalid : validHookOutput text = false) :
++    decodeHookReply reply = .incomplete := by
++  simp [decodeHookReply, field, invalid]
++
++namespace Command
++def boundedRpc (backend : System.FilePath) (kind : String) (input : Json) (deadline : Nat) : IO (Option String) := do
++  let child ← IO.Process.spawn {
++    cmd := backend.toString, args := #["codex-rpc", kind]
++    stdin := .piped, stdout := .piped, stderr := .null, setsid := true }
++  let task ← IO.asTask (do
++    child.stdin.putStr ((input.setObjVal! "_eggshell_rpc_deadline" (toJson deadline)).compress ++ "\n")
++    child.stdin.flush
++    -- RPC stdin is one JSON line; it must not wait for EOF from its parent.
++    child.stdout.readToEnd) .dedicated
++  try
++    let result ← ProcessGroup.awaitUntil task deadline
++    ProcessGroup.kill child
++    let _ ← child.wait
++    let _ ← IO.wait task
++    pure result
++  catch error =>
++    ProcessGroup.kill child
++    let _ ← child.wait
++    throw error
++
++def hookClient (backend : System.FilePath) (fast : Bool := false) : IO UInt32 := do
++  let started ← IO.monoMsNow
++  let deadline := started + (if fast then 2000 else 29000)
++  let receipt ← Receipt.fresh
++  try
++    let child ← IO.Process.spawn {
++      cmd := backend.toString, args := #["codex-hook-child", toString deadline, receipt]
++      stdin := .inherit, stdout := .piped, stderr := .inherit, setsid := true }
++    let task ← IO.asTask child.stdout.readToEnd .dedicated
++    let result ← try
++      ProcessGroup.awaitUntil task (deadline - 150)
++      finally
++        ProcessGroup.kill child
++        let _ ← child.wait
++        let _ ← IO.wait task
++        pure ()
++    let json := result.bind (Json.parse · |>.toOption)
++    let reply := decodeHookReply json
++    let stdout ← IO.getStdout
++    let output := (reply.output "").trimAscii.toString ++ "\n"
++    stdout.putStr output
++    stdout.flush
++    let flushed ← IO.monoMsNow
++    let publication := Json.mkObj [("output", toJson output),
++      ("bytes", toJson output.utf8ByteSize), ("sha256", toJson (Sha256.hex output.toUTF8)),
++      ("replyComplete", toJson reply.isComplete), ("startedMs", toJson started),
++      ("flushedMs", toJson flushed), ("deadlineMs", toJson deadline)]
++    let payload := Json.mkObj [("receipt", toJson receipt), ("publication", publication),
++      ("ack", if reply.isComplete then json.map (·.getObjValD "ack") |>.getD Json.null else Json.null)]
++    let recorded ← try boundedRpc backend "receipt" payload deadline
++      catch error => do
++        IO.eprintln s!"Eggshell publication receipt failed: {error}"
++        pure none
++    unless recorded.bind (Json.parse · |>.toOption) |>.bind (optionalString · "output") |>.isSome do
++      IO.eprintln s!"Eggshell publication receipt was not confirmed: {receipt}"
++    pure 0
++  catch error =>
++    IO.eprintln s!"Eggshell hook failed open: {error}"
++    IO.println (incompleteHook "")
++    pure 0
++
++end Command
++end Eggshell.Plugin.Daemon
