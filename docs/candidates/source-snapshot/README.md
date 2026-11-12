@@ -5,6 +5,10 @@ It preserves an existing native DB as a sealed read input, without recreating it
 work graph, original observations, source identity or authority. The product and
 global installation remain unchanged. Adoption and paid comparisons remain zero.
 
+The subsequent [real LLVM audit](llvm/README.md) finishes semantic retrieval in
+2.845–3.770 s but delivers only 16/32 necessary-evidence appearances. That is a
+delivery failure; the mixed-client pass below does not establish real-corpus recall.
+
 ## Existing sources join the project reader without fabricated history
 
 `egg snapshot DB TARGET` copies exactly the committed extent through a pinned
@@ -17,8 +21,8 @@ The wrapper does not assert or invent historical project dependencies.
 
 `egg warm --shared PATH` explicitly requests preparation of a host-owned shared
 derived cache. It requires database-local cache targets and grants no writes to
-the original source. Default read-only preparation is unchanged. End-to-end use
-of this entrypoint with the protected LLVM corpus is still the next check.
+the original source. Default read-only preparation is unchanged. The subsequent
+real-corpus audit exercises this entrypoint; its initial cold warm takes 135.505 s.
 The manifest format is deliberately breaking; no compatibility fallback is added.
 
 [Native checks](checks.json) verify the actual functions used by the product:
@@ -95,5 +99,6 @@ models. They establish the declared local mixed workload. Large growing DBs,
 sustained 80-person operation, NAS/remote deployment, production p99 and general
 98% necessary-evidence delivery remain unverified. Accepted LLVM seed and both
 topic passes remain **0/6**, matched total-token/quality comparisons **0/18**,
-adoption **0**. Next, freeze DB-present LLVM requirements before delivery and test
-the real corpus through this connected route under the existing admission rules.
+adoption **0**. The real-corpus follow-up freezes requirements before retrieval
+and identifies selection losses; continue from those witnesses under the existing
+admission rules.
