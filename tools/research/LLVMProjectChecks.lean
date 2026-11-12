@@ -38,7 +38,7 @@ def environment (plan : Plan) (data : System.FilePath) :=
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
 def load (input : String) : IO Plan := do
   let plan ← IO.ofExcept (fromJson? (α := Plan) (← read (.mk input)))
-  check (plan.installation.handoffChars == 120000) "retain the ordinary character budget"
+  check (plan.installation.handoffChars > 0) "explicit positive delivery budget required"
   StudyAdmission.verifyArtifact plan.installation.runtime
   for file in plan.installation.pluginFiles do StudyAdmission.verifyArtifact file
   StudySeedChecks.requireNumericalSupport plan.installation
@@ -59,7 +59,8 @@ def prepare (input : String) : IO Unit := do
   let runtime := plan.installation.runtime.path
   IO.FS.writeFile (root/"host.toml") ("default = \"work\"\nsemantic_matcher = "++
     (toJson #[runtime,"search-provider"]).compress++"\n[eggs]\nllvm = "++
-    (toJson projectPath.toString).compress++"\n[profiles.work]\nread = [\"llvm\"]\nhandoff_chars = 120000\n")
+    (toJson projectPath.toString).compress++"\n[profiles.work]\nread = [\"llvm\"]\nhandoff_chars = "++
+    toString plan.installation.handoffChars++"\n")
   if plan.project.isNone then
     let captured ← StudyCommand.run (plan.installation.pluginRoot++"/bin/egg")
       #["snapshot",plan.original,projectPath.toString] (environment plan (root/"host")) plan.workspace ""
@@ -87,14 +88,14 @@ def prepare (input : String) : IO Unit := do
     ("frozenBeforeAnyQueryOrWarm",toJson true),("acceptedSeed",toJson false),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   let connection := root/"connections/read-llvm.json"
-  let catalog : Publication.Gateway.Catalog := ⟨#[⟨"LLVM",projectPath.toString,true,false⟩],⟨120000,true⟩⟩
+  let catalog : Publication.Gateway.Catalog := ⟨#[⟨"LLVM",projectPath.toString,true,false⟩],⟨plan.installation.handoffChars,true⟩⟩
   let delegation : Publication.Gateway.Delegation :=
     ⟨⟨#["LLVM"],none⟩,Blake3.hex (← IO.getRandomBytes 32),connection.toString⟩
   FileSystem.privateDirectory (root/"host/publisher")
   write (root/"host/publisher/project-access.json") (toJson (⟨catalog,#[delegation]⟩ : Publication.Gateway.Host))
   IO.FS.writeFile (root/"client.toml") ("default = \"work\"\nsemantic_matcher = "++
     (toJson #[runtime,"search-provider"]).compress++"\n[profiles.work]\nproject_service = "++
-    (toJson connection.toString).compress++"\nread = [\"LLVM\"]\nhandoff_chars = 120000\n")
+    (toJson connection.toString).compress++"\nread = [\"LLVM\"]\nhandoff_chars = "++toString plan.installation.handoffChars++"\n")
 
 def run (input : String) : IO Unit := do
   let plan ← load input
@@ -205,7 +206,7 @@ def diagnose (input : String) : IO Unit := do
       let selection : Config.Selection := {
         label := "project-service",semanticMatcher := some [plan.installation.runtime.path,"search-provider"],
         read := [⟨project.manifest.identity++":0",source.directory⟩],write := none,
-        handoffChars := 120000,localUnion := false }
+        handoffChars := plan.installation.handoffChars,localUnion := false }
       let receipt ← Receipt.fresh
       write (output/"request.json") (Json.mkObj [("receipt",toJson receipt),("question",toJson question),
         ("source",toJson source.head),("oraclePassedToProduct",toJson false),
