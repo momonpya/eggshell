@@ -30,14 +30,15 @@ def remaining (known : Array Nat) : IO (Array Nat) := do
   let result ← IO.Process.output {cmd := "/bin/ps",args := #["-o","pid=","-p",",".intercalate (known.toList.map toString)]}
   check (result.exitCode ≤ 1) "cannot inspect owned PIDs"
   return result.stdout.splitOn "\n" |>.toArray.filterMap (fun row => row.trimAscii.toString.toNat?)
-def run (root : System.FilePath) (label : String := "checks") (footprintOnly : Bool := false) : IO Unit := do
-  let records := project/"docs/candidates/hook-command"
+def run (root : System.FilePath) (label : String := "checks") (footprintOnly : Bool := false)
+    (backendOverride baselineClient : Option System.FilePath := none) : IO Unit := do
+  let records := project/"docs/candidates"/root.fileName.get!
   let checkRoot := root/label
   check (!(← checkRoot.pathExists)) "fresh hook-command checks required"
   IO.FS.createDirAll checkRoot
   let client := root/"command-build/StudyMain"
   let fixture := root/"fixture-build/StudyMain"
-  let backend := root/"build/StudyMain"
+  let backend := backendOverride.getD (root/"build/StudyMain")
   let mut cases := #[]
   for mode in (if footprintOnly then [] else ["valid","empty","invalid","missing","malformed","silent","hang","blocked-input"]) do
     let path := checkRoot/mode
@@ -89,8 +90,8 @@ def run (root : System.FilePath) (label : String := "checks") (footprintOnly : B
     let path := checkRoot/s!"footprint-{index}"
     IO.FS.createDirAll path
     let began ← IO.monoMsNow
-    let (child,held) ← launch (if small then client else backend)
-      (if small then #[backend.toString,"fast"] else #["codex-hook","fast"])
+    let (child,held) ← launch (if small then client else baselineClient.getD backend)
+      (if small || baselineClient.isSome then #[backend.toString,"fast"] else #["codex-hook","fast"])
       #[("EGGSHELL_DATA_ROOT",some (path/"data").toString)] none
     let hold ← IO.mkRef held
     let stdout ← IO.asTask child.stdout.readToEnd .dedicated
@@ -117,10 +118,11 @@ def run (root : System.FilePath) (label : String := "checks") (footprintOnly : B
     check (exit == 0 && !samples.isEmpty && (Json.parse output).isOk && (← remaining known).isEmpty)
       "footprint observation failed its ownership or output checks"
     let peaks := samples.map fun (_,rows) => rows.foldl (fun total row => total+row.2.2) 0
-    probes := probes.push (Json.mkObj [("index",toJson index),("smallSupervisor",toJson small),
+    probes := probes.push (Json.mkObj [("index",toJson index),("candidateClient",toJson small),
       ("samples",toJson samples),("pairPeakRssKiB",toJson (peaks.foldl max 0)),
       ("elapsedMs",toJson ((← IO.monoMsNow)-began)),("stdout",toJson output),("stderr",toJson errors)])
-  write (records/"footprint.json") (Json.mkObj [("order",toJson #["full","small","small","full"]),
+  write (records/"footprint.json") (Json.mkObj [("order",toJson #["baseline","candidate","candidate","baseline"]),
+    ("baselineClient",toJson (baselineClient.map (·.toString))),
     ("probes",toJson probes),("sameBackendSha256",toJson (← hash backend)),
     ("leanThreadEnvironment",Json.null),
     ("workload",toJson "blocked stdin; identical backend; 400-1200 ms owned-process RSS"),
@@ -130,4 +132,6 @@ def main : List String → IO Unit
   | [root] => HookCommandChecks.run (.mk root)
   | [root,label] => HookCommandChecks.run (.mk root) label
   | [root,label,"footprint"] => HookCommandChecks.run (.mk root) label true
+  | [root,label,"footprint",backend,baseline] =>
+      HookCommandChecks.run (.mk root) label true (some (.mk backend)) (some (.mk baseline))
   | _ => throw (IO.userError "HookCommandChecks ROOT")

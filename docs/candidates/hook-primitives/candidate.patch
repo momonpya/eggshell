@@ -1,0 +1,148 @@
+--- a/Eggshell/Blake3.lean
++++ b/Eggshell/Blake3.lean
+@@ -1,6 +1,7 @@
+ module
+ 
+ import Std
++public import Eggshell.Hex
+ public import tools.research.RegisterMix
+ public import tools.research.RegisterRounds
+ 
+@@ -277,12 +278,10 @@
+     fields.flatMap fun field => [u64le field.size, field])
+ 
+ def hexDigit (value : UInt8) : Char :=
+-  if value < 10 then Char.ofNat ('0'.toNat + value.toNat)
+-  else Char.ofNat ('a'.toNat + value.toNat - 10)
++  Hex.digit value
+ 
+ def hex (bytes : ByteArray) : String :=
+-  String.ofList <| bytes.toList.flatMap fun byte =>
+-    [hexDigit (byte.toNat / 16).toUInt8, hexDigit (byte.toNat % 16).toUInt8]
++  Hex.encode bytes
+ 
+ theorem hashSegments_size (segments : List ByteArray) :
+     (hashSegments segments).size = 32 := by
+--- a/Eggshell/Sha256.lean
++++ b/Eggshell/Sha256.lean
+@@ -1,11 +1,15 @@
+ module
+ 
+-public import Eggshell.Blake3
++public import Eggshell.Hex
+ 
+ @[expose] public section
+ 
+ namespace Eggshell.Sha256
+ 
++def iv : Array UInt32 := #[
++  0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
++  0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19]
++
+ def constants : Array UInt32 := #[
+   0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+   0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+@@ -53,13 +57,13 @@
+   for _ in [0:padding] do bytes := bytes.push 0
+   let bits := input.size.toUInt64 * 8
+   for i in [0:8] do bytes := bytes.push ((bits >>> ((7-i)*8).toUInt64).toUInt8)
+-  let mut state := Blake3.iv
++  let mut state := iv
+   for block in [0:bytes.size/64] do state := compress state bytes (block*64)
+   let mut result := ByteArray.empty
+   for word in state do
+     for i in [0:4] do result := result.push ((word >>> ((3-i)*8).toUInt32).toUInt8)
+   return result
+ 
+-def hex (bytes : ByteArray) : String := Blake3.hex (digest bytes)
++def hex (bytes : ByteArray) : String := Hex.encode (digest bytes)
+ 
+ end Eggshell.Sha256
+--- a/Eggshell/Receipt.lean
++++ b/Eggshell/Receipt.lean
+@@ -4,6 +4,7 @@
+ public import Eggshell.Paths
+ public import Eggshell.Blake3
+ public import Eggshell.Sha256
++public import Eggshell.ReceiptId
+ 
+ @[expose] public section
+ 
+@@ -11,10 +12,9 @@
+ open Lean
+ 
+ def validId (id : String) : Bool :=
+-  id.length == 64 && id.toList.all (fun c =>
+-    ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))
++  ReceiptId.valid id
+ 
+-def fresh : IO String := do pure (Blake3.hex (← IO.getRandomBytes 32))
++def fresh : IO String := ReceiptId.fresh
+ 
+ /-- Every writer publishes its own stage atomically. No shared append lock,
+     graph write, session lifetime or provider command identifies a receipt. -/
+--- a/Eggshell/HookCommand.lean
++++ b/Eggshell/HookCommand.lean
+@@ -1,6 +1,7 @@
+ module
+ public import Eggshell.HookWire
+-public import Eggshell.Receipt
++public import Eggshell.ReceiptId
++public import Eggshell.Sha256
+ public import Eggshell.ProcessGroup
+ @[expose] public section
+ namespace Eggshell.Plugin.Daemon
+@@ -81,7 +82,7 @@
+ def hookClient (backend : System.FilePath) (fast : Bool := false) : IO UInt32 := do
+   let started ← IO.monoMsNow
+   let deadline := started + (if fast then 2000 else 29000)
+-  let receipt ← Receipt.fresh
++  let receipt ← ReceiptId.fresh
+   try
+     let child ← IO.Process.spawn {
+       cmd := backend.toString, args := #["codex-hook-child", toString deadline, receipt]
+--- a/Eggshell/ProcessGroup.lean
++++ b/Eggshell/ProcessGroup.lean
+@@ -1,5 +1,5 @@
+ module
+-public import Std
++public import Init.System.IO
+ @[expose] public section
+ namespace Eggshell.ProcessGroup
+ /-- The caller owns a child started with setsid. Other requests never close
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -168,6 +168,8 @@
+   (include_str "../tools/research/PreparedOwnerArena.lean").toUTF8,
+   (include_str "CanonicalSourcePrepared.lean").toUTF8,(include_str "DaemonWire.lean").toUTF8,
+   (include_str "HookWire.lean").toUTF8,(include_str "HookCommand.lean").toUTF8,
++  (include_str "Hex.lean").toUTF8,(include_str "ReceiptId.lean").toUTF8,
++  (include_str "Sha256.lean").toUTF8,(include_str "Receipt.lean").toUTF8,
+   (include_str "PluginModel.lean").toUTF8,(include_str "DB/PageMap.lean").toUTF8,
+   (include_str "DB/Sidecar.lean").toUTF8,
+   (include_str "PreparationPlan.lean").toUTF8,(include_str "PreparationRegistry.lean").toUTF8,
+--- /dev/null
++++ b/Eggshell/Hex.lean
+@@ -0,0 +1,10 @@
++module
++@[expose] public section
++namespace Eggshell.Hex
++def digit (value : UInt8) : Char :=
++  if value < 10 then Char.ofNat ('0'.toNat + value.toNat)
++  else Char.ofNat ('a'.toNat + value.toNat - 10)
++def encode (bytes : ByteArray) : String :=
++  String.ofList <| bytes.toList.flatMap fun byte =>
++    [digit (byte.toNat / 16).toUInt8, digit (byte.toNat % 16).toUInt8]
++end Eggshell.Hex
+--- /dev/null
++++ b/Eggshell/ReceiptId.lean
+@@ -0,0 +1,9 @@
++module
++public import Eggshell.Hex
++@[expose] public section
++namespace Eggshell.ReceiptId
++def valid (id : String) : Bool :=
++  id.length == 64 && id.toList.all (fun c =>
++    ('0' ≤ c && c ≤ '9') || ('a' ≤ c && c ≤ 'f'))
++def fresh : IO String := do pure (Hex.encode (← IO.getRandomBytes 32))
++end Eggshell.ReceiptId
