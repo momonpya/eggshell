@@ -1,4 +1,5 @@
 import tools.research.StudyLocal
+import tools.research.SourceBlocks
 open Lean StudyLocal
 namespace AutomaticPublicationStudy
 def productRoot := base/"practical-runtime/terminal-closure"
@@ -82,16 +83,7 @@ def expectedPath (line : String) : Except String String := do
 The original row must occur inside the block carrying its own file identity;
 an unrelated path or a saved-position-only entry does not count. -/
 def sourceBlockContains (body path fingerprint original : String) : Bool :=
-  ((body.splitOn "\nSOURCE ").drop 1).any fun block => Id.run do
-    let header := (block.splitOn "\n").headD ""
-    let .ok source := Json.parse header | return false
-    if source.getObjValD "relative" != toJson path || source.getObjValD "fingerprint" != toJson fingerprint then
-      return false
-    let some code := ((block.splitOn "\nCODE\n").drop 1).head? | return false
-    return (code.splitOn "\n").any fun row =>
-      match row.splitOn "\t" with
-      | number :: pieces => number.toNat?.isSome && "\t".intercalate pieces == original
-      | _ => false
+  Eggshell.Research.SourceBlocks.contains body path fingerprint original
 
 def sourceBlockAudit (queries fingerprints output : String) : IO Unit := do
   idle
@@ -453,6 +445,16 @@ def retireTrial (location evidence product : String) (tags : List String) : IO U
     |>.setObjVal! "trialDirectoryRemoved" (toJson true))
 end AutomaticPublicationStudy
 def main : List String → IO Unit
+  | ["retire-artifacts-at",product,evidence,plan] => do
+      let root : System.FilePath := .mk product
+      let records : System.FilePath := .mk evidence
+      let paths : Array String ← IO.ofExcept (fromJson? (← read (.mk plan)))
+      let targets := paths.map System.FilePath.mk
+      check (!targets.isEmpty && targets.all (fun target => target.isAbsolute &&
+        target.toString.startsWith (base.toString++"/practical-runtime/") && target != root &&
+        !root.toString.startsWith (target.toString++"/") && target != records &&
+        !records.toString.startsWith (target.toString++"/"))) "artifact cleanup escaped its isolated scope"
+      AutomaticPublicationStudy.retireArtifacts records root targets
   | ["prepare"] => AutomaticPublicationStudy.prepare
   | ["audit"] => AutomaticPublicationStudy.audit
   | ["run"] => AutomaticPublicationStudy.run

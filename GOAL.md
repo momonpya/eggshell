@@ -2,6 +2,17 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[複数DBとチャットのライフサイクル混在](docs/practical-runtime/mixed-chat-lifecycle/README.md)を実フックで検査した。
+2プロジェクト・各4所有者、4書込と8読込の同時進行、新規/既存/中断再開、実service再起動、旧turnの後着Post/Stopと重複通知、途中の書込project変更を含む。
+最初の停止は保存確認器が27原観測を時系列付き来歴の件数で代用した誤りで、read-only監査では原観測27・回答9・原文18項目が全て正しいDBに存在した。時系列が不明な後着4件は不明のまま区別し、23件の確定区間へ加算しない。
+確認器を修正した現行候補 `ed077918…` では、同じchat IDのclearが以前のconfirmedDeliveryと配送済み主張を残す実不具合を再現した。
+[clearの隔離修正](docs/candidates/context-clear/README.md) `5d37ec14…` は、元DBと設定を維持してcontextの配送済み主張を消し、epochを進める。直接変更はPluginHooksと対応するDeliveryLedgerの埋込literalだけ。新4法則は標準公理のみ、336 object整合を確認した。
+隔離修正では全22意味検索・可視本文の必要原文206/206が通り、新規4読取1.423秒、4書込+8読取2.658秒、再起動後の新規/再開/clear/compact混在10読取2.217秒だった。
+既存chatは実返送本文の履歴だけを保持し、新規/clear/compactは新たな実本文で確認する。後着を含む原観測27・回答9、元の保存先と新turnの継続、3種の推薦辺も確認した。
+候補の実callback161件に未完了・stderr・非0終了なし。失敗した旧2実行の245 callbackも別に保持し、合格へ書き換えない。関連RSS最大3,308,800KiB、全service/guard終了・ownedPids空。
+終了済みDB/cache/診断build等26,892項目・2,822,586,145論理bytesをarchiveせず削除し、原典・現行候補/model/native入力のSHAと削除後336 object整合を維持した。
+これは同一Mac/Unix利用者の小規模native fixtureで、実Codex UIのchatや回答modelは呼んでいない。隔離修正は未採用でglobal install不変。受理seed・モデル両周0/6・反復総token比較0/18・本体採用0、80人8時間・一般98%・MCP/NASは未達のまま。
+
 [現行候補でのLLVM読取](docs/practical-runtime/stable-storage-read-llvm/README.md)を、製品 `ed077918…` を変えずに検査した。
 中断した診断原典の出版だけを復元し、既存数値ヒントを別途コピーして一度warmした。warm 55.105秒、原典とコピーの保存本文は不変。
 別の空data rootの新規10検索×3組は7.071 / 5.052 / 4.984秒で、全30意味検索・必要原文135/135（部分保存込み156/156）・既存の本文/返送bytes一致を確認した。
@@ -11,7 +22,7 @@
 試験入力の不足はDB作成/フック前に拒否され、失敗記録を残して別tagで補完した。製品は変更していない。
 終了済みDB/cache/source/制御器9,682項目・1,532,569,040論理bytesをarchiveせず削除し、削除後も現行336 objectが整合した。
 約1MBの状態fileは以前にも記録済みであり、byte数を新しい遅延原因としない。修復で書くreadState?のlockを無条件に外さない。
-次は利用者が追加した、複数DB・新規/既存chat・中断/再開を同じ負荷へ混ぜる検査を行う。別々の既存試験をこの組合せの合格へ転用しない。
+このLLVM読取は上記clear修正前の製品の結果であり、別runtimeの合格へ転用しない。複数DB・chatの混在は上記の独立したnative fixtureで検査した。
 現在版の受理seed・回答model両周0/6・反復総token比較0/18・本体採用0を維持し、80人8時間・一般98%・MCP/NASは未達のまま。
 
 [原子的な差し替え後も安定して読む候補](docs/candidates/stable-storage-read/README.md)をLeanで隔離実装した。製品SHAは `ed077918…`。

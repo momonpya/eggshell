@@ -1,0 +1,46 @@
+--- a/Eggshell/PluginHooks.lean
++++ b/Eggshell/PluginHooks.lean
+@@ -134,6 +134,30 @@
+ 
+ theorem compaction_forgets_delivery_projection (state : ThreadState) :
+     (compactState state).confirmedDelivery = none := rfl
++
++/-- A cleared model context has no visible prior delivery, including the
++checkpoints deliberately retained by compaction. DB evidence is unchanged. -/
++def clearState (state : ThreadState) : ThreadState := {
++  (compactState state) with
++    deliveredGraphs := []
++    lastSearch := none
++    searchStarted := false
++    lastReason := "cleared; graph may be resent" }
++
++theorem clear_forgets_claims (state : ThreadState) (turn : String) (now : Nat) :
++    (clearState state).deliveryClaims turn now = [] := by
++  simp [ThreadState.deliveryClaims,clearState,compactState]
++
++theorem clear_forgets_delivery_projection (state : ThreadState) :
++    (clearState state).confirmedDelivery = none := rfl
++
++theorem clear_advances_epoch (state : ThreadState) :
++    (clearState state).epoch = state.epoch + 1 := rfl
++
++theorem clear_preserves_settings (state : ThreadState) :
++    ((clearState state).profile,(clearState state).enabled,
++      (clearState state).nextProfile,(clearState state).nextProjection) =
++    (state.profile,state.enabled,state.nextProfile,state.nextProjection) := rfl
+ 
+ def boundedHookDeadline (now budget : Nat) (upstream : Option Nat) : Nat :=
+   min (now + budget) (upstream.getD (now + budget))
+@@ -646,6 +670,12 @@
+         if state.enabled then writeJson files.state (compactState state)
+     return emptyHook
+   else
++    if optionalString input "source" = some "clear" then
++      Worker.cancel session "search"
++      withHookSession input session fun files => do
++        if let some state ← readState? files then
++          writeJson files.state (clearState state)
++          Synapses.Live.reset files
+     let cwd := System.FilePath.mk ((optionalString input "cwd").getD ".")
+     let config ← configFromHook input cwd
+     let state ← withHookSession input session fun files => do
