@@ -27,6 +27,19 @@ structure Paused where
   detail : Json
   deriving ToJson
 
+/-- Exercise the same lifecycle through either a directory or the project
+service, without requiring a service-only field in older local runtimes. -/
+def capturedWriter (pending : PendingTurn) (name : String) (directory : System.FilePath) : Bool :=
+  if pending.projectInputs.isSome then toJson pending.write == toJson directory.toString
+  else toJson pending.write == Json.mkObj [("project",toJson name)] && pending.read.isEmpty &&
+    (toJson pending).getObjValD "remoteFrame" != Json.null
+def remoteConfig (runtime : String) (command : Array String) (groups : Array String)
+    (write : Option String) : String :=
+  "default = \"work\"\nsemantic_matcher = "++(toJson #[runtime,"search-provider"]).compress++
+  "\n[profiles.work]\nproject_service = "++(toJson command).compress++
+  "\nread = "++(toJson groups).compress++"\nhandoff_chars = 500000\n"++
+  (write.map (fun name => "write = "++(toJson name).compress++"\n")).getD ""
+
 def invoke (plan : StudySeedChecks.Input) (root data config : System.FilePath)
     (session turn label event : String) (fields : List (String × Json) := []) : IO StudyCommand.Result := do
   let source := ((Json.mkObj fields).getObjValAs? String "source").toOption
@@ -46,7 +59,8 @@ def invoke (plan : StudySeedChecks.Input) (root data config : System.FilePath)
     (request.compress++"\n") directory command.timeoutMs
   save (directory/"registration.json") (Json.mkObj [("event",toJson event),("command",toJson command.text),
     ("timeoutMs",toJson command.timeoutMs),("matcher",toJson command.matcher)])
-  check (result.exitCode == 0 && result.elapsedMs < command.timeoutMs) "mixed client exceeded its registered hook contract"
+  check (result.exitCode == 0 && result.elapsedMs < command.timeoutMs &&
+    !result.stdout.contains "Local memory search is busy or unavailable") "mixed client failed its registered hook contract"
   let reply ← IO.ofExcept (Json.parse result.stdout)
   if ["Stop","PostCompact","Interrupt","SessionEnd"].contains event then
     check (reply == Json.mkObj []) "mixed terminal event returned an incomplete notice"
@@ -65,8 +79,8 @@ def stage (plan : StudySeedChecks.Input) (root data config : System.FilePath) (t
   let files ← sessionFiles turn.item.session
   let some pending ← readPendingBase? files | throw (IO.userError "writer prompt did not create a captured turn")
   let expected := root/(if turn.project == "ALPHA" then "alpha.egg" else "beta.egg")
-  check (pending.turnId == turn.id && pending.write == some expected.toString &&
-    pending.projectInputs.any (·.size == 2)) "writer changed its selected project or turn identity"
+  check (pending.turnId == turn.id && capturedWriter pending turn.project expected &&
+    pending.projectInputs.all (·.size == 2)) "writer changed its selected project or turn identity"
 def command (turn : Turn) (id : String) : String :=
   if id == "read" then s!"nl -ba {turn.item.path} | sed -n '1p'"
   else if id == "detail" then s!"nl -ba {turn.item.path} | sed -n '2p'"
@@ -179,8 +193,9 @@ def awaitReady (alpha beta : ProjectStore.Project) (runtime : String) : IO Json 
         let reference ← PreparedInputs.loadStored? source .database MiniLM.model SearchProvider.encoderContract
         let count ← Persistence.Store.getNat source.get "candidates"
         let required ← if count == 0 then pure false else Warm.storedRequired target source
+        let ownerReady ← OwnerViews.loadStored? source .database
         rows := rows.push (Json.mkObj [("project",toJson name),("slot",toJson slot),("head",toJson source.head),
-          ("ready",toJson (!required && reference.isSome))])
+          ("ready",toJson (!required && reference.isSome && ownerReady.isSome))])
     if rows.all (·.getObjValD "ready" == toJson true) then return toJson rows
     check ((← IO.monoMsNow) < deadline) "automatic mixed-project preparation did not catch up"
     IO.sleep 100
@@ -224,7 +239,14 @@ def read (plan : StudySeedChecks.Input) (root data : System.FilePath) (client : 
   client.visible.set visible
   let files ← sessionFiles client.session
   let some pending ← readPendingBase? files | throw (IO.userError "read-only prompt omitted its captured turn")
-  check (pending.turnId == turn && pending.write.isNone && pending.projectInputs.any (·.size == client.groups.size))
+  let remote := (toJson pending).getObjValD "remoteFrame"
+  let payload := if remote.getObjValD "payload" == Json.null then remote else remote.getObjValD "payload"
+  let remoteGroups := ((payload.getObjValD "descriptor").getObjValD "projects").getArr?.toOption.getD #[]
+    |>.map (fun item => item.getObjValD "name")
+  let completeScope := match pending.projectInputs with
+    | some inputs => inputs.size == client.groups.size
+    | none => pending.read.isEmpty && remoteGroups == client.groups.map toJson
+  check (pending.turnId == turn && pending.write.isNone && completeScope)
     "reader acquired a writer or lost its complete selected project inventory"
   let some state ← readState? files | throw (IO.userError "reader state unavailable")
   let fresh := before.isEmpty
@@ -274,17 +296,19 @@ def readerBatch (plan : StudySeedChecks.Input) (root data : System.FilePath) (cl
     "mixed reader batch omitted needed original rows"
   return rows
 
-def run (inputPath directory : String) (sharedOwner : Bool := false) : IO Unit := do
+def run (inputPath directory : String) (sharedOwner : Bool := false) (remote : Bool := false) : IO Unit := do
   let plan ← IO.ofExcept (fromJson? (α := StudySeedChecks.Input) (← StudyAdmission.readJson inputPath))
   StudyAdmission.verifyArtifact plan.runtime
   for file in plan.pluginFiles do StudyAdmission.verifyArtifact file
   StudySeedChecks.requireNumericalSupport plan
   let root : System.FilePath := .mk directory
   let data := root/"data"
+  let host := if remote then root/"host" else data
   check (root.isAbsolute && !(← root.pathExists) && (← Paths.dataRoot) == data) "fresh mixed lifecycle root required"
   IO.FS.createDirAll (root/"src")
   IO.FS.createDirAll (root/"tmp")
   IO.FS.createDirAll data
+  IO.FS.createDirAll host
   let alpha ← ProjectStore.create (root/"alpha.egg") 4
   let beta ← ProjectStore.create (root/"beta.egg") 4
   IO.FS.writeFile (configured root "ALPHA") (renderConfig plan.runtime.path alpha.directory beta.directory (some "active"))
@@ -292,6 +316,19 @@ def run (inputPath directory : String) (sharedOwner : Bool := false) : IO Unit :
   IO.FS.writeFile (root/"read-both.toml") (renderConfig plan.runtime.path alpha.directory beta.directory none)
   for (name,project) in [("ALPHA",alpha),("BETA",beta)] do
     IO.FS.writeFile (root/("read-"++name++".toml")) (SharedTrafficChecks.config plan.runtime.path project.directory false)
+  if remote then
+    let catalog := root/"catalog.json"
+    let entries := (#[("ALPHA",alpha),("BETA",beta)]).map fun (name,project) =>
+      Json.mkObj [("name",toJson name),("directory",toJson project.directory.toString),
+        ("readable",toJson true),("writable",toJson true)]
+    save catalog (Json.mkObj [("projects",toJson entries),
+      ("policy",Json.mkObj [("chars",toJson (500000 : Nat)),("numeric",toJson true)])])
+    let command := #["/usr/bin/env","EGGSHELL_DATA_ROOT="++host.toString,
+      "EGGSHELL_PREFIX="++(← Paths.installRoot).toString,plan.runtime.path,"project-gateway",catalog.toString]
+    for name in ["ALPHA","BETA"] do
+      IO.FS.writeFile (configured root name) (remoteConfig plan.runtime.path command #["ALPHA","BETA"] (some name))
+      IO.FS.writeFile (root/("read-"++name++".toml")) (remoteConfig plan.runtime.path command #[name] none)
+    IO.FS.writeFile (root/"read-both.toml") (remoteConfig plan.runtime.path command #["ALPHA","BETA"] none)
   let mut sessions := #[]
   for (group,slot) in [("ALPHA",0),("ALPHA",1),("BETA",2),("BETA",3)] do
     let item ← SharedTrafficChecks.route ⟨s!"mixed-{group}-{slot}","","","",""⟩ (if sharedOwner then 0 else slot)
@@ -310,20 +347,27 @@ def run (inputPath directory : String) (sharedOwner : Bool := false) : IO Unit :
   save (root/"declared-turns.json") (toJson declared)
   let environment := replaceEnv plan.environment #[("EGGSHELL_DATA_ROOT",some data.toString),
     ("TMPDIR",some (root/"tmp").toString),("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
-  let services ← IO.mkRef (none : Option (StudyRuntime.Managed × StudyRuntime.Managed))
+  let services ← IO.mkRef (#[] : Array (StudyRuntime.Managed × String))
   let start := do
-    let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
-    let frontend ← try
-        StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) "mixed-chat-service" (data/"daemon.json") environment
-      catch error => StudyRuntime.stopManaged publisher (root/"startup-publisher-stop.json"); throw error
-    services.set (some (frontend,publisher))
+    check (← services.get).isEmpty "mixed services are already running"
+    let hostEnvironment := replaceEnv environment #[("EGGSHELL_DATA_ROOT",some host.toString)]
+    let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) host hostEnvironment
+    services.modify (·.push (publisher,"publisher"))
+    if remote then
+      let clientPublisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
+      services.modify (fun live => #[(clientPublisher,"client-publisher")]++live)
+    let frontend ← StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot)
+      "mixed-chat-service" (data/"daemon.json") environment
+    services.modify (fun live => #[(frontend,"frontend")]++live)
   let stop := fun label => do
-    if let some (frontend,publisher) ← services.get then
-      try StudyRuntime.stopManaged frontend (root/(label++"-frontend-stop.json"))
-      finally StudyRuntime.stopManaged publisher (root/(label++"-publisher-stop.json"))
-      services.set none
-  start
+    let mut failures : Array String := #[]
+    for (service,name) in ← services.get do
+      try StudyRuntime.stopManaged service (root/(label++"-"++name++"-stop.json"))
+      catch error => failures := failures.push error.toString; StudyRuntime.abort service
+    services.set #[]
+    check failures.isEmpty "mixed services failed normal shutdown"
   try
+    start
     let tasks ← first.mapM fun turn => IO.asTask (writer plan root data turn true false) .dedicated
     let settled := tasks.map (·.get)
     for result in settled do discard <| IO.ofExcept (result.mapError IO.Error.toString)
@@ -387,7 +431,7 @@ def run (inputPath directory : String) (sharedOwner : Bool := false) : IO Unit :
       if changing then
         let files ← sessionFiles switched.item.session
         let some pending ← readPendingBase? files | throw (IO.userError "older Stop removed the newer active turn")
-        check (pending.turnId == switched.id && pending.write == some beta.directory.toString && !pending.closed)
+        check (pending.turnId == switched.id && capturedWriter pending "BETA" beta.directory && !pending.closed)
           "older Stop changed the newer project/turn"
         for id in ["read","consume","detail"] do tool plan root data config switched id
         finish plan root data config switched
@@ -445,6 +489,7 @@ def run (inputPath directory : String) (sharedOwner : Bool := false) : IO Unit :
       ("writers",toJson turns),("readers",toJson final),("observations",toJson (27 : Nat)),("answers",toJson (9 : Nat)),
       ("manualWarmCalls",toJson (0 : Nat)),("manualKeepCalls",toJson (0 : Nat)),
       ("actualServiceRestart",toJson true),("interruptedWriters",toJson (2 : Nat)),
+      ("projectService",toJson remote),
       ("samePhysicalOwner",toJson sharedOwner),("growthWaves",toJson growthWaves),
       ("finalWriterTurns",toJson knownTurns.size),("finalOriginalObservations",toJson (knownTurns.size*3)),
       ("maxSimultaneousClients",toJson (if sharedOwner then 14 else 12 : Nat)),
@@ -571,11 +616,44 @@ def inspect (directory output : String) : IO Unit := do
   save (.mk output) (Json.mkObj [("inventory",counts),("rawFields",toJson fields),("journals",toJson journals),
     ("sessions",toJson sessions),("originalsUnchanged",toJson true),("readOnly",toJson true),
     ("servicesStarted",toJson (0 : Nat)),("hooksReplayed",toJson (0 : Nat)),("originalRunPassed",toJson false)])
+def inspectPrepared (directory output : String) : IO Unit := do
+  let root : System.FilePath := .mk directory
+  let declared ← declaredTurns root
+  let some first := declared[0]? | throw (IO.userError "missing declared mixed turn")
+  let session := first.item.session
+  let pending ← StudyAdmission.readJson (root/"data/sessions"/session/"pending.json").toString
+  let frame := (pending.getObjValD "remoteFrame").getObjValD "payload"
+  let cuts ← IO.ofExcept (((frame.getObjValD "boundary").getObjValD "projects").getArr?)
+  let alpha ← ProjectStore.openProject (root/"alpha.egg")
+  let beta ← ProjectStore.openProject (root/"beta.egg")
+  let before := Json.mkObj [("alpha",← originals alpha),("beta",← originals beta)]
+  let mut rows := #[]
+  for selected in cuts do
+    let name ← IO.ofExcept (selected.getObjValAs? String "name")
+    let project := if name == "ALPHA" then alpha else beta
+    let cut ← IO.ofExcept (fromJson? (α := ProjectStore.Cut) (selected.getObjValD "cut"))
+    let view ← ProjectStore.openView project cut
+    for index in [:view.sources.size] do
+      let some source := view.sources[index]? | throw (IO.userError "captured view omitted an owner")
+      let current ← project.current index
+      rows := rows.push (Json.mkObj [("project",toJson name),("slot",toJson index),
+        ("capturedHead",toJson source.head),("currentHead",toJson current.head),
+        ("capturedQueryReady",toJson (← PreparedInputs.loadStored? source .database MiniLM.model SearchProvider.encoderContract).isSome),
+        ("capturedOwnerReady",toJson (← OwnerViews.loadStored? source .database).isSome),
+        ("currentQueryReady",toJson (← PreparedInputs.loadStored? current .database MiniLM.model SearchProvider.encoderContract).isSome),
+        ("currentOwnerReady",toJson (← OwnerViews.loadStored? current .database).isSome)])
+  check ((Json.mkObj [("alpha",← originals alpha),("beta",← originals beta)]) == before)
+    "preparation postmortem changed original source files"
+  save (.mk output) (Json.mkObj [("originalsUnchanged",toJson true),("rows",toJson rows),
+    ("servicesStarted",toJson (0 : Nat)),("hooksReplayed",toJson (0 : Nat))])
 end MixedChatChecks
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["check",input,directory] => MixedChatChecks.run input directory; return 0
   | ["shared-owner",input,directory] => MixedChatChecks.run input directory true; return 0
+  | ["service",input,directory] => MixedChatChecks.run input directory false true; return 0
+  | ["service-growth",input,directory] => MixedChatChecks.run input directory true true; return 0
   | ["fresh-grown",input,directory] => MixedChatChecks.freshGrown input directory; return 0
   | ["inspect",directory,output] => MixedChatChecks.inspect directory output; return 0
+  | ["inspect-prepared",directory,output] => MixedChatChecks.inspectPrepared directory output; return 0
   | _ => sourceRouteEngine args

@@ -1,0 +1,405 @@
+--- a/Eggshell/PreparationService.lean
++++ b/Eggshell/PreparationService.lean
+@@ -24,6 +24,30 @@
+     set next
+     return admitted
+ 
++/-- The source ACK never depends on derived completion. After a restart,
++replay the durable registry through the existing bounded admission path.
++Discovery and source IO run in a dedicated background task, not in a search
++or the listener. A full queue retains this cursor until admission succeeds. -/
++def Pool.restoreDurable (pool : Pool) (stopping : IO.Ref Bool) : IO Unit := do
++  for (kind,folder) in [("index",← indexRegistry),("synapses",← Synapses.Journal.registry)] do
++    if ← stopping.get then return
++    let paths ← try targetReferences folder none catch _ =>
++      IO.eprintln s!"Eggshell preparation recovery could not read the {kind} registry"
++      pure #[]
++    for path in paths do
++      let key := ((path.fileName.getD "").dropEnd 5).toString
++      repeat
++        if ← stopping.get then return
++        let accepted ← try pool.notify kind key catch _ =>
++          -- Registry keys carry no original input/output or customer path.
++          pool.lastRetry.atomically do
++            set (some (Json.mkObj [("stage",toJson "durable-recovery"),("kind",toJson kind),
++              ("key",toJson key),("reason",toJson "invalid-or-unavailable-registry-target")]))
++          IO.eprintln s!"Eggshell preparation recovery skipped {kind}:{key}"
++          pure true
++        if accepted then break
++        IO.sleep 20
++
+ def Pool.openWaiter (pool : Pool) (expires : Nat)
+     (window : Nat := OperationWire.searchBudgetMs) : IO (Option PreparationPlan.Ticket) := do
+   let now ← IO.monoMsNow
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -909,13 +909,13 @@
+     let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange","project-query"].contains kind
+     streamed.set streamedRead
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-publish","project-query"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-prepared-pin","project-publish","project-query"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+     replyDeadline.set deadline
+     let replyCharge := if streamedRead && !["worker-exchange","project-query"].contains kind then Stream.maxBytes else 65536
+-    if !["source-palette","source-palettes","source-plan"].contains kind then
++    if !["source-palette","source-palettes","source-plan","project-prepared-pin"].contains kind then
+       reserveReply server replyCharge deadline
+       reservedReply.set replyCharge
+     let profileDispatch ← IO.monoMsNow
+@@ -936,6 +936,17 @@
+       else if kind == "project-read-pin" then do
+         let identity ← IO.ofExcept (payload.getObjValAs? String "database")
+         toJson <$> server.owned.pinRead identity secret deadline
++      else if kind == "project-prepared-pin" then do
++        let identity ← IO.ofExcept (payload.getObjValAs? String "database")
++        let result ← Read.pin server.owned identity secret deadline
++          (do return !(← server.stopping.get) && (← peerWaiting client))
++        let value := toJson result
++        -- Do not reserve reply bytes while waiting for background readiness.
++        -- The complete owner inventory may exceed the old 64 KiB envelope.
++        let charge := (Daemon.response (.ok value.compress)).compress.utf8ByteSize
++        reserveReply server charge deadline
++        reservedReply.set charge
++        pure value
+       else if kind == "project-pin" then do
+         let identity ← IO.ofExcept (payload.getObjValAs? String "database")
+         toJson <$> server.owned.pin identity secret deadline
+@@ -1103,6 +1114,7 @@
+     some <$> Research.RetentionProbe.Probe.new else pure none
+   let mut activity ← IO.monoMsNow
+   Client.registerHosted endpoint
++  let recovery ← IO.asTask (server.preparation.restoreDurable server.stopping) .dedicated
+   try
+     while !(← server.stopping.get) do
+       -- Backpressure belongs before accept. Accepting and dropping a socket
+@@ -1157,6 +1169,7 @@
+     return 0
+   finally
+     server.stopping.set true
++    let _ ← IO.wait recovery
+     if let some retention := retention then retention.stop
+     server.preparation.close
+     server.operations.close
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -686,13 +686,27 @@
+   let cut ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectStore.Cut))
+   unless cut.inScope granted.manifest do throw (IO.userError "read project pin omitted or mixed original owners")
+   return cut
++
++def pinPreparedProject (endpoint : Daemon.Endpoint) (granted : ReadGrant)
++    (deadline : Nat) : IO (ProjectStore.Cut × Array ProjectReadSnapshot.Pin) := do
++  let budget ← liveBudget deadline
++  let peer := {endpoint with secret := granted.capability}
++  let response ← Daemon.exchange peer "project-prepared-pin" (Json.mkObj [
++    ("database",toJson granted.manifest.identity),("budgetMs",toJson budget)]) (budget := budget)
++  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectStore.Cut × Array ProjectReadSnapshot.Pin))
++  unless result.1.inScope granted.manifest && ProjectReadSnapshot.boundTo result.2 result.1.heads do
++    throw (IO.userError "prepared project pin omitted or mixed original owners")
++  return result
+ 
+ def readProjectAdvice (requests : Array (ReadGrant × ProjectStore.Cut)) (question : Read.Question)
++    (prepared : Array (Array ProjectReadSnapshot.Pin))
+     (deadline : Nat) : IO Read.Response := do
+   unless question.valid && !requests.isEmpty && requests.all (fun (grant,cut) => cut.inScope grant.manifest) do
+     throw (IO.userError "project query changed its complete authorized boundary")
+   let endpoint ← operationEndpoint
+-  let request : Read.Request := ⟨requests.map (fun (grant,cut) => ⟨grant.manifest.identity,grant.capability,cut⟩),question⟩
++  unless prepared.size == requests.size && (prepared.zip requests).all (fun (pins,(_,cut)) =>
++      ProjectReadSnapshot.boundTo pins cut.heads) do throw (IO.userError "prepared query changed its source inventory")
++  let request : Read.Request := ⟨requests.map (fun (grant,cut) => ⟨grant.manifest.identity,grant.capability,cut⟩),prepared,question⟩
+   let budget ← liveBudget deadline
+   let response ← Stream.exchange endpoint "project-query" (Json.mkObj [
+     ("request",toJson request),("budgetMs",toJson budget)]) budget
+--- a/Eggshell/ProjectGateway.lean
++++ b/Eggshell/ProjectGateway.lean
+@@ -9,6 +9,7 @@
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-gateway".toUTF8 [
+   (include_str "ProjectGateway.lean").toUTF8,(include_str "ProjectGatewayPeer.lean").toUTF8,
+   (include_str "ProcessGroup.lean").toUTF8,
++  (include_str "ProjectReadSnapshot.lean").toUTF8,(include_str "ProjectReadWire.lean").toUTF8,
+   Publication.implementation.toUTF8])
+ 
+ /-- Host-side configuration, never a client request. The process channel is
+@@ -42,6 +43,7 @@
+ structure NamedCut where
+   name : String
+   cut : ProjectStore.Cut
++  prepared : Array ProjectReadSnapshot.Pin
+   deriving FromJson, ToJson
+ structure Boundary where
+   scope : String
+@@ -57,7 +59,8 @@
+     frame.descriptor.projects.map (·.name) == service.projects.toArray &&
+     frame.boundary.scope == frame.descriptor.key &&
+     frame.boundary.projects.map (·.name) == frame.descriptor.projects.map (·.name) &&
+-    (frame.boundary.projects.zip frame.descriptor.projects).all (fun (cut,project) => cut.cut.inScope project.manifest)
++    (frame.boundary.projects.zip frame.descriptor.projects).all (fun (cut,project) =>
++      cut.cut.inScope project.manifest && ProjectReadSnapshot.boundTo cut.prepared cut.cut.heads)
+ def Captured.accepts (frame : Captured) (service : Config.ProjectService) : Bool :=
+   frame.inventory service && frame.descriptor.write == service.write
+ theorem captured_keeps_writer (frame : Captured) (service : Config.ProjectService)
+@@ -75,7 +78,8 @@
+ def Boundary.inScope (boundary : Boundary) (scope : Scope) : Bool :=
+   boundary.scope == scope.key &&
+     boundary.projects.map (·.name) == scope.readers.map (·.1) &&
+-    (boundary.projects.zip scope.readers).all (fun (cut,(_,grant)) => cut.cut.inScope grant.manifest)
++    (boundary.projects.zip scope.readers).all (fun (cut,(_,grant)) =>
++      cut.cut.inScope grant.manifest && ProjectReadSnapshot.boundTo cut.prepared cut.cut.heads)
+ 
+ theorem boundary_keeps_all_projects (boundary : Boundary) (scope : Scope)
+     (accepted : boundary.inScope scope = true) :
+@@ -132,7 +136,8 @@
+ 
+ def pin (endpoint : Daemon.Endpoint) (scope : Scope) (deadline : Nat) : IO Boundary := do
+   let projects ← scope.readers.mapM fun (name,grant) => do
+-    return (⟨name,← Client.pinReadProject endpoint grant deadline⟩ : NamedCut)
++    let (cut,prepared) ← Client.pinPreparedProject endpoint grant deadline
++    return (⟨name,cut,prepared⟩ : NamedCut)
+   let boundary : Boundary := ⟨scope.key,projects⟩
+   unless boundary.inScope scope do throw (IO.userError "project pin changed its complete scope")
+   return boundary
+@@ -158,7 +163,7 @@
+     unless boundary.inScope scope && question.policy == scope.descriptor.policy do
+       throw (IO.userError "project query changed its selected scope or host policy")
+     let requests := (boundary.projects.zip scope.readers).map fun (cut,(_,grant)) => (grant,cut.cut)
+-    return toJson (← Client.readProjectAdvice requests question deadline)
++    return toJson (← Client.readProjectAdvice requests question (boundary.projects.map (·.prepared)) deadline)
+   | .publish target boundary capsule =>
+     let writer ← IO.ofExcept (writeFor scope target)
+     unless boundary.inScope scope do throw (IO.userError "publication changed its complete read boundary")
+--- a/Eggshell/ProjectGatewayPeer.lean
++++ b/Eggshell/ProjectGatewayPeer.lean
+@@ -66,7 +66,8 @@
+ def Peer.accepts (peer : Peer) (boundary : Boundary) : Bool :=
+   boundary.scope == peer.key &&
+     boundary.projects.map (·.name) == peer.descriptor.projects.map (·.name) &&
+-    (boundary.projects.zip peer.descriptor.projects).all (fun (cut,project) => cut.cut.inScope project.manifest)
++    (boundary.projects.zip peer.descriptor.projects).all (fun (cut,project) =>
++      cut.cut.inScope project.manifest && ProjectReadSnapshot.boundTo cut.prepared cut.cut.heads)
+ 
+ @[no_expose] def Peer.pin (peer : Peer) (deadline : Nat) : IO Boundary := do
+   let boundary ← IO.ofExcept (fromJson? (α := Boundary) (← peer.channel.exchange .pin deadline))
+--- a/Eggshell/ProjectReadWire.lean
++++ b/Eggshell/ProjectReadWire.lean
+@@ -1,5 +1,6 @@
+ module
+ public import Eggshell.PublicationWire
++public import Eggshell.ProjectReadSnapshot
+ @[expose] public section
+ namespace Eggshell.Plugin.Publication.Read
+ open Lean DB
+@@ -18,6 +19,7 @@
+   question.delivered.length ≤ 4096 && question.delivered.all (fun key => key.utf8ByteSize ≤ 1024)
+ structure Request where
+   reads : Array ReadInput
++  prepared : Array (Array ProjectReadSnapshot.Pin)
+   question : Question
+   deriving ToJson, FromJson
+ def image (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut) : ProjectInputs.Image :=
+--- a/Eggshell/ProjectRead.lean
++++ b/Eggshell/ProjectRead.lean
+@@ -6,6 +6,36 @@
+ @[expose] public section
+ namespace Eggshell.Plugin.Publication.Read
+ open Lean DB
++/-- Admission freezes a source lower bound once, then waits for published
++preparation covering it. Closing recorded dependencies may raise that bound;
++it never substitutes an older cut or omits a physical owner. -/
++def pin (pool : Owned.Pool) (identity secret : String) (deadline : Nat)
++    (live : IO Bool := pure true) : IO (ProjectStore.Cut × Array ProjectReadSnapshot.Pin) := do
++  let registered ← pool.readProject identity secret
++  let initial ← ProjectStore.pin registered.project deadline
++    (some ⟨pool.views.pages,ProjectViews.scope registered.project⟩)
++  let mut minimum := initial.cut
++  repeat
++    TaskDeadline.ensureLive deadline
++    unless ← live do throw (IO.userError "prepared project pin cancelled")
++    let mut captured : Array ProjectReadSnapshot.Pin := #[]
++    for slot in [:minimum.heads.size] do
++      let current ← registered.project.current slot
++      let required ← ProjectStore.headAt minimum.heads slot
++      if let some ready ← ProjectReadSnapshot.find? current required MiniLM.model SearchProvider.encoderContract then
++        captured := captured.push ready.pin
++    if captured.size == minimum.heads.size then
++      let selected : ProjectStore.Cut := ⟨minimum.project,captured.map (·.source)⟩
++      let closed ← ProjectStore.closeCut registered.project selected deadline
++        (some ⟨pool.views.pages,ProjectViews.scope registered.project⟩)
++      if closed.cut == selected then
++        let pins := captured
++        unless ProjectReadSnapshot.boundTo pins selected.heads do throw (IO.userError "prepared pin omitted an original owner")
++        return (selected,pins)
++      minimum := closed.cut
++    IO.sleep 20
++  throw (IO.userError "unreachable prepared project pin")
++
+ def advice (handoff : Handoff) : Except String Advice := do
+   unless handoff.completed == 0 && !handoff.blocksCurrent && handoff.localUnions == 0 &&
+       handoff.reason != "search-incomplete" && handoff.controlDeltaChars == 0 &&
+@@ -18,13 +48,20 @@
+ def query (pool : Owned.Pool) (readers : SearchReaders.Coordinator) (request : Request)
+     (cancelled : IO.Ref Bool) (deadline : Nat) : IO Response := do
+   unless request.question.valid && 0 < request.reads.size && request.reads.size ≤ 64 &&
++      request.prepared.size == request.reads.size &&
+       (request.reads.toList.map (·.database)).Nodup do throw (IO.userError "invalid project read request")
+   let held ← IO.mkRef (#[] : Array ProjectViews.Borrow)
+   try
+     let mut sources : Array PageMap.Snapshot := #[]
+     let mut images : Array ProjectInputs.Image := #[]
+     let mut names : List Config.Egg := []
+-    for input in request.reads do
++    let mut pins : Array ProjectReadSnapshot.Pin := #[]
++    for ordinal in [:request.reads.size] do
++      let some input := request.reads[ordinal]? | throw (IO.userError "missing project read")
++      let some prepared := request.prepared[ordinal]? | throw (IO.userError "missing prepared project inventory")
++      unless ProjectReadSnapshot.boundTo prepared input.cut.heads do
++        throw (IO.userError "prepared read changed its original owner inventory")
++      pins := pins++prepared
+       TaskDeadline.ensureLive deadline
+       unless !(← cancelled.get) do throw (IO.userError "project read cancelled")
+       let registered ← pool.readProject input.database input.capability
+@@ -37,13 +74,14 @@
+         sources := sources.push source
+         names := names++[⟨input.database++":"++toString slot,source.directory⟩]
+     let mut inputs : Array PreparedInputs.Reference := #[]
+-    for source in sources do
+-      let some input ← PreparedInputs.loadStored? source .database MiniLM.model SearchProvider.encoderContract |
+-        throw (IO.userError "project read is waiting for publication preparation")
+-      let input := {input with usage := none}
+-      unless input.sharedSafe do throw (IO.userError "project reader contains private preparation")
+-      inputs := inputs.push input
+-    let owners ← OwnerViews.load? sources
++    let mut ownerInputs : Array OwnerViews.Item := #[]
++    for ordinal in [:sources.size] do
++      let some source := sources[ordinal]? | throw (IO.userError "missing original source")
++      let some pin := pins[ordinal]? | throw (IO.userError "missing admitted preparation root")
++      let captured ← ProjectReadSnapshot.load source pin MiniLM.model SearchProvider.encoderContract
++      inputs := inputs.push captured.input
++      ownerInputs := ownerInputs.push captured.owner
++    let owners := some (⟨OwnerViews.implementation,sources.map (·.head),ownerInputs⟩ : OwnerViews.Reference)
+     let frame ← PreparedReaders.Frame.capture sources inputs owners
+     let session ← readers.borrow frame deadline cancelled
+     let prepared ← session.pool.acquire session.sources inputs owners
+--- a/Eggshell/PublicationWire.lean
++++ b/Eggshell/PublicationWire.lean
+@@ -125,6 +125,7 @@
+ source protocol can share one owner across clients built from the same code. -/
+ def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-service".toUTF8 [
+   (include_str "ProjectRead.lean").toUTF8,
++  (include_str "ProjectReadSnapshot.lean").toUTF8,
+   (include_str "ProjectHookRead.lean").toUTF8,(include_str "Config.lean").toUTF8,
+   (include_str "ProjectIngress.lean").toUTF8,(include_str "ProcessGroup.lean").toUTF8,
+   (include_str "ProjectReadWire.lean").toUTF8,
+--- /dev/null
++++ b/Eggshell/ProjectReadSnapshot.lean
+@@ -0,0 +1,107 @@
++module
++public import Eggshell.PreparedInputs
++public import Eggshell.ProjectSources
++@[expose] public section
++namespace Eggshell.ProjectReadSnapshot
++open Lean DB Persistence.Store
++
++/-- Opaque immutable metadata roots. No host path, query, original body,
++private usage state or completion authority crosses this boundary. -/
++structure Pin where
++  source : PageMap.Head
++  query : PageMap.Head
++  owners : PageMap.Head
++  deriving ToJson, FromJson, BEq
++def boundTo (pins : Array Pin) (heads : Array PageMap.Head) : Bool :=
++  decide (pins.map (·.source) = heads)
++theorem bound_sources (pins : Array Pin) (heads : Array PageMap.Head)
++    (bound : boundTo pins heads = true) : pins.map (·.source) = heads := by
++  exact of_decide_eq_true bound
++theorem bound_count (pins : Array Pin) (heads : Array PageMap.Head)
++    (bound : boundTo pins heads = true) : pins.size = heads.size := by
++  have same := congrArg Array.size (bound_sources pins heads bound)
++  simpa using same
++
++structure Captured where
++  original : PageMap.Snapshot
++  pin : Pin
++  input : PreparedInputs.Reference
++  owner : OwnerViews.Item
++  originalBound : original.head = pin.source
++  inputBound : input.source = pin.source
++  ownerBound : owner.captured.state.source.head = pin.source
++  shared : input.sharedSafe = true
++  ownerShared : (owner.storage == .database) = true
++
++def queryAuthority (source : PageMap.Head) : String :=
++  "prepared-query-inputs:"++source.identity++":"++PreparedInputs.implementation
++def ownerAuthority (source : PageMap.Head) : String :=
++  "owner-input-ready:"++source.identity++":"++OwnerViews.implementation
++def restore (path : System.FilePath) (head : PageMap.Head) (authority : String) : IO PageMap.Snapshot := do
++  let current ← PageMap.pin path
++  unless current.head.identity == head.identity && head.authority == authority &&
++      current.head.authority == authority do throw (IO.userError "prepared snapshot metadata belongs to another owner")
++  let some retained ← PageMap.HistoryReader.make? current head |
++    throw (IO.userError "pinned preparation metadata extent is unavailable")
++  return retained.snapshot
++
++/-- Restore the roots actually admitted, rather than looking a source up in
++the later 64-entry name directory. Retirement of a live name cannot change
++this immutable record. Metadata validation never prepares an index. -/
++def load (source : PageMap.Snapshot) (pin : Pin) (model encoder : String) : IO Captured := do
++  let query ← restore (← PreparedInputs.folder source .database model encoder)
++    pin.query (queryAuthority source.head)
++  let some raw ← query.get (PreparedInputs.sourceKey pin.source) |
++    throw (IO.userError "admitted preparation metadata omitted its source")
++  let input ← Synapses.Index.decode (α := PreparedInputs.Reference) raw
++  let owners ← restore ((← OwnerViews.directory source .database)/"ready.egg") pin.owners (ownerAuthority source.head)
++  let some owner ← PreparedOwners.readJson (α := OwnerViews.Item) owners owners.get (OwnerViews.sourceKey source) |
++    throw (IO.userError "admitted preparation metadata omitted its owner input")
++  unless input.producer == PreparedInputs.implementation && input.model == model &&
++      input.encoder == encoder do throw (IO.userError "prepared snapshot producer changed")
++  OwnerViews.validate ⟨OwnerViews.implementation,#[source.head],#[owner]⟩ #[source]
++  if originalBound : source.head = pin.source then
++    if inputBound : input.source = pin.source then
++      if ownerBound : owner.captured.state.source.head = pin.source then
++        if shared : input.sharedSafe = true then
++          if ownerShared : (owner.storage == .database) = true then
++            return ⟨source,pin,input,owner,originalBound,inputBound,ownerBound,shared,ownerShared⟩
++  throw (IO.userError "prepared snapshot changed its source or public storage boundary")
++
++/-- Select the earliest retained prepared prefix covering the admission fence.
++Only the bounded metadata directory is examined; no Work, Outcome, source
++body, vector, lexical posting or synaptic edge is reconstructed here. -/
++def find? (current : PageMap.Snapshot) (minimum : PageMap.Head) (model encoder : String) : IO (Option Captured) := do
++  unless ← ProjectStore.sourceContains current minimum do
++    throw (IO.userError "query admission fence is not in the owner's original history")
++  let some query ← PageMap.open? (← PreparedInputs.folder current .database model encoder) |
++    return none
++  unless query.head.authority == queryAuthority current.head do throw (IO.userError "foreign prepared query directory")
++  let some owners ← PageMap.open? ((← OwnerViews.directory current .database)/"ready.egg") | return none
++  if (← query.get (PreparedInputs.sourceKey minimum)).isSome then
++    let some retained ← PageMap.HistoryReader.make? current minimum |
++      throw (IO.userError "admission fence extent is unavailable")
++    let source := retained.snapshot
++    if (← PreparedOwners.readJson (α := OwnerViews.Item) owners owners.get (OwnerViews.sourceKey source)).isSome then
++      return some (← load source ⟨minimum,query.head,owners.head⟩ model encoder)
++  let mut heads : List PageMap.Head := []
++  if (← query.get (PreparedInputs.sourceKey minimum)).isSome then heads := [minimum]
++  let count ← getNat query.get "count"
++  for slot in [:min count 64] do
++    if let some raw ← query.get (key "slot" slot) then
++      let head ← Synapses.Index.decode (α := PageMap.Head) raw
++      if head.revision ≥ minimum.revision && !heads.contains head then heads := head::heads
++  for head in heads.mergeSort (fun a b => a.revision ≤ b.revision) do
++    unless head.identity == current.head.identity && head.authority == current.head.authority do
++      throw (IO.userError "prepared directory mixed original incarnations")
++    unless ← ProjectStore.sourceContains current head do
++      throw (IO.userError "prepared directory names a divergent original history")
++    let some retained ← PageMap.HistoryReader.make? current head |
++      throw (IO.userError "prepared original extent is unavailable")
++    let source := retained.snapshot
++    unless ← ProjectStore.sourceContains source minimum do continue
++    if (← query.get (PreparedInputs.sourceKey head)).isNone then continue
++    if (← PreparedOwners.readJson (α := OwnerViews.Item) owners owners.get (OwnerViews.sourceKey source)).isNone then continue
++    return some (← load source ⟨head,query.head,owners.head⟩ model encoder)
++  return none
++end Eggshell.ProjectReadSnapshot
