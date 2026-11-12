@@ -186,7 +186,3 @@ def run (input directory : String) : IO Unit := do
     try StudyRuntime.stopManaged frontend (root/"frontend-stop.json")
     finally StudyRuntime.stopManaged publisher (root/"publisher-stop.json")
 end AutomaticPublicationChecks
-def main (args : List String) : IO UInt32 := do
-  match args with
-  | ["check",input,directory] => AutomaticPublicationChecks.run input directory; return 0
-  | _ => sourceRouteEngine args

@@ -1,0 +1,104 @@
+--- a/Eggshell/FileSystem.lean
++++ b/Eggshell/FileSystem.lean
+@@ -319,31 +319,84 @@
+ def atomicBytes (path : System.FilePath) (bytes : ByteArray) : IO Unit :=
+   atomicBytesWith path bytes (fun _ => pure ())
+ 
+-def boundedBytes (path : System.FilePath) (limit : Nat) : IO ByteArray := do
+-  let handle ← openRead path.toString
+-  let before ← readVersion handle
+-  if before.bytes > limit then throw (IO.userError "storage object exceeds byte budget")
+-  let mut bytes := ByteArray.empty
+-  while bytes.size < before.bytes do
+-    let count := min 4096 (before.bytes - bytes.size)
+-    let part ← readPage handle bytes.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
+-    unless part.size == count do throw (IO.userError "truncated storage object")
+-    bytes := bytes ++ part
+-  unless (← readVersion handle) == before do throw (IO.userError "storage object mutated during read")
+-  pure bytes
++/-- An accepted storage image is complete, bounded, and has the full OS
++version unchanged throughout its own read. It need not still occupy its path:
++an atomic publisher may have retired this pinned immutable descriptor. -/
++structure StorageImage (limit : Nat) where
++  before : ReadVersion
++  after : ReadVersion
++  bytes : ByteArray
++  unchanged : before = after
++  complete : bytes.size = before.bytes
++  bounded : bytes.size ≤ limit
+ 
+-def boundedRead (handle : ReadHandle) (limit : Nat) : IO ByteArray := do
+-  let before ← readVersion handle
++def checkedStorageImage? (limit : Nat) (before after : ReadVersion)
++    (bytes : ByteArray) : Option (StorageImage limit) :=
++  if unchanged : before = after then
++    if complete : bytes.size = before.bytes then
++      if bounded : bytes.size ≤ limit then
++        some ⟨before,after,bytes,unchanged,complete,bounded⟩
++      else none
++    else none
++  else none
++
++theorem storage_image_unchanged (image : StorageImage limit) :
++    image.before = image.after := image.unchanged
++
++theorem storage_image_complete (image : StorageImage limit) :
++    image.bytes.size = image.before.bytes := image.complete
++
++theorem storage_image_bounded (image : StorageImage limit) :
++    image.bytes.size ≤ limit := image.bounded
++
++theorem mutated_storage_image_rejected (limit : Nat) (before after : ReadVersion)
++    (bytes : ByteArray) (changed : before ≠ after) :
++    checkedStorageImage? limit before after bytes = none := by
++  simp [checkedStorageImage?,changed]
++
++theorem incomplete_storage_image_rejected (limit : Nat) (before after : ReadVersion)
++    (bytes : ByteArray) (incomplete : bytes.size ≠ before.bytes) :
++    checkedStorageImage? limit before after bytes = none := by
++  simp [checkedStorageImage?,incomplete]
++
++theorem oversized_storage_image_rejected (limit : Nat) (before after : ReadVersion)
++    (bytes : ByteArray) (oversized : ¬ bytes.size ≤ limit) :
++    checkedStorageImage? limit before after bytes = none := by
++  simp [checkedStorageImage?,oversized]
++
++/-- One attempt. Only an unstable version is retryable; truncated reads,
++budget errors, and native IO failures retain their original failure behavior. -/
++def storageReadAttempt (limit : Nat) (version : IO ReadVersion)
++    (page : UInt64 → ReadSize → IO ByteArray) : IO (Option (StorageImage limit)) := do
++  let before ← version
+   if before.bytes > limit then throw (IO.userError "storage object exceeds byte budget")
+   let mut bytes := ByteArray.empty
+   while bytes.size < before.bytes do
+     let count := min 4096 (before.bytes - bytes.size)
+-    let part ← readPage handle bytes.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
++    let part ← page bytes.size.toUInt64 ⟨count, Nat.min_le_left _ _⟩
+     unless part.size == count do throw (IO.userError "truncated storage object")
+     bytes := bytes ++ part
+-  unless (← readVersion handle) == before do throw (IO.userError "storage object mutated during read")
+-  pure bytes
++  return checkedStorageImage? limit before (← version) bytes
+ 
++/-- Retry the same pinned descriptor, without reopening the current path,
++waiting, or weakening version equality. A retired immutable image stabilizes;
++a continuously changing image exhausts the fixed attempt budget. -/
++def boundedStorageImageWith (attempts limit : Nat) (version : IO ReadVersion)
++    (page : UInt64 → ReadSize → IO ByteArray) : IO (StorageImage limit) :=
++  let rec attempt : Nat → IO (StorageImage limit)
++    | 0 => throw (IO.userError "storage object did not stabilize during read")
++    | remaining+1 => do
++        match ← storageReadAttempt limit version page with
++        | some image => pure image
++        | none => attempt remaining
++  attempt attempts
++
++def boundedRead (handle : ReadHandle) (limit : Nat) : IO ByteArray := do
++  return (← boundedStorageImageWith 3 limit (readVersion handle) (readPage handle)).bytes
++
++def boundedBytes (path : System.FilePath) (limit : Nat) : IO ByteArray := do
++  boundedRead (← openRead path.toString) limit
++
+ theorem bounded_read_original (path : System.FilePath) (limit : Nat) :
+     boundedBytes path limit = (do boundedRead (← openRead path.toString) limit) := by
+   rfl

@@ -2,6 +2,18 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[原子的な差し替え後も安定して読む候補](docs/candidates/stable-storage-read/README.md)をLeanで隔離実装した。製品SHAは `ed077918…`。
+同じFDで最大3回、完全な変更情報・全byte・予算の検査に通った読取だけを返す。読取lock・待機・sleep・path再open・包括的な例外握りつぶしは加えない。
+nativeで差し替え中の読取が2回目に成功し、連続変更・途中切れ・容量超過・IO失敗を拒否すること、外部原文の差し替えを鮮度検査が拒否することを確認した。
+新6法則と既存4法則は標準公理だけ。直接変更はFileSystemと対応する埋込literalのみで、336 object・335 moduleの対応を確認した。
+同じ空2プロジェクトへの自動積み増しでは、全70意味検索と原文640/640が実配送へ入り、各行を自身のSOURCE path/fingerprintのCODE block内で確認した。
+4保存＋10検索の混在3組は7.434 / 7.992 / 8.720秒、新規10検索4組は1.933 / 2.038 / 2.320 / 2.197秒。手動keep/warmなし、48観測・16回答を保存した。
+実callback 354件に未完了通知・stderr・非0終了なし、失敗receiptも0。背景state.guard待ち警告4件は残り、未解消として記録する。
+Pre p95 2.528秒、Post p95 1.047秒は小fixtureの48件ずつであり、本番p99ではない。関連RSS最大3,859,072KiB、全guard/service終了0・ownedPids空。
+追加した試験libraryをstrict subsetと誤って扱った監査拒否は保持し、全製品core・共通sourceと追加fixture bytesを別々に照合した。製品一致条件は緩めない。
+終了済みDB/cache/診断build等16,529項目・1,041,164,509論理bytesをarchiveせず削除し、削除後も現行336 objectが整合した。
+受理seed・回答model両周0/6・品質・反復総token比較0/18・本体採用0を維持する。大規模・80人8時間・一般98%・MCP/NASは未検証のまま。
+
 [手動warmなしの差分保存と検索](docs/practical-runtime/automatic-publication/README.md)を、製品SHA `302ead20…` を変えずに確認した。
 空の2プロジェクト・各4所有者へ16 turnを積み増し、48観測・16回答が自動保存された。
 4保存＋10検索の混在3組は7.335 / 7.956 / 8.604秒、新規10検索4組は1.892〜2.057秒。

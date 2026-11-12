@@ -63,6 +63,9 @@ to SHA-256. Original `queries.json` and `summary.json` preserve that verifier
 mistake. `checked-queries.json` and `checked-summary.json` use independently
 inspected `SourceEvidence.fingerprint` values: a length-bound BLAKE3 page chain.
 The experiment was not rerun, and the product was not changed to pass the audit.
+An additional retained `source-blocks.json` audit verifies all 640 rows inside
+the CODE block carrying that row's own SOURCE path and fingerprint, rather than
+accepting unrelated path/fingerprint strings elsewhere in the body.
 
 ## Scope and retained evidence
 

@@ -16,8 +16,9 @@ def prepare : IO Unit := do
   IO.FS.createDirAll root
   IO.FS.createDirAll records
   discard <| command "/bin/cp" #["-cR",(productRoot/"source").toString,(root/"source").toString]
-  IO.FS.writeFile (root/"source/tools/research/AutomaticPublicationChecks.lean")
-    (← IO.FS.readFile (project/"tools/research/AutomaticPublicationChecks.lean"))
+  for name in ["AutomaticPublicationChecks","AutomaticPublicationMain"] do
+    IO.FS.writeFile (root/"source/tools/research"/(name++".lean"))
+      (← IO.FS.readFile (project/"tools/research"/(name++".lean")))
   copyLocalArtifacts (productRoot/"build") (root/"build")
   let settings := (← read (productRoot/"build/build.json")).getObjValD "settings"
     |>.setObjVal! "project" (toJson (root/"source").toString)
@@ -27,7 +28,7 @@ def prepare : IO Unit := do
     |>.setObjVal! "baselineResponse" (toJson (productRoot/"build/runtime.rsp").toString)
     |>.setObjVal! "baselineMain" (toJson (productRoot/"build/tools_research_StudyMain.o").toString)
     |>.setObjVal! "objectModules" (toJson (productRoot/"build/object-mapping.json").toString)
-    |>.setObjVal! "mainModule" (toJson "tools.research.AutomaticPublicationChecks")
+    |>.setObjVal! "mainModule" (toJson "tools.research.AutomaticPublicationMain")
     |>.setObjVal! "force" (toJson (#[] : Array String))
   write (root/"build-settings.json") settings
   write (records/"plan.json") (Json.mkObj [("runtimeSha256",toJson (← hash (productRoot/"build/StudyMain"))),
@@ -77,9 +78,80 @@ def expectedPath (line : String) : Except String String := do
   unless kind == "BASE" || kind == "DETAIL" do throw "unexpected fixture field"
   return s!"src/{group}_{wave}_{slot}.cpp"
 
-def retain : IO Unit := do
+/-- Inspect the product's rendered SOURCE/CODE envelope, not tool syntax.
+The original row must occur inside the block carrying its own file identity;
+an unrelated path or a saved-position-only entry does not count. -/
+def sourceBlockContains (body path fingerprint original : String) : Bool :=
+  ((body.splitOn "\nSOURCE ").drop 1).any fun block => Id.run do
+    let header := (block.splitOn "\n").headD ""
+    let .ok source := Json.parse header | return false
+    if source.getObjValD "relative" != toJson path || source.getObjValD "fingerprint" != toJson fingerprint then
+      return false
+    let some code := ((block.splitOn "\nCODE\n").drop 1).head? | return false
+    return (code.splitOn "\n").any fun row =>
+      match row.splitOn "\t" with
+      | number :: pieces => number.toNat?.isSome && "\t".intercalate pieces == original
+      | _ => false
+
+def sourceBlockAudit (queries fingerprints output : String) : IO Unit := do
   idle
-  let monitor ← finished "automatic-publication-flow"
+  check (!(← (System.FilePath.mk output).pathExists)) "retain the first source-block audit"
+  let sourceData ← read (.mk fingerprints)
+  let sources : Array Json ← match sourceData.getArr? with
+    | .ok values => pure values
+    | .error _ => IO.ofExcept (sourceData.getObjValAs? (Array Json) "fingerprints")
+  let values ← IO.ofExcept ((← read (.mk queries)).getArr?)
+  let mut rows := #[]
+  let mut eligible := 0
+  let mut delivered := 0
+  for query in values do
+    let bodyPath : String ← IO.ofExcept (query.getObjValAs? _ "body")
+    let body ← IO.FS.readFile (.mk bodyPath)
+    let required : Array String ← IO.ofExcept (query.getObjValAs? _ "required")
+    let mut missing := #[]
+    for line in required do
+      let path ← IO.ofExcept (expectedPath line)
+      let some source := sources.find? (·.getObjValD "path" == toJson path) |
+        throw (IO.userError "native source fingerprint missing from block audit")
+      let fingerprint : String ← IO.ofExcept ((source.getObjValD "content").getObjValAs? _ "root")
+      if !sourceBlockContains body path fingerprint line then missing := missing.push line
+    eligible := eligible+required.size
+    delivered := delivered+required.size-missing.size
+    rows := rows.push (Json.mkObj [("session",query.getObjValD "session"),("eligible",toJson required.size),
+      ("boundOriginalRows",toJson (required.size-missing.size)),("missing",toJson missing)])
+  write (.mk output) (Json.mkObj [("queries",toJson rows),("eligibleFields",toJson eligible),
+    ("rowsInsideMatchingSourceBlocks",toJson delivered),("ok",toJson (delivered == eligible))])
+  check (delivered == eligible && eligible > 0) "an original row lacks its own delivered source block"
+
+def callbackAudit (input output : String) : IO Unit := do
+  idle
+  check (!(← (System.FilePath.mk output).pathExists)) "retain the first callback audit"
+  let calls ← IO.ofExcept ((← read (.mk input)).getArr?)
+  let mut incomplete := #[]
+  let mut events : Array (String × Array Nat) := #[]
+  for call in calls do
+    let event : String ← IO.ofExcept ((call.getObjValD "request").getObjValAs? _ "hook_event_name")
+    let elapsed : Nat ← IO.ofExcept ((call.getObjValD "timing").getObjValAs? _ "elapsedMs")
+    let path : String ← IO.ofExcept (call.getObjValAs? _ "stdout")
+    let body ← IO.FS.readFile (.mk path)
+    if body.contains "EGGSHELL SEARCH INCOMPLETE" ||
+        (call.getObjValD "timing").getObjValD "exitCode" != toJson (0 : Nat) ||
+        call.getObjValD "stderr" != toJson "" then incomplete := incomplete.push call
+    let values := (events.find? (·.1 == event)).map (·.2) |>.getD #[]
+    events := (events.filter (·.1 != event)).push (event,values.push elapsed)
+  let rows := events.map fun (event,values) => Id.run do
+    let sorted := values.qsort (· < ·)
+    return Json.mkObj [("event",toJson event),("count",toJson sorted.size),
+      ("p50Ms",toJson sorted[(sorted.size*50+99)/100-1]!),
+      ("p95Ms",toJson sorted[(sorted.size*95+99)/100-1]!),
+      ("maxMs",toJson sorted[sorted.size-1]!)]
+  write (.mk output) (Json.mkObj [("calls",toJson calls.size),("events",toJson rows),
+    ("failedOrIncompleteCallbacks",toJson incomplete),
+    ("fixtureOnlyNotProductionP99",toJson true)])
+  check (incomplete.isEmpty && calls.size > 0) "callback audit found an incomplete or failed actual response"
+
+def retainAt (root records : System.FilePath) (monitor : Json)
+    (sourceFingerprints : Array Json) (productChanges : Nat) : IO Unit := do
   let area := root/"run"
   for entry in ← area.readDir do
     if (← entry.path.symlinkMetadata).type == .file && entry.fileName.endsWith ".json" then
@@ -94,7 +166,6 @@ def retain : IO Unit := do
   let mut attributed := 0
   let mut semantic := 0
   let mut warnings := #[]
-  let mut fingerprints : Array (String × String) := #[]
   for session in ← (area/"calls").readDir do
     if (← session.path.symlinkMetadata).type != .dir then continue
     for call in ← session.path.readDir do
@@ -131,12 +202,9 @@ def retain : IO Unit := do
       let mut withSource := 0
       for line in required do
         let path ← IO.ofExcept (expectedPath line)
-        let fingerprint ← match fingerprints.find? (·.1 == path) with
-          | some (_,digest) => pure digest
-          | none => do
-              let digest ← hash (area/path)
-              fingerprints := fingerprints.push (path,digest)
-              pure digest
+        let some source := sourceFingerprints.find? (·.getObjValD "path" == toJson path) |
+          throw (IO.userError "native source fingerprints must be inspected before retention")
+        let fingerprint : String ← IO.ofExcept ((source.getObjValD "content").getObjValAs? _ "root")
         if body.contains line && body.contains path && body.contains fingerprint then
           withSource := withSource+1
       eligible := eligible+required.size
@@ -162,6 +230,15 @@ def retain : IO Unit := do
   write (records/"registered-calls.json") (toJson calls)
   write (records/"queries.json") (toJson queries)
   write (records/"client-warnings.json") (toJson warnings)
+  let mut failedReceipts := #[]
+  for receipt in ← (area/"data/receipts").readDir do
+    if (← receipt.path.symlinkMetadata).type != .dir || !(← (receipt.path/"failure.json").pathExists) then continue
+    let mut stages := #[]
+    for name in ["request","ingress","dispatch","failure","published","returned"] do
+      if ← (receipt.path/(name++".json")).pathExists then
+        stages := stages.push (name,← read (receipt.path/(name++".json")))
+    failedReceipts := failedReceipts.push (Json.mkObj [("receipt",toJson receipt.fileName),("stages",toJson stages)])
+  write (records/"failed-receipts.json") (toJson failedReceipts)
   let result ← read (records/"result.json")
   let waves ← IO.ofExcept (result.getObjValAs? (Array Json) "waves")
   let summary := Json.mkObj [("runtime",result.getObjValD "runtime"),("projects",toJson (2 : Nat)),
@@ -174,11 +251,27 @@ def retain : IO Unit := do
       ("betaMs",(row.getObjValD "betaPreparation").getObjValD "elapsedMs")])),
     ("manualWarmCalls",toJson (0 : Nat)),("manualKeepCalls",toJson (0 : Nat)),
     ("maxSimultaneousClients",toJson (14 : Nat)),("clientWarnings",toJson warnings.size),
+    ("failedReceipts",toJson failedReceipts.size),
     ("serviceStderr",toJson (← IO.FS.readFile (records/"flow.stderr"))),
     ("peakRssKiB",monitor.getObjValD "sampledPeakRssKiB"),("answeringModelCalls",toJson (0 : Nat)),
-    ("productChanges",toJson (0 : Nat)),("adopted",toJson false)]
+    ("productChanges",toJson productChanges),("adopted",toJson false),
+    ("fingerprintAlgorithm",toJson "SourceEvidence.fingerprint: length-bound BLAKE3 page chain"),
+    ("allHookCallbacksClean",toJson warnings.isEmpty)]
   write (records/"summary.json") summary
   IO.println summary.compress
+
+def retain : IO Unit := do
+  idle
+  let monitor ← finished "automatic-publication-flow"
+  let sourceFingerprints ← IO.ofExcept ((← read (records/"postmortem.json")).getObjValAs? (Array Json) "fingerprints")
+  retainAt root records monitor sourceFingerprints 0
+
+def retainOther (root records tag fingerprints changes : String) : IO Unit := do
+  idle
+  let monitor ← finished tag
+  let values ← IO.ofExcept ((← read (.mk fingerprints)).getArr?)
+  let some count := changes.toNat? | throw (IO.userError "invalid product change count")
+  retainAt (.mk root) (.mk records) monitor values count
 
 def preparePostmortem : IO Unit := do
   idle
@@ -255,27 +348,12 @@ partial def remove (path : System.FilePath) : IO (Nat × Nat) := do
   IO.FS.removeDir path
   return total
 
-def retire : IO Unit := do
+def retireArtifacts (records productRoot : System.FilePath) (targets : Array System.FilePath) : IO Unit := do
   idle
   check (!(← (records/"retired.json").pathExists)) "retain the first cleanup record"
-  for tag in ["build","flow","audit-build","postmortem"] do
-    write (records/(tag++".guard.json")) (← finished ("automatic-publication-"++tag))
-  let summary ← read (records/"checked-summary.json")
-  check (summary.getObjValD "fieldsWithPathAndFingerprint" == toJson (640 : Nat) &&
-    summary.getObjValD "allHookCallbacksClean" == toJson false) "retain delivery and callback failure separately"
-  let receipt := "fb1d84810c55f1ec7f40422f3d16262e91ce787e239205ea3f348bc204e2cf98"
-  let mut stages := #[]
-  for name in ["request","ingress","dispatch","failure","published"] do
-    stages := stages.push (name,← read (root/"run/data/receipts"/receipt/(name++".json")))
-  write (records/"failed-pre-receipt.json") (Json.mkObj [("receipt",toJson receipt),("stages",toJson stages)])
-  for query in ← IO.ofExcept ((← read (records/"checked-queries.json")).getArr?) do
-    for (field,digest) in [("body","bodySha256"),("stdout","stdoutSha256")] do
-      let path : String ← IO.ofExcept (query.getObjValAs? _ field)
-      check (toJson (← hash (.mk path)) == query.getObjValD digest) "retained callback bytes changed"
-  let targets := #[root/"run",root/"source",root/"build",root/"audit-build",root/"tmp",root/"atomic-replacement-probe"]
   let retiredPath := fun (text : String) => targets.any fun target =>
     text == target.toString || text.startsWith (target.toString++"/")
-  let builds := #[productRoot/"build",base/"practical-runtime/terminal-intent/build",
+  let builds := #[productRoot/"build",base/"practical-runtime/terminal-closure/build",base/"practical-runtime/terminal-intent/build",
     base/"practical-runtime/terminal-capture/build",base/"practical-runtime/readonly-save/build",
     base/"practical-runtime/block-seek/build",base/"practical-runtime/build",
     base/"practical-runtime/independent-maintenance/build",base/"practical-runtime/coordinated-warm/build",
@@ -313,14 +391,54 @@ def retire : IO Unit := do
   IO.println (← command (compiler/"bin/lean").toString #["-j1","-M768","--run",
     (project/"tools/research/StudyBuildClosureAudit.lean").toString,"inspect",(productRoot/"build").toString,
     (records/"product-after-cleanup.json").toString])
+
+def checkRetainedQueries (path : System.FilePath) : IO Unit := do
+  for query in ← IO.ofExcept ((← read path).getArr?) do
+    for (field,digest) in [("body","bodySha256"),("stdout","stdoutSha256")] do
+      let path : String ← IO.ofExcept (query.getObjValAs? _ field)
+      check (toJson (← hash (.mk path)) == query.getObjValD digest) "retained callback bytes changed"
+
+def retire : IO Unit := do
+  idle
+  for tag in ["build","flow","audit-build","postmortem"] do
+    write (records/(tag++".guard.json")) (← finished ("automatic-publication-"++tag))
+  let summary ← read (records/"checked-summary.json")
+  check (summary.getObjValD "fieldsWithPathAndFingerprint" == toJson (640 : Nat) &&
+    summary.getObjValD "allHookCallbacksClean" == toJson false) "retain delivery and callback failure separately"
+  let receipt := "fb1d84810c55f1ec7f40422f3d16262e91ce787e239205ea3f348bc204e2cf98"
+  let mut stages := #[]
+  for name in ["request","ingress","dispatch","failure","published"] do
+    stages := stages.push (name,← read (root/"run/data/receipts"/receipt/(name++".json")))
+  write (records/"failed-pre-receipt.json") (Json.mkObj [("receipt",toJson receipt),("stages",toJson stages)])
+  checkRetainedQueries (records/"checked-queries.json")
+  retireArtifacts records productRoot #[root/"run",root/"source",root/"build",root/"audit-build",root/"tmp",root/"atomic-replacement-probe"]
+
+def retireProduct (location evidence : String) (tags : List String) : IO Unit := do
+  idle
+  let root : System.FilePath := .mk location
+  let records : System.FilePath := .mk evidence
+  check (root.isAbsolute && root.toString.startsWith (base.toString++"/practical-runtime/")) "candidate cleanup escaped experiment scope"
+  check (!tags.isEmpty) "all candidate stages must have terminal evidence"
+  for tag in tags do write (records/(tag++".guard.json")) (← finished tag)
+  let summary ← read (records/"summary.json")
+  check (summary.getObjValD "fieldsWithPathAndFingerprint" == summary.getObjValD "eligibleFields") "retained attribution failed"
+  check ((← read (records/"source-blocks.json")).getObjValD "ok" == toJson true) "source-block audit must precede cleanup"
+  checkRetainedQueries (records/"queries.json")
+  retireArtifacts records root #[root/"run",root/"checks",root/"checks-build",root/"tmp",root/"helper-lib",root/"launcher.lean",root/"laws.lean"]
 end AutomaticPublicationStudy
 def main : List String → IO Unit
   | ["prepare"] => AutomaticPublicationStudy.prepare
   | ["audit"] => AutomaticPublicationStudy.audit
   | ["run"] => AutomaticPublicationStudy.run
   | ["retain"] => AutomaticPublicationStudy.retain
+  | ["retain-at",root,records,tag,fingerprints,changes] =>
+      AutomaticPublicationStudy.retainOther root records tag fingerprints changes
+  | ["audit-source-blocks",queries,fingerprints,output] =>
+      AutomaticPublicationStudy.sourceBlockAudit queries fingerprints output
+  | ["audit-callbacks",input,output] => AutomaticPublicationStudy.callbackAudit input output
   | ["prepare-postmortem"] => AutomaticPublicationStudy.preparePostmortem
   | ["postmortem"] => AutomaticPublicationStudy.postmortem
   | ["correct-fingerprint-audit"] => AutomaticPublicationStudy.correctFingerprintAudit
   | ["retire"] => AutomaticPublicationStudy.retire
+  | "retire-product-at" :: root :: records :: tags => AutomaticPublicationStudy.retireProduct root records tags
   | _ => throw (IO.userError "AutomaticPublicationStudy prepare|audit|run")

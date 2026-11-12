@@ -1,0 +1,37 @@
+{"twoMutationBurst": {"versionCalls": 6, "pageCalls": 3},
+ "truncated": {"pageCalls": 1, "error": "truncated storage object"},
+ "stableMultiPage": {"versionCalls": 2, "pageCalls": 3, "bytes": 9001},
+ "readLocksAdded": false,
+ "productSleepAdded": false,
+ "oversize":
+ {"versionCalls": 1,
+  "pageCalls": 0,
+  "error": "storage object exceeds byte budget"},
+ "nativeIoFailure": {"pageCalls": 1, "error": "injected native read failure"},
+ "hookReplays": 0,
+ "empty": true,
+ "continuousMutation":
+ {"versionCalls": 6,
+  "pageCalls": 3,
+  "error": "storage object did not stabilize during read"},
+ "atomicReplacement":
+ {"versionCalls": 4,
+  "stableBefore":
+  {"stamp": "16777231:298600277:9001:1794447827:151117384:1794447827:159194246",
+   "bytes": 9001},
+  "stableAfter":
+  {"stamp": "16777231:298600277:9001:1794447827:151117384:1794447827:159194246",
+   "bytes": 9001},
+  "pinnedOriginalBytesUnchanged": true,
+  "pathHasNewBytes": true,
+  "pageCalls": 6,
+  "firstAttemptWouldBeRejected": true,
+  "externalFreshnessRejects": true,
+  "currentPath":
+  {"stamp": "16777231:298600278:9007:1794447827:159098247:1794447827:159194288",
+   "bytes": 9007},
+  "before":
+  {"stamp": "16777231:298600277:9001:1794447827:151117384:1794447827:151216425",
+   "bytes": 9001}},
+ "answeringModelCalls": 0,
+ "adopted": false}
