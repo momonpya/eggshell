@@ -56,6 +56,13 @@ The paired reduction is 19,824 KiB, about 19.4 MiB. All four stop in
 query, throughput or token benchmark. See [raw samples](footprint.json) and
 [predeclared configuration](production-environment-plan.json).
 
+This older observation window was not bound to the backend's ingress phase.
+The later [runtime-stamp study](../runtime-stamp/README.md) identifies a
+cold-start phase error in its own first run and adds PID-bound ingress
+sampling. These older RSS observations remain raw component measurements,
+not a separately verified comparison of fully initialized processes. The
+whole mixed-workload failure below is unchanged.
+
 Initial observer attempts are not counted as successful comparisons. One lacked
 the metadata import path; another used the interpreter; the first native
 observer called `wait` after `tryWait` had already reaped the child. The first

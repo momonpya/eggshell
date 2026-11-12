@@ -42,6 +42,12 @@ All four observations exit with empty stderr; the resource guard finishes
 normally and owns no surviving processes. Client/probe build and probe guard
 records are retained alongside the result.
 
+This older observer did not bind sampling to backend ingress. The later
+[runtime-stamp experiment](../runtime-stamp/README.md) finds a cold-start phase
+error in its own first comparison and adds PID-bound ingress sampling. The
+old primitive-import observations are retained without a causal or
+initialized-memory claim; they still establish no adoption benefit.
+
 Ended candidate sources, binaries, interfaces and synthetic receipt caches
 were removed: [560 entries / 218,495,258 logical bytes](retired.json), without
 an archive. The parent backend and client hashes remain unchanged. The

@@ -31,7 +31,8 @@ def remaining (known : Array Nat) : IO (Array Nat) := do
   check (result.exitCode ≤ 1) "cannot inspect owned PIDs"
   return result.stdout.splitOn "\n" |>.toArray.filterMap (fun row => row.trimAscii.toString.toNat?)
 def run (root : System.FilePath) (label : String := "checks") (footprintOnly : Bool := false)
-    (backendOverride baselineClient : Option System.FilePath := none) : IO Unit := do
+    (backendOverride baselineClient baselineBackend : Option System.FilePath := none)
+    (readyOnly : Bool := false) : IO Unit := do
   let records := project/"docs/candidates"/root.fileName.get!
   let checkRoot := root/label
   check (!(← checkRoot.pathExists)) "fresh hook-command checks required"
@@ -90,8 +91,9 @@ def run (root : System.FilePath) (label : String := "checks") (footprintOnly : B
     let path := checkRoot/s!"footprint-{index}"
     IO.FS.createDirAll path
     let began ← IO.monoMsNow
-    let (child,held) ← launch (if small then client else baselineClient.getD backend)
-      (if small || baselineClient.isSome then #[backend.toString,"fast"] else #["codex-hook","fast"])
+    let selectedBackend := if small then backend else baselineBackend.getD backend
+    let (child,held) ← launch (if small then client else baselineClient.getD selectedBackend)
+      (if small || baselineClient.isSome then #[selectedBackend.toString,"fast"] else #["codex-hook","fast"])
       #[("EGGSHELL_DATA_ROOT",some (path/"data").toString)] none
     let hold ← IO.mkRef held
     let stdout ← IO.asTask child.stdout.readToEnd .dedicated
@@ -99,16 +101,30 @@ def run (root : System.FilePath) (label : String := "checks") (footprintOnly : B
     let mut samples := #[]
     let mut known := #[child.pid.toNat]
     let mut exitCode : Option UInt32 := none
+    let mut ingress : Option Json := none
     repeat
       let elapsed := (← IO.monoMsNow)-began
       let owned ← census child.pid.toNat
       for (pid,_,_) in owned do
         unless known.contains pid do known := known.push pid
+      if readyOnly && ingress.isNone && (← (path/"data/receipts").pathExists) then
+        for entry in ← (path/"data/receipts").readDir do
+          let candidate := entry.path/"ingress.json"
+          if ← candidate.pathExists then
+            let value ← read candidate
+            let pid : Nat ← IO.ofExcept (value.getObjValAs? _ "pid")
+            check (pid != child.pid.toNat && owned.any (·.1 == pid)) "ingress is not the observed backend child"
+            check ingress.isNone "multiple ingress witnesses in one fresh probe"
+            ingress := some value
       if let some code ← child.tryWait then
         exitCode := some code
         break
       check (elapsed < 3500) "footprint supervisor did not stop"
-      if elapsed ≥ 400 && elapsed ≤ 1200 then
+      let sampling := if readyOnly then ingress.any (fun record =>
+          let ready := (record.getObjValAs? Nat "observedMs").toOption.getD 0
+          began+elapsed ≥ ready+100 && began+elapsed ≤ ready+700)
+        else elapsed ≥ 400 && elapsed ≤ 1200
+      if sampling then
         samples := samples.push (elapsed,owned)
       IO.sleep 20
     hold.set none
@@ -117,15 +133,24 @@ def run (root : System.FilePath) (label : String := "checks") (footprintOnly : B
     let errors ← IO.ofExcept ((← IO.wait stderr).mapError IO.Error.toString)
     check (exit == 0 && !samples.isEmpty && (Json.parse output).isOk && (← remaining known).isEmpty)
       "footprint observation failed its ownership or output checks"
+    if readyOnly then
+      check (ingress.isSome && samples.size ≥ 3 && samples.back!.1-samples[0]!.1 ≥ 200)
+        "not enough initialized backend observations"
     let peaks := samples.map fun (_,rows) => rows.foldl (fun total row => total+row.2.2) 0
     probes := probes.push (Json.mkObj [("index",toJson index),("candidateClient",toJson small),
+      ("backendSha256",toJson (← hash selectedBackend)),
+      ("ingress",ingress.getD Json.null),
       ("samples",toJson samples),("pairPeakRssKiB",toJson (peaks.foldl max 0)),
       ("elapsedMs",toJson ((← IO.monoMsNow)-began)),("stdout",toJson output),("stderr",toJson errors)])
-  write (records/"footprint.json") (Json.mkObj [("order",toJson #["baseline","candidate","candidate","baseline"]),
+  let candidateBackendSha256 ← hash backend
+  write (records/(if readyOnly then "ready-footprint.json" else "footprint.json"))
+    (Json.mkObj [("order",toJson #["baseline","candidate","candidate","baseline"]),
     ("baselineClient",toJson (baselineClient.map (·.toString))),
-    ("probes",toJson probes),("sameBackendSha256",toJson (← hash backend)),
+    ("probes",toJson probes),("sameBackendSha256",if baselineBackend.isSome then Json.null else toJson candidateBackendSha256),
+    ("baselineBackendSha256",toJson (← hash (baselineBackend.getD backend))),
     ("leanThreadEnvironment",Json.null),
-    ("workload",toJson "blocked stdin; identical backend; 400-1200 ms owned-process RSS"),
+    ("workload",toJson (if readyOnly then "blocked stdin; 100-700 ms after backend ingress; at least 200 ms observed"
+      else "blocked stdin; 400-1200 ms owned-process RSS")),
     ("queryOrDeliveryBenchmark",toJson false),("adopted",toJson false)])
 end HookCommandChecks
 def main : List String → IO Unit
@@ -134,4 +159,8 @@ def main : List String → IO Unit
   | [root,label,"footprint"] => HookCommandChecks.run (.mk root) label true
   | [root,label,"footprint",backend,baseline] =>
       HookCommandChecks.run (.mk root) label true (some (.mk backend)) (some (.mk baseline))
+  | [root,label,"footprint",backend,baseline,parentBackend] =>
+      HookCommandChecks.run (.mk root) label true (some (.mk backend)) (some (.mk baseline)) (some (.mk parentBackend))
+  | [root,label,"ready-footprint",backend,baseline,parentBackend] =>
+      HookCommandChecks.run (.mk root) label true (some (.mk backend)) (some (.mk baseline)) (some (.mk parentBackend)) true
   | _ => throw (IO.userError "HookCommandChecks ROOT")
