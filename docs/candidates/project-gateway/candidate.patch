@@ -1,0 +1,487 @@
+--- a/Eggshell/ProjectPublication.lean
++++ b/Eggshell/ProjectPublication.lean
+@@ -131,14 +131,28 @@
+     set {state with readers := state.readers.push ⟨project,capability⟩}
+     return ⟨project.manifest,capability⟩
+ 
+-def Pool.readScope (pool : Pool) (request : ReadInput) : IO ReadRegistration := pool.state.atomically do
++def Pool.readProject (pool : Pool) (identity secret : String) : IO ReadRegistration := pool.state.atomically do
+   let state ← get
+   unless !state.closed do throw (IO.userError "project publisher is closed")
+-  let some registered := state.readers.find? (·.project.manifest.identity == request.database) |
++  let some registered := state.readers.find? (·.project.manifest.identity == identity) |
+     throw (IO.userError "unknown project read scope")
+-  unless registered.capability == request.capability do throw (IO.userError "unauthorized project read scope")
++  unless registered.capability == secret do throw (IO.userError "unauthorized project read scope")
+   return registered
++
++def Pool.readScope (pool : Pool) (request : ReadInput) : IO ReadRegistration :=
++  pool.readProject request.database request.capability
++
++/-- A read capability pins the complete project cut without acquiring any
++source owner or borrowing a write capability. IO runs outside registry access. -/
++def Pool.pinRead (pool : Pool) (identity secret : String) (deadline : Nat) : IO Cut := do
++  let registered ← pool.readProject identity secret
++  let view ← pool.measured "read-pin-all" fun _ => ProjectStore.pin registered.project deadline
++    (some ⟨pool.views.pages,ProjectViews.scope registered.project⟩)
++  return view.cut
+ 
++theorem read_scope_uses_read_registration (pool : Pool) (request : ReadInput) :
++    pool.readScope request = pool.readProject request.database request.capability := rfl
++
+ def Pool.pin (pool : Pool) (identity secret : String) (deadline : Nat) : IO Cut := do
+   let registered ← pool.scope identity secret
+   let view ← pool.measured "pin-all" fun _ => ProjectStore.pin registered.project deadline
+--- a/Eggshell/PublicationClient.lean
++++ b/Eggshell/PublicationClient.lean
+@@ -675,6 +675,17 @@
+       Synapses.digest granted.capability do throw (IO.userError "publisher granted another read project")
+   return granted
+ 
++/-- Path-independent after local administration has granted a read project. -/
++def pinReadProject (endpoint : Daemon.Endpoint) (granted : ReadGrant)
++    (deadline : Nat) : IO ProjectStore.Cut := do
++  let budget ← liveBudget deadline
++  let peer := {endpoint with secret := granted.capability}
++  let response ← Daemon.exchange peer "project-read-pin" (Json.mkObj [
++    ("database",toJson granted.manifest.identity),("budgetMs",toJson budget)]) (budget := budget)
++  let cut ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectStore.Cut))
++  unless cut.inScope granted.manifest do throw (IO.userError "read project pin omitted or mixed original owners")
++  return cut
++
+ def readImage (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut) : ProjectInputs.Image :=
+   ⟨manifest.identity,ProjectStore.manifestChecksum manifest,cut⟩
+ 
+@@ -687,30 +698,38 @@
+     unless granted.manifest == view.project.manifest do throw (IO.userError "registered read project changed its complete inventory")
+     return (granted,view.cut)
+ 
++def checkProjectReceipt (manifest : ProjectStore.Manifest) (cut : ProjectStore.Cut)
++    (capsule : Capsule) (inputs : Array (ProjectStore.Manifest × ProjectStore.Cut))
++    (value : Json) : Except String ProjectReceipt := do
++  unless cut.inScope manifest && inputs.all (fun (manifest,cut) => cut.inScope manifest) do
++    throw "project ACK has an incomplete or foreign read boundary"
++  let images := #[readImage manifest cut] ++ inputs.map (fun (manifest,cut) => readImage manifest cut)
++  let result ← fromJson? (α := ProjectReceipt) value
++  unless result.inputs == ProjectInputs.digest images do throw "project ACK changed its actual read boundary"
++  let receipt := result.source
++  let slot := ownerSlot capsule.session manifest.owners.size
++  let some original := manifest.owners[slot]? | throw "publisher original route is missing"
++  unless receipt.accounted && receipt.head.identity == original.identity && receipt.head.authority == original.authority do
++    throw "publisher returned another original ACK"
++  let request ← capsule.prepare (.mk ".") original.identity
++  let expected := NativePublication.receipt request.items receipt.head
++  unless toJson expected == toJson receipt do throw "project source ACK changed observation coverage"
++  return result
++
+ def submitProject (endpoint : Daemon.Endpoint) (granted : ProjectGrant) (cut : ProjectStore.Cut)
+     (capsule : Capsule) (inputs : Array (ReadGrant × ProjectStore.Cut))
+     (deadline : Nat) : IO ProjectReceipt := do
+   unless cut.inScope granted.manifest do throw (IO.userError "publication cut omitted or mixed original owners")
+   for (read,cut) in inputs do
+     unless cut.inScope read.manifest do throw (IO.userError "publication read input omitted or mixed original owners")
+-  let images := #[readImage granted.manifest cut] ++ inputs.map (fun (read,cut) => readImage read.manifest cut)
+   let readRequests := inputs.map fun (read,cut) => ({database := read.manifest.identity,capability := read.capability,cut} : ReadInput)
+   let budget ← liveBudget deadline
+   let peer := {endpoint with secret := granted.capability}
+   let response ← Daemon.exchange peer "project-publish" (Json.mkObj [
+     ("database",toJson granted.manifest.identity),("capsule",toJson capsule),
+     ("cut",toJson cut),("inputs",toJson readRequests),("budgetMs",toJson budget)]) (budget := budget)
+-  let result ← IO.ofExcept (Json.parse response >>= fromJson? (α := ProjectReceipt))
+-  unless result.inputs == ProjectInputs.digest images do throw (IO.userError "project ACK changed its actual read boundary")
+-  let receipt := result.source
+-  let slot := ownerSlot capsule.session granted.manifest.owners.size
+-  let some original := granted.manifest.owners[slot]? | throw (IO.userError "publisher original route is missing")
+-  unless receipt.accounted && receipt.head.identity == original.identity &&
+-      receipt.head.authority == original.authority do throw (IO.userError "publisher returned another original ACK")
+-  let request ← IO.ofExcept (capsule.prepare (.mk ".") original.identity)
+-  let expected := NativePublication.receipt request.items receipt.head
+-  unless toJson expected == toJson receipt do throw (IO.userError "project source ACK changed observation coverage")
+-  return result
++  IO.ofExcept (checkProjectReceipt granted.manifest cut capsule (inputs.map fun (grant,cut) => (grant.manifest,cut))
++    (← IO.ofExcept (Json.parse response)))
+ 
+ def submit (endpoint : Daemon.Endpoint) (project : Project) (capsule : Capsule) : IO NativePublication.SourceReceipt := do
+   let peer := {endpoint with secret := project.capability}
+--- a/Eggshell/PublicationService.lean
++++ b/Eggshell/PublicationService.lean
+@@ -894,7 +894,7 @@
+     let streamedRead := ["source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","worker-exchange"].contains kind
+     streamed.set streamedRead
+     let payload := json.getObjValD "payload"
+-    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-publish"].contains kind then do
++    let deadline ← if ["prepare-target","open-preparation","prepare-interests","release-preparation","preparation-status","prepare-source","prepare-source-batch","release-retained-source-batch","refresh-source","source-rows","source-bindings","source-palette","source-fetch","source-palettes","source-fetch-many","source-plan","source-release","source-release-many","project-pin","project-read-pin","project-publish"].contains kind then do
+         let budget ← IO.ofExcept (payload.getObjValAs? Nat "budgetMs")
+         pure (min deadline (deadline-maxBudgetMs+min budget maxBudgetMs))
+       else pure deadline
+@@ -915,6 +915,9 @@
+       else if kind == "source-release" then releasePalette server secret payload
+       else if kind == "source-bindings" then sourceBindings server secret payload deadline
+       else if kind == "release-retained-source" then releaseRetainedSource server secret payload
++      else if kind == "project-read-pin" then do
++        let identity ← IO.ofExcept (payload.getObjValAs? String "database")
++        toJson <$> server.owned.pinRead identity secret deadline
+       else if kind == "project-pin" then do
+         let identity ← IO.ofExcept (payload.getObjValAs? String "database")
+         toJson <$> server.owned.pin identity secret deadline
+--- a/Main.lean
++++ b/Main.lean
+@@ -6,6 +6,7 @@
+ public import Eggshell.Numerical
+ public import Eggshell.Setup
+ public import Eggshell.PublicationService
++public import Eggshell.ProjectGatewayPeer
+ 
+ @[expose] public section
+ 
+@@ -14,6 +15,8 @@
+ 
+ def dispatchEngine (arguments : List String) : IO UInt32 := do
+   match arguments with
++  | ["project-gateway",config] | ["egg","project-gateway",config] =>
++      Eggshell.Plugin.Publication.Gateway.run (.mk config)
+   | ["codex-publication-daemon"] =>
+       Eggshell.Plugin.Publication.Service.run
+   | ["publication-control",kind] => Eggshell.Install.runCommand (Eggshell.Plugin.Publication.Client.control kind)
+--- /dev/null
++++ b/Eggshell/ProjectGateway.lean
+@@ -0,0 +1,224 @@
++module
++public import Eggshell.PublicationClient
++@[expose] public section
++
++namespace Eggshell.Plugin.Publication.Gateway
++open Lean DB
++
++/-- Actual protocol/source bytes, not a manually maintained version. -/
++def implementation : String := Blake3.hex (Blake3.digest "eggshell.project-gateway".toUTF8 [
++  (include_str "ProjectGateway.lean").toUTF8,(include_str "ProjectGatewayPeer.lean").toUTF8,
++  Publication.implementation.toUTF8])
++
++/-- Host-side configuration, never a client request. The process channel is
++authenticated by its operator (for example a forced SSH command). -/
++structure Entry where
++  name : String
++  directory : String
++  readable : Bool
++  writable : Bool
++  deriving FromJson, ToJson
++structure Catalog where
++  projects : Array Entry
++  deriving FromJson, ToJson
++structure Selection where
++  read : Array String
++  write : Option String
++  deriving FromJson, ToJson, BEq
++structure NamedManifest where
++  name : String
++  manifest : ProjectStore.Manifest
++  deriving FromJson, ToJson
++structure Descriptor where
++  protocol : String
++  projects : Array NamedManifest
++  write : Option String
++  deriving FromJson, ToJson
++structure NamedCut where
++  name : String
++  cut : ProjectStore.Cut
++  deriving FromJson, ToJson
++structure Boundary where
++  scope : String
++  projects : Array NamedCut
++  deriving FromJson, ToJson
++structure Write where
++  name : String
++  grant : ProjectGrant
++structure Scope where
++  descriptor : Descriptor
++  key : String
++  readers : Array (String × ReadGrant)
++  writer : Option Write
++
++def Boundary.inScope (boundary : Boundary) (scope : Scope) : Bool :=
++  boundary.scope == scope.key &&
++    boundary.projects.map (·.name) == scope.readers.map (·.1) &&
++    (boundary.projects.zip scope.readers).all (fun (cut,(_,grant)) => cut.cut.inScope grant.manifest)
++
++theorem boundary_keeps_all_projects (boundary : Boundary) (scope : Scope)
++    (accepted : boundary.inScope scope = true) :
++    boundary.projects.map (·.name) = scope.readers.map (·.1) := by
++  simp only [Boundary.inScope,Bool.and_eq_true,beq_iff_eq] at accepted
++  exact accepted.1.2
++
++def writeFor (scope : Scope) (target : String) : Except String Write :=
++  match scope.writer with
++  | none => .error "read-only project scope"
++  | some writer => if writer.grant.manifest.identity == target then .ok writer
++      else .error "publication changed its captured project"
++
++theorem readonly_rejects_publication (scope : Scope) (target : String) :
++    writeFor {scope with writer := none} target = .error "read-only project scope" := rfl
++
++theorem publication_keeps_target (scope : Scope) (target : String) (writer : Write)
++    (accepted : writeFor scope target = .ok writer) : writer.grant.manifest.identity = target := by
++  cases saved : scope.writer with
++  | none => simp [writeFor,saved] at accepted
++  | some selected =>
++      by_cases same : selected.grant.manifest.identity == target
++      · simp [writeFor,saved,same] at accepted
++        subst writer
++        simpa only [beq_iff_eq] using same
++      · simp [writeFor,saved,same] at accepted
++
++def openScope (endpoint : Daemon.Endpoint) (catalog : Catalog) (selection : Selection) : IO Scope := do
++  unless catalog.projects.size ≤ 64 && (catalog.projects.toList.map (·.name)).Nodup &&
++      catalog.projects.all (fun entry => !entry.name.isEmpty && (!entry.writable || entry.readable)) &&
++      selection.read.size ≤ 64 && selection.read.toList.Nodup &&
++      selection.write.all selection.read.contains do throw (IO.userError "invalid project selection")
++  let mut readers : Array (String × ReadGrant) := #[]
++  let mut descriptions : Array NamedManifest := #[]
++  let mut writer : Option Write := none
++  for name in selection.read do
++    let some entry := catalog.projects.find? (·.name == name) | throw (IO.userError "project scope denied")
++    unless entry.readable && (selection.write != some name || entry.writable) do
++      throw (IO.userError "project scope denied")
++    let project ← ProjectStore.openProject (.mk entry.directory)
++    let read ← Client.registerReadProject endpoint project.directory project.manifest.identity
++    unless read.manifest == project.manifest do throw (IO.userError "read inventory changed")
++    readers := readers.push (name,read)
++    descriptions := descriptions.push (⟨name,read.manifest⟩ : NamedManifest)
++    if selection.write == some name then
++      let grant ← Client.registerProject endpoint project.directory project.manifest.identity
++      unless grant.manifest == read.manifest do throw (IO.userError "write inventory changed")
++      writer := some ⟨name,grant⟩
++  unless ((descriptions.map (·.manifest.identity)).toList).Nodup do
++    throw (IO.userError "project aliases repeat one physical inventory")
++  let descriptor : Descriptor := ⟨implementation,descriptions,selection.write⟩
++  let key := Blake3.hex (Blake3.digest "eggshell.project-gateway-scope".toUTF8 [(toJson descriptor).compress.toUTF8])
++  return ⟨descriptor,key,readers,writer⟩
++
++def pin (endpoint : Daemon.Endpoint) (scope : Scope) (deadline : Nat) : IO Boundary := do
++  let projects ← scope.readers.mapM fun (name,grant) => do
++    return (⟨name,← Client.pinReadProject endpoint grant deadline⟩ : NamedCut)
++  let boundary : Boundary := ⟨scope.key,projects⟩
++  unless boundary.inScope scope do throw (IO.userError "project pin changed its complete scope")
++  return boundary
++
++inductive Operation where
++  | open (selection : Selection)
++  | pin
++  | publish (target : String) (boundary : Boundary) (capsule : Capsule)
++  deriving FromJson, ToJson
++structure Request where
++  id : String
++  protocol : String
++  budgetMs : Nat
++  operation : Operation
++  deriving FromJson, ToJson
++
++def execute (endpoint : Daemon.Endpoint) (scope : Scope) (operation : Operation) (deadline : Nat) : IO Json := do
++  match operation with
++  | .open _ => throw (IO.userError "project scope is immutable for this connection")
++  | .pin => return toJson (← pin endpoint scope deadline)
++  | .publish target boundary capsule =>
++    let writer ← IO.ofExcept (writeFor scope target)
++    unless boundary.inScope scope do throw (IO.userError "publication changed its complete read boundary")
++    let some original := boundary.projects.find? (·.name == writer.name) |
++      throw (IO.userError "publication omitted its write project cut")
++    let mut inputs := #[]
++    for (saved,(name,grant)) in boundary.projects.zip scope.readers do
++      if name != writer.name then inputs := inputs.push (grant,saved.cut)
++    return toJson (← Client.submitProject endpoint writer.grant original.cut capsule inputs deadline)
++
++/-- A connection owns its input/output streams. Neither a registry lock nor
++a shared request queue serializes independent gateway processes. -/
++partial def readExactly (input : IO.FS.Stream) (count : Nat) (accumulated : ByteArray := .empty) : IO (Option ByteArray) := do
++  if count == 0 then return some accumulated
++  let bytes ← input.read (min count 65536).toUSize
++  if bytes.isEmpty then
++    if accumulated.isEmpty then return none
++    else throw (IO.userError "truncated project frame")
++  unless bytes.size ≤ count do throw (IO.userError "invalid project frame extent")
++  readExactly input (count-bytes.size) (accumulated++bytes)
++
++def readFrame (input : IO.FS.Stream) : IO (Option ByteArray) := do
++  let some header ← readExactly input 4 | return none
++  let count := Daemon.decodeLength header
++  unless 0 < count && count ≤ Daemon.maxFrameBytes do throw (IO.userError "project frame exceeds its bound")
++  let some bytes ← readExactly input count | throw (IO.userError "truncated project frame")
++  return some bytes
++
++def writeFrame (output : IO.FS.Stream) (value : Json) : IO Unit := do
++  let bytes := value.compress.toUTF8
++  unless bytes.size ≤ Daemon.maxFrameBytes do throw (IO.userError "project reply exceeds its bound")
++  output.write (Daemon.frameLength bytes)
++  output.write bytes
++  output.flush
++
++inductive ReplyBody where
++  | value (data : Json)
++  | error (message : String)
++  deriving FromJson, ToJson
++structure Reply where
++  id : String
++  protocol : String
++  body : ReplyBody
++  deriving FromJson, ToJson
++
++def response (id : String) (result : Except String Json) : Reply :=
++  ⟨id,implementation,match result with | .ok value => .value value | .error message => .error message⟩
++
++theorem response_keeps_request (id : String) (result : Except String Json) :
++    (response id result).id = id := rfl
++
++def decode (bytes : ByteArray) : IO Request := do
++  let some text := String.fromUTF8? bytes | throw (IO.userError "invalid project request encoding")
++  let request ← IO.ofExcept (Json.parse text >>= fromJson? (α := Request))
++  unless request.protocol == implementation && !request.id.isEmpty && request.id.length ≤ 128 &&
++      0 < request.budgetMs && request.budgetMs ≤ maxBudgetMs do
++    throw (IO.userError "invalid project request bounds")
++  return request
++
++/-- This stdio boundary must be launched through an operator-authenticated
++channel. It never listens on an unauthenticated network socket or exports the
++local administration endpoint, filesystem paths, or private capabilities. -/
++def run (profile : System.FilePath) : IO UInt32 := do
++  let input ← IO.getStdin
++  let output ← IO.getStdout
++  try
++    let some first ← readFrame input | return 0
++    let request ← decode first
++    let .open selection := request.operation | throw (IO.userError "project selection must be first")
++    let raw ← FileSystem.boundedBytes profile 65536
++    let some text := String.fromUTF8? raw | throw (IO.userError "invalid project catalog")
++    let catalog ← IO.ofExcept (Json.parse text >>= fromJson? (α := Catalog))
++    -- A client connection never owns, starts, or stops the shared publisher.
++    let some endpoint ← Client.endpoint? | throw (IO.userError "project service is not running")
++    Client.ready endpoint
++    let scope ← openScope endpoint catalog selection
++    writeFrame output (toJson (response request.id (.ok (toJson scope.descriptor))))
++    repeat
++      let some bytes ← readFrame input | break
++      let request ← decode bytes
++      let deadline := (← IO.monoMsNow)+request.budgetMs
++      let result : Except String Json ← try pure (.ok (← execute endpoint scope request.operation deadline))
++        catch _ => pure (.error "project request rejected")
++      writeFrame output (toJson (response request.id result))
++    return 0
++  catch _ =>
++    -- Detailed filesystem errors and administration secrets stay on the host.
++    -- A failed bootstrap has issued neither a descriptor nor a project grant.
++    return 1
++end Eggshell.Plugin.Publication.Gateway
+--- /dev/null
++++ b/Eggshell/ProjectGatewayPeer.lean
+@@ -0,0 +1,112 @@
++module
++public import Eggshell.ProjectGateway
++public import Eggshell.Worker
++@[expose] public section
++
++namespace Eggshell.Plugin.Publication.Gateway
++open Lean DB
++
++abbrev PipeChild := IO.Process.Child {stdin := .null,stdout := .piped,stderr := .piped}
++
++/-- One caller owns this connection. Independent requests use independent
++connections; no global channel mutex or serialized multi-client queue exists. -/
++structure Channel where
++  private mk ::
++  private input : IO.FS.Stream
++  private output : IO.FS.Stream
++  private child : PipeChild
++  private errors : Task (Except IO.Error Unit)
++  private closed : IO.Ref Bool
++
++private partial def drain (handle : IO.FS.Handle) : IO Unit := do
++  let bytes ← handle.read 65536
++  unless bytes.isEmpty do drain handle
++
++/-- Only this connection's sequential owner closes its child. Timeout and
++scope exit share the same flag, so a reaped PID is never signalled again. -/
++private def closeChannel (channel : Channel) : IO Unit := do
++  unless ← channel.closed.get do
++    channel.closed.set true
++    Worker.killGroup channel.child
++    discard <| channel.child.wait
++    discard <| IO.wait channel.errors
++
++@[no_expose] def Channel.exchange (channel : Channel) (operation : Operation) (deadline : Nat) : IO Json := do
++  let now ← IO.monoMsNow
++  unless now < deadline && !(← channel.closed.get) do throw (IO.userError "project request expired or closed")
++  let id ← Receipt.fresh
++  let request : Request := ⟨id,implementation,min maxBudgetMs (deadline-now),operation⟩
++  let task ← IO.asTask (do
++    writeFrame channel.output (toJson request)
++    let some bytes ← readFrame channel.input | throw (IO.userError "project channel closed without a reply")
++    let some text := String.fromUTF8? bytes | throw (IO.userError "project reply is not UTF-8")
++    let value ← IO.ofExcept (Json.parse text >>= fromJson? (α := Reply))
++    unless value.id == id && value.protocol == implementation do
++      throw (IO.userError "project reply belongs to another request or implementation")
++    match value.body with
++    | .value result => pure result
++    | .error message => throw (IO.userError message)) .dedicated
++  try
++    while !(← IO.hasFinished task) do
++      unless (← IO.monoMsNow) < deadline do throw (IO.userError "project request exceeded its deadline")
++      IO.sleep 2
++    IO.ofExcept (task.get.mapError IO.Error.toString)
++  finally
++    if !(← IO.hasFinished task) then
++      closeChannel channel
++      discard <| IO.wait task
++
++structure Peer where
++  private mk ::
++  private channel : Channel
++  descriptor : Descriptor
++  key : String
++
++def Peer.accepts (peer : Peer) (boundary : Boundary) : Bool :=
++  boundary.scope == peer.key &&
++    boundary.projects.map (·.name) == peer.descriptor.projects.map (·.name) &&
++    (boundary.projects.zip peer.descriptor.projects).all (fun (cut,project) => cut.cut.inScope project.manifest)
++
++@[no_expose] def Peer.pin (peer : Peer) (deadline : Nat) : IO Boundary := do
++  let boundary ← IO.ofExcept (fromJson? (α := Boundary) (← peer.channel.exchange .pin deadline))
++  unless peer.accepts boundary do throw (IO.userError "project pin changed its complete read scope")
++  return boundary
++
++@[no_expose] def Peer.publish (peer : Peer) (target : String) (boundary : Boundary) (capsule : Capsule)
++    (deadline : Nat) : IO ProjectReceipt := do
++  unless peer.accepts boundary do throw (IO.userError "publication changed its complete read scope")
++  let some name := peer.descriptor.write | throw (IO.userError "read-only project scope")
++  let some writer := peer.descriptor.projects.find? (·.name == name) | throw (IO.userError "missing write project")
++  unless writer.manifest.identity == target do throw (IO.userError "publication changed its captured project")
++  let some original := boundary.projects.find? (·.name == name) | throw (IO.userError "missing write cut")
++  let inputs := (boundary.projects.zip peer.descriptor.projects).filterMap fun (cut,project) =>
++    if project.name == name then none else some (project.manifest,cut.cut)
++  let result ← peer.channel.exchange (.publish target boundary capsule) deadline
++  let checked ← IO.ofExcept (Client.checkProjectReceipt writer.manifest original.cut capsule inputs result)
++  unless (← IO.monoMsNow) < deadline do throw (IO.userError "project ACK arrived after its deadline")
++  return checked
++
++/-- Command arguments are operator configuration, not tool output or request
++text. SSH authentication/forced-command policy belongs to that deployment.
++Child groups and pipe tasks are owned and joined on every exit. -/
++@[no_expose] def withPeer (command : Array String) (selection : Selection) (deadline : Nat) (action : Peer → IO α) : IO α := do
++  unless (← IO.monoMsNow) < deadline do throw (IO.userError "project connection expired")
++  let some executable := command[0]? | throw (IO.userError "empty project service command")
++  let spawned ← IO.Process.spawn {
++    cmd := executable, args := command.extract 1 command.size,
++    stdin := .piped, stdout := .piped, stderr := .piped, setsid := true }
++  let (stdin,child) ← spawned.takeStdin
++  let errors ← IO.asTask (drain child.stderr) .dedicated
++  let channel : Channel := ⟨IO.FS.Stream.ofHandle child.stdout,IO.FS.Stream.ofHandle stdin,child,errors,← IO.mkRef false⟩
++  try
++    let value ← channel.exchange (.open selection) deadline
++    let descriptor ← IO.ofExcept (fromJson? (α := Descriptor) value)
++    unless descriptor.protocol == implementation && descriptor.projects.map (·.name) == selection.read && descriptor.write == selection.write &&
++      descriptor.projects.all (fun project => decide project.manifest.Valid) &&
++      (descriptor.projects.toList.map (·.manifest.identity)).Nodup do
++      throw (IO.userError "project service changed its selected inventory")
++    let key := Blake3.hex (Blake3.digest "eggshell.project-gateway-scope".toUTF8 [(toJson descriptor).compress.toUTF8])
++    action ⟨channel,descriptor,key⟩
++  finally
++    closeChannel channel
++end Eggshell.Plugin.Publication.Gateway

@@ -2,6 +2,13 @@
 
 ## 実用品を先に仕上げる（最新の指示）
 
+[共有projectのprocess接続候補](docs/candidates/project-gateway/README.md)をLeanで隔離実装した。製品 `e7f3c8b6…` は保存と完全な読取cutのpinに対応し、hostの物理path/管理secret/private capabilityをclientへ渡さない。選択した書込projectと全読取projectの境界を既存の永続ACKへ結び付け、独立接続ごとに要求を処理する。
+nativeの別publisher/gateway process試験で、2DBへの10並行保存gateは0.416秒。実ツールの完全な入力/出力12観測・回答12件が正しいDBにあり、client cwdを削除した後でも保存できた。ACK直後/返送前に切断し、再接続/同一要求再送とpublisher再起動後の再送で原典headの不変を確認した。
+読取専用のraw要求とSDK要求、保存先/cut/scope変更、権限なしproject、不正/切断/過大frameを拒否した。応答停止は305msで取消/子taskをjoin。全fixtureは9.699秒、関連RSS最大784,224KiB、全guard terminal/ownedPids空・publisher正常終了であり、検索/hookの時間ではない。
+5法則は標準公理だけ。client側1,462宣言の依存閉包にproject file読込とmutex atomicallyがなく、338製品objectと299 observer objectの整合、完全な製品coreと298共通import sourceの一致を確認した。
+終了済みDB/cache/observer build 2,357項目・568,381,141論理bytesをarchiveせず削除し、削除後も製品338 objectが整合する。旧不確定buildの破棄と失敗diagnostic/source digestを保持する。
+これはlocal process通信の検証で、別PC/OS利用者/SSH/NASではない。遠隔の原文取得/vector/work graph検索/通常hook設定への接続、完全なcross-project依存、一般98%/80人8時間と30秒、現runtimeのseed/両周・総token/品質は未完。回答model 0・比較0/18・採用0を維持する。
+
 [同じ内部所有者への並行書込と、増加後DBの新規チャット利用](docs/practical-runtime/shared-owner-lifecycle/README.md)を追加した。前回の隔離製品 `5d37ec14…` は変更していない。
 各projectの2書込sessionを同じ物理slot 0へ集中し、中断/再起動/後着/重複/保存先切替/clear/compactの後、4書込+10読込の追加4組を実行した。
 25 turn・75原観測・25回答・原文50項目が元のDBに保存された。原観測は全て元の不変tool受領記録の入力/出力と一致し、この2DB間の保存先取り違えと、単独DB読込clientへの他DB原文混入はなかった。71区間は確定、4後着区間は不明のまま区別する。
