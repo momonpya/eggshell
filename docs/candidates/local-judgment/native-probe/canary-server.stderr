@@ -1,0 +1,23 @@
+0.04.539.104 I srv  llama_server: initializing ...
+0.04.539.113 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.04.539.579 W srv  server_setup: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.04.541.378 I srv    load_model: loading model '/Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/local-judgment/model.gguf'
+0.04.668.490 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.04.737.558 I cmn          init: llama threadpool init, n_threads = 2
+0.04.737.594 W init: embeddings required but some input tokens were not marked as outputs -> overriding
+0.04.947.926 W init: embeddings required but some input tokens were not marked as outputs -> overriding
+0.04.960.370 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 2048, kv_unified = 'false'
+0.04.965.138 I srv  server_run_i: model loaded
+0.04.965.141 I srv  server_on_li: listening on unix:///tmp/egg-judge-85177-4387028647247458/server.sock
+0.05.013.910 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 0, t_last = -1
+0.05.013.913 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.05.148.796 I slot      release: id  0 | task 0 | stop processing: n_tokens = 88, truncated = 0
+0.05.148.811 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 0, t_last = 4387040884598
+0.05.148.815 I slot launch_slot_: id  0 | task 1 | processing task, is_child = 0
+0.05.242.291 I slot      release: id  0 | task 1 | stop processing: n_tokens = 93, truncated = 0
+0.05.249.007 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 0, t_last = 4387040978092
+0.05.249.011 I slot launch_slot_: id  0 | task 4 | processing task, is_child = 0
+0.05.282.528 I slot      release: id  0 | task 4 | stop processing: n_tokens = 93, truncated = 0
+0.05.282.543 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 0, t_last = 4387041018330
+0.05.282.546 I slot launch_slot_: id  0 | task 5 | processing task, is_child = 0
+0.05.315.199 I slot      release: id  0 | task 5 | stop processing: n_tokens = 88, truncated = 0
