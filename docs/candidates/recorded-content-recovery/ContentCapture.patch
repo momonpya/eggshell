@@ -1,0 +1,54 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/content-location/fixed-source/Eggshell/ContentCapture.lean	2026-11-13 16:46:52
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/recorded-content-recovery/source/Eggshell/ContentCapture.lean	2026-11-13 17:09:59
+@@ -46,6 +46,7 @@
+   parentProducer : String
+   original : String
+   implementation : String
++  inputs : Array SourceEvidence.File := #[]
+   aliases : Array Alias := #[]
+   sealed : Bool := false
+   failure : Option String := none
+@@ -395,13 +396,42 @@
+     parent := captured.digest
+     parentProducer := captured.implementation
+     original := Sha256.hex raw.toUTF8
+-    implementation}
++    implementation
++    inputs := captured.inputs}
+   let characters := raw.toList.toArray
+   unless captured.complete && raw.utf8ByteSize ≤ 2*1024*1024 && captured.aliases.all (fun alias =>
+       alias.file.valid && 0 < alias.line && (code? characters alias).isSome && captured.inputs.any (fun input =>
+         input.relative == alias.file.relative && input.content == some ⟨alias.file.bytes,alias.file.fingerprint⟩)) do
+     return {result with failure := some "unbound-recorded-anchors"}
+   let some (aliases,failure) ← correlate workspace captured.inputs raw (some captured.aliases) deadline |
++    return {result with failure := some "recorded-input-not-sealed"}
++  return {result with aliases,sealed := failure.isNone,failure}
++
++/-- A failed optional correspondence may use every file descriptor still
++recorded in its original Outcome. A successful export retains its old
++anchor-only domain: omitted files must not manufacture uniqueness. -/
++def recoveryInputs (captured : Captured) (recorded : Array SourceEvidence.File) : Array SourceEvidence.File :=
++  if captured.complete then captured.inputs else (captured.inputs ++ recorded).toList.eraseDups.toArray
++
++theorem recovery_complete_domain (captured : Captured) (recorded : Array SourceEvidence.File)
++    (complete : captured.complete = true) : recoveryInputs captured recorded = captured.inputs := by
++  simp [recoveryInputs,complete]
++
++/-- Read-only administrative derivation, never a historical re-execution.
++Every selected file is rechecked against its originally recorded fingerprint. -/
++def recoverSaved (workspace : System.FilePath) (captured : Captured) (raw : String)
++    (recorded : Array SourceEvidence.File) (deadline : Nat) : IO Supplement := do
++  if captured.complete then return ← refineSaved workspace captured raw deadline
++  let inputs := recoveryInputs captured recorded
++  let result : Supplement := {
++    parent := captured.digest
++    parentProducer := captured.implementation
++    original := Sha256.hex raw.toUTF8
++    implementation
++    inputs}
++  unless captured.aliases.isEmpty && !inputs.isEmpty && raw.utf8ByteSize ≤ 2*1024*1024 do
++    return {result with failure := some "missing-or-inconsistent-original-file-domain"}
++  let some (aliases,failure) ← correlate workspace inputs raw none deadline |
+     return {result with failure := some "recorded-input-not-sealed"}
+   return {result with aliases,sealed := failure.isNone,failure}
+ 

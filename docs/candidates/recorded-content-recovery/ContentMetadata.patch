@@ -1,0 +1,63 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/content-location/fixed-source/Eggshell/ContentMetadata.lean	2026-11-11 19:35:09
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/recorded-content-recovery/source/Eggshell/ContentMetadata.lean	2026-11-13 17:10:46
+@@ -137,17 +137,22 @@
+         (ObservationContext.Quotation.prepare quoteSource read alias.first alias.limit code)}
+   return result
+ 
++/-- Portable descriptors are read from the same immutable original Outcome. -/
++def originalInputs (doc : Document) : Array SourceEvidence.File :=
++  doc.files.map fun file => ⟨file.relative,some ⟨file.bytes,file.fingerprint⟩⟩
++
+ /-- A separately prepared supplement is bound to the unchanged original
+ capture. It contributes advisory coordinates, never a replacement producer. -/
+ def catalogSupplement (database : String) (doc : Document) (captured : ContentCapture.Captured)
+     (supplement : ContentCapture.Supplement) : Except String ObservationContext.Catalog := do
+   let some raw := doc.source | throw "supplement lost original body"
+   unless supplement.sealed && supplement.boundTo captured raw &&
+-      supplement.aliases.all (validAlias captured.inputs raw.toList.toArray) do
++      supplement.inputs == ContentCapture.recoveryInputs captured (originalInputs doc) &&
++      supplement.aliases.all (validAlias supplement.inputs raw.toList.toArray) do
+     throw "unbound or unsealed content supplement"
+   catalog database doc {
+     implementation := supplement.implementation
+-    inputs := captured.inputs
++    inputs := supplement.inputs
+     complete := true
+     aliases := supplement.aliases}
+ 
+@@ -182,7 +187,7 @@
+     chunks := chunks.push digest
+   let header : SupplementHeader := {
+     original := ⟨database,doc.owner,doc.work,supplement.original,supplement.implementation,
+-      captured.inputs,true,none,supplement.aliases.size,chunks⟩
++      supplement.inputs,true,none,supplement.aliases.size,chunks⟩
+     parent := supplement.parent
+     parentProducer := supplement.parentProducer}
+   let bytes := (toJson header).compress.toUTF8
+@@ -198,7 +203,8 @@
+   let some payload ← MetadataBytes.get? prepared (supplementKey id) | return none
+   let header ← ObservedRecords.decode (α := SupplementHeader) payload.bytes
+   let some raw := doc.source | throw (IO.userError "supplement lost original native output")
+-  unless header.original.boundTo database doc raw && header.original.inputs == captured.inputs do
++  unless header.original.boundTo database doc raw &&
++      header.original.inputs == ContentCapture.recoveryInputs captured (originalInputs doc) do
+     throw (IO.userError "supplement belongs to another original")
+   let mut aliases := #[]
+   for digest in header.original.chunks do
+@@ -214,6 +220,7 @@
+     parentProducer := header.parentProducer
+     original := header.original.original
+     implementation := header.original.implementation
++    inputs := header.original.inputs
+     aliases
+     sealed := true}
+   let _ ← IO.ofExcept (catalogSupplement database doc captured supplement)
+@@ -223,7 +230,7 @@
+     (doc : Document) (captured : ContentCapture.Captured) : IO ContentCapture.Captured := do
+   let some prepared := prepared | return captured
+   let some extra ← loadSupplement? prepared database id doc captured | return captured
+-  return {captured with aliases := captured.aliases ++ extra.aliases}
++  return {captured with inputs := extra.inputs,aliases := captured.aliases ++ extra.aliases}
+ 
+ /-- Native correspondence headers/chunks are immutable source records.
+ Historical consumers may use them without borrowing any later supplement. -/
