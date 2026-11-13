@@ -1,0 +1,22 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/source-snapshot/source/Eggshell/SynapseExtraction.lean	2026-11-11 19:35:09
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/citation-read-scope/source/Eggshell/SynapseExtraction.lean	2026-11-13 15:07:48
+@@ -1,6 +1,7 @@
+ module
+ 
+ public import Eggshell.Synapses
++public import tools.research.CitationRows
+ public import Eggshell.SearchUnicode
+ public import Eggshell.JsonScalars
+ public import Eggshell.HashDistinct
+@@ -295,10 +296,7 @@
+   for citation in cited do
+     for recorded in reads do
+       if let some source := citation.intersection? recorded.source then
+-        let rows := original.filter (fun row => row.occurrence == recorded.occurrence &&
+-          row.binding.database == recorded.binding.database &&
+-          row.binding.owner == recorded.binding.owner && row.binding.work == recorded.binding.work &&
+-          source.contains row.source)
++        let rows := CitationRows.forCitation recorded source original
+         let binding ← if source == recorded.source then pure recorded.binding else do
+           unless covered source (rows.map (·.source)) do continue
+           let first := rows.foldl (fun first row => min first row.binding.first) recorded.binding.limit
