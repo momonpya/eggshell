@@ -1,0 +1,14 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/source-snapshot/source/Eggshell/ProjectRead.lean	2026-11-12 20:41:59
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/project-query-receipt/source/Eggshell/ProjectRead.lean	2026-11-13 11:12:55
+@@ -95,8 +95,11 @@
+         read := names,write := none,handoffChars := request.question.policy.chars,localUnion := false }
+       let started ← IO.monoMsNow
+       let semanticReady ← IO.mkRef (none : Option Nat)
++      let captureInput := (← IO.getEnv "EGGSHELL_TRACE_SELECTOR_INPUT") == some "1"
++      let receipt ← if captureInput then some <$> Receipt.fresh else pure none
+       let result ← computeAutomaticHandoff selection (session.sources.toList.map some) request.question.text
+         request.question.delivered false (enableLocalUnion := false) (meaningQuery := some request.question.text)
++        (receipt := receipt)
+         (synaptic := synaptic) (upstreamDeadline := some deadline) (queryInputs := some inputs)
+         (queryOwners := owners) (preparedReaders := some prepared)
+         (onSemanticReady := do semanticReady.set (some (← IO.monoMsNow)))
