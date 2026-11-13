@@ -4,7 +4,11 @@
 
 [引用の元Read範囲を守る隔離修正を実フックで比較した](docs/candidates/citation-read-scope/README.md)。旧処理で失敗する重複行の再現と、修正後の6ケース、348 native objectとsourceの監査、範囲の3法則を確認した。同じ受理済みsnapshot・5/7/6凍結項目・質問・12万文字枠で、各2独立chatの配送は4/5・7/7・4/6＝15/18（現行2/5・6/7・5/6＝13/18）。題材3の悪化を隠さず未採用とする。全6意味検索は完了、未完了通知0、反復本文SHA一致。フック5.671〜7.043秒、初回shared warm133.050秒、RSS標本最大2,570,480KiB、全サービスACK/正常停止・guard残存0。初期準備とqueryを混ぜて速度改善とは言わない。
 
-次は同じ候補の実選択入力を捕捉し、題材1 input-language-predicate、題材3 syntax-only-compile-cutoffと新たに押し出されたfrontend-job-constructionの段階を確認する。引用信号は回復したが98%は未達。係数/枠の再調整、追加の小型model、回答モデル投入は先行させない。モデルの両周0/6・matched総token/品質0/18・採用0を維持する。これは元seedの検索反復であり、native observerのruntime一致seed audit未添付を、新しいseed受理成功へ読み替えない。元の原記録と受理監査は不変である。以下の「ビルド中」「実配送未確認」はこの現在地で更新する。
+同じ候補の実登録hookから3題材の選択入力を捕捉し、通常本文とのバイト一致を全件で確認した。残る題材1 input-language-predicate、題材3 syntax-only-compile-cutoffとfrontend-job-constructionはすべて候補にあり、最終選択で落ちている。18凍結項目に選択後の描画漏れはない。既存のSelectorSignalAuditを拡張して同一入力の現行/候補を比較した。残る3件には追加graph bonusがなく、他の多くの片には増分がある。ただし現行で配送されたConstructJobにもbonusはなく、過去にはbonus付きの必要行も落ちている。max/係数だけを原因と決めて同じ失敗案を再試行しない。
+
+原文をたどると、題材1の未配送ownerは原文10,746文字と2ファイルの指紋を保持していたが、content metadataはinput-not-captured、旧行解析はunsupported literal read sequenceだった。ディレクトリを含む一般的なパス候補をregularMetadata?で検査し、ディレクトリの例外で正常ファイルの取得まで全破棄していた。順序を入れ替えた再現を含む6ケースと同じ実コマンド入力で確認し、非regular候補を除外する隔離修正で0→2ファイル、6msとなった。2ファイルの指紋は原記録と一致し、symlink拒否・closed=falseを保つ。67 module/68 objectの検査と実source差分はContentCaptureの1箇所＋実バイトを含む索引だけで一致した。これは新規取得の部品試験であり、過去の原文を取り直したことにも、配送18/18にも換算しない。
+
+次は、既に記録されたファイル指紋と元の出力に結び付いた派生物として、取得時に欠けた座標を出版・warmで回復する。歴史上の入力を捏造したり、問い合わせ中に再照合したりしない。同じsnapshot/凍結項目で実フックを再確認し、その後に回答両周と総tokenを評価する。係数/枠、追加の小型model、回答モデル投入は先行させない。現行13/18・引用修正候補15/18・98%未達、回答両周0/6・matched総token/品質0/18・採用0を維持する。これは元seedの検索反復であり、runtime一致seed audit未添付を新seed受理へ読み替えない。原記録と保持製品は不変。終了した試験実行体/DB/cacheをarchiveせず削除して約2GiB空きを増やし、重複本文はSHAで参照する3本文へ整理した。選択/domainの実入力だけは次の診断に必要な現用データとして保持する。[記録](docs/candidates/citation-read-scope/README.md)。以下の古い「次」はこの現在地で更新する。
 
 [出版済み引用信号の欠落を特定した](docs/candidates/synapse-signals/README.md)。同じ受理seedにはfile read9,197件・原出力read13,862件があり、回答の引用44件すべてに既存file readが重なる。WorkGraphの59 Workの経路とpostingsも完全走査と一致する。それなのに引用支持/共引用は0で、引用作成を再生すると既存のRead境界検査で失敗した。同じファイル行が出力中に繰り返される場合に、別の文字区間の行を混ぜていた。元Readの文字区間に限って再生すると、引用支持3,189件・共引用4,368件を作れた。これは実配送の成功ではない。検査wrapperの65.548秒を製品の遅延に読み替えず、wrapperを検索へ入れない。
 

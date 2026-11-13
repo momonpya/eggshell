@@ -1,0 +1,12 @@
+--- /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/content-location/source/Eggshell/ContentCapture.lean	2026-11-11 19:35:09
++++ /Users/ovm/.codex/experiments/eggshell/scope-token-study-20261028/fixed-frame-study/practical-runtime/content-location/fixed-source/Eggshell/ContentCapture.lean	2026-11-13 16:46:52
+@@ -233,7 +233,8 @@
+     let path := workspace / relative.text
+     try
+       FileSystem.rejectSymlinkAncestors path
+-      if (← FileSystem.regularMetadata? path).isNone then continue
++      let some metadata ← FileSystem.symlinkMetadata? path | continue
++      if metadata.type != .file then continue
+       unless probes.length < 256 do return SourceEvidence.unknown workspace
+       let previous := known.bind fun captured => captured.probes.find? (·.file.relative == relative.text)
+       let some observed ← match previous with
