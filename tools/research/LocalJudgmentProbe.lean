@@ -22,6 +22,7 @@ structure Plan where
   output : String
   requests : Array Request
   contextTokens : Nat := 2048
+  requestDeadlineSeconds : Nat := 30
   deriving FromJson, ToJson
 private def check (value : Bool) (message : String) : IO Unit :=
   unless value do throw (IO.userError message)
@@ -46,6 +47,8 @@ def run (path : String) : IO Unit := do
   check (output.isAbsolute && !(← output.pathExists)) "fresh absolute probe output required"
   check (!plan.requests.isEmpty && plan.requests.size ≤ 128) "bounded nonempty probe requests required"
   check (1024 ≤ plan.contextTokens && plan.contextTokens ≤ 4096) "bounded numerical context required"
+  check (0 < plan.requestDeadlineSeconds && plan.requestDeadlineSeconds ≤ 120)
+    "research numerical deadline must be between one and 120 seconds"
   for artifact in #[plan.executable,plan.model]++plan.runtimeFiles do verify artifact
   IO.FS.createDirAll output
   let ipc := System.FilePath.mk s!"/tmp/egg-judge-{← IO.Process.getPID}-{← IO.monoNanosNow}"
@@ -98,7 +101,7 @@ def run (path : String) : IO Unit := do
       write requestPath request.body
       let requestStarted ← IO.monoMsNow
       let result ← IO.Process.output { cmd := "/usr/bin/curl", args := #["--silent","--show-error","--fail-with-body",
-        "--max-time","30","--unix-socket",socket.toString,"http://localhost/reranking",
+        "--max-time",toString plan.requestDeadlineSeconds,"--unix-socket",socket.toString,"http://localhost/reranking",
         "--max-filesize","1048576","--header","Content-Type: application/json",
         "--data-binary","@"++requestPath.toString], cwd := some output }
       let requestMs := (← IO.monoMsNow)-requestStarted
