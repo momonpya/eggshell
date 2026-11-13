@@ -21,7 +21,9 @@
 元ソースの事実は不変で、配送本文は読まずに分母を凍結した。
 [原文の独立照合](seed-read-coverage.json)にも競合行・payload不一致はない。
 完全保存された凍結項目は題材1/2/3で **5/7/6**。
-題材3の `syntax-only-no-output-action` は完全保存されていないため別記する。
+題材3の `syntax-only-no-output-action` は、このseedが原文を取得していなかった。
+[受領値との全件照合](selector-input/README.md)で、受領済み57件の引数・応答が
+すべてDBと一致することを確認した。未取得と、受領後の保存欠落を区別する。
 部分保存を含む実配送の分母は、モデル投入前にさらに検査する。
 `input-language-predicate` と `syntax-only-compile-cutoff` は座標読み取りでは
 見つからない一方、元のnative出力の本文に完全に存在する。これらを分母から

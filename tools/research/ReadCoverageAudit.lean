@@ -112,9 +112,10 @@ def cliMain (args : List String) : IO Unit := do
           let snippet := "\n".intercalate (lines.extract (requirement.first-1) requirement.last).toList
           some (nativeText.filterMap fun (owner,text) => if !snippet.isEmpty &&
             (text.splitOn snippet).length > 1 then some owner else none)
+      let literalOwners := literalOwners.flatten
       return Json.mkObj [("reference",toJson requirement),("locatedOriginal",toJson located),
         ("literalSnippetSearchAvailable",toJson (!literalOwners.isEmpty)),
-        ("literalSnippetNativeOwners",toJson literalOwners.flatten)]))]
+        ("literalSnippetNativeOwners",toJson literalOwners)]))]
   let conflicts := payloads.fold (fun count _ variants => if variants.size > 1 then count+1 else count) 0
   unless (← StudyRuntime.files source.directory) == before do throw (IO.userError "read audit changed the source")
   IO.FS.writeFile output ((Json.mkObj [("database",toJson database),("nativeDocuments",toJson total),

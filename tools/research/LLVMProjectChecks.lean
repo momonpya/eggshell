@@ -4,6 +4,7 @@ import tools.research.RegisteredHook
 import tools.research.NativeTrialAudit
 import tools.research.StudyRuntime
 import tools.research.StudyLaunchers
+import tools.research.NativeSourceIntegrity
 
 open Lean Eggshell Eggshell.Plugin Eggshell.Research
 namespace LLVMProjectChecks
@@ -16,6 +17,7 @@ structure Plan where
   root : String
   records : String
   project : Option String := none
+  seedAudit : Option StudyAdmission.Artifact := none
   deriving FromJson, ToJson
 def Plan.projectPath (plan : Plan) : System.FilePath :=
   plan.project.map System.FilePath.mk |>.getD (System.FilePath.mk plan.root/"llvm.egg")
@@ -44,6 +46,18 @@ def load (input : String) : IO Plan := do
   StudySeedChecks.requireNumericalSupport plan.installation
   for (name,expected) in plan.originalFiles do
     check ((← ArtifactHash.hex (System.FilePath.mk plan.original/name)) == expected) "protected native LLVM source changed"
+  if let some artifact := plan.seedAudit then
+    StudyAdmission.verifyArtifact artifact
+    let audit ← read (.mk artifact.path)
+    check (audit.getObjValD "seedAccepted" == toJson true &&
+      audit.getObjValD "nativeJournalComplete" == toJson true &&
+      audit.getObjValD "portableOriginsComplete" == toJson true &&
+      audit.getObjValD "sourceFactsUnchanged" == toJson true &&
+      audit.getObjValD "publication" == toJson plan.original &&
+      audit.getObjValD "sourceFiles" == toJson plan.originalFiles &&
+      (audit.getObjValD "runtime").getObjValD "sha256" == toJson plan.installation.runtime.sha256 &&
+      audit.getObjValD "taskDefinitionsSha256" == toJson (← ArtifactHash.hex (.mk plan.definitions)))
+      "accepted seed audit differs from this fixed source, product or requirements"
   return plan
 
 /-- No query, warm, handoff body or answering model is opened before every
@@ -85,7 +99,7 @@ def prepare (input : String) : IO Unit := do
   write (records/"before-delivery.json") (Json.mkObj [("runtime",toJson plan.installation.runtime),
     ("originalHead",toJson original.head),("capturedHead",toJson source.head),
     ("manifest",toJson project.manifest),("sourceFiles",toJson sourceFiles),("topics",toJson topics),
-    ("frozenBeforeAnyQueryOrWarm",toJson true),("acceptedSeed",toJson false),
+    ("frozenBeforeAnyQueryOrWarm",toJson true),("acceptedSeed",toJson plan.seedAudit.isSome),
     ("answeringModelCalls",toJson (0 : Nat)),("adopted",toJson false)])
   let connection := root/"connections/read-llvm.json"
   let catalog : Publication.Gateway.Catalog := ⟨#[⟨"LLVM",projectPath.toString,true,false⟩],⟨plan.installation.handoffChars,true⟩⟩
@@ -158,9 +172,9 @@ def run (input : String) : IO Unit := do
       row.getObjValD "incompleteNotice" == toJson false &&
       ((row.getObjValD "assessment").getObjValD "availableDelivery").getObjValD "targetMet" == toJson true)
     write (records/"result.json") (Json.mkObj [("queries",toJson queries),("allSixReachTarget",toJson successful),
-      ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("scope",toJson "six fresh-chat retrieval audits of one fixed incomplete native corpus; no answering rounds"),
+      ("elapsedMs",toJson ((← IO.monoMsNow)-started)),("scope",toJson "six fresh-chat retrieval audits of one fixed native corpus; no answering rounds"),
       ("handoffChars",toJson plan.installation.handoffChars),("answeringModelCalls",toJson (0 : Nat)),
-      ("acceptedSeed",toJson false),("adopted",toJson false)])
+      ("acceptedSeed",toJson plan.seedAudit.isSome),("adopted",toJson false)])
   finally
     let mut failures : Array String := #[]
     for (service,name) in (← services.get).reverse do
@@ -168,73 +182,83 @@ def run (input : String) : IO Unit := do
       catch error => failures := failures.push error.toString; StudyRuntime.abort service
     check failures.isEmpty ("owned LLVM services did not drain: "++toString failures)
 
-/-- Replay the product's read computation with its existing range receipt.
-This is a diagnostic, not another hook latency sample. Reject it unless the
-entire resulting body equals the earlier ordinary fresh-chat body. No frozen
-requirement enters the product computation. -/
-def diagnose (input : String) : IO Unit := do
+/-- Capture the actual registered product hook, rather than reconstructing
+its in-process prepared state in a different executable. Tracing must preserve
+the ordinary body exactly. Frozen requirements never enter the request. -/
+def diagnose (input : String) (number : Nat := 1) : IO Unit := do
   let plan ← load input
   let root : System.FilePath := .mk plan.root
   let records : System.FilePath := .mk plan.records
-  let output := records/"diagnostic"
-  check (!(← output.pathExists) && (← Paths.dataRoot) == root/"host") "fresh host-side range diagnostic required"
+  let output := records/(if number == 1 then "diagnostic" else s!"diagnostic-topic-{number}")
+  let data := root/s!"capture-{number}"
+  check (!(← output.pathExists) && !(← data.pathExists)) "fresh registered selection capture required"
   IO.FS.createDirAll output
   let frozen ← read (records/"before-delivery.json")
   let topics ← IO.ofExcept ((frozen.getObjValD "topics").getArr?)
-  let some topic := topics[0]? | throw (IO.userError "missing fixed first topic")
+  let some topic := topics.find? (·.getObjValD "topic" == toJson number) |
+    throw (IO.userError "missing fixed diagnostic topic")
   let question ← IO.ofExcept ((topic.getObjValD "specification").getObjValAs? String "prompt")
-  let project ← ProjectStore.openProject plan.projectPath
-  let service ← StudyRuntime.startPublisher (.mk plan.installation.runtime.path) (root/"host") (environment plan (root/"host"))
-  let coordinator ← SearchReaders.Coordinator.new
+  let tracing := #[("EGGSHELL_TRACE_SELECTION_RANGES",some "1"),("EGGSHELL_TRACE_SELECTOR_INPUT",some "1")]
+  let installation := {plan.installation with environment := replace plan.installation.environment tracing}
+  let plan := {plan with installation}
+  let receiptDirectories := #[root/"host/receipts",data/"receipts"]
+  let mut previous : Array System.FilePath := #[]
+  for directory in receiptDirectories do
+    if ← directory.isDir then previous := previous++(← directory.readDir).map (·.path)
+  let services ← IO.mkRef (#[] : Array (StudyRuntime.Managed × String))
   try
-    let pool ← Publication.Owned.Pool.new
-    let grant ← pool.registerRead project.directory project.manifest.identity
-    let deadline := (← IO.monoMsNow)+29000
-    let (_,pins) ← Publication.Read.pin pool grant.manifest.identity grant.capability deadline
-    let source ← project.current 0
-    let some pin := pins[0]? | throw (IO.userError "missing captured preparation pin")
-    let captured ← ProjectReadSnapshot.load source pin MiniLM.model SearchProvider.encoderContract
-    let inputs := #[captured.input]
-    let owners : OwnerViews.Reference := ⟨OwnerViews.implementation,#[source.head],#[captured.owner]⟩
-    let frame ← PreparedReaders.Frame.capture #[source] inputs (some owners)
-    let cancelled ← IO.mkRef false
-    let session ← coordinator.borrow frame deadline cancelled
-    let prepared ← session.pool.acquire session.sources inputs (some owners)
-    let synaptic ← Synapses.Recommend.prepareMany session.sources (some inputs) deadline (some prepared)
-    try
-      check (synaptic.all (·.failure.isNone)) "diagnostic omitted a prepared synaptic input"
-      let selection : Config.Selection := {
-        label := "project-service",semanticMatcher := some [plan.installation.runtime.path,"search-provider"],
-        read := [⟨project.manifest.identity++":0",source.directory⟩],write := none,
-        handoffChars := plan.installation.handoffChars,localUnion := false }
-      let receipt ← Receipt.fresh
-      write (output/"request.json") (Json.mkObj [("receipt",toJson receipt),("question",toJson question),
-        ("source",toJson source.head),("oraclePassedToProduct",toJson false),
-        ("latencySample",toJson false),("productChanged",toJson false)])
-      let handoff ← computeAutomaticHandoff selection (session.sources.toList.map some) question [] false
-        (enableLocalUnion := false) (meaningQuery := some question) (receipt := some receipt)
-        (synaptic := synaptic) (upstreamDeadline := some deadline) (queryInputs := some inputs)
-        (queryOwners := some owners) (preparedReaders := some prepared)
-      let some handoff := handoff | throw (IO.userError "diagnostic produced no handoff")
-      let advice ← IO.ofExcept (Publication.Read.advice handoff)
-      let ordinary ← IO.FS.readFile (records/"pass-0-topic-1.txt")
-      IO.FS.writeFile (output/"body.txt") advice.text
-      let same := ordinary == advice.text
-      write (output/"validation.json") (Json.mkObj [("sameOrdinaryBody",toJson same),
-        ("ordinarySha256",toJson (Sha256.hex ordinary.toUTF8)),("diagnosticSha256",toJson (Sha256.hex advice.text.toUTF8)),
-        ("source",toJson source.head),("sourceOraclePassedToProduct",toJson false),
-        ("newHookLatencySamples",toJson (0 : Nat)),("answeringModelCalls",toJson (0 : Nat))])
-      check same "diagnostic body differs; its decisions cannot explain the ordinary hook"
-      let directory := root/"host/receipts"/receipt
-      write (output/"selection.json") (← Receipt.readSelection directory)
-      write (output/"domain.json") ((← read (directory/"delivery-domain.json")).getObjValD "data")
-    finally Synapses.Recommend.releaseMany synaptic ((← IO.monoMsNow)+1000)
+    let host ← StudyRuntime.startPublisher (.mk installation.runtime.path) (root/"host") (environment plan (root/"host"))
+    services.modify (·.push (host,"host"))
+    let clientEnvironment := replace (environment plan data) #[("EGGSHELL_CONFIG",some (root/"client.toml").toString)]
+    let client ← StudyRuntime.startPublisher (.mk installation.runtime.path) data clientEnvironment
+    services.modify (·.push (client,"client"))
+    let session := s!"actual-selection-topic-{number}"
+    let frontend ← StudyRuntime.startManaged (.mk installation.runtime.path) (.mk installation.pluginRoot)
+      session (data/"daemon.json") clientEnvironment
+    services.modify (·.push (frontend,"frontend"))
+    IO.FS.createDirAll (root/"tmp"/session)
+    discard <| RegisteredHook.invoke installation root (.mk plan.workspace) data (root/"client.toml") session "start" "SessionStart"
+    let response ← RegisteredHook.invoke installation root (.mk plan.workspace) data (root/"client.toml")
+      session "prompt" "UserPromptSubmit" [("prompt",toJson question)]
+    let reply ← IO.ofExcept (Json.parse response.stdout)
+    let body ← IO.ofExcept ((reply.getObjValD "hookSpecificOutput").getObjValAs? String "additionalContext")
+    IO.FS.writeFile (output/"body.txt") body
+    discard <| RegisteredHook.invoke installation root (.mk plan.workspace) data (root/"client.toml") session "stop" "Stop"
+      [("last_assistant_message",toJson "Recorded original selection input; no answering model.")]
+    let ordinary ← IO.FS.readFile (records/s!"pass-0-topic-{number}.txt")
+    write (output/"validation.json") (Json.mkObj [("sameOrdinaryBody",toJson (ordinary == body)),
+      ("ordinarySha256",toJson (Sha256.hex ordinary.toUTF8)),("diagnosticSha256",toJson (Sha256.hex body.toUTF8)),
+      ("actualRegisteredHook",toJson true),("hookMs",toJson response.elapsedMs),
+      ("sourceOraclePassedToProduct",toJson false),("answeringModelCalls",toJson (0 : Nat))])
+    check (ordinary == body) "instrumented actual hook differs from ordinary delivery"
   finally
-    coordinator.close
-    StudyRuntime.stopManaged service (output/"host-stop.json")
+    for (service,name) in (← services.get).reverse do
+      StudyRuntime.stopManaged service (output/(name++"-stop.json"))
+  let mut captured : Array System.FilePath := #[]
+  for directory in receiptDirectories do
+    if !(← directory.isDir) then continue
+    for entry in ← directory.readDir do
+      if previous.contains entry.path || !(← (entry.path/"selection-plan.json").pathExists) then continue
+      let selection ← Receipt.readSelection entry.path
+      if selection.getObjValD "selectorInput" == Json.null then continue
+      captured := captured.push entry.path
+      write (output/"selection.json") selection
+      if ← (entry.path/"delivery-domain.json").pathExists then
+        write (output/"domain.json") ((← read (entry.path/"delivery-domain.json")).getObjValD "data")
+  check (captured.size == 1) "expected one complete actual-hook selection manifest"
+  write (output/"receipt.json") (toJson captured)
 end LLVMProjectChecks
 
 def main : List String → IO UInt32
+  | ["journal-integrity",database,originals,session,turn,output] => do
+    NativeSourceIntegrity.verifyJournal database originals session turn output
+    return 0
+  | ["originals",database,output] => do
+    NativeSourceIntegrity.exportOriginals database output
+    return 0
+  | ["source-integrity",database,acquisition,workspace,definitions,output] => do
+    NativeSourceIntegrity.run database acquisition workspace definitions output
+    return 0
   | ["bind",directory,inherited] => do
     let target : System.FilePath := .mk directory
     let parent : System.FilePath := .mk inherited
@@ -250,4 +274,8 @@ def main : List String → IO UInt32
   | ["prepare",input] => do LLVMProjectChecks.prepare input; return 0
   | ["run",input] => do LLVMProjectChecks.run input; return 0
   | ["diagnose",input] => do LLVMProjectChecks.diagnose input; return 0
-  | _ => throw (IO.userError "LLVMProjectChecks prepare|run PLAN")
+  | ["diagnose",input,number] => do
+    let some topic := number.toNat? | throw (IO.userError "natural topic required")
+    LLVMProjectChecks.diagnose input topic
+    return 0
+  | _ => throw (IO.userError "LLVMProjectChecks prepare|run|diagnose PLAN")
