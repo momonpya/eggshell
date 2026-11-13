@@ -151,7 +151,111 @@ def run (directory originalPath output : String) : IO Unit := do
   IO.FS.writeFile path (Json.mkObj [("topics",toJson results),("allActualEvidenceHasPlannedFootprint",toJson consistent),
     ("candidateMeansUnionNotFeasiblePacket",toJson true),("productOrModelCalled",toJson false)]).compress
   check consistent "range receipt does not explain all actual deliveries; do not classify losses from it"
+private def mergeRanges (ranges : Array (Nat × Nat)) : Array (Nat × Nat) := Id.run do
+  let mut result := #[]
+  for (first,stop) in ranges.qsort (fun a b => a.1 < b.1) do
+    if first ≥ stop then continue
+    match result.back? with
+    | some (a,b) =>
+      if first ≤ b then result := result.pop.push (a,max b stop)
+      else result := result.push (first,stop)
+    | none => result := result.push (first,stop)
+  return result
+private def inferPositions (selection : Json) (nodes : Array Nat) : IO Json := do
+  let raw ← IO.ofExcept (fromJson? (α := SharedCoverage.Input.RawProblem) (selection.getObjValD "selectorInput"))
+  let _ ← IO.ofExcept raw.decode
+  check (nodes.all (· < raw.costs.size)) "planned payload node exceeds frozen problem"
+  let known := Std.HashSet.ofArray nodes
+  let witness := selection.getObjValD "selectionWitness"
+  let owners ← IO.ofExcept (witness.getObjValAs? (Array String) "owners")
+  let units ← array (witness.getObjValD "units")
+  let mut ranges : Std.HashMap Nat (Array (Nat × Nat)) := {}
+  for id in [:units.size] do
+    let row ← array units[id]!
+    let family ← nat row[0]!
+    check (family < owners.size) "unit names unknown original owner"
+    let sourceNodes ← IO.ofExcept (fromJson? (α := Array (Option Nat)) row[2]!)
+    let sourceNodes := sourceNodes.filterMap (fun node => node)
+    let some offer := raw.offers[id]? | throw (IO.userError "base unit has no original offer")
+    let present := if sourceNodes.isEmpty then offer.closure.all known.contains
+      else sourceNodes.all known.contains
+    if !present then continue
+    let spans ← IO.ofExcept (fromJson? (α := Array (Nat × Nat)) row[1]!)
+    ranges := ranges.insert family ((ranges[family]?).getD #[]++spans)
+  let mut selectedNodes := #[]
+  for entry in ← array (witness.getObjValD "sourceNodes") do
+    let row ← array entry
+    if let some node ← optionalNat row[0]! then
+      if known.contains node then selectedNodes := selectedNodes.push (some node)
+  let rangeAudit ← (← array (selection.getObjValD "rangeAudit")).mapM fun row => do
+    let id ← nat (row.getObjValD "id")
+    return row.setObjVal! "selectedRanges" (toJson (mergeRanges ((ranges[id]?).getD #[])))
+  return selection.setObjVal! "rangeAudit" (toJson rangeAudit)
+    |>.setObjVal! "selectionWitness" (witness.setObjVal! "selectedSourceNodes" (toJson selectedNodes))
+private def selected (ctx : Context) (unit : Json) : IO Bool := do
+  let mut satisfied := false
+  for alternative in ← array (unit.getObjValD "alternatives") do
+    let inspected ← (← array alternative).mapM (footprint ctx)
+    if inspected.all (·.getObjValD "selected" == toJson true) then satisfied := true
+  return satisfied
+def planned (directory originalPath beforePath actualPath planPath output : String)
+    (modelDomain : Option String := none) : IO Unit := do
+  check (!(← System.FilePath.pathExists output)) "preserve prior packet inference audit"
+  let root : System.FilePath := .mk directory
+  let originals ← read (.mk originalPath)
+  let before ← read (.mk beforePath)
+  check (originals.getObjValD "head" == before.getObjValD "originalHead") "frozen packet uses another source head"
+  let actual ← array ((← read (.mk actualPath)).getObjValD "queries")
+  let plans ← array ((← read (.mk planPath)).getObjValD "topics")
+  let judgedDomains ← match modelDomain with
+    | none => pure #[]
+    | some path => array ((← read (.mk path)).getObjValD "cases")
+  let mut reports := #[]
+  for topic in ← array (before.getObjValD "topics") do
+    let number ← nat (topic.getObjValD "topic")
+    let capture := root/(if number == 1 then "diagnostic" else s!"diagnostic-topic-{number}")/"selection.json"
+    let selection ← read capture
+    let raw ← IO.ofExcept (fromJson? (α := SharedCoverage.Input.RawProblem) (selection.getObjValD "selectorInput"))
+    let originalChosen ← IO.ofExcept ((selection.getObjValD "selectionWitness").getObjValAs? (Array Nat) "compiledSelected")
+    let mut baselineNodes := #[]
+    for index in originalChosen do
+      let some offer := raw.offers[index]? | throw (IO.userError "actual choice outside frozen offer domain")
+      baselineNodes := baselineNodes++offer.closure.toArray
+    let baseline ← context (← inferPositions selection baselineNodes) originals
+    let some plan := plans.find? (·.getObjValD "topic" == toJson number) | throw (IO.userError "planned topic missing")
+    let candidateNodes ← IO.ofExcept (plan.getObjValAs? (Array Nat) "selectedNodes")
+    let candidate ← context (← inferPositions selection candidateNodes) originals
+    let domain ← match judgedDomains.find? (·.getObjValD "topic" == toJson number) with
+      | none => pure none
+      | some domain => do
+        let mut nodes := #[]
+        for capsule in ← array (domain.getObjValD "capsules") do
+          for part in ← IO.ofExcept (capsule.getObjValAs? (Array Nat) "parts") do
+            let some offer := raw.offers[part]? | throw (IO.userError "judged capsule exceeds original offer domain")
+            nodes := nodes++offer.closure.toArray
+        pure (some (← context (← inferPositions selection nodes) originals))
+    let some observed := actual.find? (fun row => row.getObjValD "pass" == toJson (0 : Nat) &&
+      row.getObjValD "topic" == toJson number) | throw (IO.userError "actual baseline body audit missing")
+    let missing ← IO.ofExcept (((observed.getObjValD "assessment").getObjValD "availableDelivery").getObjValAs?
+      (Array (Array String)) "missing")
+    let mut units := #[]
+    for unit in ← array ((topic.getObjValD "frozen").getObjValD "units") do
+      let names ← IO.ofExcept (unit.getObjValAs? (Array String) "names")
+      let actual := !(names.any fun name => missing.any (·.contains name))
+      let baseline ← selected baseline unit
+      check (baseline == actual) "node inference fails to reproduce frozen baseline delivery; no candidate claim allowed"
+      units := units.push (Json.mkObj [("names",toJson names),("baseline",toJson baseline),
+        ("candidatePayloadAvailable",toJson (← selected candidate unit)),
+        ("judgedDomainPayloadAvailable",← match domain with
+          | none => pure Json.null
+          | some domain => toJson <$> selected domain unit)])
+    reports := reports.push (Json.mkObj [("topic",toJson number),("units",toJson units)])
+  IO.FS.writeFile output (Json.mkObj [("topics",toJson reports),("baselineInferenceMatchesAllFrozenActualLabels",toJson true),
+    ("assertsActualCandidateDelivery",toJson false),("scope",toJson "selected original payload availability only; actual candidate rendering and hook still required")]).compress
 end SelectionMembershipAudit
 def main : List String → IO Unit
   | [directory,originals,output] => SelectionMembershipAudit.run directory originals output
+  | ["planned",directory,originals,before,actual,plan,output] => SelectionMembershipAudit.planned directory originals before actual plan output
+  | ["planned-model",directory,originals,before,actual,plan,dataset,output] =>
+      SelectionMembershipAudit.planned directory originals before actual plan output (some dataset)
   | _ => throw (IO.userError "SelectionMembershipAudit CAPTURED-DIRECTORY ORIGINAL-EXPORT NEW-REPORT")
