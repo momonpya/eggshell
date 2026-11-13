@@ -66,9 +66,9 @@ def prepare (templatePath directory : String) (live : Bool := false) : IO StudyA
   write (root / "available-evidence.json") (toJson frozenAvailable)
   let mut finalSession := ""
   let mut finalCall := root
+  discard <| StudyReadiness.finishJournal template.runtime.path (.mk template.database) environment template.workspace (root/"finish-replay")
   let publisher ← StudyRuntime.startPublisher (.mk template.runtime.path) data environment
   try
-    discard <| StudyReadiness.finishJournal template.runtime.path (.mk template.database) environment template.workspace (root/"finish-replay")
     let warm ← StudyCommand.run template.runtime.path #["egg","warm","work"] environment template.workspace "" (root / "warm") 240000
     check (warm.exitCode == 0) "explicit source warm failed"
     discard <| StudyReadiness.warm warm (.mk template.database)

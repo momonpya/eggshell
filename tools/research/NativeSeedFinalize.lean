@@ -80,8 +80,11 @@ def cliMain (args : List String) : IO UInt32 := do
       return 0
     -- Warm after the save/index child has exited: there is only one writer.
     let replay ← StudyReadiness.finishJournal plan.runtime.path plan.database environment plan.workspace (output/"finish-replay")
-    let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment
-      plan.workspace "" (output / "warm") 240000
+    let preparation ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
+    let warm ← try
+      StudyCommand.run plan.runtime.path #["egg","warm","work"] environment
+        plan.workspace "" (output / "warm") 240000
+      finally StudyRuntime.stopManaged preparation (output/"preparation-publisher-shutdown.json")
     check (warm.exitCode == 0) "frozen runtime warm failed"
     let coverage := (← StudyReadiness.warm warm plan.database).coverage
     let prepared ← DB.PageMap.pin plan.database

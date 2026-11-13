@@ -146,12 +146,12 @@ def recall (plan : Input) (root source : System.FilePath)
     ("EGGSHELL_DATA_ROOT",some data.toString),("EGGSHELL_CONFIG",some configuration.toString),
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
   discard <| StudyReadiness.finishJournal plan.runtime.path source environment workspace.toString (root/"recall-replay") .user
-  let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment workspace.toString ""
-    (root / "recall-warm") 60000
-  check (warm.exitCode == 0) "readonly recall source was not warmed"
-  checkedWarm warm source
   let publisher ← StudyRuntime.startPublisher (.mk plan.runtime.path) data environment
   let managed ← try
+    let warm ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment workspace.toString ""
+      (root / "recall-warm") 60000
+    check (warm.exitCode == 0) "readonly recall source was not warmed"
+    checkedWarm warm source
     StudyRuntime.startManaged (.mk plan.runtime.path) (.mk plan.pluginRoot) session
       (data / "daemon.json") environment
     catch error =>
@@ -353,8 +353,11 @@ def run (templatePath directory : String) (remote : Bool := false)
     try StudyRuntime.stopManaged managed (root / "shutdown.json")
     finally StudyRuntime.stopManaged publisher (root / "publisher-shutdown.json")
   discard <| StudyReadiness.finishJournal plan.runtime.path database environment root.toString (root/"finish-replay")
-  let prepared ← StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
-    (root / "final-warm") 60000
+  let preparation ← StudyRuntime.startPublisher (.mk plan.runtime.path) (root/"data") environment
+  let prepared ← try
+    StudyCommand.run plan.runtime.path #["egg","warm","work"] environment root.toString ""
+      (root / "final-warm") 60000
+    finally StudyRuntime.stopManaged preparation (root/"preparation-publisher-shutdown.json")
   checkedWarm prepared database
   let copied := root / "output.egg"
   let publication ← StudyRuntime.checkpoint database copied
@@ -367,8 +370,11 @@ def run (templatePath directory : String) (remote : Bool := false)
     ("EGGSHELL_DATA_ROOT",some recoveryData.toString),("EGGSHELL_CONFIG",some recoveryConfig.toString),
     ("CODEX_THREAD_ID",none),("CODEX_TURN_ID",none)]
   discard <| StudyReadiness.finishJournal plan.runtime.path copied recoveredEnvironment root.toString (root/"recover-replay")
-  let warmed ← StudyCommand.run plan.runtime.path #["egg","warm","work"] recoveredEnvironment root.toString ""
-    (root / "recover-warm") 60000
+  let recovery ← StudyRuntime.startPublisher (.mk plan.runtime.path) recoveryData recoveredEnvironment
+  let warmed ← try
+    StudyCommand.run plan.runtime.path #["egg","warm","work"] recoveredEnvironment root.toString ""
+      (root / "recover-warm") 60000
+    finally StudyRuntime.stopManaged recovery (root/"recovery-publisher-shutdown.json")
   check (warmed.exitCode == 0) "source-only seed could not be warmed without its old private state"
   checkedWarm warmed copied
   let recovered ← facts copied fun all => all.any isConsumption && all.any supported && all.any coquoted
